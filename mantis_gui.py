@@ -8,17 +8,15 @@ import wxmpl as mpl
 import numpy as npy
 import os.path
 from mpl_toolkits.axes_grid import make_axes_locatable
+import time
 
-
-import x1a_stk
+import data_stack
 import analyze
-import logo_2l_32
-import logo_2ndlook 
+import logos
+
 
 Winsizex = 1000
 Winsizey = 750
-
-
 
 
 
@@ -35,22 +33,21 @@ class common:
 
 """ ------------------------------------------------------------------------------------------------"""
 class PageCluster(wx.Panel):
-    def __init__(self, parent):
+    def __init__(self, parent, common, stack, anlz):
         wx.Panel.__init__(self, parent)
+        
+        self.stk = stack
+        self.com = common
+        self.anlz = anlz
         
         self.SetBackgroundColour("White")
         
-        self.stk = parent.GetParent().GetParent().stk
-        self.anlz = parent.GetParent().GetParent().anlz
         
         self.selcluster = 1
         self.numclusters = 5
-        
         self.wo_1st_pca = 0
         
-        self.MakeColorTable()
-        
-        self.com = wx.GetApp().TopWindow.common      
+        self.MakeColorTable()             
         self.fontsize = self.com.fontsize
         
         
@@ -435,29 +432,29 @@ class PageCluster(wx.Panel):
         
 #----------------------------------------------------------------------     
     def OnShowScatterplots(self, evt):    
-        Scatterplots().Show()
+        Scatterplots(self.com, self.anlz).Show()
         
 #---------------------------------------------------------------------- 
 class Scatterplots(wx.Frame):
 
     title = "Scatter plots"
  
-    def __init__(self):
+    def __init__(self, common, analz):
         wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(600, 550))
         
         self.SetBackgroundColour("White")
         
-        ico = logo_2l_32.getlogo_2l_32Icon()
+        ico = logos.getlogo_2l_32Icon()
         self.SetIcon(ico)
         
         self.SetBackgroundColour("White") 
         
         self.colors = wx.GetApp().TopWindow.page3.colors
         
-        self.com = wx.GetApp().TopWindow.common       
+        self.com = common       
         self.fontsize = self.com.fontsize
         
-        self.anlz = wx.GetApp().TopWindow.page3.anlz
+        self.anlz = analz
         self.numsigpca = self.anlz.numsigpca  
         self.ncols = self.anlz.stack.n_cols
         self.nrows = self.anlz.stack.n_rows
@@ -648,18 +645,19 @@ class Scatterplots(wx.Frame):
     
 """ ------------------------------------------------------------------------------------------------"""
 class PagePCA(wx.Panel):
-    def __init__(self, parent):
+    def __init__(self, parent, common, stack, anlz):
         wx.Panel.__init__(self, parent)
         
         self.SetBackgroundColour("White")
         
-        self.stk = parent.GetParent().GetParent().stk       
-        self.anlz = parent.GetParent().GetParent().anlz
+        self.com = common 
+        self.stk = stack       
+        self.anlz = anlz
         
         self.selpca = 1       
         self.numsigpca = 2
         
-        self.com = wx.GetApp().TopWindow.common   
+          
         self.fontsize = self.com.fontsize
         
   
@@ -809,7 +807,6 @@ class PagePCA(wx.Panel):
 #----------------------------------------------------------------------
     def CalcPCA(self):
  
-        
         self.anlz.setdata(self.stk)
         self.anlz.calculate_pca()
      
@@ -993,16 +990,17 @@ class PagePCA(wx.Panel):
         axes.set_ylabel('Optical Density')
         
         self.PCASpecPan.draw()
-        #self.PCAImagePan.Refresh()        
+ 
         
 """ ------------------------------------------------------------------------------------------------"""
 class PageStack(wx.Panel):
-    def __init__(self, parent):
+    def __init__(self, parent, common, stack):
         wx.Panel.__init__(self, parent)
         
+        self.stk = stack
+        self.com = common                  
         self.SetBackgroundColour("White")
         
-        self.stk = parent.GetParent().GetParent().stk
         self.filename = " "
        
         self.ix = 0
@@ -1010,8 +1008,6 @@ class PageStack(wx.Panel):
         self.iev = 50  
         self.sel = 50
         self.showflux = True
-        
-        self.com = wx.GetApp().TopWindow.common      
         self.fontsize = self.com.fontsize
  
 
@@ -1135,7 +1131,7 @@ class PageStack(wx.Panel):
 
 #----------------------------------------------------------------------        
     def loadImage(self):
-        
+               
         self.image = 0         
         if self.showflux:  
             #Show flux image      
@@ -1253,7 +1249,7 @@ class PageStack(wx.Panel):
         
 #----------------------------------------------------------------------       
     def OnI0histogram(self, event):    
-        ShowHistogram().Show()
+        ShowHistogram(self.stk).Show()
          
 
 #----------------------------------------------------------------------       
@@ -1335,22 +1331,22 @@ class PageStack(wx.Panel):
 #----------------------------------------------------------------------    
         
     def OnLimitEv(self, evt):    
-        LimitEv().Show()
+        LimitEv(self.com, self.stk).Show()
         
 #---------------------------------------------------------------------- 
 class ShowHistogram(wx.Frame):
 
     title = "Histogram"
 
-    def __init__(self):
+    def __init__(self, stack):
         wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(630, 700))
                
-        ico = logo_2l_32.getlogo_2l_32Icon()
+        ico = logos.getlogo_2l_32Icon()
         self.SetIcon(ico)
         
         self.SetBackgroundColour("White") 
         
-        self.stack = wx.GetApp().TopWindow.page1.stk
+        self.stack = stack
         
         self.com = wx.GetApp().TopWindow.common         
         self.fontsize = self.com.fontsize
@@ -1499,17 +1495,16 @@ class LimitEv(wx.Frame):
 
     title = "Limit energy range"
 
-    def __init__(self):
+    def __init__(self, common, stack):
         wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(630, 560))
                
-        ico = logo_2l_32.getlogo_2l_32Icon()
+        ico = logos.getlogo_2l_32Icon()
         self.SetIcon(ico)
         
         self.SetBackgroundColour("White") 
         
-        self.stack = wx.GetApp().TopWindow.page1.stk
-        
-        self.com = wx.GetApp().TopWindow.common         
+        self.stack = stack
+        self.com = common         
         self.fontsize = self.com.fontsize
         
         self.evlimited = 0
@@ -1641,7 +1636,7 @@ class PlotFrame(wx.Frame):
     def __init__(self, datax, datay):
         wx.Frame.__init__(self, wx.GetApp().TopWindow, title = "I0 data", size=(630, 500))
         
-        ico = logo_2l_32.getlogo_2l_32Icon()
+        ico = logos.getlogo_2l_32Icon()
         self.SetIcon(ico)
         
         self.SetBackgroundColour("White")
@@ -1706,15 +1701,14 @@ class MainFrame(wx.Frame):
         wx.Frame.__init__(self, parent, id, title, size=(Winsizex, Winsizey))
         
       
-        ico = logo_2l_32.getlogo_2l_32Icon()
+        ico = logos.getlogo_2l_32Icon()
         self.SetIcon(ico)
 
         
         self.initToolbar()
         
-        self.stk = x1a_stk.x1astk()
+        self.stk = data_stack.data()
         self.anlz = analyze.analyze()
-        
         self.common = common()
                       
 
@@ -1723,9 +1717,9 @@ class MainFrame(wx.Frame):
         nb = wx.Notebook(p, style=wx.BORDER_STATIC)
 
         # create the page windows as children of the notebook
-        self.page1 = PageStack(nb)
-        self.page2 = PagePCA(nb)
-        self.page3 = PageCluster(nb)
+        self.page1 = PageStack(nb, self.common, self.stk)
+        self.page2 = PagePCA(nb, self.common, self.stk, self.anlz)
+        self.page3 = PageCluster(nb, self.common, self.stk, self.anlz)
 
         # add the pages to the notebook with the label to show on the tab
         nb.AddPage(self.page1, "Image Stack")
@@ -1755,8 +1749,12 @@ class MainFrame(wx.Frame):
         save_ico = wx.ArtProvider.GetBitmap(wx.ART_FILE_SAVE, wx.ART_TOOLBAR, (16,16))
         saveTool = self.toolbar.AddSimpleTool(wx.ID_SAVE, save_ico, "Save", "Save analysis")
         self.toolbar.EnableTool(wx.ID_SAVE, False)       
-        #self.Bind(wx.EVT_MENU, self.onBrowse, openTool)     
+        #self.Bind(wx.EVT_MENU, self.onBrowse, saveTool)     
         
+        saveas_ico = wx.ArtProvider.GetBitmap(wx.ART_FILE_SAVE_AS, wx.ART_TOOLBAR, (16,16))
+        saveasTool = self.toolbar.AddSimpleTool(wx.ID_SAVEAS, saveas_ico, "Convert .stk to .hdf5", "Convert .stk to .hdf5")
+        self.Bind(wx.EVT_MENU, self.onSaveAsH5, saveasTool)
+        self.toolbar.EnableTool(wx.ID_SAVEAS, False)
         
         help_ico = wx.ArtProvider.GetBitmap(wx.ART_INFORMATION, wx.ART_TOOLBAR, (16,16))
         helpTool = self.toolbar.AddSimpleTool(wx.ID_HELP, help_ico, "About", "About")
@@ -1772,45 +1770,83 @@ class MainFrame(wx.Frame):
         Browse for .stk file
         """
         try: 
-            wildcard = "STK files (*.stk)|*.stk"
+            wildcard = "STK files (*.stk)|*.stk|" + "HDF5 files (*.hdf5)|*.hdf5"
             dialog = wx.FileDialog(None, "Choose a file",
                                     wildcard=wildcard,
                                     style=wx.OPEN)
             if dialog.ShowModal() == wx.ID_OK:
                             filepath = dialog.GetPath()
                             self.page1.filename = dialog.GetFilename()
-                                                        
-            wx.BeginBusyCursor()     
+                                  
+            basename, extension = os.path.splitext(self.page1.filename)      
             
-            if self.common.stack_loaded == 1:
-                self.new_stack_refresh()  
-                self.stk = x1a_stk.x1astk() 
-                self.anlz = analyze.analyze()                   
+            if extension == '.stk':
+                wx.BeginBusyCursor()     
             
-            self.stk.read_stk(filepath)
-                         
-            self.page1.slider.SetRange(0,self.stk.n_ev-1)
-            self.iev = self.stk.n_ev/2
-            self.page1.iev = self.iev
-            self.page1.slider.SetValue(self.iev)
+                if self.common.stack_loaded == 1:
+                    self.new_stack_refresh()  
+                    self.stk = data_stack.data() 
+                    self.anlz = analyze.analyze()                   
+                self.stk.read_stk(filepath)        
+                self.page1.slider.SetRange(0,self.stk.n_ev-1)
+                self.iev = self.stk.n_ev/2
+                self.page1.iev = self.iev
+                self.page1.slider.SetValue(self.iev)
             
-            x=self.stk.n_cols
-            y=self.stk.n_rows
-            z=self.iev               
-            self.page1.imgrgb = npy.zeros(x*y*3,dtype = "uint8")        
-            self.page1.maxval = npy.amax(self.stk.imagestack)
+                x=self.stk.n_cols
+                y=self.stk.n_rows
+                z=self.iev               
+                self.page1.imgrgb = npy.zeros(x*y*3,dtype = "uint8")        
+                self.page1.maxval = npy.amax(self.stk.imagestack)
             
-            self.ix = x/2
-            self.iy = y/2
+                self.ix = x/2
+                self.iy = y/2
                         
-            self.common.stack_loaded = 1
+                self.common.stack_loaded = 1
                 
-            self.page1.loadImage()
-            self.page1.textctrl.SetValue(self.page1.filename)
+                self.page1.loadImage()
+                self.page1.textctrl.SetValue(self.page1.filename)
+                
 
-            wx.EndBusyCursor()
+                wx.EndBusyCursor()
+                
+            if extension == '.hdf5':
+                wx.BeginBusyCursor()     
+                
             
+                if self.common.stack_loaded == 1:
+                    self.new_stack_refresh()  
+                    self.stk = data_stack.data() 
+                    self.anlz = analyze.analyze()                   
+            
+                self.stk.read_h5(filepath)
+                         
+                self.page1.slider.SetRange(0,self.stk.n_ev-1)
+                self.iev = self.stk.n_ev/2
+                self.page1.iev = self.iev
+                self.page1.slider.SetValue(self.iev)
+            
+                x=self.stk.n_cols
+                y=self.stk.n_rows
+                z=self.iev               
+                self.page1.imgrgb = npy.zeros(x*y*3,dtype = "uint8")        
+                self.page1.maxval = npy.amax(self.stk.absdata)
+            
+                self.ix = x/2
+                self.iy = y/2
+                        
+                self.common.stack_loaded = 1
+                self.common.i0_loaded = 1
+                
+                self.page1.loadImage()
+                self.page1.loadSpectrum(self.ix, self.iy)
+                self.page1.textctrl.SetValue(self.page1.filename)
+                
+
+                wx.EndBusyCursor()
+
         except:
+
             self.common.stack_loaded = 0 
             self.common.i0_loaded = 0
                                
@@ -1819,10 +1855,40 @@ class MainFrame(wx.Frame):
                    
         dialog.Destroy()
         self.refresh_widgets()
+        
+#----------------------------------------------------------------------
+    def onSaveAsH5(self, event):
+
+        """
+        Browse for .hdf5 file
+        """
+        try: 
+            wildcard = "HDF5 files (*.hdf5)|*.hdf5"
+            dialog = wx.FileDialog(None, "Choose a file",
+                                    wildcard=wildcard,
+                                    style=wx.OPEN)
+            if dialog.ShowModal() == wx.ID_OK:
+                            filepath = dialog.GetPath()
+                            self.page1.filename = dialog.GetFilename()
+
+            wx.BeginBusyCursor()                 
+            self.stk.convert_stk_to_h5(filepath)        
+            wx.EndBusyCursor()      
+
+        except:
+
+            wx.EndBusyCursor()
+            wx.MessageBox("Could not save HDF5 file.")
+                   
+        dialog.Destroy()
+        self.refresh_widgets()
+        
+        return
        
 #----------------------------------------------------------------------
     def onAbout(self, event):
         AboutFrame().Show()
+        return
         
 #----------------------------------------------------------------------        
     def refresh_widgets(self):
@@ -1843,12 +1909,14 @@ class MainFrame(wx.Frame):
             self.page1.rb_flux.Disable()
             self.page1.rb_od.Disable()
             self.page2.button_calcpca.Disable()
+            self.toolbar.EnableTool(wx.ID_SAVEAS, False)
         else:
             self.page1.button_limitev.Enable()
             self.page1.button_showi0.Enable()
             self.page1.rb_flux.Enable()
             self.page1.rb_od.Enable()   
-            self.page2.button_calcpca.Enable()   
+            self.page2.button_calcpca.Enable() 
+            self.toolbar.EnableTool(wx.ID_SAVEAS, True)  
             
             
         if self.common.pca_calculated == 0:      
@@ -1938,9 +2006,9 @@ class MainFrame(wx.Frame):
 class AboutFrame(wx.Frame):
 
     def __init__(self):
-        wx.Frame.__init__(self, wx.GetApp().TopWindow, title = "About", size=(350, 400))
+        wx.Frame.__init__(self, wx.GetApp().TopWindow, title = "About Mantis", size=(410, 510))
         
-        ico = logo_2l_32.getlogo_2l_32Icon()
+        ico = logos.getlogo_2l_32Icon()
         self.SetIcon(ico)
         
         
@@ -1956,22 +2024,15 @@ class AboutFrame(wx.Frame):
         panel = wx.Panel(self, -1)
         vbox = wx.BoxSizer(wx.VERTICAL)
         
-        img = logo_2ndlook.getlogo_2ndlookImage()              
+        img = logos.getMantis_logo_aboutImage()
         self.imageCtrl = wx.StaticBitmap(panel, wx.ID_ANY, wx.BitmapFromImage(img))
  
-        vbox.Add(self.imageCtrl, 0, wx.ALL, 20)
+        vbox.Add(self.imageCtrl, 0, wx.ALL, 2)
 
         
-        font1 = wx.Font(12, wx.SWISS, wx.NORMAL, wx.NORMAL)
-        text1 = wx.StaticText(panel, 0, "Mantis")
-        text1.SetFont(font1)
-        
-        font2 = wx.Font(10, wx.SWISS, wx.NORMAL, wx.LIGHT)
-        text2 = wx.StaticText(panel, 0, "version 1.0")
-        text2.SetFont(font2)
-        
         font3 = wx.Font(12, wx.SWISS, wx.NORMAL, wx.NORMAL)
-        text3 = wx.StaticText(panel, 0, "Developed by Mirna Lerotic")
+        text3 = wx.StaticText(panel, 0, '''Mantis 1.0  
+Developed by Mirna Lerotic''')
         text3.SetFont(font3)
              
         font4 = wx.Font(12, wx.SWISS, wx.NORMAL, wx.NORMAL)
@@ -1979,13 +2040,11 @@ class AboutFrame(wx.Frame):
         text4.SetFont(font4)   
         text4.SetForegroundColour((53,159,217)) 
 
-        vbox .Add((0,10))
-        vbox.Add(text1,0, wx.LEFT, 40)
-        vbox.Add(text2,0, wx.LEFT, 40)  
-        vbox.Add((0,25))      
-        vbox.Add(text3,0, wx.LEFT, 40)     
+        vbox .Add((0,30))
+  
+        vbox.Add(text3,0, wx.LEFT, 50)     
         vbox.Add((0,10)) 
-        vbox.Add(text4,0, wx.LEFT, 120) 
+        vbox.Add(text4,0, wx.LEFT, 50) 
         
         
         button_close = wx.Button(panel, 0, 'Close')
@@ -2003,11 +2062,28 @@ class AboutFrame(wx.Frame):
     def OnClose(self, evt):
         self.Close(True)
         
-        
-        
+    
+""" ------------------------------------------------------------------------------------------------"""    
+def show_splash():
+    # create, show and return the splash screen
+    bitmap = logos.getMantis_logo_splashBitmap()
+    splash = wx.SplashScreen(bitmap, wx.SPLASH_CENTRE_ON_SCREEN|wx.SPLASH_NO_TIMEOUT, 3000, None, -1)
+    splash.Show()
+    return splash
+
 """ ------------------------------------------------------------------------------------------------"""
+def main():
+    app = wx.App()
+    splash = show_splash()
+   
+    time.sleep(1)
+
+    frame = MainFrame(None, -1, 'Mantis')
+    frame.Show()
+
+    splash.Destroy()
+    app.MainLoop()
+
 
 if __name__ == '__main__':
-    app = wx.App()
-    MainFrame(None, -1, 'Mantis')
-    app.MainLoop()
+    main()
