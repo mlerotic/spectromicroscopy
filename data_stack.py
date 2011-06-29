@@ -19,16 +19,51 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
         aps_hdf5.h5.__init__(self)
 
         pass
-    
+#----------------------------------------------------------------------   
+    def new_data(self):
+        self.n_cols = 0
+        self.n_rows = 0
+        self.n_ev = 0
+               
+        self.x_dist = 0       
+        self.y_dist = 0
+
+        self.ev = 0 
+        self.msec = 0
+        self.imagestack = 0             
+        self.absdata = 0
+
+        self.original_n_cols = 0
+        self.original_n_rows = 0
+        self.original_n_ev = 0
+        self.original_ev = 0
+        self.original_absdata = 0
+        
+        self.i0data =0
+        self.evi0 = 0
+        
+        self.od = 0
+        self.od3d = 0
+        self.original_absdata = 0
+        self.original_ev = 0
+        self.original_n_cols = 0
+        self.original_n_ev = 0
+        self.original_n_rows = 0
+        self.original_od3d = 0
+           
 #----------------------------------------------------------------------   
     def read_stk_i0(self, filename):
-        print filename
         x1a_stk.x1astk.read_stk_i0(self,filename)
-        
         self.calculate_optical_density()
-        
+
 #---------------------------------------------------------------------- 
-    def read_h5(self, filename):      
+    def read_stk(self, filename):    
+        self.new_data()  
+        x1a_stk.x1astk.read_stk(self, filename)
+  
+#---------------------------------------------------------------------- 
+    def read_h5(self, filename):    
+        self.new_data()  
         aps_hdf5.h5.read_h5(self, filename)
         
         self.calculate_optical_density()
@@ -118,8 +153,19 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
         return    
     
 #----------------------------------------------------------------------   
+    def set_i0(self, i0data, evdata):
+
+        self.evi0 = evdata
+        self.i0data = i0data 
+
+        self.calculate_optical_density()    
+    
+        return  
+    
+#----------------------------------------------------------------------   
 # Normalize the data: calculate optical density matrix D 
     def calculate_optical_density(self):
+
         n_pixels = self.n_cols*self.n_rows
         self.od = np.empty((self.n_cols, self.n_rows, self.n_ev))
         
@@ -144,9 +190,15 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
             self.od[nan_indices] = 0
             
         self.od3d = self.od.copy()
-            
+
         #Optical density matrix is rearranged into n_pixelsxn_ev
         self.od = np.reshape(self.od, (n_pixels, self.n_ev), order='F')
         self.original_od3d = self.od3d.copy()
         
         return
+    
+#----------------------------------------------------------------------   
+    def write_xas(self, filename, evdata, i0data):
+        print filename
+    
+        return  

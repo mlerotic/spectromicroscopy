@@ -330,7 +330,7 @@ class PageCluster(wx.Panel):
 #----------------------------------------------------------------------    
     def OnSave(self, event):     
                
-        fileName = wx.FileSelector('Save Plot', default_extension='png', 
+        fileName = wx.FileSelector('Save', default_extension='png', 
                                    wildcard=('Portable Network Graphics (*.png)|*.png|' 
                                              + 'Encapsulated Postscript (*.eps)|*.eps|All files (*.*)|*.*'), 
                                               parent=self, flags=wx.SAVE|wx.OVERWRITE_PROMPT) 
@@ -554,7 +554,7 @@ class Scatterplots(wx.Frame):
     def OnSaveScatt(self, event): 
           
                
-        fileName = wx.FileSelector('Save Plot', default_extension='png', 
+        fileName = wx.FileSelector('Save Plots', default_extension='png', 
                                    wildcard=('Portable Network Graphics (*.png)|*.png|' 
                                              + 'Encapsulated Postscript (*.eps)|*.eps|All files (*.*)|*.*'), 
                                               parent=self, flags=wx.SAVE|wx.OVERWRITE_PROMPT) 
@@ -1009,7 +1009,11 @@ class PageStack(wx.Panel):
         self.sel = 50
         self.showflux = True
         self.fontsize = self.com.fontsize
- 
+        
+        self.addroi = 0 
+        self.showROImask = 0
+        self.line = None
+        self.ROIpix = None
 
         vbox = wx.BoxSizer(wx.VERTICAL)
         hboxT = wx.BoxSizer(wx.HORIZONTAL)
@@ -1024,7 +1028,7 @@ class PageStack(wx.Panel):
         hbox11 = wx.BoxSizer(wx.HORIZONTAL)
    
         self.AbsImagePanel = mpl.PlotPanel(panel1, -1, size =(3.5,3.5), cursor=False, crosshairs=True, location=False, zoom=False)
-        mpl.EVT_POINT(panel1, self.AbsImagePanel.GetId(), self.on_point_absimage)
+        mpl.EVT_POINT(panel1, self.AbsImagePanel.GetId(), self.OnPointAbsimage)
                               
         self.slider = wx.Slider(panel1, -1, self.sel, 0, 100, style=wx.SL_LEFT )        
         self.slider.SetFocus()
@@ -1057,27 +1061,30 @@ class PageStack(wx.Panel):
         
         #panel 3
         panel3 = wx.Panel(self, -1)
-        sizer1 = wx.StaticBoxSizer(wx.StaticBox(panel3, -1, 'Preprocess'), wx.VERTICAL)
-        self.button_limitev = wx.Button(panel3, -1, 'Limit energy range')
+        sizer1 = wx.StaticBoxSizer(wx.StaticBox(panel3, -1, 'Preprocess', size =(100,-1)),orient=wx.VERTICAL)
+        vbox31 = wx.BoxSizer(wx.VERTICAL)
+        
+        self.button_limitev = wx.Button(panel3, -1, '   Limit energy range   ', (10,10))
         self.Bind(wx.EVT_BUTTON, self.OnLimitEv, id=self.button_limitev.GetId())
         self.button_limitev.Disable()
-        sizer1.Add(self.button_limitev, 0, )
-        self.button_i0ffile = wx.Button(panel3, -1, 'I0 from file')
+        vbox31.Add(self.button_limitev, 1, wx.EXPAND)
+        self.button_i0ffile = wx.Button(panel3, -1, 'I0 from file', (10,10))
         self.Bind(wx.EVT_BUTTON, self.OnI0FFile, id=self.button_i0ffile.GetId())
         self.button_i0ffile.Disable()
-        sizer1.Add(self.button_i0ffile, 0, wx.EXPAND)
-        self.button_i0histogram = wx.Button(panel3, -1, 'I0 from histogram')
+        vbox31.Add(self.button_i0ffile, 1, wx.EXPAND)
+        self.button_i0histogram = wx.Button(panel3, -1, 'I0 from histogram', (10,10))
         self.Bind(wx.EVT_BUTTON, self.OnI0histogram, id=self.button_i0histogram.GetId())   
         self.button_i0histogram.Disable()     
-        sizer1.Add(self.button_i0histogram, 0, wx.EXPAND)
-        self.button_showi0 = wx.Button(panel3, -1, 'Show I0')
+        vbox31.Add(self.button_i0histogram, 1, wx.EXPAND)
+        self.button_showi0 = wx.Button(panel3, -1, 'Show I0', (10,10))
         self.Bind(wx.EVT_BUTTON, self.OnShowI0, id=self.button_showi0.GetId())   
         self.button_showi0.Disable()
-        sizer1.Add(self.button_showi0, 0, wx.EXPAND)
-        self.button_save = wx.Button(panel3, -1, 'Save')
+        vbox31.Add(self.button_showi0, 1, wx.EXPAND)
+        self.button_save = wx.Button(panel3, -1, 'Save', (10,10))
         self.Bind(wx.EVT_BUTTON, self.OnSave, id=self.button_save.GetId())
         self.button_save.Disable()          
-        sizer1.Add(self.button_save, 0, wx.EXPAND)
+        vbox31.Add(self.button_save, 1, wx.EXPAND)
+        sizer1.Add(vbox31,1, wx.LEFT|wx.RIGHT|wx.EXPAND,2)
         panel3.SetSizer(sizer1)
         
 
@@ -1105,26 +1112,63 @@ class PageStack(wx.Panel):
         sizer21.Add(self.rb_flux)
         sizer21.Add(self.rb_od)
         hbox2.Add(sizer21, 1, wx.EXPAND)
-
-        
+                
         vbox3.Add(hbox1, 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 10)
         vbox3.Add(hbox2, 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 10)
         sizer4.Add(vbox3,1, wx.EXPAND)
-
         
         panel4.SetSizer(sizer4)
+        
+        
+        #panel 5
+        panel5 = wx.Panel(self, -1)
+        sizer5 = wx.StaticBoxSizer(wx.StaticBox(panel5, -1, 'Region of Interest'), wx.VERTICAL)
+        
+        vbox51 = wx.BoxSizer(wx.VERTICAL)
+        self.button_addROI = wx.Button(panel5, -1, 'Add Region', (10,10))
+        self.Bind(wx.EVT_BUTTON, self.OnAddROI, id=self.button_addROI.GetId())
+        self.button_addROI.Disable()
+        vbox51.Add(self.button_addROI, 0, wx.EXPAND)
+        
+        self.button_acceptROI = wx.Button(panel5, -1, 'Accept Region', (10,10))
+        self.Bind(wx.EVT_BUTTON, self.OnAcceptROI, id=self.button_acceptROI.GetId())   
+        self.button_acceptROI.Disable()     
+        vbox51.Add(self.button_acceptROI, 0, wx.EXPAND)
+        
+        self.button_resetROI = wx.Button(panel5, -1, 'Reset Region', (10,10))
+        self.Bind(wx.EVT_BUTTON, self.OnResetROI, id=self.button_resetROI.GetId())
+        self.button_resetROI.Disable()
+        vbox51.Add(self.button_resetROI, 0, wx.EXPAND) 
+
+        self.button_setROII0 = wx.Button(panel5, -1, 'Set Region As I0', (10,10))
+        self.Bind(wx.EVT_BUTTON, self.OnSetROII0, id=self.button_setROII0.GetId())
+        self.button_setROII0.Disable()
+        vbox51.Add(self.button_setROII0, 0, wx.EXPAND)
+        
+        self.button_saveROIspectr = wx.Button(panel5, -1, 'Save Region Spectrum', (10,10))
+        self.Bind(wx.EVT_BUTTON, self.OnSaveROISpectrum, id=self.button_saveROIspectr.GetId())   
+        self.button_saveROIspectr.Disable()     
+        vbox51.Add(self.button_saveROIspectr, 0, wx.EXPAND)
+        
+        sizer5.Add(vbox51,1, wx.ALL|wx.EXPAND,2)        
+        panel5.SetSizer(sizer5)
+
         
 
         hboxB.Add(panel1, 0, wx.BOTTOM | wx.TOP, 9)
         hboxB.Add(panel2, 0, wx.BOTTOM | wx.TOP, 9)
-        hboxT.Add((10,0))        
+        hboxT.Add((10,0)) 
+               
         hboxT.Add(panel3, 1, wx.LEFT | wx.RIGHT | wx.TOP | wx.EXPAND, 10)
-        hboxT.Add(panel4, 3.5, wx.LEFT | wx.RIGHT |wx.TOP | wx.EXPAND,10)
-        
+        hboxT.Add(panel4, 3, wx.LEFT | wx.RIGHT |wx.TOP | wx.EXPAND,10)
+        hboxT.Add(panel5, 1, wx.LEFT | wx.RIGHT |wx.TOP | wx.EXPAND,10)
+
         vbox.Add(hboxT, 0, wx.ALL, 5)
+        
         vbox.Add(hboxB, 0,  wx.ALL, 5)
   
         self.SetSizer(vbox) 
+        
         
 
       
@@ -1145,8 +1189,15 @@ class PageStack(wx.Panel):
         fig.clf()
         fig.add_axes((0.02,0.02,0.96,0.96))
         axes = fig.gca()
-      
-        im = axes.imshow(self.image, cmap=mtplot.cm.get_cmap("gray"))   
+        fig.patch.set_alpha(1.0)
+        
+        if (self.line != None) and (self.addroi == 1):
+            axes.add_line(self.line)
+
+        im = axes.imshow(self.image, cmap=mtplot.cm.get_cmap("gray")) 
+        if (self.showROImask == 1) and (self.addroi == 1):
+            im_red = axes.imshow(self.ROIpix_masked,cmap=mtplot.cm.get_cmap("autumn")) 
+         
         axes.axis("off")  
         self.AbsImagePanel.draw()
         
@@ -1157,8 +1208,7 @@ class PageStack(wx.Panel):
     def loadSpectrum(self, xpos, ypos):
 
         self.spectrum = self.stk.od3d[xpos,ypos, :]
-            
-        
+
         fig = self.SpectrumPanel.get_figure()
         fig.clf()
         fig.add_axes((0.15,0.15,0.75,0.75))
@@ -1184,11 +1234,11 @@ class PageStack(wx.Panel):
             self.loadImage()
                    
 #----------------------------------------------------------------------  
-    def on_point_absimage(self, evt):
+    def OnPointAbsimage(self, evt):
         x = evt.xdata
         y = evt.ydata
         
-        if self.com.i0_loaded == 1:      
+        if (self.com.i0_loaded == 1) and (self.addroi == 0):      
             self.ix = int(npy.floor(y))           
             self.iy = int(npy.floor(x))  
                     
@@ -1201,16 +1251,37 @@ class PageStack(wx.Panel):
             if self.iy>self.stk.n_rows :
                 self.iy=self.stk.n_rows 
             
-           
+
             self.loadSpectrum(self.ix, self.iy)
             self.loadImage()
-        
+
+            
+        if (self.com.stack_loaded == 1) and (self.addroi == 1):
+            if self.line == None: # if there is no line, create a line
+                self.line = mtplot.lines.Line2D([x,  x], [y, y], marker = '.', color = 'red')
+                self.start_point = [x,y]
+                self.previous_point =  self.start_point
+                self.roixdata.append(x)
+                self.roiydata.append(y)
+                self.loadImage()
+            # add a segment
+            else: # if there is a line, create a segment
+                self.roixdata.append(x)
+                self.roiydata.append(y)
+                self.line.set_data(self.roixdata,self.roiydata)
+                self.previous_point = [x,y]
+                if len(self.roixdata) == 3:
+                    self.button_acceptROI.Enable()
+                self.loadImage()
+
+
+
 #----------------------------------------------------------------------
         
     def OnI0FFile(self, event):
 
         try: 
-            wildcard = "STK files (*.xas)|*.xas"
+            wildcard = "I0 files (*.xas)|*.xas"
             dialog = wx.FileDialog(None, "Choose i0 file",
                                     wildcard=wildcard,
                                     style=wx.OPEN)
@@ -1226,7 +1297,6 @@ class PageStack(wx.Panel):
 
             self.ix = x/2
             self.iy = y/2
-
 
             self.stk.read_stk_i0(filepath_i0)
             
@@ -1313,8 +1383,7 @@ class PageStack(wx.Panel):
                           parent=self, style=wx.OK|wx.ICON_ERROR) 
 
 
-#----------------------------------------------------------------------    
-        
+#----------------------------------------------------------------------          
     def onrb_fluxod(self, evt):
         state = self.rb_flux.GetValue()
         
@@ -1328,11 +1397,214 @@ class PageStack(wx.Panel):
 
         
  
-#----------------------------------------------------------------------    
-        
+#----------------------------------------------------------------------        
     def OnLimitEv(self, evt):    
         LimitEv(self.com, self.stk).Show()
         
+#----------------------------------------------------------------------         
+# Determine if a point is inside a given polygon or not. The algorithm is called
+# "Ray Casting Method".
+    def point_in_poly(self, x, y, polyx, polyy):
+
+        n = len(polyx)
+        inside = False
+
+        p1x = polyx[0]
+        p1y = polyy[0]
+        for i in range(n+1):
+            p2x = polyx[i % n]
+            p2y = polyy[i % n]
+            if y > min(p1y,p2y):
+                if y <= max(p1y,p2y):
+                    if x <= max(p1x,p2x):
+                        if p1y != p2y:
+                            xinters = (y-p1y)*(p2x-p1x)/(p2y-p1y)+p1x
+                            if p1x == p2x or x <= xinters:
+                                inside = not inside
+            p1x,p1y = p2x,p2y
+
+        return inside
+        
+#----------------------------------------------------------------------    
+    def OnAddROI(self, evt):    
+        self.addroi = 1
+        self.previous_point = []
+        self.start_point = []
+        self.end_point = []
+        self.line = None
+        self.roixdata = []
+        self.roiydata = []
+                
+        fig = self.SpectrumPanel.get_figure()
+        fig.clf()
+        self.SpectrumPanel.draw()
+        self.tc_spec.SetValue("Average ROI Spectrum: ")
+        
+        self.button_acceptROI.Disable()
+        self.button_resetROI.Enable()
+        wx.GetApp().TopWindow.refresh_widgets()
+
+        return
+        
+        
+#----------------------------------------------------------------------    
+    def CalcROISpectrum(self):
+              
+        self.ROIspectrum = npy.zeros((self.stk.n_ev))
+               
+        indices = npy.where(self.ROIpix == 255)
+        numroipix = self.ROIpix[indices].shape[0]
+            
+        for ie in range(self.stk.n_ev):
+            thiseng_od = self.stk.od3d[:,:,ie]
+            self.ROIspectrum[ie] = npy.sum(thiseng_od[indices])/numroipix
+                 
+#----------------------------------------------------------------------          
+    def ShowROISpectrum(self):
+        
+        self.CalcROISpectrum()
+
+        fig = self.SpectrumPanel.get_figure()
+        fig.clf()
+        fig.add_axes((0.15,0.15,0.75,0.75))
+        axes = fig.gca()
+        
+        mtplot.rcParams['font.size'] = self.fontsize
+
+        specplot = axes.plot(self.stk.ev,self.ROIspectrum)
+        
+        axes.set_xlabel('Photon Energy [eV]')
+        axes.set_ylabel('Optical Density')
+        
+        self.SpectrumPanel.draw()
+        
+        self.tc_spec.SetValue("Average ROI Spectrum: ")
+        
+#----------------------------------------------------------------------    
+    def OnAcceptROI(self, evt):    
+        self.roixdata.append(self.start_point[0])
+        self.roiydata.append(self.start_point[1])
+        self.line.set_data(self.roixdata,self.roiydata)
+        self.loadImage()
+        
+        #find pixels inside the polygon 
+        if self.ROIpix == None:
+            self.ROIpix = npy.zeros((self.stk.n_cols,self.stk.n_rows))    
+        
+        for i in range(self.stk.n_cols):
+            for j in range(self.stk.n_rows):
+                Pinside = self.point_in_poly(i, j, self.roixdata, self.roiydata)
+                if Pinside == True:
+                    self.ROIpix[j,i] = 255
+              
+        self.ROIpix = npy.ma.array(self.ROIpix)
+        
+        self.ROIpix_masked =  npy.ma.masked_values(self.ROIpix, 0)
+        
+        self.showROImask = 1
+        self.line = None
+        self.previous_point = []
+        self.start_point = []
+        self.end_point = []
+        self.roixdata = []
+        self.roiydata = []
+
+        self.button_saveROIspectr.Enable()
+        self.button_setROII0.Enable()
+        wx.GetApp().TopWindow.refresh_widgets()
+                
+        self.loadImage()
+        if (self.com.i0_loaded == 1):
+            self.ShowROISpectrum()
+        
+    
+#----------------------------------------------------------------------    
+    def OnResetROI(self, evt): 
+        self.addroi = 0   
+        self.showROImask = 0
+        self.ROIpix = None
+        
+        self.button_acceptROI.Disable()
+        self.button_setROII0.Disable()
+        self.button_resetROI.Disable()
+        self.button_saveROIspectr.Disable()
+        wx.GetApp().TopWindow.refresh_widgets()
+        
+        self.loadImage()
+        if (self.com.i0_loaded == 1):
+            self.loadSpectrum(self.ix, self.iy)
+        pass
+    
+#----------------------------------------------------------------------    
+    def CalcROI_I0Spectrum(self):
+   
+        self.ROIspectrum = npy.zeros((self.stk.n_ev))
+               
+        indices = npy.where(self.ROIpix == 255)
+        numroipix = self.ROIpix[indices].shape[0]
+            
+        for ie in range(self.stk.n_ev):
+            thiseng_abs = self.stk.absdata[:,:,ie]
+            self.ROIspectrum[ie] = npy.sum(thiseng_abs[indices])/numroipix
+                
+#----------------------------------------------------------------------    
+    def OnSetROII0(self, evt):    
+        self.CalcROI_I0Spectrum()   
+        
+        self.stk.set_i0(self.ROIspectrum, self.stk.ev)  
+        
+        PlotFrame(self.stk.evi0,self.stk.i0data).Show()              
+         
+        x=self.stk.n_cols
+        y=self.stk.n_rows
+             
+        self.ix = int(x/2)
+        self.iy = int(y/2)
+        
+        self.com.i0_loaded = 1
+        
+        self.addroi = 0   
+        self.showROImask = 0
+        self.ROIpix = None
+        
+        self.loadSpectrum(self.ix, self.iy)
+        self.loadImage()
+        
+        self.button_acceptROI.Disable()
+        self.button_setROII0.Disable()
+        wx.GetApp().TopWindow.refresh_widgets()
+        
+
+        
+#----------------------------------------------------------------------    
+    def OnSaveROISpectrum(self, event):  
+               
+        fileName = wx.FileSelector('Save ROI Spectrum (.xas)', default_extension='xas', 
+                                   wildcard=('XAS (*.xas)|*.xas|'), 
+                                              parent=self, flags=wx.SAVE|wx.OVERWRITE_PROMPT) 
+   
+        if not fileName: 
+            return 
+
+        path, ext = os.path.splitext(fileName) 
+        ext = ext[1:].lower() 
+   
+        try: 
+            self.stk.write_xas(fileName, self.stk.ev, self.ROIspectrum)
+                     
+                
+        except IOError, e:
+            if e.strerror:
+                err = e.strerror 
+            else: 
+                err = e 
+   
+            wx.MessageBox('Could not save file: %s' % err, 'Error', 
+                          parent=self, style=wx.OK|wx.ICON_ERROR) 
+            
+        
+ 
+               
 #---------------------------------------------------------------------- 
 class ShowHistogram(wx.Frame):
 
@@ -1770,7 +2042,7 @@ class MainFrame(wx.Frame):
         Browse for .stk file
         """
         try: 
-            wildcard = "STK files (*.stk)|*.stk|" + "HDF5 files (*.hdf5)|*.hdf5"
+            wildcard =  "HDF5 files (*.hdf5)|*.hdf5|" + "STK files (*.stk)|*.stk|" 
             dialog = wx.FileDialog(None, "Choose a file",
                                     wildcard=wildcard,
                                     style=wx.OPEN)
@@ -1785,7 +2057,6 @@ class MainFrame(wx.Frame):
             
                 if self.common.stack_loaded == 1:
                     self.new_stack_refresh()  
-                    self.stk = data_stack.data() 
                     self.anlz = analyze.analyze()                   
                 self.stk.read_stk(filepath)        
                 self.page1.slider.SetRange(0,self.stk.n_ev-1)
@@ -1813,11 +2084,9 @@ class MainFrame(wx.Frame):
             if extension == '.hdf5':
                 wx.BeginBusyCursor()     
                 
-            
                 if self.common.stack_loaded == 1:
                     self.new_stack_refresh()  
-                    self.stk = data_stack.data() 
-                    self.anlz = analyze.analyze()                   
+                    self.anlz = analyze.analyze()              
             
                 self.stk.read_h5(filepath)
                          
@@ -1838,6 +2107,7 @@ class MainFrame(wx.Frame):
                 self.common.stack_loaded = 1
                 self.common.i0_loaded = 1
                 
+            
                 self.page1.loadImage()
                 self.page1.loadSpectrum(self.ix, self.iy)
                 self.page1.textctrl.SetValue(self.page1.filename)
@@ -1864,9 +2134,9 @@ class MainFrame(wx.Frame):
         """
         try: 
             wildcard = "HDF5 files (*.hdf5)|*.hdf5"
-            dialog = wx.FileDialog(None, "Choose a file",
-                                    wildcard=wildcard,
-                                    style=wx.OPEN)
+            dialog = wx.FileDialog(None, "Save as .hdf5", wildcard=wildcard,
+                                    style=wx.SAVE|wx.OVERWRITE_PROMPT)
+
             if dialog.ShowModal() == wx.ID_OK:
                             filepath = dialog.GetPath()
                             self.page1.filename = dialog.GetFilename()
@@ -1898,10 +2168,12 @@ class MainFrame(wx.Frame):
             self.page1.button_i0ffile.Disable()
             self.page1.button_i0histogram.Disable() 
             self.page1.button_save.Disable() 
+            self.page1.button_addROI.Disable()
         else:
             self.page1.button_i0ffile.Enable()
             self.page1.button_i0histogram.Enable() 
-            self.page1.button_save.Enable()             
+            self.page1.button_save.Enable()     
+            self.page1.button_addROI.Enable()  
             
         if self.common.i0_loaded == 0:
             self.page1.button_limitev.Disable()
@@ -1938,6 +2210,8 @@ class MainFrame(wx.Frame):
             self.page3.button_savecluster.Enable()  
             self.page3.slidershow.Enable()          
             
+            
+            
 #----------------------------------------------------------------------        
     def new_stack_refresh(self):
         
@@ -1955,7 +2229,14 @@ class MainFrame(wx.Frame):
         fig = self.page1.SpectrumPanel.get_figure()
         fig.clf()
         self.page1.SpectrumPanel.draw()
-        self.page1.tc_spec.SetValue("Spectrum at point: ")
+        self.page1.tc_spec.SetValue("Spectrum at point: ")       
+        
+        fig = self.page1.AbsImagePanel.get_figure()
+        fig.clf()
+        self.page1.AbsImagePanel.draw()        
+        self.page1.tc_imageeng.SetValue("Image at energy: ")
+        
+        self.page1.textctrl.SetValue(' ')
         
         
         #page 2
@@ -2077,7 +2358,6 @@ def main():
     splash = show_splash()
    
     time.sleep(1)
-
     frame = MainFrame(None, -1, 'Mantis')
     frame.Show()
 

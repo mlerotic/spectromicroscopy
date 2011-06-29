@@ -55,7 +55,7 @@ class x1astk:
 
 #----------------------------------------------------------------------   
     def read_stk_i0(self, filename):
-        print 'tusam'
+
         f = open(str(filename),'r')
         
         elist = []
