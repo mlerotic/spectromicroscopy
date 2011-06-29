@@ -1589,8 +1589,12 @@ class PageStack(wx.Panel):
         path, ext = os.path.splitext(fileName) 
         ext = ext[1:].lower() 
    
-        try: 
-            self.stk.write_xas(fileName, self.stk.ev, self.ROIspectrum)
+        try:
+            if (self.com.i0_loaded == 1):
+                self.stk.write_xas(fileName, self.stk.ev, self.ROIspectrum)
+            else:
+                self.CalcROI_I0Spectrum()
+                self.stk.write_xas(fileName, self.stk.ev, self.ROIspectrum)
                      
                 
         except IOError, e:
