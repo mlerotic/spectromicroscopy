@@ -59,10 +59,10 @@ class PageCluster(wx.Panel):
         self.button_calcca = wx.Button(panel1, -1, 'Calculate Clusters', (10, 10))
         self.Bind(wx.EVT_BUTTON, self.OnCalcClusters, id=self.button_calcca.GetId())   
         self.button_calcca.Disable()     
-        self.button_scatterplots = wx.Button(panel1, -1, 'Show scatter plots', (10, 10))
+        self.button_scatterplots = wx.Button(panel1, -1, 'Show scatter plots...', (10, 10))
         self.Bind(wx.EVT_BUTTON, self.OnShowScatterplots, id=self.button_scatterplots.GetId())
         self.button_scatterplots.Disable()
-        self.button_savecluster = wx.Button(panel1, -1, 'Save CA Results', (10, 10))
+        self.button_savecluster = wx.Button(panel1, -1, 'Save CA Results...', (10, 10))
         self.Bind(wx.EVT_BUTTON, self.OnSave, id=self.button_savecluster.GetId())
         self.button_savecluster.Disable()
         
@@ -698,7 +698,7 @@ class PagePCA(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self.OnCalcPCA, id=self.button_calcpca.GetId())     
         self.button_calcpca.Disable()   
         sizer1.Add(self.button_calcpca, 0, wx.EXPAND)
-        self.button_savepca = wx.Button(panel2, -1, 'Save PCA Results', (10, 10))
+        self.button_savepca = wx.Button(panel2, -1, 'Save PCA Results...', (10, 10))
         self.Bind(wx.EVT_BUTTON, self.OnSave, id=self.button_savepca.GetId())
         self.button_savepca.Disable()
         sizer1.Add(self.button_savepca, 0, wx.EXPAND)
@@ -1018,7 +1018,7 @@ class PageStack(wx.Panel):
         self.defaultdisplay = 1.0
         
         self.colortable = "gray"
-        
+                
         self.addroi = 0 
         self.showROImask = 0
         self.line = None
@@ -1074,19 +1074,19 @@ class PageStack(wx.Panel):
         vbox31 = wx.BoxSizer(wx.VERTICAL)
         vbox31.Add((0,10)) 
         
-        self.button_limitev = wx.Button(panel3, -1, '   Limit energy range   ', (10,10))
+        self.button_limitev = wx.Button(panel3, -1, '  Limit energy range...  ', (10,10))
         self.Bind(wx.EVT_BUTTON, self.OnLimitEv, id=self.button_limitev.GetId())
         self.button_limitev.Disable()
         vbox31.Add(self.button_limitev, 0, wx.EXPAND)
-        self.button_i0ffile = wx.Button(panel3, -1, 'I0 from file', (10,10))
+        self.button_i0ffile = wx.Button(panel3, -1, 'I0 from file...', (10,10))
         self.Bind(wx.EVT_BUTTON, self.OnI0FFile, id=self.button_i0ffile.GetId())
         self.button_i0ffile.Disable()
         vbox31.Add(self.button_i0ffile, 0, wx.EXPAND)
-        self.button_i0histogram = wx.Button(panel3, -1, 'I0 from histogram', (10,10))
+        self.button_i0histogram = wx.Button(panel3, -1, 'I0 from histogram...', (10,10))
         self.Bind(wx.EVT_BUTTON, self.OnI0histogram, id=self.button_i0histogram.GetId())   
         self.button_i0histogram.Disable()     
         vbox31.Add(self.button_i0histogram, 0, wx.EXPAND)
-        self.button_showi0 = wx.Button(panel3, -1, 'Show I0', (10,10))
+        self.button_showi0 = wx.Button(panel3, -1, 'Show I0...', (10,10))
         self.Bind(wx.EVT_BUTTON, self.OnShowI0, id=self.button_showi0.GetId())   
         self.button_showi0.Disable()
         vbox31.Add(self.button_showi0, 0, wx.EXPAND)
@@ -1159,7 +1159,7 @@ class PageStack(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self.onResetDisplaySettings, id=self.button_resetdisplay.GetId())   
         self.button_resetdisplay.Disable()     
         vbox43.Add(self.button_resetdisplay, 1, wx.EXPAND)
-        self.button_displaycolor = wx.Button(panel4, -1, 'Color Table', (10,10))
+        self.button_displaycolor = wx.Button(panel4, -1, 'Color Table...', (10,10))
         self.Bind(wx.EVT_BUTTON, self.onSetColorTable, id=self.button_displaycolor.GetId())   
         self.button_displaycolor.Disable()     
         vbox43.Add(self.button_displaycolor, 1, wx.EXPAND)
@@ -1182,27 +1182,27 @@ class PageStack(wx.Panel):
         
         vbox51 = wx.BoxSizer(wx.VERTICAL)
         vbox51.Add((0,10))
-        self.button_addROI = wx.Button(panel5, -1, 'Add Region', (10,10))
+        self.button_addROI = wx.Button(panel5, -1, 'Add ROI', (10,10))
         self.Bind(wx.EVT_BUTTON, self.OnAddROI, id=self.button_addROI.GetId())
         self.button_addROI.Disable()
         vbox51.Add(self.button_addROI, 0, wx.EXPAND)
         
-        self.button_acceptROI = wx.Button(panel5, -1, 'Accept Region', (10,10))
+        self.button_acceptROI = wx.Button(panel5, -1, 'Accept ROI', (10,10))
         self.Bind(wx.EVT_BUTTON, self.OnAcceptROI, id=self.button_acceptROI.GetId())   
         self.button_acceptROI.Disable()     
         vbox51.Add(self.button_acceptROI, 0, wx.EXPAND)
         
-        self.button_resetROI = wx.Button(panel5, -1, 'Reset Region', (10,10))
+        self.button_resetROI = wx.Button(panel5, -1, 'Reset ROI', (10,10))
         self.Bind(wx.EVT_BUTTON, self.OnResetROI, id=self.button_resetROI.GetId())
         self.button_resetROI.Disable()
         vbox51.Add(self.button_resetROI, 0, wx.EXPAND) 
 
-        self.button_setROII0 = wx.Button(panel5, -1, 'Set Region As I0', (10,10))
+        self.button_setROII0 = wx.Button(panel5, -1, 'Set ROI As I0', (10,10))
         self.Bind(wx.EVT_BUTTON, self.OnSetROII0, id=self.button_setROII0.GetId())
         self.button_setROII0.Disable()
         vbox51.Add(self.button_setROII0, 0, wx.EXPAND)
         
-        self.button_saveROIspectr = wx.Button(panel5, -1, 'Save Region Spectrum', (10,10))
+        self.button_saveROIspectr = wx.Button(panel5, -1, 'Save ROI Spectrum...', (10,10))
         self.Bind(wx.EVT_BUTTON, self.OnSaveROISpectrum, id=self.button_saveROIspectr.GetId())   
         self.button_saveROIspectr.Disable()     
         vbox51.Add(self.button_saveROIspectr, 0, wx.EXPAND)
@@ -2129,6 +2129,27 @@ class ColorTableFrame(wx.Frame):
         self.rb_winter = wx.RadioButton(panel, -1, self.colors[13])
         self.rb_spectral = wx.RadioButton(panel, -1, self.colors[14])
         
+        
+        self.radios = [] 
+        
+        self.radios.append(self.rb_grey)
+        self.radios.append(self.rb_jet)
+        self.radios.append(self.rb_autumn)
+        self.radios.append(self.rb_bone)
+        self.radios.append(self.rb_cool)
+        self.radios.append(self.rb_copper)
+        self.radios.append(self.rb_flag)
+        self.radios.append(self.rb_hot)
+        self.radios.append(self.rb_hsv)
+        self.radios.append(self.rb_pink)
+        self.radios.append(self.rb_prism)
+        self.radios.append(self.rb_spring)
+        self.radios.append(self.rb_summer)
+        self.radios.append(self.rb_winter)
+        self.radios.append(self.rb_spectral)
+        
+        self.ct_dict = dict([(self.colors[x], self.radios[x]) for x in range(len(self.colors))])
+        
 
         self.Bind(wx.EVT_RADIOBUTTON, self.OnColorTable, id=self.rb_grey.GetId())
         self.Bind(wx.EVT_RADIOBUTTON, self.OnColorTable, id=self.rb_jet.GetId())
@@ -2177,6 +2198,8 @@ class ColorTableFrame(wx.Frame):
         
         self.SetSizer(vboxtop)
         
+        self.ct_dict[ wx.GetApp().TopWindow.page1.colortable].SetValue(True)
+        
 #----------------------------------------------------------------------          
     def OnColorTable(self, event):
         
@@ -2188,7 +2211,7 @@ class ColorTableFrame(wx.Frame):
         
 #----------------------------------------------------------------------              
     def OnClose(self, evt):
-        self.Close(True)
+        self.Hide()
         
         
             
