@@ -1,5 +1,7 @@
 from __future__ import division
 import wx
+import wx.lib.intctrl  
+import wx.lib.masked.numctrl
 import matplotlib as mtplot 
 mtplot.interactive( True )
 mtplot.use( 'WXAgg',warn=False )
@@ -16,7 +18,7 @@ import logos
 
 
 Winsizex = 1000
-Winsizey = 750
+Winsizey = 740
 
 
 
@@ -109,7 +111,7 @@ class PageCluster(wx.Panel):
         
         self.tc_clustercomp = wx.TextCtrl(panel2, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         self.tc_clustercomp.SetValue("Composite cluster image")        
-        self.ClusterImagePan = mpl.PlotPanel(panel2, -1, size =(3.45,3.45), cursor=False, crosshairs=True, location=False, zoom=False)                              
+        self.ClusterImagePan = mpl.PlotPanel(panel2, -1, size =(3.40,3.40), cursor=False, crosshairs=True, location=False, zoom=False)                              
         mpl.EVT_POINT(self, self.ClusterImagePan.GetId(), self.OnPointClusterImage)   
         vbox2.Add(self.tc_clustercomp, 0, wx.EXPAND) 
         vbox2.Add(self.ClusterImagePan, 0)   
@@ -124,7 +126,7 @@ class PageCluster(wx.Panel):
         self.tc_cluster = wx.TextCtrl(panel3, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         self.tc_cluster.SetValue("Cluster ")
         hbox31 = wx.BoxSizer(wx.HORIZONTAL)
-        self.ClusterIndvImagePan = mpl.PlotPanel(panel3, -1, size =(2.65,2.65), cursor=False, crosshairs=False, location=False, zoom=False)
+        self.ClusterIndvImagePan = mpl.PlotPanel(panel3, -1, size =(2.60,2.60), cursor=False, crosshairs=False, location=False, zoom=False)
     
         self.slidershow = wx.Slider(panel3, -1, self.selcluster, 1, 20, style=wx.SL_LEFT)   
         self.slidershow.Disable()    
@@ -147,7 +149,7 @@ class PageCluster(wx.Panel):
         self.tc_clustersp = wx.TextCtrl(panel4, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         self.tc_clustersp.SetValue("Cluster spectrum")
         
-        self.ClusterSpecPan = mpl.PlotPanel(panel4, -1, size =(5.7,3.45), cursor=False, crosshairs=False, location=False, zoom=False)
+        self.ClusterSpecPan = mpl.PlotPanel(panel4, -1, size =(5.7,3.40), cursor=False, crosshairs=False, location=False, zoom=False)
         
         vbox4.Add(self.tc_clustersp, 0, wx.EXPAND)        
         vbox4.Add(self.ClusterSpecPan, 0)
@@ -1010,6 +1012,13 @@ class PageStack(wx.Panel):
         self.showflux = True
         self.fontsize = self.com.fontsize
         
+        self.displaymin = 0
+        self.displaymax = 0
+        self.displaygamma = 1.0
+        self.defaultdisplay = 1.0
+        
+        self.colortable = "gray"
+        
         self.addroi = 0 
         self.showROImask = 0
         self.line = None
@@ -1042,8 +1051,8 @@ class PageStack(wx.Panel):
 
         panel1.SetSizer(vbox1)
      
+     
         #panel 2
-
         panel2 = wx.Panel(self, -1)
         vbox2 = wx.BoxSizer(wx.VERTICAL)
         
@@ -1063,27 +1072,28 @@ class PageStack(wx.Panel):
         panel3 = wx.Panel(self, -1)
         sizer1 = wx.StaticBoxSizer(wx.StaticBox(panel3, -1, 'Preprocess', size =(100,-1)),orient=wx.VERTICAL)
         vbox31 = wx.BoxSizer(wx.VERTICAL)
+        vbox31.Add((0,10)) 
         
         self.button_limitev = wx.Button(panel3, -1, '   Limit energy range   ', (10,10))
         self.Bind(wx.EVT_BUTTON, self.OnLimitEv, id=self.button_limitev.GetId())
         self.button_limitev.Disable()
-        vbox31.Add(self.button_limitev, 1, wx.EXPAND)
+        vbox31.Add(self.button_limitev, 0, wx.EXPAND)
         self.button_i0ffile = wx.Button(panel3, -1, 'I0 from file', (10,10))
         self.Bind(wx.EVT_BUTTON, self.OnI0FFile, id=self.button_i0ffile.GetId())
         self.button_i0ffile.Disable()
-        vbox31.Add(self.button_i0ffile, 1, wx.EXPAND)
+        vbox31.Add(self.button_i0ffile, 0, wx.EXPAND)
         self.button_i0histogram = wx.Button(panel3, -1, 'I0 from histogram', (10,10))
         self.Bind(wx.EVT_BUTTON, self.OnI0histogram, id=self.button_i0histogram.GetId())   
         self.button_i0histogram.Disable()     
-        vbox31.Add(self.button_i0histogram, 1, wx.EXPAND)
+        vbox31.Add(self.button_i0histogram, 0, wx.EXPAND)
         self.button_showi0 = wx.Button(panel3, -1, 'Show I0', (10,10))
         self.Bind(wx.EVT_BUTTON, self.OnShowI0, id=self.button_showi0.GetId())   
         self.button_showi0.Disable()
-        vbox31.Add(self.button_showi0, 1, wx.EXPAND)
+        vbox31.Add(self.button_showi0, 0, wx.EXPAND)
         self.button_save = wx.Button(panel3, -1, 'Save', (10,10))
         self.Bind(wx.EVT_BUTTON, self.OnSave, id=self.button_save.GetId())
         self.button_save.Disable()          
-        vbox31.Add(self.button_save, 1, wx.EXPAND)
+        vbox31.Add(self.button_save, 0, wx.EXPAND)
         sizer1.Add(vbox31,1, wx.LEFT|wx.RIGHT|wx.EXPAND,2)
         panel3.SetSizer(sizer1)
         
@@ -1091,16 +1101,18 @@ class PageStack(wx.Panel):
         
         #panel 4
         panel4 = wx.Panel(self, -1)
+        vbox4 = wx.BoxSizer(wx.VERTICAL)
+
         sizer4 = wx.StaticBoxSizer(wx.StaticBox(panel4, -1, 'Display', size =(500,-1)), orient=wx.VERTICAL)
-        vbox3 = wx.BoxSizer(wx.VERTICAL)
-        hbox1 = wx.BoxSizer(wx.HORIZONTAL)
-        sizer11 = wx.StaticBoxSizer(wx.StaticBox(panel4, -1, 'File', size =(500,-1)), orient=wx.VERTICAL)
+
+        sizer41 = wx.StaticBoxSizer(wx.StaticBox(panel4, -1, 'File', size =(500,-1)), orient=wx.VERTICAL)
         self.textctrl = wx.TextCtrl(panel4, -1, style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
-        sizer11.Add(self.textctrl, 1, wx.EXPAND)
-        hbox1.Add(sizer11, 1, wx.EXPAND)
+        sizer41.Add(self.textctrl, 1, wx.EXPAND|wx.TOP|wx.LEFT, 5)
+        vbox4.Add(sizer41, 0, wx.EXPAND)
         
-        hbox2 = wx.BoxSizer(wx.HORIZONTAL)
-        sizer21 = wx.StaticBoxSizer(wx.StaticBox(panel4, -1, 'Image', size =(500,-1)),  orient=wx.VERTICAL)
+        hbox41 = wx.BoxSizer(wx.HORIZONTAL)
+         
+        sizer42 = wx.StaticBoxSizer(wx.StaticBox(panel4, -1, 'Image', size =(240,-1)),  orient=wx.VERTICAL)
         self.rb_flux = wx.RadioButton(panel4, -1, 'Flux', style=wx.RB_GROUP)
         self.rb_od = wx.RadioButton(panel4, -1, 'Optical Density')
         self.Bind(wx.EVT_RADIOBUTTON, self.onrb_fluxod, id=self.rb_flux.GetId())
@@ -1109,13 +1121,57 @@ class PageStack(wx.Panel):
         self.rb_flux.Disable()
         self.rb_od.Disable()
 
-        sizer21.Add(self.rb_flux)
-        sizer21.Add(self.rb_od)
-        hbox2.Add(sizer21, 1, wx.EXPAND)
+        sizer42.Add((0,10))
+        sizer42.Add(self.rb_flux)
+        sizer42.Add((0,5))
+        sizer42.Add(self.rb_od)
+        hbox41.Add(sizer42, 0, wx.EXPAND)
                 
-        vbox3.Add(hbox1, 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 10)
-        vbox3.Add(hbox2, 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 10)
-        sizer4.Add(vbox3,1, wx.EXPAND)
+
+        sizer43 = wx.StaticBoxSizer(wx.StaticBox(panel4, -1, 'Display settings', size =(240,-1)),  orient=wx.VERTICAL)
+        hbox42 = wx.BoxSizer(wx.HORIZONTAL)
+        hbox42.Add((15,0))
+
+        fgs41 = wx.FlexGridSizer(3, 2, 2, 5)
+        min = wx.StaticText(panel4, label="Minimum")
+        max = wx.StaticText(panel4, label="Maximum")
+        self.tc_min = wx.lib.masked.numctrl.NumCtrl(panel4, integerWidth = 6, fractionWidth = 2, value=self.displaymin,
+                                                    signedForegroundColour = "Black")
+        self.tc_max = wx.lib.masked.numctrl.NumCtrl(panel4, integerWidth = 6, fractionWidth = 2, value=self.displaymax,
+                                                    signedForegroundColour = "Black")
+        gamma = wx.StaticText(panel4, label="Gamma")
+        self.tc_gamma = wx.lib.masked.numctrl.NumCtrl(panel4, integerWidth = 6, fractionWidth = 2, value=self.displaygamma,
+                                                      allowNegative = False)
+        
+        fgs41.AddMany([(min), (self.tc_min, 1, wx.EXPAND), (max), 
+            (self.tc_max, 1, wx.EXPAND),(gamma), (self.tc_gamma, 1, wx.EXPAND)])
+        fgs41.AddGrowableRow(3, 1)
+        hbox42.Add(fgs41, 1, wx.EXPAND)
+        hbox42.Add((20,0))
+
+        
+        vbox43 = wx.BoxSizer(wx.VERTICAL)
+        self.button_setdisplay = wx.Button(panel4, -1, 'Accept', (10,10))
+        self.Bind(wx.EVT_BUTTON, self.onAcceptDisplaySettings, id=self.button_setdisplay.GetId())   
+        self.button_setdisplay.Disable()     
+        vbox43.Add(self.button_setdisplay, 1, wx.EXPAND)
+        self.button_resetdisplay = wx.Button(panel4, -1, 'Reset', (10,10))
+        self.Bind(wx.EVT_BUTTON, self.onResetDisplaySettings, id=self.button_resetdisplay.GetId())   
+        self.button_resetdisplay.Disable()     
+        vbox43.Add(self.button_resetdisplay, 1, wx.EXPAND)
+        self.button_displaycolor = wx.Button(panel4, -1, 'Color Table', (10,10))
+        self.Bind(wx.EVT_BUTTON, self.onSetColorTable, id=self.button_displaycolor.GetId())   
+        self.button_displaycolor.Disable()     
+        vbox43.Add(self.button_displaycolor, 1, wx.EXPAND)
+        
+        hbox42.Add(vbox43, 1, wx.EXPAND)                   
+        sizer43.Add(hbox42)
+    
+        hbox41.Add((10,0))
+        hbox41.Add(sizer43, 1, wx.EXPAND)
+        vbox4.Add(hbox41, 1, wx.EXPAND)
+
+        sizer4.Add(vbox4,1, wx.EXPAND)
         
         panel4.SetSizer(sizer4)
         
@@ -1125,6 +1181,7 @@ class PageStack(wx.Panel):
         sizer5 = wx.StaticBoxSizer(wx.StaticBox(panel5, -1, 'Region of Interest'), wx.VERTICAL)
         
         vbox51 = wx.BoxSizer(wx.VERTICAL)
+        vbox51.Add((0,10))
         self.button_addROI = wx.Button(panel5, -1, 'Add Region', (10,10))
         self.Bind(wx.EVT_BUTTON, self.OnAddROI, id=self.button_addROI.GetId())
         self.button_addROI.Disable()
@@ -1183,8 +1240,19 @@ class PageStack(wx.Panel):
         else:
             #Show OD image
             self.image = self.stk.od3d[:,:,self.iev]#.copy() 
-              
-               
+
+        if self.defaultdisplay == 0.0:
+            if self.showflux:
+                self.image = self.stk.absdata[:,:,self.iev].copy() 
+            else:
+                self.image = self.stk.od3d[:,:,self.iev].copy() 
+            
+            indices = npy.where(self.image>self.displaymax)
+            self.image[indices] = self.displaymax 
+            indices = npy.where(self.image<self.displaymin)
+            self.image[indices] = self.displaymin
+
+                             
         fig = self.AbsImagePanel.get_figure()
         fig.clf()
         fig.add_axes((0.02,0.02,0.96,0.96))
@@ -1194,7 +1262,7 @@ class PageStack(wx.Panel):
         if (self.line != None) and (self.addroi == 1):
             axes.add_line(self.line)
 
-        im = axes.imshow(self.image, cmap=mtplot.cm.get_cmap("gray")) 
+        im = axes.imshow(self.image, cmap=mtplot.cm.get_cmap(self.colortable)) 
         if (self.showROImask == 1) and (self.addroi == 1):
             im_red = axes.imshow(self.ROIpix_masked,cmap=mtplot.cm.get_cmap("autumn")) 
          
@@ -1393,9 +1461,56 @@ class PageStack(wx.Panel):
         else:        
             self.showflux = False
             
+        self.ResetDisplaySettings()
         self.loadImage()
-
         
+#----------------------------------------------------------------------
+    def onResetDisplaySettings(self, event):
+        
+        self.ResetDisplaySettings()
+        self.loadImage()
+        
+#----------------------------------------------------------------------
+    def onAcceptDisplaySettings(self, event):
+        
+        self.displaymin = float(self.tc_min.GetValue())
+        self.displaymax = float(self.tc_max.GetValue())
+        self.displaygamma = float(self.tc_gamma.GetValue())
+        
+        self.defaultdisplay = 0.0
+        
+        self.loadImage()
+        
+#----------------------------------------------------------------------
+    def onSetColorTable(self, event):
+        
+        ColorTableFrame().Show()
+        
+#----------------------------------------------------------------------
+    def ResetDisplaySettings(self):
+
+        self.defaultdisplay = 1.0
+        self.displaygamma = 1.0
+        
+               
+        if self.showflux:    
+            self.displaymin = float(npy.floor(npy.amin(self.stk.absdata)))
+            self.displaymax = float(npy.ceil(npy.amax(self.stk.absdata)))
+        else:
+            self.displaymin = float(npy.floor(npy.amin(self.stk.od3d)))
+            self.displaymax = float(npy.ceil(npy.amax(self.stk.od3d)))
+        
+        self.tc_min.SetValue(self.displaymin)
+        self.tc_max.SetValue(self.displaymax)
+        self.tc_gamma.SetValue(self.displaygamma)
+        
+        self.tc_min.SetMin(self.displaymin)
+        self.tc_min.SetMax(self.displaymax)
+        
+        self.tc_max.SetMin(self.displaymin)
+        self.tc_max.SetMax(self.displaymax)
+        
+              
  
 #----------------------------------------------------------------------        
     def OnLimitEv(self, evt):    
@@ -1482,6 +1597,7 @@ class PageStack(wx.Panel):
         
 #----------------------------------------------------------------------    
     def OnAcceptROI(self, evt):    
+        wx.BeginBusyCursor()
         self.roixdata.append(self.start_point[0])
         self.roiydata.append(self.start_point[1])
         self.line.set_data(self.roixdata,self.roiydata)
@@ -1516,6 +1632,8 @@ class PageStack(wx.Panel):
         self.loadImage()
         if (self.com.i0_loaded == 1):
             self.ShowROISpectrum()
+            
+        wx.EndBusyCursor()
         
     
 #----------------------------------------------------------------------    
@@ -1970,6 +2088,109 @@ class PlotFrame(wx.Frame):
     def OnClose(self, evt):
         self.Close(True)
         
+        
+#---------------------------------------------------------------------- 
+class ColorTableFrame(wx.Frame):
+
+    def __init__(self):
+        wx.Frame.__init__(self, wx.GetApp().TopWindow, title = "Pick Color Table", size=(200, 430))
+        
+        ico = logos.getlogo_2l_32Icon()
+        self.SetIcon(ico)
+        
+        self.SetBackgroundColour("White")
+        
+        
+        self.com = wx.GetApp().TopWindow.common         
+        self.fontsize = self.com.fontsize
+        
+        self.colors= ["gray","jet","autumn","bone", "cool","copper", "flag","hot","hsv","pink",
+                      "prism","spring","summer","winter", "spectral"]
+        
+        vboxtop = wx.BoxSizer(wx.VERTICAL)
+        
+        panel = wx.Panel(self, -1)
+        vbox = wx.BoxSizer(wx.VERTICAL)
+               
+        sizer1 = wx.StaticBoxSizer(wx.StaticBox(panel, -1, 'Color Tables'),  orient=wx.VERTICAL)
+        self.rb_grey = wx.RadioButton(panel, -1, self.colors[0], style=wx.RB_GROUP)
+        self.rb_jet = wx.RadioButton(panel, -1, self.colors[1])
+        self.rb_autumn = wx.RadioButton(panel, -1, self.colors[2])
+        self.rb_bone = wx.RadioButton(panel, -1, self.colors[3])
+        self.rb_cool = wx.RadioButton(panel, -1, self.colors[4])
+        self.rb_copper = wx.RadioButton(panel, -1, self.colors[5])
+        self.rb_flag = wx.RadioButton(panel, -1, self.colors[6])
+        self.rb_hot = wx.RadioButton(panel, -1, self.colors[7])
+        self.rb_hsv = wx.RadioButton(panel, -1, self.colors[8])
+        self.rb_pink = wx.RadioButton(panel, -1, self.colors[9])
+        self.rb_prism = wx.RadioButton(panel, -1, self.colors[10])
+        self.rb_spring = wx.RadioButton(panel, -1, self.colors[11])
+        self.rb_summer = wx.RadioButton(panel, -1, self.colors[12])
+        self.rb_winter = wx.RadioButton(panel, -1, self.colors[13])
+        self.rb_spectral = wx.RadioButton(panel, -1, self.colors[14])
+        
+
+        self.Bind(wx.EVT_RADIOBUTTON, self.OnColorTable, id=self.rb_grey.GetId())
+        self.Bind(wx.EVT_RADIOBUTTON, self.OnColorTable, id=self.rb_jet.GetId())
+        self.Bind(wx.EVT_RADIOBUTTON, self.OnColorTable, id=self.rb_autumn.GetId())
+        self.Bind(wx.EVT_RADIOBUTTON, self.OnColorTable, id=self.rb_bone.GetId())
+        self.Bind(wx.EVT_RADIOBUTTON, self.OnColorTable, id=self.rb_cool.GetId())
+        self.Bind(wx.EVT_RADIOBUTTON, self.OnColorTable, id=self.rb_copper.GetId())
+        self.Bind(wx.EVT_RADIOBUTTON, self.OnColorTable, id=self.rb_flag.GetId())
+        self.Bind(wx.EVT_RADIOBUTTON, self.OnColorTable, id=self.rb_hot.GetId())
+        self.Bind(wx.EVT_RADIOBUTTON, self.OnColorTable, id=self.rb_hsv.GetId())
+        self.Bind(wx.EVT_RADIOBUTTON, self.OnColorTable, id=self.rb_pink.GetId())
+        self.Bind(wx.EVT_RADIOBUTTON, self.OnColorTable, id=self.rb_prism.GetId())
+        self.Bind(wx.EVT_RADIOBUTTON, self.OnColorTable, id=self.rb_spring.GetId())
+        self.Bind(wx.EVT_RADIOBUTTON, self.OnColorTable, id=self.rb_summer.GetId())
+        self.Bind(wx.EVT_RADIOBUTTON, self.OnColorTable, id=self.rb_winter.GetId())
+        self.Bind(wx.EVT_RADIOBUTTON, self.OnColorTable, id=self.rb_spectral.GetId())
+        
+        sizer1.Add(self.rb_grey, 1, wx.EXPAND)
+        sizer1.Add(self.rb_jet, 1, wx.EXPAND)
+        sizer1.Add(self.rb_autumn, 1, wx.EXPAND)
+        sizer1.Add(self.rb_bone, 1, wx.EXPAND)
+        sizer1.Add(self.rb_cool, 1, wx.EXPAND)
+        sizer1.Add(self.rb_copper, 1, wx.EXPAND)
+        sizer1.Add(self.rb_flag, 1, wx.EXPAND)
+        sizer1.Add(self.rb_hot, 1, wx.EXPAND)
+        sizer1.Add(self.rb_hsv, 1, wx.EXPAND)
+        sizer1.Add(self.rb_pink, 1, wx.EXPAND)
+        sizer1.Add(self.rb_prism, 1, wx.EXPAND)
+        sizer1.Add(self.rb_spring, 1, wx.EXPAND)
+        sizer1.Add(self.rb_summer, 1, wx.EXPAND)
+        sizer1.Add(self.rb_winter, 1, wx.EXPAND)
+        sizer1.Add(self.rb_spectral, 1, wx.EXPAND)
+
+        vbox.Add(sizer1, 1, wx.EXPAND | wx.ALL, 20)
+        
+
+        
+        button_close = wx.Button(panel, -1, 'Close')
+        self.Bind(wx.EVT_BUTTON, self.OnClose, id=button_close.GetId())
+        vbox.Add(button_close, 0, wx.RIGHT | wx.BOTTOM | wx.ALIGN_RIGHT ,20)
+        
+
+        panel.SetSizer(vbox)
+        
+        vboxtop.Add(panel,1, wx.EXPAND )
+        
+        self.SetSizer(vboxtop)
+        
+#----------------------------------------------------------------------          
+    def OnColorTable(self, event):
+        
+        radioSelected = event.GetEventObject()
+
+        wx.GetApp().TopWindow.page1.colortable = radioSelected.GetLabel()
+        
+        wx.GetApp().TopWindow.page1.loadImage()
+        
+#----------------------------------------------------------------------              
+    def OnClose(self, evt):
+        self.Close(True)
+        
+        
             
 """ ------------------------------------------------------------------------------------------------"""
 class MainFrame(wx.Frame):
@@ -2079,6 +2300,7 @@ class MainFrame(wx.Frame):
                         
                 self.common.stack_loaded = 1
                 
+                self.page1.ResetDisplaySettings()
                 self.page1.loadImage()
                 self.page1.textctrl.SetValue(self.page1.filename)
                 
@@ -2111,7 +2333,7 @@ class MainFrame(wx.Frame):
                 self.common.stack_loaded = 1
                 self.common.i0_loaded = 1
                 
-            
+                self.page1.ResetDisplaySettings()
                 self.page1.loadImage()
                 self.page1.loadSpectrum(self.ix, self.iy)
                 self.page1.textctrl.SetValue(self.page1.filename)
@@ -2173,11 +2395,17 @@ class MainFrame(wx.Frame):
             self.page1.button_i0histogram.Disable() 
             self.page1.button_save.Disable() 
             self.page1.button_addROI.Disable()
+            self.page1.button_resetdisplay.Disable() 
+            self.page1.button_setdisplay.Disable()   
+            self.page1.button_displaycolor.Disable()
         else:
             self.page1.button_i0ffile.Enable()
             self.page1.button_i0histogram.Enable() 
             self.page1.button_save.Enable()     
             self.page1.button_addROI.Enable()  
+            self.page1.button_resetdisplay.Enable() 
+            self.page1.button_setdisplay.Enable() 
+            self.page1.button_displaycolor.Enable()
             
         if self.common.i0_loaded == 0:
             self.page1.button_limitev.Disable()
