@@ -1012,10 +1012,14 @@ class PageStack(wx.Panel):
         self.showflux = True
         self.fontsize = self.com.fontsize
         
-        self.displaymin = 0
-        self.displaymax = 0
-        self.displaygamma = 1.0
+        self.dispbrightness_min = 0
+        self.dispbrightness_max = 100
+        self.displaygamma = 10.0
         self.defaultdisplay = 1.0
+        
+        self.brightness_min = 0.0
+        self.brightness_max = 1.0
+        self.gamma = 1.0
         
         self.colortable = "gray"
                 
@@ -1039,12 +1043,12 @@ class PageStack(wx.Panel):
         self.AbsImagePanel = mpl.PlotPanel(panel1, -1, size =(3.5,3.5), cursor=False, crosshairs=True, location=False, zoom=False)
         mpl.EVT_POINT(panel1, self.AbsImagePanel.GetId(), self.OnPointAbsimage)
                               
-        self.slider = wx.Slider(panel1, -1, self.sel, 0, 100, style=wx.SL_LEFT )        
-        self.slider.SetFocus()
-        self.Bind(wx.EVT_SCROLL, self.OnScroll)
+        self.slider_eng = wx.Slider(panel1, -1, self.sel, 0, 100, style=wx.SL_LEFT )        
+        self.slider_eng.SetFocus()
+        self.Bind(wx.EVT_SCROLL, self.OnScrollEng, self.slider_eng)
 
         hbox11.Add(self.AbsImagePanel, 0)
-        hbox11.Add(self.slider, 0,  wx.EXPAND)
+        hbox11.Add(self.slider_eng, 0,  wx.EXPAND)
         
         vbox1.Add(self.tc_imageeng,1, wx.LEFT | wx.TOP | wx.EXPAND, 20)        
         vbox1.Add(hbox11, 0,  wx.LEFT, 20)
@@ -1135,26 +1139,32 @@ class PageStack(wx.Panel):
         fgs41 = wx.FlexGridSizer(3, 2, 2, 5)
         min = wx.StaticText(panel4, label="Minimum")
         max = wx.StaticText(panel4, label="Maximum")
-        self.tc_min = wx.lib.masked.numctrl.NumCtrl(panel4, integerWidth = 6, fractionWidth = 2, value=self.displaymin,
-                                                    signedForegroundColour = "Black")
-        self.tc_max = wx.lib.masked.numctrl.NumCtrl(panel4, integerWidth = 6, fractionWidth = 2, value=self.displaymax,
-                                                    signedForegroundColour = "Black")
-        gamma = wx.StaticText(panel4, label="Gamma")
-        self.tc_gamma = wx.lib.masked.numctrl.NumCtrl(panel4, integerWidth = 6, fractionWidth = 2, value=self.displaygamma,
-                                                      allowNegative = False)
+        self.slider_brightness_min = wx.Slider(panel4, -1, self.dispbrightness_min, 0, 49, style=wx.SL_HORIZONTAL)        
+        self.slider_brightness_min.SetFocus()
+        self.Bind(wx.EVT_SCROLL, self.OnScrollBrightnessMin, self.slider_brightness_min)
         
-        fgs41.AddMany([(min), (self.tc_min, 1, wx.EXPAND), (max), 
-            (self.tc_max, 1, wx.EXPAND),(gamma), (self.tc_gamma, 1, wx.EXPAND)])
+        self.slider_brightness_max = wx.Slider(panel4, -1, self.dispbrightness_max, 50, 100, style=wx.SL_HORIZONTAL)        
+        self.slider_brightness_max.SetFocus()
+        self.Bind(wx.EVT_SCROLL, self.OnScrollBrightnessMax, self.slider_brightness_max)        
+        
+        gamma = wx.StaticText(panel4, label="Gamma")
+        self.slider_gamma = wx.Slider(panel4, -1, self.displaygamma, 1, 20, style=wx.SL_HORIZONTAL)        
+        self.slider_gamma.SetFocus()
+        self.Bind(wx.EVT_SCROLL, self.OnScrollGamma, self.slider_gamma)
+
+        
+        fgs41.AddMany([(min), (self.slider_brightness_min, 1, wx.EXPAND), (max), 
+            (self.slider_brightness_max, 1, wx.EXPAND),(gamma), (self.slider_gamma, 1, wx.EXPAND)])
         fgs41.AddGrowableRow(3, 1)
         hbox42.Add(fgs41, 1, wx.EXPAND)
         hbox42.Add((20,0))
 
         
         vbox43 = wx.BoxSizer(wx.VERTICAL)
-        self.button_setdisplay = wx.Button(panel4, -1, 'Accept', (10,10))
-        self.Bind(wx.EVT_BUTTON, self.onAcceptDisplaySettings, id=self.button_setdisplay.GetId())   
-        self.button_setdisplay.Disable()     
-        vbox43.Add(self.button_setdisplay, 1, wx.EXPAND)
+        self.button_despike = wx.Button(panel4, -1, 'Despike', (10,10))
+        #self.Bind(wx.EVT_BUTTON, self.onDespike, id=self.button_despike.GetId())   
+        self.button_despike.Disable()     
+        vbox43.Add(self.button_despike, 1, wx.EXPAND)
         self.button_resetdisplay = wx.Button(panel4, -1, 'Reset', (10,10))
         self.Bind(wx.EVT_BUTTON, self.onResetDisplaySettings, id=self.button_resetdisplay.GetId())   
         self.button_resetdisplay.Disable()     
@@ -1233,26 +1243,25 @@ class PageStack(wx.Panel):
 #----------------------------------------------------------------------        
     def loadImage(self):
                
-        self.image = 0         
-        if self.showflux:  
-            #Show flux image      
-            self.image = self.stk.absdata[:,:,self.iev]#.copy() 
-        else:
-            #Show OD image
-            self.image = self.stk.od3d[:,:,self.iev]#.copy() 
-
-        if self.defaultdisplay == 0.0:
+        self.image = 0     
+        
+        if self.defaultdisplay == 1.0:
+            #use a pointer to the data not a copy
+            if self.showflux:
+                #Show flux image      
+                self.image = self.stk.absdata[:,:,self.iev]#.copy() 
+            else:
+                #Show OD image
+                self.image = self.stk.od3d[:,:,self.iev]#.copy()
+        else:   
+            #Adjustment to the data display setting has been made so make a copy
             if self.showflux:
                 self.image = self.stk.absdata[:,:,self.iev].copy() 
             else:
                 self.image = self.stk.od3d[:,:,self.iev].copy() 
-            
-            indices = npy.where(self.image>self.displaymax)
-            self.image[indices] = self.displaymax 
-            indices = npy.where(self.image<self.displaymin)
-            self.image[indices] = self.displaymin
+  
 
-                             
+                      
         fig = self.AbsImagePanel.get_figure()
         fig.clf()
         fig.add_axes((0.02,0.02,0.96,0.96))
@@ -1262,7 +1271,20 @@ class PageStack(wx.Panel):
         if (self.line != None) and (self.addroi == 1):
             axes.add_line(self.line)
 
-        im = axes.imshow(self.image, cmap=mtplot.cm.get_cmap(self.colortable)) 
+        if self.defaultdisplay == 1.0:
+            im = axes.imshow(self.image, cmap=mtplot.cm.get_cmap(self.colortable)) 
+        else:
+            imgmax = npy.amax(self.image)
+            imgmin = npy.amin(self.image)
+            if (self.gamma != 1.0) or (imgmin < 0.0):
+                self.image = (self.image-imgmin)/(imgmax-imgmin)
+                imgmax = 1.0
+                imgmin = 0.0
+                if (self.gamma != 1.0):
+                    self.image = npy.power(self.image, self.gamma)
+            im = axes.imshow(self.image, cmap=mtplot.cm.get_cmap(self.colortable), 
+                             vmin=(imgmin+imgmax*self.brightness_min),vmax=imgmax*self.brightness_max)
+            
         if (self.showROImask == 1) and (self.addroi == 1):
             im_red = axes.imshow(self.ROIpix_masked,cmap=mtplot.cm.get_cmap("autumn")) 
          
@@ -1295,7 +1317,7 @@ class PageStack(wx.Panel):
 
         
 #----------------------------------------------------------------------            
-    def OnScroll(self, event):
+    def OnScrollEng(self, event):
         self.sel = event.GetInt()
         self.iev = self.sel
         if self.com.stack_loaded == 1:
@@ -1471,15 +1493,40 @@ class PageStack(wx.Panel):
         self.loadImage()
         
 #----------------------------------------------------------------------
-    def onAcceptDisplaySettings(self, event):
+    def OnScrollBrightnessMin(self, event):
         
-        self.displaymin = float(self.tc_min.GetValue())
-        self.displaymax = float(self.tc_max.GetValue())
-        self.displaygamma = float(self.tc_gamma.GetValue())
+        self.dispbrightness_min = event.GetInt()
+        
+        self.brightness_min = float(self.dispbrightness_min)/100.0
         
         self.defaultdisplay = 0.0
         
-        self.loadImage()
+        if self.com.stack_loaded == 1:
+            self.loadImage()
+        
+#----------------------------------------------------------------------
+    def OnScrollBrightnessMax(self, event):
+        
+        self.dispbrightness_max = event.GetInt()
+        
+        self.brightness_max = float(self.dispbrightness_max)/100.0
+        
+        self.defaultdisplay = 0.0
+        
+        if self.com.stack_loaded == 1:
+            self.loadImage()
+        
+#----------------------------------------------------------------------
+    def OnScrollGamma(self, event):
+        
+        self.displaygamma = event.GetInt()
+        
+        self.gamma = float(self.displaygamma)/10.0  
+        
+        self.defaultdisplay = 0.0
+        
+        if self.com.stack_loaded == 1:
+            self.loadImage()
         
 #----------------------------------------------------------------------
     def onSetColorTable(self, event):
@@ -1490,27 +1537,18 @@ class PageStack(wx.Panel):
     def ResetDisplaySettings(self):
 
         self.defaultdisplay = 1.0
-        self.displaygamma = 1.0
         
-               
-        if self.showflux:    
-            self.displaymin = float(npy.floor(npy.amin(self.stk.absdata)))
-            self.displaymax = float(npy.ceil(npy.amax(self.stk.absdata)))
-        else:
-            self.displaymin = float(npy.floor(npy.amin(self.stk.od3d)))
-            self.displaymax = float(npy.ceil(npy.amax(self.stk.od3d)))
+        self.dispbrightness_min = 0
+        self.dispbrightness_max = 100
+        self.displaygamma = 10.0
         
-        self.tc_min.SetValue(self.displaymin)
-        self.tc_max.SetValue(self.displaymax)
-        self.tc_gamma.SetValue(self.displaygamma)
+        self.brightness_min = 0.0
+        self.brightness_max = 1.0
+        self.gamma = 1.0
         
-        self.tc_min.SetMin(self.displaymin)
-        self.tc_min.SetMax(self.displaymax)
-        
-        self.tc_max.SetMin(self.displaymin)
-        self.tc_max.SetMax(self.displaymax)
-        
-              
+        self.slider_brightness_max.SetValue(self.dispbrightness_max)
+        self.slider_brightness_min.SetValue(self.dispbrightness_min) 
+        self.slider_gamma.SetValue(self.displaygamma)             
  
 #----------------------------------------------------------------------        
     def OnLimitEv(self, evt):    
@@ -2010,9 +2048,9 @@ class LimitEv(wx.Frame):
         self.stack.od = npy.reshape(self.stack.od, (self.stack.n_rows*self.stack.n_cols, self.stack.n_ev), order='F')
         
         #Fix the slider on Page 1! 
-        wx.GetApp().TopWindow.page1.slider.SetRange(0,self.stack.n_ev-1)
+        wx.GetApp().TopWindow.page1.slider_eng.SetRange(0,self.stack.n_ev-1)
         wx.GetApp().TopWindow.page1.iev = self.stack.n_ev/2
-        wx.GetApp().TopWindow.page1.slider.SetValue(wx.GetApp().TopWindow.page1.iev)
+        wx.GetApp().TopWindow.page1.slider_eng.SetValue(wx.GetApp().TopWindow.page1.iev)
         
         wx.GetApp().TopWindow.page1.loadSpectrum(wx.GetApp().TopWindow.page1.ix, wx.GetApp().TopWindow.page1.iy)
         wx.GetApp().TopWindow.page1.loadImage()
@@ -2307,10 +2345,10 @@ class MainFrame(wx.Frame):
                     self.new_stack_refresh()  
                     self.anlz = analyze.analyze()                   
                 self.stk.read_stk(filepath)        
-                self.page1.slider.SetRange(0,self.stk.n_ev-1)
+                self.page1.slider_eng.SetRange(0,self.stk.n_ev-1)
                 self.iev = self.stk.n_ev/2
                 self.page1.iev = self.iev
-                self.page1.slider.SetValue(self.iev)
+                self.page1.slider_eng.SetValue(self.iev)
             
                 x=self.stk.n_cols
                 y=self.stk.n_rows
@@ -2339,10 +2377,10 @@ class MainFrame(wx.Frame):
             
                 self.stk.read_h5(filepath)
                          
-                self.page1.slider.SetRange(0,self.stk.n_ev-1)
+                self.page1.slider_eng.SetRange(0,self.stk.n_ev-1)
                 self.iev = self.stk.n_ev/2
                 self.page1.iev = self.iev
-                self.page1.slider.SetValue(self.iev)
+                self.page1.slider_eng.SetValue(self.iev)
             
                 x=self.stk.n_cols
                 y=self.stk.n_rows
@@ -2419,7 +2457,7 @@ class MainFrame(wx.Frame):
             self.page1.button_save.Disable() 
             self.page1.button_addROI.Disable()
             self.page1.button_resetdisplay.Disable() 
-            self.page1.button_setdisplay.Disable()   
+            self.page1.button_despike.Disable()   
             self.page1.button_displaycolor.Disable()
         else:
             self.page1.button_i0ffile.Enable()
@@ -2427,7 +2465,7 @@ class MainFrame(wx.Frame):
             self.page1.button_save.Enable()     
             self.page1.button_addROI.Enable()  
             self.page1.button_resetdisplay.Enable() 
-            self.page1.button_setdisplay.Enable() 
+            #self.page1.button_despike.Enable() 
             self.page1.button_displaycolor.Enable()
             
         if self.common.i0_loaded == 0:
@@ -2465,6 +2503,8 @@ class MainFrame(wx.Frame):
             self.page3.button_savecluster.Enable()  
             self.page3.slidershow.Enable()          
             
+        self.page1.ResetDisplaySettings()
+            
             
             
 #----------------------------------------------------------------------        
@@ -2492,6 +2532,8 @@ class MainFrame(wx.Frame):
         self.page1.tc_imageeng.SetValue("Image at energy: ")
         
         self.page1.textctrl.SetValue(' ')
+        
+        self.page1.ResetDisplaySettings()
         
         
         #page 2

@@ -26,9 +26,9 @@ Created on Jun 12, 2011
                     n_rows [integer]
                     n_energies [integer]
                     n_detector_elements [integer]
-                    x_dist [float]
+                    x_dist [float] x distance (micron)
                     y_dist [float]
-                    ev [float]
+                    ev [float] photon energy (ev)
                     msec [float]
             i0/ [HDF5 group]
                     i0data [float]
