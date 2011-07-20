@@ -777,7 +777,6 @@ class PagePCA(wx.Panel):
         self.selpca = 1       
         self.numsigpca = 2
         self.slidershow.SetValue(self.selpca)
-        
         try: 
             self.CalcPCA()
             self.calcpca = True
@@ -789,6 +788,7 @@ class PagePCA(wx.Panel):
         except:
             self.com.pca_calculated = 0
             wx.EndBusyCursor()
+            wx.MessageBox("PCA not calculated.")
         
         wx.GetApp().TopWindow.refresh_widgets()
 
@@ -963,7 +963,6 @@ class PagePCA(wx.Panel):
         bound = self.anlz.pcaimagebounds[self.selpca-1]
         
      
-        
         im = axes.imshow(self.pcaimage, cmap=mtplot.cm.get_cmap("seismic_r"), vmin = -bound, vmax = bound)
         cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
     
@@ -971,7 +970,6 @@ class PagePCA(wx.Panel):
         self.PCAImagePan.draw()
 
         
-
         
 #----------------------------------------------------------------------     
     def loadPCASpectrum(self):
@@ -993,7 +991,7 @@ class PagePCA(wx.Panel):
         
         self.PCASpecPan.draw()
  
-        
+
 """ ------------------------------------------------------------------------------------------------"""
 class PageStack(wx.Panel):
     def __init__(self, parent, common, stack):
@@ -1065,7 +1063,8 @@ class PageStack(wx.Panel):
           
         
         self.SpectrumPanel = mpl.PlotPanel(panel2, -1, size=(5.75, 3.5), cursor=False, crosshairs=False, location=False, zoom=False)
-
+        mpl.EVT_POINT(panel2, self.SpectrumPanel.GetId(), self.OnPointSpectrum)
+        
         vbox2.Add(self.tc_spec, 1, wx.LEFT | wx.TOP | wx.EXPAND, 20)       
         vbox2.Add(self.SpectrumPanel, 0, wx.LEFT , 20)
         
@@ -1191,7 +1190,7 @@ class PageStack(wx.Panel):
         sizer5 = wx.StaticBoxSizer(wx.StaticBox(panel5, -1, 'Region of Interest'), wx.VERTICAL)
         
         vbox51 = wx.BoxSizer(wx.VERTICAL)
-        vbox51.Add((0,10))
+        vbox51.Add((0,2))
         self.button_addROI = wx.Button(panel5, -1, 'Add ROI', (10,10))
         self.Bind(wx.EVT_BUTTON, self.OnAddROI, id=self.button_addROI.GetId())
         self.button_addROI.Disable()
@@ -1216,6 +1215,15 @@ class PageStack(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self.OnSaveROISpectrum, id=self.button_saveROIspectr.GetId())   
         self.button_saveROIspectr.Disable()     
         vbox51.Add(self.button_saveROIspectr, 0, wx.EXPAND)
+        
+        vbox51.Add((0,8))        
+        
+        self.button_spectralROI = wx.Button(panel5, -1, 'Spectral ROI...', (10,10))
+        self.Bind(wx.EVT_BUTTON, self.OnSpectralROI, id=self.button_spectralROI.GetId())   
+        self.button_spectralROI.Disable()     
+        vbox51.Add(self.button_spectralROI, 0, wx.EXPAND)
+        
+        
         
         sizer5.Add(vbox51,1, wx.ALL|wx.EXPAND,2)        
         panel5.SetSizer(sizer5)
@@ -1311,6 +1319,9 @@ class PageStack(wx.Panel):
         axes.set_xlabel('Photon Energy [eV]')
         axes.set_ylabel('Optical Density')
         
+        axes.axvline(x=self.stk.ev[self.iev], color = 'g', alpha=0.5)
+
+        
         self.SpectrumPanel.draw()
         
         self.tc_spec.SetValue("Spectrum at point: [" +str(xpos)+", " + str(ypos)+"] ")
@@ -1322,6 +1333,27 @@ class PageStack(wx.Panel):
         self.iev = self.sel
         if self.com.stack_loaded == 1:
             self.loadImage()
+            
+                   
+#----------------------------------------------------------------------  
+    def OnPointSpectrum(self, evt):
+        x = evt.xdata
+        y = evt.ydata
+        
+        if (self.com.i0_loaded == 1) and (self.addroi == 0):      
+            if x < self.stk.ev[0]:
+                sel_ev = 0
+            elif x > self.stk.ev[self.stk.n_ev-1]:
+                sel_ev = self.stk.n_ev-1
+            else:
+                indx = npy.abs(self.stk.ev - x).argmin()
+                sel_ev = indx
+                
+            self.iev = sel_ev                   
+
+            self.loadSpectrum(self.ix, self.iy)
+            self.loadImage()
+            
                    
 #----------------------------------------------------------------------  
     def OnPointAbsimage(self, evt):
@@ -1762,8 +1794,10 @@ class PageStack(wx.Panel):
             wx.MessageBox('Could not save file: %s' % err, 'Error', 
                           parent=self, style=wx.OK|wx.ICON_ERROR) 
             
-        
- 
+     
+#----------------------------------------------------------------------        
+    def OnSpectralROI(self, evt):    
+        SpectralROI(self.com, self.stk).Show()
                
 #---------------------------------------------------------------------- 
 class ShowHistogram(wx.Frame):
@@ -2060,6 +2094,232 @@ class LimitEv(wx.Frame):
 #---------------------------------------------------------------------- 
     def OnCancel(self, evt):
         self.Close(True)
+        
+        
+               
+#---------------------------------------------------------------------- 
+class SpectralROI(wx.Frame):
+
+    title = "Spectral Regions of Interest"
+
+    def __init__(self, common, stack):
+        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(630, 700))
+               
+        ico = logos.getlogo_2l_32Icon()
+        self.SetIcon(ico)
+        
+        self.SetBackgroundColour("White") 
+        
+        self.stack = stack
+        self.com = common
+               
+        self.fontsize = self.com.fontsize
+        
+        self.imin = 0
+        self.imax = 0
+        self.i0min = 0
+        self.i0max = 0
+        self.iselected = 0
+        self.i0selected = 0        
+        
+                
+        self.odtotal = self.stack.original_od3d.sum(axis=0)   
+        self.odtotal = self.odtotal.sum(axis=0)/(self.stack.n_rows*self.stack.n_cols) 
+        
+        self.image_i0 = npy.zeros((self.stack.n_cols, self.stack.n_rows))
+        self.image_i = npy.zeros((self.stack.n_cols, self.stack.n_rows))
+        self.odthickmap = npy.zeros((self.stack.n_cols, self.stack.n_rows))
+        
+    
+        vboxtop = wx.BoxSizer(wx.VERTICAL)
+        
+        panel = wx.Panel(self, -1)
+        vbox = wx.BoxSizer(wx.VERTICAL)
+               
+        self.SpectrumPanel = mpl.PlotPanel(panel, -1, size=(6.0, 3.7), cursor=False, crosshairs=False, location=False, zoom=False)
+        
+        mpl.EVT_SELECTION(panel, self.SpectrumPanel.GetId(), self.OnSelection)
+
+        vbox.Add(self.SpectrumPanel, 0, wx.ALL, 20)
+        
+       
+        hbox2 = wx.BoxSizer(wx.HORIZONTAL)
+        
+        
+        
+        sizer2 = wx.StaticBoxSizer(wx.StaticBox(panel, -1, 'Selected Spectral Regions'), orient=wx.VERTICAL)
+        text = wx.StaticText(panel, 0, 'I Selection (red): ')
+        self.textctrl1 = wx.TextCtrl(panel, -1, size = (328, 20), style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.textctrl1.SetValue('[  ]' )
+        self.textctrl1.SetBackgroundColour("White")
+        sizer2.Add((0,10))
+        sizer2.Add(text, 1, wx.EXPAND|wx.LEFT, 10)
+        sizer2.Add(self.textctrl1, 1, wx.EXPAND|wx.LEFT, 10)
+        
+        text = wx.StaticText(panel, 0, 'I0 Selection (green): ')
+        self.textctrl2 = wx.TextCtrl(panel, -1, size = (328, 20), style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.textctrl2.SetValue('[  ]' )
+        self.textctrl2.SetBackgroundColour("White")
+        sizer2.Add((0,10))
+        sizer2.Add(text, 1, wx.EXPAND|wx.LEFT, 10)
+        sizer2.Add(self.textctrl2, 1, wx.EXPAND|wx.LEFT, 10)
+        
+        text = wx.StaticText(panel, 0, 'Optical density map')
+        vbox.Add(text, 0, wx.LEFT|wx.RIGHT,20)
+        vbox.Add((0,2))
+
+        self.ODMImagePanel = mpl.PlotPanel(panel, -1, size =(2.0,2.0), cursor=False, crosshairs=False, location=False, zoom=False)
+        hbox2.Add(self.ODMImagePanel, 0, wx.LEFT|wx.RIGHT,20)
+        hbox2.Add(sizer2, 1, wx.EXPAND|wx.LEFT|wx.RIGHT,20)
+        
+        vbox.Add(hbox2, 0, wx.EXPAND)      
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
+        
+        
+        button_ok = wx.Button(panel, -1, 'Save')
+        self.Bind(wx.EVT_BUTTON, self.OnAccept, id=button_ok.GetId())
+        hbox.Add(button_ok, 1, wx.ALL,20)
+        
+        button_cancel = wx.Button(panel, -1, 'Dismiss')
+        self.Bind(wx.EVT_BUTTON, self.OnCancel, id=button_cancel.GetId())
+        hbox.Add(button_cancel, 1, wx.ALL ,20)
+        
+        vbox.Add(hbox, 0 )
+        
+        panel.SetSizer(vbox)
+        
+        vboxtop.Add(panel,1, wx.EXPAND )
+        
+        self.SetSizer(vboxtop)
+        
+        self.draw_spectrum()
+        
+        
+#----------------------------------------------------------------------        
+    def draw_spectrum(self):
+
+        
+        fig = self.SpectrumPanel.get_figure()
+        fig.clf()
+        fig.add_axes((0.15,0.15,0.75,0.75))
+        self.axes = fig.gca()
+        
+        mtplot.rcParams['font.size'] = self.fontsize
+
+        specplot = self.axes.plot(self.stack.ev,self.odtotal)
+        
+        if self.i0selected == 1:
+            self.axes.axvspan(self.stack.ev[self.i0min], self.stack.ev[self.i0max], facecolor='g', alpha=0.5)
+            
+        if self.iselected == 1:
+            self.axes.axvspan(self.stack.ev[self.imin], self.stack.ev[self.imax], facecolor='r', alpha=0.5)
+
+        
+        self.axes.set_xlabel('Photon Energy [eV]')
+        self.axes.set_ylabel('Optical Density')
+        
+
+        self.SpectrumPanel.draw()
+    
+#----------------------------------------------------------------------        
+    def draw_image(self):
+
+               
+        fig = self.ODMImagePanel.get_figure()
+        fig.clf()
+        fig.add_axes((0.02,0.02,0.96,0.96))
+        
+        
+        axes = fig.gca()
+        
+        im = axes.imshow(self.odthickmap, cmap=mtplot.cm.get_cmap("gray")) 
+
+         
+        axes.axis("off")  
+        self.ODMImagePanel.draw()
+
+
+#----------------------------------------------------------------------        
+    def OnSelection(self, evt):
+        
+        x1, y1 = evt.x1data, evt.y1data
+        x2, y2 = evt.x2data, evt.y2data
+
+        
+        if (self.i0selected == 1) and (self.iselected ==1):
+            self.i0selected = 0
+            self.iselected = 0
+        
+        if self.i0selected == 0:       
+            self.i0min = npy.abs(self.stack.ev - x1).argmin()
+            self.i0max = npy.abs(self.stack.ev - x2).argmin()
+            
+            self.image_i0 = npy.sum(self.stack.absdata[:, :, self.i0min:self.i0max+1], axis=2)/(self.i0max+1-self.i0min)
+
+            self.textctrl1.SetValue('Selection: [ '+str(self.stack.ev[self.i0min]) + ' eV, '+ str(self.stack.ev[self.i0max])+' eV ]' )
+            self.i0selected = 1
+            
+        elif self.iselected == 0:
+            self.imin = npy.abs(self.stack.ev - x1).argmin()
+            self.imax = npy.abs(self.stack.ev - x2).argmin()
+                       
+            self.image_i = npy.sum(self.stack.absdata[:, :, self.imin:self.imax+1], axis=2)/(self.imax+1-self.imin)
+            
+            self.textctrl2.SetValue('Selection: [ '+str(self.stack.ev[self.imin]) + ' eV, '+ str(self.stack.ev[self.imax])+' eV ]' )
+            self.iselected = 1        
+            
+        if (self.i0selected == 1) and (self.iselected ==1):              
+            nonzeroind = self.image_i0.nonzero()
+            self.odthickmap = npy.zeros((self.stack.n_cols, self.stack.n_rows))
+            self.odthickmap[nonzeroind] = - npy.log(self.image_i[nonzeroind]/self.image_i0[nonzeroind])
+            self.draw_image()
+            
+        
+        self.draw_spectrum()
+
+#----------------------------------------------------------------------        
+    def OnAccept(self, evt):
+        #Save images
+                       
+        fileName = wx.FileSelector('Save OD Map', default_extension='png', 
+                                   wildcard=('Portable Network Graphics (*.png)|*.png|' 
+                                             + 'Encapsulated Postscript (*.eps)|*.eps|All files (*.*)|*.*'), 
+                                              parent=self, flags=wx.SAVE|wx.OVERWRITE_PROMPT) 
+   
+        if not fileName: 
+            return 
+
+        path, ext = os.path.splitext(fileName) 
+        ext = ext[1:].lower() 
+        
+       
+        if ext != 'png' and ext != 'eps': 
+            error_message = ( 
+                  'Only the PNG and EPS image formats are supported.\n' 
+                 'A file extension of `png\' or `eps\' must be used.') 
+            wx.MessageBox(error_message, 'Error - plotit', 
+                  parent=self, style=wx.OK|wx.ICON_ERROR) 
+            return 
+   
+        try: 
+                        
+            self.ODMImagePanel.print_figure(fileName)
+            
+        except IOError, e:
+            if e.strerror:
+                err = e.strerror 
+            else: 
+                err = e 
+   
+            wx.MessageBox('Could not save file: %s' % err, 'Error', 
+                          parent=self, style=wx.OK|wx.ICON_ERROR) 
+            
+
+                
+#---------------------------------------------------------------------- 
+    def OnCancel(self, evt):
+        self.Close(True)   
+
         
     
 #---------------------------------------------------------------------- 
@@ -2358,6 +2618,9 @@ class MainFrame(wx.Frame):
             
                 self.ix = x/2
                 self.iy = y/2
+                
+                self.page1.ix = self.ix
+                self.page1.iy = self.iy
                         
                 self.common.stack_loaded = 1
                 
@@ -2393,6 +2656,9 @@ class MainFrame(wx.Frame):
                         
                 self.common.stack_loaded = 1
                 self.common.i0_loaded = 1
+                
+                self.page1.ix = self.ix
+                self.page1.iy = self.iy
                 
                 self.page1.ResetDisplaySettings()
                 self.page1.loadImage()
@@ -2456,6 +2722,7 @@ class MainFrame(wx.Frame):
             self.page1.button_i0histogram.Disable() 
             self.page1.button_save.Disable() 
             self.page1.button_addROI.Disable()
+            self.page1.button_spectralROI.Disable()
             self.page1.button_resetdisplay.Disable() 
             self.page1.button_despike.Disable()   
             self.page1.button_displaycolor.Disable()
@@ -2464,6 +2731,7 @@ class MainFrame(wx.Frame):
             self.page1.button_i0histogram.Enable() 
             self.page1.button_save.Enable()     
             self.page1.button_addROI.Enable()  
+            self.page1.button_spectralROI.Enable()
             self.page1.button_resetdisplay.Enable() 
             #self.page1.button_despike.Enable() 
             self.page1.button_displaycolor.Enable()

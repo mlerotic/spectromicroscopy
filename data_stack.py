@@ -60,6 +60,8 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
     def read_stk(self, filename):    
         self.new_data()  
         x1a_stk.x1astk.read_stk(self, filename)
+        
+        self.scale_bar()
   
 #---------------------------------------------------------------------- 
     def read_h5(self, filename):    
@@ -67,6 +69,7 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
         aps_hdf5.h5.read_h5(self, filename)
         
         self.calculate_optical_density()
+        self.scale_bar()
         
 #----------------------------------------------------------------------
     def convert_stk_to_h5(self, filename):
@@ -196,6 +199,39 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
         self.original_od3d = self.od3d.copy()
         
         return
+    
+#----------------------------------------------------------------------   
+    def scale_bar(self): 
+           
+        x_start = np.amin(self.x_dist)
+        x_stop = np.amax(self.x_dist)
+        bar_microns = 0.2*np.abs(x_stop-x_start)
+        
+        if bar_microns >= 10.:
+            bar_microns = 10.*int(0.5+0.1*int(0.5+bar_microns))
+            bar_string = str(int(0.01+bar_microns)).strip()+' microns'
+        elif bar_microns >= 1.:      
+            bar_microns = float(int(0.5+bar_microns))
+            if bar_microns == 1.:
+                bar_string = '1 micron'
+            else:
+                bar_string = str(int(0.01+bar_microns)).strip()+' microns'
+        else:
+            bar_microns = np.maximum(0.1*int(0.5+10*bar_microns),0.1)
+            bar_string = str(bar_microns).strip()+' microns'
+
+#
+#      bar_pixels = fix(0.5+float(n_cols*local_zoom)*$
+#                       float(bar_microns)/ $
+#                       float(abs(x_stop-x_start)))
+#      bar = bytarr(bar_pixels,fix(0.6*pca_gui_par.char_ypix))+$
+#        pca_gui_par.top_color_index
+#      tv,bar,5,fix(0.2*pca_gui_par.textregion_ypix),/device
+#      xyouts,(10+bar_pixels),fix(0.2*pca_gui_par.textregion_ypix),$
+#        bar_string,/device,color=pca_gui_par.top_color_index,$
+#        charsize=pca_gui_par.charsize
+             
+             
     
 #----------------------------------------------------------------------   
     def write_xas(self, filename, evdata, data):

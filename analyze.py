@@ -25,45 +25,47 @@ class analyze:
         
             
 #----------------------------------------------------------------------   
-# Calculate pca using MDP
+# Calculate pca 
     def calculate_pca(self):
         #covariance matrix
-        od = self.stack.od.copy()
-        #normalize od vecs
-        norms = np.apply_along_axis(np.linalg.norm, 0, od)
+        n_pix = self.stack.n_cols*self.stack.n_rows
+
+        od = self.stack.od
         
-        odn = od / norms.reshape(1,-1)
-    
-        covmatrix = np.dot(odn.transpose(),odn)
-        
-        #print covmatrix.shape
-        
+#        #normalize od spectra - not used in pca_gui.pro
+#        norms = np.apply_along_axis(np.linalg.norm, 1, od)
+#        odn = np.zeros((n_pix, self.stack.n_ev))
+#        for i in range(n_pix):
+#            odn[i,:] = od[i,:]/np.linalg.norm(od[i,:])
+            
+       
+        covmatrix = np.dot(od.T,od)
+  
         self.pcaimages = np.zeros((self.stack.n_cols, self.stack.n_rows, self.stack.n_ev))
-        
         self.pcaimagebounds = np.zeros((self.stack.n_ev))
         
-        
+
         try:
-            self.eigenvals, self.eigenvecs = np.linalg.eig(covmatrix)
+            self.eigenvals, self.eigenvecs = np.linalg.eigh(covmatrix)
+
+            #sort the eigenvals and eigenvecs       
+            perm = np.argsort(-np.abs(self.eigenvals))
+            self.eigenvals = self.eigenvals[perm]
+            self.eigenvecs = self.eigenvecs[:,perm]
             
-            #print eigenvals
+
+            self.pcaimages = np.dot(od,self.eigenvecs)            
             
             #calculate eigenimages
-            for i in range(self.stack.n_ev):
-                evec = self.eigenvecs[:,i]
-
-                pcimage = np.dot(odn,evec)
-               
-                self.pcaimages[:,:,i] = np.reshape(pcimage, (self.stack.n_cols, self.stack.n_rows), order='F')
+            self.pcaimages = np.reshape(self.pcaimages, (self.stack.n_cols, self.stack.n_rows, self.stack.n_ev), order='F')
                 
-            #Find bounds for displaying colortables
+            #Find bounds for displaying color-tables
             for i in range(self.stack.n_ev):
                 min_val = np.min(self.pcaimages[:,:,i])
                 max_val = np.max(self.pcaimages[:,:,i])
                 self.pcaimagebounds[i] = np.max((np.abs(min_val), np.abs(max_val)))
 
             
-                
             #calculate variance captured by the pca components
             self.variance = self.eigenvals.copy()
             
