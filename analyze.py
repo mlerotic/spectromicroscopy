@@ -1,7 +1,7 @@
 '''
 Created on Nov 22, 2010
 
-@author: Mirna
+@author: Mirna Lerotic
 '''
 from __future__ import division
 
@@ -32,11 +32,11 @@ class analyze:
 
         od = self.stack.od
         
-#        #normalize od spectra - not used in pca_gui.pro
-#        norms = np.apply_along_axis(np.linalg.norm, 1, od)
-#        odn = np.zeros((n_pix, self.stack.n_ev))
-#        for i in range(n_pix):
-#            odn[i,:] = od[i,:]/np.linalg.norm(od[i,:])
+        #normalize od spectra - not used in pca_gui.pro
+        norms = np.apply_along_axis(np.linalg.norm, 1, od)
+        odn = np.zeros((n_pix, self.stack.n_ev))
+        for i in range(n_pix):
+            odn[i,:] = od[i,:]/np.linalg.norm(od[i,:])
             
        
         covmatrix = np.dot(od.T,od)

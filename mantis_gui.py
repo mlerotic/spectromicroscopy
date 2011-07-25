@@ -1,3 +1,8 @@
+'''
+
+@author: Mirna Lerotic
+'''
+
 from __future__ import division
 import wx
 import wx.lib.intctrl  
@@ -6,15 +11,17 @@ import matplotlib as mtplot
 mtplot.interactive( True )
 mtplot.use( 'WXAgg',warn=False )
 
-import wxmpl as mpl 
+import wxmpl
 import numpy as npy
 import os.path
 from mpl_toolkits.axes_grid import make_axes_locatable
 import time
 
+import data_struct
 import data_stack
 import analyze
 import logos
+
 
 
 Winsizex = 1000
@@ -111,8 +118,8 @@ class PageCluster(wx.Panel):
         
         self.tc_clustercomp = wx.TextCtrl(panel2, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         self.tc_clustercomp.SetValue("Composite cluster image")        
-        self.ClusterImagePan = mpl.PlotPanel(panel2, -1, size =(3.40,3.40), cursor=False, crosshairs=True, location=False, zoom=False)                              
-        mpl.EVT_POINT(self, self.ClusterImagePan.GetId(), self.OnPointClusterImage)   
+        self.ClusterImagePan = wxmpl.PlotPanel(panel2, -1, size =(3.40,3.40), cursor=False, crosshairs=True, location=False, zoom=False)                              
+        wxmpl.EVT_POINT(self, self.ClusterImagePan.GetId(), self.OnPointClusterImage)   
         vbox2.Add(self.tc_clustercomp, 0, wx.EXPAND) 
         vbox2.Add(self.ClusterImagePan, 0)   
 
@@ -126,7 +133,7 @@ class PageCluster(wx.Panel):
         self.tc_cluster = wx.TextCtrl(panel3, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         self.tc_cluster.SetValue("Cluster ")
         hbox31 = wx.BoxSizer(wx.HORIZONTAL)
-        self.ClusterIndvImagePan = mpl.PlotPanel(panel3, -1, size =(2.60,2.60), cursor=False, crosshairs=False, location=False, zoom=False)
+        self.ClusterIndvImagePan = wxmpl.PlotPanel(panel3, -1, size =(2.60,2.60), cursor=False, crosshairs=False, location=False, zoom=False)
     
         self.slidershow = wx.Slider(panel3, -1, self.selcluster, 1, 20, style=wx.SL_LEFT)   
         self.slidershow.Disable()    
@@ -149,7 +156,7 @@ class PageCluster(wx.Panel):
         self.tc_clustersp = wx.TextCtrl(panel4, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         self.tc_clustersp.SetValue("Cluster spectrum")
         
-        self.ClusterSpecPan = mpl.PlotPanel(panel4, -1, size =(5.7,3.40), cursor=False, crosshairs=False, location=False, zoom=False)
+        self.ClusterSpecPan = wxmpl.PlotPanel(panel4, -1, size =(5.7,3.40), cursor=False, crosshairs=False, location=False, zoom=False)
         
         vbox4.Add(self.tc_clustersp, 0, wx.EXPAND)        
         vbox4.Add(self.ClusterSpecPan, 0)
@@ -334,7 +341,7 @@ class PageCluster(wx.Panel):
                
         fileName = wx.FileSelector('Save', default_extension='png', 
                                    wildcard=('Portable Network Graphics (*.png)|*.png|' 
-                                             + 'Encapsulated Postscript (*.eps)|*.eps|All files (*.*)|*.*'), 
+                                             + 'Adobe PDF Files (*.pdf)|*.pdf|All files (*.*)|*.*'), 
                                               parent=self, flags=wx.SAVE|wx.OVERWRITE_PROMPT) 
    
         if not fileName: 
@@ -344,11 +351,11 @@ class PageCluster(wx.Panel):
         ext = ext[1:].lower() 
         
        
-        if ext != 'png' and ext != 'eps': 
+        if ext != 'png' and ext != 'pdf': 
             error_message = ( 
-                  'Only the PNG and EPS image formats are supported.\n' 
-                 'A file extension of `png\' or `eps\' must be used.') 
-            wx.MessageBox(error_message, 'Error - plotit', 
+                  'Only the PNG and PDF image formats are supported.\n' 
+                 'A file extension of `png\' or `pdf\' must be used.') 
+            wx.MessageBox(error_message, 'Error - Could not save file.', 
                   parent=self, style=wx.OK|wx.ICON_ERROR) 
             return 
    
@@ -356,8 +363,13 @@ class PageCluster(wx.Panel):
             
             suffix = "." + ext
             
-            fileName_evals = fileName[:-len(suffix)]+"_CAcimg."+ext
-            self.ClusterImagePan.print_figure(fileName_evals)
+            fileName_evals = fileName[:-len(suffix)]+"_CAcimg."+ext          
+            
+            mtplot.rcParams['pdf.fonttype'] = 42
+            
+            fig = self.ClusterImagePan.get_figure()
+            fig.savefig(fileName_evals)
+            
             
             from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas          
             for i in range (self.numclusters):
@@ -375,8 +387,8 @@ class PageCluster(wx.Panel):
                 im = axes.imshow(indvclusterimage, cmap=self.clusterclrmap2, norm=self.bnorm2)
                 axes.axis("off")
                    
-                fileName_img = fileName[:-len(suffix)]+"_CAimg_" +str(i+1)+"."+ext
-                canvas.print_figure(fileName_img)
+                fileName_img = fileName[:-len(suffix)]+"_CAimg_" +str(i+1)+"."+ext               
+                fig.savefig(fileName_img)
                 
                 
                 clusterspectrum = self.anlz.clusterspectra[i, ]
@@ -391,8 +403,7 @@ class PageCluster(wx.Panel):
                 axes.set_ylabel('Optical Density')
 
                 fileName_spec = fileName[:-len(suffix)]+"_CAspectrum_" +str(i+1)+"."+ext
-                canvas.print_figure(fileName_spec)
-                
+                fig.savefig(fileName_spec)                
                 
                 
             
@@ -478,7 +489,7 @@ class Scatterplots(wx.Frame):
           
         grid1 = wx.FlexGridSizer(2, 2)
 
-        self.ScatterPPanel = mpl.PlotPanel(panel, -1, size=(5.0, 4.0), cursor=False, crosshairs=False, location=False, zoom=False)
+        self.ScatterPPanel = wxmpl.PlotPanel(panel, -1, size=(5.0, 4.0), cursor=False, crosshairs=False, location=False, zoom=False)
         
         self.slidershow_y = wx.Slider(panel, -1, self.pca_y, 1, self.numsigpca, style=wx.SL_RIGHT|wx.SL_LABELS|wx.SL_INVERSE)
         self.slidershow_y.SetFocus()
@@ -558,7 +569,7 @@ class Scatterplots(wx.Frame):
                
         fileName = wx.FileSelector('Save Plots', default_extension='png', 
                                    wildcard=('Portable Network Graphics (*.png)|*.png|' 
-                                             + 'Encapsulated Postscript (*.eps)|*.eps|All files (*.*)|*.*'), 
+                                             + 'Adobe PDF Files (*.pdf)|*.pdf|All files (*.*)|*.*'), 
                                               parent=self, flags=wx.SAVE|wx.OVERWRITE_PROMPT) 
         
    
@@ -569,11 +580,11 @@ class Scatterplots(wx.Frame):
         ext = ext[1:].lower() 
         
        
-        if ext != 'png' and ext != 'eps': 
+        if ext != 'png' and ext != 'pdf': 
             error_message = ( 
-                  'Only the PNG and EPS image formats are supported.\n' 
-                 'A file extension of `png\' or `eps\' must be used.') 
-            wx.MessageBox(error_message, 'Error - plotit', 
+                  'Only the PNG and PDF image formats are supported.\n' 
+                 'A file extension of `png\' or `pdf\' must be used.') 
+            wx.MessageBox(error_message, 'Error - Could not save file.', 
                   parent=self, style=wx.OK|wx.ICON_ERROR) 
             return 
    
@@ -625,12 +636,11 @@ class Scatterplots(wx.Frame):
                         axes.set_xlabel('Component '+str(ip+1))
                         axes.set_ylabel('Component '+str(jp+1))
                             
-            
-
+    
             fileName_sct = fileName[:-len(suffix)]+"_CAscatterplot_" +str(i+1)+"."+ext
-            canvas.print_figure(fileName_sct)
-                
-
+            mtplot.rcParams['pdf.fonttype'] = 42
+            fig.savefig(fileName_sct)
+     
             
         except IOError, e:
             if e.strerror:
@@ -672,7 +682,7 @@ class PagePCA(wx.Panel):
         
         hbox11 = wx.BoxSizer(wx.HORIZONTAL)
    
-        self.PCAImagePan = mpl.PlotPanel(panel1, -1, size =(3.9,3.4), cursor=False, crosshairs=False, location=False, zoom=False)
+        self.PCAImagePan = wxmpl.PlotPanel(panel1, -1, size =(3.9,3.4), cursor=False, crosshairs=False, location=False, zoom=False)
                               
         self.slidershow = wx.Slider(panel1, -1, self.selpca, 1, 20, style=wx.SL_LEFT)
         self.slidershow.Disable()          
@@ -729,7 +739,7 @@ class PagePCA(wx.Panel):
         #panel 3
         panel3 = wx.Panel(self, -1)
         
-        self.PCASpecPan = mpl.PlotPanel(panel3, -1, size =(5.4,3.4), cursor=False, crosshairs=False, location=False, zoom=False)
+        self.PCASpecPan = wxmpl.PlotPanel(panel3, -1, size =(5.4,3.4), cursor=False, crosshairs=False, location=False, zoom=False)
              
         vbox3 = wx.BoxSizer(wx.VERTICAL)
         self.text_pcaspec = wx.TextCtrl(panel3, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
@@ -742,7 +752,7 @@ class PagePCA(wx.Panel):
         #panel 4
         panel4 = wx.Panel(self, -1)
              
-        self.PCAEvalsPan = mpl.PlotPanel(panel4, -1, size =(5.4,2.6), cursor=False, crosshairs=False, location=False, zoom=False)
+        self.PCAEvalsPan = wxmpl.PlotPanel(panel4, -1, size =(5.4,2.6), cursor=False, crosshairs=False, location=False, zoom=False)
         
         vbox4 = wx.BoxSizer(wx.VERTICAL)
         text4 = wx.TextCtrl(panel4, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
@@ -839,7 +849,7 @@ class PagePCA(wx.Panel):
                
         fileName = wx.FileSelector('Save Plot', default_extension='png', 
                                    wildcard=('Portable Network Graphics (*.png)|*.png|' 
-                                             + 'Encapsulated Postscript (*.eps)|*.eps|All files (*.*)|*.*'), 
+                                             + 'Adobe PDF Files (*.pdf)|*.pdf|All files (*.*)|*.*'), 
                                               parent=self, flags=wx.SAVE|wx.OVERWRITE_PROMPT) 
    
         if not fileName: 
@@ -849,11 +859,11 @@ class PagePCA(wx.Panel):
         ext = ext[1:].lower() 
         
        
-        if ext != 'png' and ext != 'eps': 
+        if ext != 'png' and ext != 'pdf': 
             error_message = ( 
-                  'Only the PNG and EPS image formats are supported.\n' 
-                 'A file extension of `png\' or `eps\' must be used.') 
-            wx.MessageBox(error_message, 'Error - plotit', 
+                  'Only the PNG and PDF image formats are supported.\n' 
+                 'A file extension of `png\' or `pdf\' must be used.') 
+            wx.MessageBox(error_message, 'Error - Could not save file.'+error_message, 
                   parent=self, style=wx.OK|wx.ICON_ERROR) 
             return 
    
@@ -861,8 +871,10 @@ class PagePCA(wx.Panel):
             
             suffix = "." + ext
             fileName_evals = fileName[:-len(suffix)]+"_PCAevals."+ext
+            mtplot.rcParams['pdf.fonttype'] = 42
             
-            self.PCAEvalsPan.print_figure(fileName_evals)
+            fig = self.PCAEvalsPan.get_figure()
+            fig.savefig(fileName_evals)
             
             from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
             
@@ -886,9 +898,8 @@ class PagePCA(wx.Panel):
                 axes.axis("off") 
                                 
                 fileName_img = fileName[:-len(suffix)]+"_PCA_" +str(i+1)+"."+ext
-                canvas.print_figure(fileName_img)
-                
-                
+                fig.savefig(fileName_img)
+            
                 
                 self.pcaspectrum = self.anlz.eigenvecs[:,i]
                 fig = mtplot.figure.Figure(figsize =(5.65,3.5))
@@ -901,7 +912,7 @@ class PagePCA(wx.Panel):
                 axes.set_ylabel('Optical Density')
                 
                 fileName_spec = fileName[:-len(suffix)]+"_PCAspectrum_" +str(i+1)+"."+ext
-                canvas.print_figure(fileName_spec)
+                fig.savefig(fileName_spec)
                 
                 
                 
@@ -1025,6 +1036,8 @@ class PageStack(wx.Panel):
         self.showROImask = 0
         self.line = None
         self.ROIpix = None
+        
+        self.show_scale_bar = 0
 
         vbox = wx.BoxSizer(wx.VERTICAL)
         hboxT = wx.BoxSizer(wx.HORIZONTAL)
@@ -1038,8 +1051,8 @@ class PageStack(wx.Panel):
         self.tc_imageeng.SetValue("Image at energy: ")
         hbox11 = wx.BoxSizer(wx.HORIZONTAL)
    
-        self.AbsImagePanel = mpl.PlotPanel(panel1, -1, size =(3.5,3.5), cursor=False, crosshairs=True, location=False, zoom=False)
-        mpl.EVT_POINT(panel1, self.AbsImagePanel.GetId(), self.OnPointAbsimage)
+        self.AbsImagePanel = wxmpl.PlotPanel(panel1, -1, size =(3.5,3.5), cursor=False, crosshairs=True, location=False, zoom=False)
+        wxmpl.EVT_POINT(panel1, self.AbsImagePanel.GetId(), self.OnPointAbsimage)
                               
         self.slider_eng = wx.Slider(panel1, -1, self.sel, 0, 100, style=wx.SL_LEFT )        
         self.slider_eng.SetFocus()
@@ -1062,8 +1075,8 @@ class PageStack(wx.Panel):
         self.tc_spec.SetValue("Spectrum at point: ")
           
         
-        self.SpectrumPanel = mpl.PlotPanel(panel2, -1, size=(5.75, 3.5), cursor=False, crosshairs=False, location=False, zoom=False)
-        mpl.EVT_POINT(panel2, self.SpectrumPanel.GetId(), self.OnPointSpectrum)
+        self.SpectrumPanel = wxmpl.PlotPanel(panel2, -1, size=(5.75, 3.5), cursor=False, crosshairs=False, location=False, zoom=False)
+        wxmpl.EVT_POINT(panel2, self.SpectrumPanel.GetId(), self.OnPointSpectrum)
         
         vbox2.Add(self.tc_spec, 1, wx.LEFT | wx.TOP | wx.EXPAND, 20)       
         vbox2.Add(self.SpectrumPanel, 0, wx.LEFT , 20)
@@ -1124,10 +1137,16 @@ class PageStack(wx.Panel):
         self.rb_flux.Disable()
         self.rb_od.Disable()
 
-        sizer42.Add((0,10))
+        self.add_scale_cb = wx.CheckBox(panel4, -1, '  Scale')
+        self.Bind(wx.EVT_CHECKBOX, self.OnShowScale, self.add_scale_cb)
+
+        sizer42.Add((0,3))
         sizer42.Add(self.rb_flux)
         sizer42.Add((0,5))
         sizer42.Add(self.rb_od)
+        sizer42.Add((0,10))
+        sizer42.Add(self.add_scale_cb)
+        
         hbox41.Add(sizer42, 0, wx.EXPAND)
                 
 
@@ -1267,7 +1286,8 @@ class PageStack(wx.Panel):
                 self.image = self.stk.absdata[:,:,self.iev].copy() 
             else:
                 self.image = self.stk.od3d[:,:,self.iev].copy() 
-  
+                
+
 
                       
         fig = self.AbsImagePanel.get_figure()
@@ -1278,6 +1298,8 @@ class PageStack(wx.Panel):
         
         if (self.line != None) and (self.addroi == 1):
             axes.add_line(self.line)
+            
+         
 
         if self.defaultdisplay == 1.0:
             im = axes.imshow(self.image, cmap=mtplot.cm.get_cmap(self.colortable)) 
@@ -1296,10 +1318,22 @@ class PageStack(wx.Panel):
         if (self.showROImask == 1) and (self.addroi == 1):
             im_red = axes.imshow(self.ROIpix_masked,cmap=mtplot.cm.get_cmap("autumn")) 
          
-        axes.axis("off")  
+        axes.axis("off") 
+        
+
+        
+        if self.show_scale_bar == 1:
+            um_string = '$\mu m$'
+            microns = '$'+self.stk.scale_bar_string+' $'+um_string
+            axes.text(self.stk.scale_bar_pixels_x+10,self.stk.n_cols-9, microns, horizontalalignment='left', verticalalignment='center',
+                      color = 'black', fontsize=14)
+            #Matplotlib has flipped scales so I'm using rows instead of cols!
+            p = mtplot.patches.Rectangle((5,self.stk.n_cols-10), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
+                                   color = 'black', fill = True)
+            axes.add_patch(p)
+        
         self.AbsImagePanel.draw()
         
-        #self.textctrl.SetValue(self.filename+"\n"+str(self.stk.ev[self.iev])+" eV")
         self.tc_imageeng.SetValue("Image at energy: " +str(self.stk.ev[self.iev])+" eV")
 
 #----------------------------------------------------------------------          
@@ -1324,7 +1358,7 @@ class PageStack(wx.Panel):
         
         self.SpectrumPanel.draw()
         
-        self.tc_spec.SetValue("Spectrum at point: [" +str(xpos)+", " + str(ypos)+"] ")
+        self.tc_spec.SetValue("Spectrum at point: [" +str(ypos)+", " + str(xpos)+"] ")
 
         
 #----------------------------------------------------------------------            
@@ -1466,7 +1500,7 @@ class PageStack(wx.Panel):
                
         fileName = wx.FileSelector('Save Plot', default_extension='png', 
                                    wildcard=('Portable Network Graphics (*.png)|*.png|' 
-                                             + 'Encapsulated Postscript (*.eps)|*.eps|All files (*.*)|*.*'), 
+                                             + 'Adobe PDF Files (*.pdf)|*.pdf|All files (*.*)|*.*'), 
                                               parent=self, flags=wx.SAVE|wx.OVERWRITE_PROMPT) 
    
         if not fileName: 
@@ -1476,11 +1510,11 @@ class PageStack(wx.Panel):
         ext = ext[1:].lower() 
         
        
-        if ext != 'png' and ext != 'eps': 
+        if ext != 'png' and ext != 'pdf': 
             error_message = ( 
-                  'Only the PNG and EPS image formats are supported.\n' 
-                 'A file extension of `png\' or `eps\' must be used.') 
-            wx.MessageBox(error_message, 'Error - plotit', 
+                  'Only the PNG and PDF image formats are supported.\n' 
+                 'A file extension of `png\' or `pdf\' must be used.') 
+            wx.MessageBox(error_message, 'Error - Could not save file.', 
                   parent=self, style=wx.OK|wx.ICON_ERROR) 
             return 
    
@@ -1488,12 +1522,17 @@ class PageStack(wx.Panel):
             
             suffix = "." + ext
             fileName_spec = fileName[:-len(suffix)]+"_spectrum."+ext
-          
-            self.SpectrumPanel.print_figure(fileName_spec)
+
+            mtplot.rcParams['pdf.fonttype'] = 42
+            
+            fig = self.SpectrumPanel.get_figure()
+            fig.savefig(fileName_spec)
+
             
             fileName_img = fileName[:-len(suffix)]+"_" +str(self.stk.ev[self.iev])+"eV."+ext
-            
-            self.AbsImagePanel.print_figure(fileName_img)
+            fig = self.AbsImagePanel.get_figure()
+            fig.savefig(fileName_img)
+
             
         except IOError, e:
             if e.strerror:
@@ -1517,7 +1556,15 @@ class PageStack(wx.Panel):
             
         self.ResetDisplaySettings()
         self.loadImage()
+
+#----------------------------------------------------------------------           
+    def OnShowScale(self, event):
+        if self.add_scale_cb.GetValue():
+            self.show_scale_bar = 1
+        else: self.show_scale_bar = 0
         
+        self.loadImage()
+             
 #----------------------------------------------------------------------
     def onResetDisplaySettings(self, event):
         
@@ -1828,9 +1875,9 @@ class ShowHistogram(wx.Frame):
         panel = wx.Panel(self, -1)
         vbox = wx.BoxSizer(wx.VERTICAL)
                
-        self.HistogramPanel = mpl.PlotPanel(panel, -1, size=(6.0, 3.7), cursor=False, crosshairs=False, location=False, zoom=False)
+        self.HistogramPanel = wxmpl.PlotPanel(panel, -1, size=(6.0, 3.7), cursor=False, crosshairs=False, location=False, zoom=False)
         
-        mpl.EVT_SELECTION(panel, self.HistogramPanel.GetId(), self.OnSelection)
+        wxmpl.EVT_SELECTION(panel, self.HistogramPanel.GetId(), self.OnSelection)
 
         vbox.Add(self.HistogramPanel, 0, wx.ALL, 20)
         
@@ -1843,7 +1890,7 @@ class ShowHistogram(wx.Frame):
         sizer2.Add(self.textctrl, 0)
         
 
-        self.AbsImagePanel = mpl.PlotPanel(panel, -1, size =(1.5,1.5), cursor=False, crosshairs=False, location=False, zoom=False)
+        self.AbsImagePanel = wxmpl.PlotPanel(panel, -1, size =(1.5,1.5), cursor=False, crosshairs=False, location=False, zoom=False)
         sizer2.Add(self.AbsImagePanel, 0)
         hbox2.Add(sizer2, 0, wx.LEFT|wx.RIGHT ,20)
         vbox.Add(hbox2, 0, wx.EXPAND)      
@@ -1982,9 +2029,9 @@ class LimitEv(wx.Frame):
         panel = wx.Panel(self, -1)
         vbox = wx.BoxSizer(wx.VERTICAL)
                
-        self.SpectrumPanel = mpl.PlotPanel(panel, -1, size=(6.0, 3.7), cursor=False, crosshairs=False, location=False, zoom=False)
+        self.SpectrumPanel = wxmpl.PlotPanel(panel, -1, size=(6.0, 3.7), cursor=False, crosshairs=False, location=False, zoom=False)
         
-        mpl.EVT_SELECTION(panel, self.SpectrumPanel.GetId(), self.OnSelection)
+        wxmpl.EVT_SELECTION(panel, self.SpectrumPanel.GetId(), self.OnSelection)
 
         vbox.Add(self.SpectrumPanel, 0, wx.ALL, 20)
         
@@ -2136,9 +2183,9 @@ class SpectralROI(wx.Frame):
         panel = wx.Panel(self, -1)
         vbox = wx.BoxSizer(wx.VERTICAL)
                
-        self.SpectrumPanel = mpl.PlotPanel(panel, -1, size=(6.0, 3.7), cursor=False, crosshairs=False, location=False, zoom=False)
+        self.SpectrumPanel = wxmpl.PlotPanel(panel, -1, size=(6.0, 3.7), cursor=False, crosshairs=False, location=False, zoom=False)
         
-        mpl.EVT_SELECTION(panel, self.SpectrumPanel.GetId(), self.OnSelection)
+        wxmpl.EVT_SELECTION(panel, self.SpectrumPanel.GetId(), self.OnSelection)
 
         vbox.Add(self.SpectrumPanel, 0, wx.ALL, 20)
         
@@ -2168,7 +2215,7 @@ class SpectralROI(wx.Frame):
         vbox.Add(text, 0, wx.LEFT|wx.RIGHT,20)
         vbox.Add((0,2))
 
-        self.ODMImagePanel = mpl.PlotPanel(panel, -1, size =(2.0,2.0), cursor=False, crosshairs=False, location=False, zoom=False)
+        self.ODMImagePanel = wxmpl.PlotPanel(panel, -1, size =(2.0,2.0), cursor=False, crosshairs=False, location=False, zoom=False)
         hbox2.Add(self.ODMImagePanel, 0, wx.LEFT|wx.RIGHT,20)
         hbox2.Add(sizer2, 1, wx.EXPAND|wx.LEFT|wx.RIGHT,20)
         
@@ -2283,7 +2330,7 @@ class SpectralROI(wx.Frame):
                        
         fileName = wx.FileSelector('Save OD Map', default_extension='png', 
                                    wildcard=('Portable Network Graphics (*.png)|*.png|' 
-                                             + 'Encapsulated Postscript (*.eps)|*.eps|All files (*.*)|*.*'), 
+                                             + 'Adobe PDF Files (*.pdf)|*.pdf|All files (*.*)|*.*'), 
                                               parent=self, flags=wx.SAVE|wx.OVERWRITE_PROMPT) 
    
         if not fileName: 
@@ -2293,17 +2340,21 @@ class SpectralROI(wx.Frame):
         ext = ext[1:].lower() 
         
        
-        if ext != 'png' and ext != 'eps': 
+        if ext != 'png' and ext != 'pdf': 
             error_message = ( 
-                  'Only the PNG and EPS image formats are supported.\n' 
-                 'A file extension of `png\' or `eps\' must be used.') 
-            wx.MessageBox(error_message, 'Error - plotit', 
+                  'Only the PNG and PDF image formats are supported.\n' 
+                 'A file extension of `png\' or `pdf\' must be used.') 
+            wx.MessageBox(error_message, 'Error - Could not save file.', 
                   parent=self, style=wx.OK|wx.ICON_ERROR) 
             return 
    
         try: 
-                        
-            self.ODMImagePanel.print_figure(fileName)
+
+            mtplot.rcParams['pdf.fonttype'] = 42
+            
+            fig = self.ODMImagePanel.get_figure()
+            fig.savefig(fileName)
+
             
         except IOError, e:
             if e.strerror:
@@ -2342,7 +2393,7 @@ class PlotFrame(wx.Frame):
         panel = wx.Panel(self, -1)
         vbox = wx.BoxSizer(wx.VERTICAL)
                
-        self.PlotPanel = mpl.PlotPanel(panel, -1, size=(6.0, 3.7), cursor=False, crosshairs=False, location=False, zoom=False)
+        self.PlotPanel = wxmpl.PlotPanel(panel, -1, size=(6.0, 3.7), cursor=False, crosshairs=False, location=False, zoom=False)
 
         vbox.Add(self.PlotPanel, 0, wx.ALL, 20)
         
@@ -2528,6 +2579,8 @@ class MainFrame(wx.Frame):
         self.stk = data_stack.data()
         self.anlz = analyze.analyze()
         self.common = common()
+        
+        self.data_struct = data_struct.h5()
                       
 
         # Here we create a panel and a notebook on the panel
@@ -2606,7 +2659,7 @@ class MainFrame(wx.Frame):
                     self.anlz = analyze.analyze()                   
                 self.stk.read_stk(filepath)        
                 self.page1.slider_eng.SetRange(0,self.stk.n_ev-1)
-                self.iev = self.stk.n_ev/2
+                self.iev = int(self.stk.n_ev/3)
                 self.page1.iev = self.iev
                 self.page1.slider_eng.SetValue(self.iev)
             
@@ -2616,8 +2669,8 @@ class MainFrame(wx.Frame):
                 self.page1.imgrgb = npy.zeros(x*y*3,dtype = "uint8")        
                 self.page1.maxval = npy.amax(self.stk.imagestack)
             
-                self.ix = x/2
-                self.iy = y/2
+                self.ix = int(x/2)
+                self.iy = int(y/2)
                 
                 self.page1.ix = self.ix
                 self.page1.iy = self.iy

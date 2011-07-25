@@ -1,7 +1,7 @@
 '''
 Created on Jun 20, 2011
 
-@author: Mirna
+@author: Mirna Lerotic
 '''
 
 import numpy as np
@@ -209,27 +209,29 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
         
         if bar_microns >= 10.:
             bar_microns = 10.*int(0.5+0.1*int(0.5+bar_microns))
-            bar_string = str(int(0.01+bar_microns)).strip()+' microns'
+            bar_string = str(int(0.01+bar_microns)).strip()
         elif bar_microns >= 1.:      
             bar_microns = float(int(0.5+bar_microns))
             if bar_microns == 1.:
-                bar_string = '1 micron'
+                bar_string = '1'
             else:
-                bar_string = str(int(0.01+bar_microns)).strip()+' microns'
+                bar_string = str(int(0.01+bar_microns)).strip()
         else:
             bar_microns = np.maximum(0.1*int(0.5+10*bar_microns),0.1)
-            bar_string = str(bar_microns).strip()+' microns'
+            bar_string = str(bar_microns).strip()
+            
+        self.scale_bar_string = bar_string
 
-#
-#      bar_pixels = fix(0.5+float(n_cols*local_zoom)*$
-#                       float(bar_microns)/ $
-#                       float(abs(x_stop-x_start)))
-#      bar = bytarr(bar_pixels,fix(0.6*pca_gui_par.char_ypix))+$
-#        pca_gui_par.top_color_index
-#      tv,bar,5,fix(0.2*pca_gui_par.textregion_ypix),/device
-#      xyouts,(10+bar_pixels),fix(0.2*pca_gui_par.textregion_ypix),$
-#        bar_string,/device,color=pca_gui_par.top_color_index,$
-#        charsize=pca_gui_par.charsize
+        #Matplotlib has flipped scales so I'm using rows instead of cols!
+        self.scale_bar_pixels_x = int(0.5+float(self.n_rows)*
+                       float(bar_microns)/float(abs(x_stop-x_start)))
+        
+        self.scale_bar_pixels_y = int(0.01*self.n_rows)
+        
+        if self.scale_bar_pixels_y < 2:
+                self.scale_bar_pixels_y = 2
+                       
+
              
              
     
