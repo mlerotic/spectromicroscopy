@@ -58,8 +58,17 @@ class detector:
         axes_list =  self.axes.split(':')
         #Dimension scales dictionary - look into how you could pass them in the argument list
         self.ds = {}
-        for i in axes_list:
-            self.ds[i] = 0.0
+        self.ds_units = {}
+                       
+    
+            
+#---------------------------------------------------------------------- 
+# Add dimension scales for the detector - the arguments must match the specification in @axes!
+    def add_dimscale(self, key = '', data = 0, units = ''):      
+
+        self.ds[key] = data
+        self.ds_units[key] = units
+
             
 #----------------------------------------------------------------------
 class instrument:
@@ -78,7 +87,8 @@ class process:
         self.program = program
 #            version [string]  
         self.version = version          
-#            parameters [string]         
+#            parameters [string]   
+        self.parameters = parameters      
 
 #----------------------------------------------------------------------
 class exchange:
@@ -110,12 +120,12 @@ class exchange:
 #---------------------------------------------------------------------- 
     def add_detector(self, data = 0, signal = 1, units = '', axes = '', energy = 0.0, energy_units = ''):   
         
-        new_detector = detector(data=data, signal=signal, units = units, energy = energy,
+        new_detector = detector(data=data, signal=signal, axes=axes, units = units, energy = energy,
                                 energy_units = energy_units)
-        self.sample.append(new_detector)
+        self.detector.append(new_detector)
         
 #---------------------------------------------------------------------- 
-    def add_white_data(self, data = 0, white_data = 0.0, white_data_units=''):  
+    def add_white_data(self, white_data = 0.0, white_data_units=''):  
         self.white_data.append(white_data)
         self.white_data_units.append(white_data_units)
         
@@ -148,26 +158,31 @@ class beamline:
         
  #----------------------------------------------------------------------
 class normalization:
-    def __init__(self, white_spectrum=0.0, white_spectrum_units = ''):
+    def __init__(self, white_spectrum=0.0, white_spectrum_units = '', white_spectrum_energy=0.0,
+                          white_spectrum_energy_units = ''):
         self.white_spectrum = white_spectrum
         self.white_spectrum_units = white_spectrum_units
+        self.white_spectrum_energy=white_spectrum_energy
+        self.white_spectrum_energy_units=white_spectrum_energy_units
                
 #----------------------------------------------------------------------
 class spectromicroscopy:
     def __init__(self):
         
         self.positions = []
-        self.postions_units = []
+        self.positions_units = []
         self.positions_names = []
         
         self.beamline = beamline()
         self.normalization = normalization()
         
+        self.optical_density = 0
+        
 #---------------------------------------------------------------------- 
     def add_positions(self,  positions = 0, positions_units = '', positions_names = ''):   
         self.positions.append(positions)
-        self.postions_units(positions_units)
-        self.positions_names(positions_names)
+        self.positions_units.append(positions_units)
+        self.positions_names.append(positions_names)
         
 #---------------------------------------------------------------------- 
     def add_beamline(self,  facility_name='', beamline_name ='', ring_current = 0, ring_current_units='',
@@ -178,9 +193,12 @@ class spectromicroscopy:
                                  monostripe = monostripe)
         
 #---------------------------------------------------------------------- 
-    def add_normalization(self,  white_spectrum=0.0, white_spectrum_units = ''):      
+    def add_normalization(self,  white_spectrum=0.0, white_spectrum_units = '', white_spectrum_energy=0.0,
+                          white_spectrum_energy_units = ''):      
         self.normalization = normalization(white_spectrum=white_spectrum, 
-                                           white_spectrum_units=white_spectrum_units)     
+                                           white_spectrum_units=white_spectrum_units, 
+                                           white_spectrum_energy=white_spectrum_energy, 
+                                           white_spectrum_energy_units=white_spectrum_energy_units)     
 
 
         

@@ -1,46 +1,18 @@
 '''
 Created on Jun 12, 2011
 
-/ [root HDF5 group]
-    spectromicroscopy/[HDF5 group]
-            file_creation_date [string - ISO 8601 format]
-            version [string]
-            comment [string]
-            experimenter/ [HDF5 group]
-                    name [string]
-                    role [string]
-                    affiliation [string]
-                    address [string]
-                    phone [string]
-                    email [string]
-                    facility_user_id [string]
-            sample/ [HDF5 group]
-                    name [string]
-                    description [string]
-                    preparation_date [string - ISO 8601 format]
-                    chemical_formula [string - abbreviated CIF format]
-            data_stack [float] - n-dim dataset 
-            dataset/ [HDF5 group]
-                    type [string]  - spectrum, 3D stack, multielement ...
-                    n_columns [integer]
-                    n_rows [integer]
-                    n_energies [integer]
-                    n_detector_elements [integer]
-                    x_dist [float] x distance (micron)
-                    y_dist [float]
-                    ev [float] photon energy (ev)
-                    msec [float]
-            i0/ [HDF5 group]
-                    i0data [float]
-                    evi0[float]
+File format details can be found on 
+
+https://confluence.aps.anl.gov/display/NX/Format+Data+Exchange+Spectromicroscopy 
 
 
-
-@author: Mirna Lerotic
+@authors: Mirna Lerotic & Nicholas Schwarz
 '''
 import numpy as np
 import scipy as scy
 import h5py 
+
+import data_struct
 
 
 #----------------------------------------------------------------------
@@ -49,62 +21,199 @@ class h5:
         pass
     
 #----------------------------------------------------------------------
-    def read_h5(self, filename):
+    def read_h5(self, filename, data_struct):
         
-        
+       
+        # Open HDF5 file
         f = h5py.File(filename, 'r') 
+    
+ 
+        # Read basic definitions
+        ds = f['implements']
+        data_struct.implements = ds[...]
+        ds = f['file_creation_date']
+        data_struct.file_creation_datetime = ds[...]
+        ds = f['comment']
+        data_struct.comment = ds[...]
+           
 
-        sm = f['spectromicroscopy']       
-        filedate = sm.attrs['file_creation_date']        
-        version = sm.attrs['version']        
-        comment = sm.attrs['comment'] 
-          
-        dataset = sm['data_stack']
-        self.absdata = dataset[...]
+        # base definition
+    
+        # Experimenter HDF5 group
+        # /experimenter
+        experimenterGrp = f['experimenter']
+        dsname = experimenterGrp['name']
+        dsrole = experimenterGrp['role']
+        dsaffil = experimenterGrp['affiliation']
+        dsaddr = experimenterGrp['address']
+        dsphone = experimenterGrp['phone']
+        dsem = experimenterGrp['email']
+        dsuid = experimenterGrp['facility_user_id']
+        data_struct.add_experimenter(name = dsname[...], 
+                                     role = dsrole[...], 
+                                     affiliation = dsaffil[...], 
+                                     address = dsaddr[...], 
+                                     phone = dsphone[...], 
+                                     email = dsem[...], 
+                                     facility_user_id = dsuid[...])
+     
+        # Sample HDF5 group
+        # /sample
+        sampleGrp = f["sample"]
+        dsname = sampleGrp['name']
+        dsdes = sampleGrp['description']
+        dspdt = sampleGrp['preparation_date']
+        dscf = sampleGrp['chemical_formula']
+        data_struct.add_sample(name = dsname[...], 
+                               description = dsdes[...], 
+                               preparation_datetime = dspdt[...], 
+                               chemical_formula = dscf[...])
+
+    
+        # Primary beam energy HDF5 group
+        # /primary_beam_energy
+        ds = f['primary_beam_energy']
+        data_struct.primary_beam_energy = ds[...]
+        data_struct.primary_beam_energy_units = f['primary_beam_energy'].attrs['units']  
+    
+    
+    
+        # exchange definition 
+    
+        # exchange HDF5 group
+        # /exchange
+        exchangeGrp = f['exchange']
+        dsver = exchangeGrp['version']
+        dscom = exchangeGrp['comment']
+        dscdt = exchangeGrp['data_collection_datetime']
+        data_struct.add_exchange(version = dsver[...], 
+                                    comment = dscom[...], 
+                                    collection_datetime = dscdt[...])
+    
+        # /exchange/detector
+        detectorGrp = exchangeGrp['detector']      
+        dsdata = detectorGrp['data']
+        dseng = detectorGrp['energy']
+        data_struct.exchange.add_detector( data = dsdata[...], 
+                                           signal = dsdata.attrs['signal'], 
+                                           units = dsdata.attrs['units'], 
+                                           axes = dsdata.attrs['axes'], 
+                                           energy = dseng[...], 
+                                           energy_units = dseng.attrs['units'])
         
-        ds = sm['dataset']
-        self.n_cols = ds.attrs['n_columns'] 
-        self.n_rows =  ds.attrs['n_rows'] 
-        self.n_ev = ds.attrs['n_energies']  
-        self.n_det = ds.attrs['n_detector_elements'] 
-        self.ev = ds.attrs['ev'] 
-        self.x_dist = ds.attrs['x_dist'] 
-        self.y_dist = ds.attrs['y_dist']
-        self.msec = ds.attrs['msec'] 
-        type = ds.attrs['type'] 
+        axes = data_struct.exchange.detector[0].axes
+        axes_list =  axes.split(':')
         
-        exp = sm['experimenter']
-        exp_name = exp.attrs['name']   
-        exp_role = exp.attrs['role']            
-        exp_affil = exp.attrs['affiliation']     
-        esp_addrs = exp.attrs['address']         
-        exp_phone = exp.attrs['phone']           
-        exp_email = exp.attrs['email']           
-        exp_facuid = exp.attrs['facility_user_id']         
         
-        sample = sm['sample']
-        samp_name = sample.attrs['name']        
-        samp_desc = sample.attrs['description']  
-        samp_prepdate = sample.attrs['preparation_date']            
-        samp_chemfor = sample.attrs['chemical_formula']            
-                   
-        i0gp = sm['i0/']
-        self.i0data = i0gp.attrs['i0data']            
-        self.evi0 = i0gp.attrs['evi0']
+        for i in axes_list:
+            ds = detectorGrp[i]
+            data_struct.exchange.detector[0].add_dimscale(key = i, data = ds[...], units = ds.attrs['units'])
+        
+
+    
+        # /exchange/white_data
+        dswd = exchangeGrp['white_data']
+        data_struct.exchange.add_white_data(white_data = dswd[...], 
+                                            white_data_units = dswd.attrs['units'])
+    
+    
+        # /exchange/dark_data
+        dsdd = exchangeGrp['dark_data']
+        data_struct.exchange.add_dark_data(dark_data = dsdd[...], 
+                                           dark_data_units = dsdd.attrs['units'])
+    
+ 
+        # /exchange/instrument
+        instrumentGrp = exchangeGrp['instrument']
+        dsname = instrumentGrp['name']
+        dsdes = instrumentGrp['description']
+        data_struct.exchange.add_instrument(name = dsname[...], 
+                                            description = dsdes[...])
+    
+    
+        # /exchange/process
+        processGrp = exchangeGrp['process']
+        dsdt = processGrp['datetime']
+        dspr = processGrp['program']
+        dsver = processGrp['version']
+        dspars = processGrp['parameters']
+        data_struct.exchange.add_process(datetime = dsdt[...], 
+                                            program = dspr[...], 
+                                            version = dsver[...], 
+                                            parameters = dspars[...])
+   
+    
+        # spectromicroscopy definition
+    
+        # Spectromicroscopy HDF5 group
+        # /spectromicroscopy
+        spectromicroscopyGrp = f['spectromicroscopy']
+        
+        # /spectromicroscopy/positions
+        dspos = spectromicroscopyGrp['positions']
+        data_struct.spectromicroscopy.add_positions(positions = dspos[...], 
+                                                    positions_units = dspos.attrs['units'], 
+                                                    positions_names = dspos.attrs['names'])
+        
+    
+        # /spectromicroscopy/beamline
+        beamlineGrp = spectromicroscopyGrp['beamline']
+        dsfn = beamlineGrp['facility_name']
+        dsbn = beamlineGrp['beamline_name']
+        dsrc = beamlineGrp['ring_current']
+        dsbe = beamlineGrp['beam_energy']
+        dsmono = beamlineGrp['monostripe']
+        data_struct.spectromicroscopy.add_beamline(facility_name = dsfn[...], 
+                                                   beamline_name = dsbn[...], 
+                                                   ring_current = dsrc[...], 
+                                                   ring_current_units = dsrc.attrs['units'], 
+                                                   beam_energy = dsbe[...], 
+                                                   beam_energy_units = dsbe.attrs['units'], 
+                                                   monostripe = dsmono[...])
+ 
+    
+        # /spectromicroscopy/normalization
+        normalizationGrp = spectromicroscopyGrp['normalization']
+        dsws = normalizationGrp['white_spectrum']
+        dswse = normalizationGrp['white_spectrum_energy']
+        data_struct.spectromicroscopy.add_normalization(white_spectrum = dsws[...], 
+                                                        white_spectrum_units = dsws.attrs['units'], 
+                                                        white_spectrum_energy = dswse[...], 
+                                                        white_spectrum_energy_units = dswse.attrs['units'])
+        
+
+    
+        # Close
+        f.close()
+        
+        self.absdata = data_struct.exchange.detector[0].data
+        
+        datadim = np.int32(self.absdata.shape)
+        
+        
+        self.n_cols = datadim[0].copy()
+        self.n_rows =  datadim[1].copy()
+        self.ev = data_struct.exchange.detector[0].energy 
+        self.n_ev = np.int32(self.ev.shape[0]).copy()
+        
+        npixels = self.n_cols*self.n_rows*self.n_ev
+        
+        
+        self.x_dist = data_struct.exchange.detector[0].ds['x'] 
+        self.y_dist = data_struct.exchange.detector[0].ds['y']
+        
+        self.i0data = data_struct.spectromicroscopy.normalization.white_spectrum           
+        self.evi0 = data_struct.spectromicroscopy.normalization.white_spectrum_energy
         
         verbose = 0
         
         if verbose == 1: 
             print  'filename ', filename
-            print list(sm)
-            print 'File creation date ', filedate
-            print 'Version ', version
-            print 'Comment ', comment
+            print 'File creation date ', data_struct.file_creation_datetime
             print 'Data array shape: ', self.absdata.shape
             print 'n columns ', self.n_cols
             print 'n_rows ', self.n_rows
             print 'n_ev ', self.n_ev
-            print 'n_detector ', self.n_det
             print 'ev array ', self.ev
             #print 'x dist ', self.x_dist
             #print 'y_dist ', self.y_dist
@@ -112,8 +221,7 @@ class h5:
             print 'i0 data ', self.i0data
             print 'evi0 ', self.evi0
         
-                
-        f.close()
+
         
         self.imagestack = np.empty((self.n_cols*self.n_rows*self.n_ev))
         self.imagestack = np.reshape(self.absdata, (self.n_cols*self.n_rows*self.n_ev), order='F')
@@ -126,5 +234,136 @@ class h5:
                 
         return
     
+#----------------------------------------------------------------------
+    def write_h5(self, filename, data_struct):
+        
+        # Open HDF5 file
+        f = h5py.File(filename, 'w')
+    
+ 
+        # Create basic definitions
+        ds = f.create_dataset('implements', data = data_struct.implements)
+        ds = f.create_dataset('file_creation_date', data = data_struct.file_creation_datetime)
+        ds = f.create_dataset('comment', data = data_struct.comment)
+    
+
+        # base definition
+    
+        # Experimenter HDF5 group
+        # /experimenter
+        experimenterGrp = f.create_group("experimenter")
+        ds = experimenterGrp.create_dataset('name', data = data_struct.experimenter[0].name)
+        ds = experimenterGrp.create_dataset('role', data = data_struct.experimenter[0].role)
+        ds = experimenterGrp.create_dataset('affiliation', data = data_struct.experimenter[0].affiliation)
+        ds = experimenterGrp.create_dataset('address', data = data_struct.experimenter[0].address)
+        ds = experimenterGrp.create_dataset('phone', data = data_struct.experimenter[0].phone)
+        ds = experimenterGrp.create_dataset('email', data= data_struct.experimenter[0].email)
+        ds = experimenterGrp.create_dataset('facility_user_id', data = data_struct.experimenter[0].facility_user_id)
+    
+    
+        # Sample HDF5 group
+        # /sample
+        sampleGrp = f.create_group("sample")
+        ds = sampleGrp.create_dataset('name', data = data_struct.sample[0].name)
+        ds = sampleGrp.create_dataset('description', data = data_struct.sample[0].description)
+        ds = sampleGrp.create_dataset('preparation_date', data = data_struct.sample[0].preparation_datetime)
+        ds = sampleGrp.create_dataset('chemical_formula', data = data_struct.sample[0].chemical_formula)
+    
+    
+        # Primary beam energy HDF5 group
+        # /primary_beam_energy
+        ds = f.create_dataset('primary_beam_energy', data = data_struct.primary_beam_energy)
+        ds.attrs['units'] =  data_struct.primary_beam_energy_units
+    
+    
+    
+        # exchange definition 
+    
+        # exchange HDF5 group
+        # /exchange
+        exchangeGrp = f.create_group("exchange")
+    
+        ds = exchangeGrp.create_dataset('version', data = data_struct.exchange.version)
+        ds = exchangeGrp.create_dataset('comment', data = data_struct.exchange.comment)
+    
+    
+        # /exchange/detector
+        detectorGrp = exchangeGrp.create_group('detector')
+        ds = detectorGrp.create_dataset('data', data = data_struct.exchange.detector[0].data)
+        ds.attrs['signal'] = data_struct.exchange.detector[0].signal
+        ds.attrs['units'] = data_struct.exchange.detector[0].units
+        ds.attrs['axes'] = data_struct.exchange.detector[0].axes
+        
+        for k, v in data_struct.exchange.detector[0].ds.iteritems():          
+            ds = detectorGrp.create_dataset(k, data = v)
+            ds.attrs['units'] = data_struct.exchange.detector[0].ds_units[k]
+        
+        ds = detectorGrp.create_dataset('energy', data = data_struct.exchange.detector[0].energy)
+        ds.attrs['units'] = data_struct.exchange.detector[0].energy_units
+    
+    
+        # /exchange/white_data
+        if data_struct.exchange.white_data:        
+            ds = exchangeGrp.create_dataset('white_data', data = data_struct.exchange.white_data[0])
+            ds.attrs['units'] = data_struct.exchange.white_data_units[0]
+    
+    
+        # /exchange/dark_data
+        if data_struct.exchange.dark_data:
+            ds = exchangeGrp.create_dataset('dark_data', data = data_struct.exchange.dark_data[0])
+            ds.attrs['units'] = data_struct.exchange.dark_data_units[0]
+    
+    
+        # /exchange/data_collection_datetime
+        ds = exchangeGrp.create_dataset('data_collection_datetime', data = data_struct.exchange.collection_datetime)
+    
+    
+        # /exchange/instrument
+        instrumentGrp = exchangeGrp.create_group('instrument')
+        ds = instrumentGrp.create_dataset('name', data = data_struct.exchange.instrument.name)
+        ds = instrumentGrp.create_dataset('description', data = data_struct.exchange.instrument.description)
+    
+    
+        # /exchange/process
+        processGrp = exchangeGrp.create_group('process')
+        ds = processGrp.create_dataset('datetime', data = data_struct.exchange.process.datetime)
+        ds = processGrp.create_dataset('program', data = data_struct.exchange.process.program)
+        ds = processGrp.create_dataset('version', data = data_struct.exchange.process.version)
+        ds = processGrp.create_dataset('parameters', data = data_struct.exchange.process.parameters)
+    
+    
+    
+        # spectromicroscopy definition
+    
+        # Spectromicroscopy HDF5 group
+        # /spectromicroscopy
+        spectromicroscopyGrp = f.create_group('spectromicroscopy')
+        
+        ds = spectromicroscopyGrp.create_dataset('positions', data = data_struct.spectromicroscopy.positions)
+        ds.attrs['units'] = data_struct.spectromicroscopy.positions_units
+        ds.attrs['names'] = data_struct.spectromicroscopy.positions_names
+        
+    
+        # /spectromicroscopy/beamline
+        beamlineGrp = spectromicroscopyGrp.create_group('beamline')
+        ds = beamlineGrp.create_dataset('facility_name', data = data_struct.spectromicroscopy.beamline.facility_name)
+        ds = beamlineGrp.create_dataset('beamline_name', data = data_struct.spectromicroscopy.beamline.beamline_name)
+        ds = beamlineGrp.create_dataset('ring_current', data = data_struct.spectromicroscopy.beamline.ring_current)
+        ds.attrs['units'] = data_struct.spectromicroscopy.beamline.ring_current_units
+        ds = beamlineGrp.create_dataset('beam_energy', data = data_struct.spectromicroscopy.beamline.beam_energy)
+        ds.attrs['units'] = data_struct.spectromicroscopy.beamline.beam_energy_units
+        ds = beamlineGrp.create_dataset('monostripe', data = data_struct.spectromicroscopy.beamline.monostripe)
+    
+    
+        # /spectromicroscopy/normalization
+        normalizationGrp = spectromicroscopyGrp.create_group('normalization')
+        ds = normalizationGrp.create_dataset('white_spectrum', data = data_struct.spectromicroscopy.normalization.white_spectrum)
+        ds.attrs['units'] = data_struct.spectromicroscopy.normalization.white_spectrum_units
+        ds = normalizationGrp.create_dataset('white_spectrum_energy', data = data_struct.spectromicroscopy.normalization.white_spectrum_energy)
+        ds.attrs['units'] = data_struct.spectromicroscopy.normalization.white_spectrum_energy_units
+    
+    
+        # Close
+        f.close()
 
 

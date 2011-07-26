@@ -11,14 +11,16 @@ import datetime
 
 import x1a_stk
 import aps_hdf5
+import data_struct
 
 #----------------------------------------------------------------------
 class data(x1a_stk.x1astk,aps_hdf5.h5):
-    def __init__(self):
+    def __init__(self, data_struct):
         x1a_stk.x1astk.__init__(self)
         aps_hdf5.h5.__init__(self)
+        
+        self.data_struct = data_struct
 
-        pass
 #----------------------------------------------------------------------   
     def new_data(self):
         self.n_cols = 0
@@ -55,6 +57,8 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
     def read_stk_i0(self, filename):
         x1a_stk.x1astk.read_stk_i0(self,filename)
         self.calculate_optical_density()
+        
+        self.fill_h5_struct_from_stk()
 
 #---------------------------------------------------------------------- 
     def read_stk(self, filename):    
@@ -66,10 +70,47 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
 #---------------------------------------------------------------------- 
     def read_h5(self, filename):    
         self.new_data()  
-        aps_hdf5.h5.read_h5(self, filename)
+        aps_hdf5.h5.read_h5(self, filename, self.data_struct)
         
         self.calculate_optical_density()
         self.scale_bar()
+        
+#---------------------------------------------------------------------- 
+    def fill_h5_struct_from_stk(self):   
+        
+        now = datetime.datetime.now()
+        
+        self.data_struct.implements = 'base, exchange, spectromicroscopy'
+        self.data_struct.file_creation_datetime = now.strftime("%Y-%m-%dT%H:%M")
+        self.data_struct.comment = 'Converted from .stk',
+        
+        self.data_struct.add_experimenter()
+
+        self.data_struct.add_sample()
+        
+        self.data_struct.exchange.version = '1.00'
+        
+        self.data_struct.exchange.add_detector(data=self.absdata, 
+                                                  signal = 1, 
+                                                  axes='x:y', 
+                                                  energy=self.ev, 
+                                                  energy_units = 'ev')
+        
+        
+        self.data_struct.exchange.detector[0].add_dimscale(key = 'x', units = 'um', data = self.x_dist)
+        self.data_struct.exchange.detector[0].add_dimscale(key = 'y', units = 'um', data = self.y_dist)
+        
+        self.data_struct.exchange.add_white_data()
+        self.data_struct.exchange.add_dark_data()
+        
+        
+        self.data_struct.spectromicroscopy.add_normalization(white_spectrum=self.i0data, 
+                                                                white_spectrum_energy = self.evi0, 
+                                                                white_spectrum_energy_units='eV')
+        self.data_struct.spectromicroscopy.add_beamline()
+        self.data_struct.spectromicroscopy.add_positions()
+        
+        self.data_struct.spectromicroscopy.optical_density = self.od
         
 #----------------------------------------------------------------------
     def convert_stk_to_h5(self, filename):
@@ -80,7 +121,7 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
         #print "Current date and time using strftime:"
         #print now.strftime("%Y-%m-%d %H:%M")
                
-        sm.attrs['file_creation_date'] = now.strftime("%Y-%m-%d")
+        sm.attrs['file_creation_date'] = now.strftime("%Y-%m-%dT%H:%M")
         sm.attrs['version'] = 0
         sm.attrs['comment'] = 'Converted from a x1a .stk file'
         
@@ -151,7 +192,9 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
         self.evi0 = self.ev.copy()
         self.i0data = self.i0datahist 
 
-        self.calculate_optical_density()    
+        self.calculate_optical_density()   
+        
+        self.fill_h5_struct_from_stk() 
     
         return    
     
@@ -161,7 +204,9 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
         self.evi0 = evdata
         self.i0data = i0data 
 
-        self.calculate_optical_density()    
+        self.calculate_optical_density()
+        
+        self.fill_h5_struct_from_stk()
     
         return  
     

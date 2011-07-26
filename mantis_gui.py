@@ -42,9 +42,10 @@ class common:
 
 """ ------------------------------------------------------------------------------------------------"""
 class PageCluster(wx.Panel):
-    def __init__(self, parent, common, stack, anlz):
+    def __init__(self, parent, common, data_struct, stack, anlz):
         wx.Panel.__init__(self, parent)
         
+        self.data_struct = data_struct
         self.stk = stack
         self.com = common
         self.anlz = anlz
@@ -657,12 +658,13 @@ class Scatterplots(wx.Frame):
     
 """ ------------------------------------------------------------------------------------------------"""
 class PagePCA(wx.Panel):
-    def __init__(self, parent, common, stack, anlz):
+    def __init__(self, parent, common, data_struct, stack, anlz):
         wx.Panel.__init__(self, parent)
         
         self.SetBackgroundColour("White")
         
         self.com = common 
+        self.data_struct = data_struct
         self.stk = stack       
         self.anlz = anlz
         
@@ -1005,9 +1007,10 @@ class PagePCA(wx.Panel):
 
 """ ------------------------------------------------------------------------------------------------"""
 class PageStack(wx.Panel):
-    def __init__(self, parent, common, stack):
+    def __init__(self, parent, common, data_struct, stack):
         wx.Panel.__init__(self, parent)
         
+        self.data_struct = data_struct
         self.stk = stack
         self.com = common                  
         self.SetBackgroundColour("White")
@@ -2576,21 +2579,20 @@ class MainFrame(wx.Frame):
         
         self.initToolbar()
         
-        self.stk = data_stack.data()
+        self.data_struct = data_struct.h5()
+        self.stk = data_stack.data(self.data_struct)
         self.anlz = analyze.analyze()
         self.common = common()
-        
-        self.data_struct = data_struct.h5()
-                      
+              
 
         # Here we create a panel and a notebook on the panel
         p = wx.Panel(self)
         nb = wx.Notebook(p, style=wx.BORDER_STATIC)
 
         # create the page windows as children of the notebook
-        self.page1 = PageStack(nb, self.common, self.stk)
-        self.page2 = PagePCA(nb, self.common, self.stk, self.anlz)
-        self.page3 = PageCluster(nb, self.common, self.stk, self.anlz)
+        self.page1 = PageStack(nb, self.common, self.data_struct, self.stk)
+        self.page2 = PagePCA(nb, self.common, self.data_struct, self.stk, self.anlz)
+        self.page3 = PageCluster(nb, self.common, self.data_struct, self.stk, self.anlz)
 
         # add the pages to the notebook with the label to show on the tab
         nb.AddPage(self.page1, "Image Stack")
@@ -2640,7 +2642,9 @@ class MainFrame(wx.Frame):
         """
         Browse for .stk file
         """
-        try: 
+        a=1
+        if a==1:
+        #try: 
             wildcard =  "HDF5 files (*.hdf5)|*.hdf5|" + "STK files (*.stk)|*.stk|" 
             dialog = wx.FileDialog(None, "Choose a file",
                                     wildcard=wildcard,
@@ -2721,13 +2725,13 @@ class MainFrame(wx.Frame):
 
                 wx.EndBusyCursor()
 
-        except:
-
-            self.common.stack_loaded = 0 
-            self.common.i0_loaded = 0
-                               
-            wx.EndBusyCursor()
-            wx.MessageBox("Image stack not loaded.")
+#        except:
+#
+#            self.common.stack_loaded = 0 
+#            self.common.i0_loaded = 0
+#                               
+#            wx.EndBusyCursor()
+#            wx.MessageBox("Image stack not loaded.")
                    
         dialog.Destroy()
         self.refresh_widgets()
@@ -2738,6 +2742,7 @@ class MainFrame(wx.Frame):
         """
         Browse for .hdf5 file
         """
+
         try: 
             wildcard = "HDF5 files (*.hdf5)|*.hdf5"
             dialog = wx.FileDialog(None, "Save as .hdf5", wildcard=wildcard,
@@ -2747,8 +2752,8 @@ class MainFrame(wx.Frame):
                             filepath = dialog.GetPath()
                             self.page1.filename = dialog.GetFilename()
 
-            wx.BeginBusyCursor()                 
-            self.stk.convert_stk_to_h5(filepath)        
+            wx.BeginBusyCursor()                  
+            self.stk.write_h5(filepath, self.data_struct)    
             wx.EndBusyCursor()      
 
         except:
