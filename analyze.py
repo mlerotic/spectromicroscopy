@@ -130,6 +130,7 @@ class analyze:
         for i in range(nclusters):
             clind = np.where(indx == count_indices[i])
             self.cluster_indices[clind] = i
+            self.clustersizes[i] = self.cluster_indices[clind].shape[0]
 
             for ie in range(self.stack.n_ev):  
                 thiseng_od = self.stack.od3d[:,:,ie]

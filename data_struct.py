@@ -92,14 +92,11 @@ class process:
 
 #----------------------------------------------------------------------
 class exchange:
-    def __init__(self, version = '', comment = '',  collection_datetime = ''):
+    def __init__(self, comment = '',  collection_datetime = ''):
         pass
     
-#        version [1.01] file version 
-        self.version = version 
 #        comment [Another comment.]  
         self.comment = comment  
-        
 #        detector/[HDF5 group]
         self.detector = []
 #        white_data []
@@ -204,11 +201,13 @@ class spectromicroscopy:
         
 #----------------------------------------------------------------------
 class h5:
-    def __init__(self, implements = '', file_creation_datetime = '', comment = '',
+    def __init__(self, implements = '', version = '', file_creation_datetime = '', comment = '',
                  primary_beam_energy = 0.0, primary_beam_energy_units = ''):
         
         #implements [string] comma separated string that tells the user which entries file contains
         self.implements = implements
+#        version [1.01] file version 
+        self.version = version 
         #file_creation_date [string - ISO 8601 format]
         self.file_creation_datetime = file_creation_datetime
         #comment [string]
@@ -251,8 +250,8 @@ class h5:
         self.sample.append(new_sample)
         
 #---------------------------------------------------------------------- 
-    def add_exchange(self, version = '', comment = '', collection_datetime = ''):   
+    def add_exchange(self,  comment = '', collection_datetime = ''):   
         
-        self.exchange = exchange(version=version, comment=comment, collection_datetime=collection_datetime)
+        self.exchange = exchange(comment=comment, collection_datetime=collection_datetime)
         
 

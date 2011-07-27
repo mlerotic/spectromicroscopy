@@ -81,6 +81,7 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
         now = datetime.datetime.now()
         
         self.data_struct.implements = 'base, exchange, spectromicroscopy'
+        self.data_struct.version = '0.9'
         self.data_struct.file_creation_datetime = now.strftime("%Y-%m-%dT%H:%M")
         self.data_struct.comment = 'Converted from .stk',
         
@@ -88,7 +89,6 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
 
         self.data_struct.add_sample()
         
-        self.data_struct.exchange.version = '1.00'
         
         self.data_struct.exchange.add_detector(data=self.absdata, 
                                                   signal = 1, 
@@ -112,57 +112,6 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
         
         self.data_struct.spectromicroscopy.optical_density = self.od
         
-#----------------------------------------------------------------------
-    def convert_stk_to_h5(self, filename):
-        f = h5py.File(filename, 'w')  
-        sm = f.create_group('spectromicroscopy')
-        
-        now = datetime.datetime.now()
-        #print "Current date and time using strftime:"
-        #print now.strftime("%Y-%m-%d %H:%M")
-               
-        sm.attrs['file_creation_date'] = now.strftime("%Y-%m-%dT%H:%M")
-        sm.attrs['version'] = 0
-        sm.attrs['comment'] = 'Converted from a x1a .stk file'
-        
-     
-        dataset = sm.create_dataset('data_stack', data=self.absdata)
-        ds = sm.create_group('dataset')
-        ds.attrs['n_columns'] = self.n_cols
-        ds.attrs['n_rows'] =  self.n_rows
-        ds.attrs['n_energies'] = self.n_ev
-        ds.attrs['n_detector_elements'] = 1
-        ds.attrs['ev'] = self.ev
-        ds.attrs['x_dist'] = self.x_dist
-        ds.attrs['y_dist'] = self.y_dist
-        ds.attrs['msec'] = self.msec
-        ds.attrs['type'] = '3dstack'
-        
-
-        exp = sm.create_group('experimenter')
-        exp.attrs['name'] = ' '  
-        exp.attrs['role'] = ' '            
-        exp.attrs['affiliation'] = ' '    
-        exp.attrs['address'] = ' '         
-        exp.attrs['phone'] = ' '           
-        exp.attrs['email'] = ' '           
-        exp.attrs['facility_user_id'] = ' '         
-        
-        sample = sm.create_group('sample')
-        sample.attrs['name'] = ' '        
-        sample.attrs['description'] = ' '   
-        sample.attrs['preparation_date'] = ' '           
-        sample.attrs['chemical_formula'] = ' '            
-
-                   
-        i0gp = sm.create_group('i0/')
-        i0gp.attrs['i0data'] = self.i0data           
-        i0gp.attrs['evi0'] = self.evi0
-        
-        f.close()
-        
-        
-        return
     
     
 #----------------------------------------------------------------------   

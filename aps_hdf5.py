@@ -31,6 +31,8 @@ class h5:
         # Read basic definitions
         ds = f['implements']
         data_struct.implements = ds[...]
+        ds = f['version']
+        data_struct.version = ds[...]
         ds = f['file_creation_date']
         data_struct.file_creation_datetime = ds[...]
         ds = f['comment']
@@ -83,12 +85,10 @@ class h5:
         # exchange HDF5 group
         # /exchange
         exchangeGrp = f['exchange']
-        dsver = exchangeGrp['version']
         dscom = exchangeGrp['comment']
         dscdt = exchangeGrp['data_collection_datetime']
-        data_struct.add_exchange(version = dsver[...], 
-                                    comment = dscom[...], 
-                                    collection_datetime = dscdt[...])
+        data_struct.add_exchange(comment = dscom[...],
+                                 collection_datetime = dscdt[...])
     
         # /exchange/detector
         detectorGrp = exchangeGrp['detector']      
@@ -107,7 +107,8 @@ class h5:
         
         for i in axes_list:
             ds = detectorGrp[i]
-            data_struct.exchange.detector[0].add_dimscale(key = i, data = ds[...], units = ds.attrs['units'])
+            data_struct.exchange.detector[0].add_dimscale(key = i, data = ds[...], 
+                                                          units = ds.attrs['units'])
         
 
     
@@ -243,6 +244,7 @@ class h5:
  
         # Create basic definitions
         ds = f.create_dataset('implements', data = data_struct.implements)
+        ds = f.create_dataset('version', data = data_struct.version)
         ds = f.create_dataset('file_creation_date', data = data_struct.file_creation_datetime)
         ds = f.create_dataset('comment', data = data_struct.comment)
     
@@ -283,7 +285,6 @@ class h5:
         # /exchange
         exchangeGrp = f.create_group("exchange")
     
-        ds = exchangeGrp.create_dataset('version', data = data_struct.exchange.version)
         ds = exchangeGrp.create_dataset('comment', data = data_struct.exchange.comment)
     
     
@@ -357,9 +358,11 @@ class h5:
     
         # /spectromicroscopy/normalization
         normalizationGrp = spectromicroscopyGrp.create_group('normalization')
-        ds = normalizationGrp.create_dataset('white_spectrum', data = data_struct.spectromicroscopy.normalization.white_spectrum)
+        ds = normalizationGrp.create_dataset('white_spectrum', 
+                                             data = data_struct.spectromicroscopy.normalization.white_spectrum)
         ds.attrs['units'] = data_struct.spectromicroscopy.normalization.white_spectrum_units
-        ds = normalizationGrp.create_dataset('white_spectrum_energy', data = data_struct.spectromicroscopy.normalization.white_spectrum_energy)
+        ds = normalizationGrp.create_dataset('white_spectrum_energy', 
+                                             data = data_struct.spectromicroscopy.normalization.white_spectrum_energy)
         ds.attrs['units'] = data_struct.spectromicroscopy.normalization.white_spectrum_energy_units
     
     
