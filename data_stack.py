@@ -167,15 +167,15 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
         self.od = np.empty((self.n_cols, self.n_rows, self.n_ev))
         
         #little hack to deal with rounding errors
-        self.evi0[self.evi0.size-1] += 0.001
+        #self.evi0[self.evi0.size-1] += 0.001
         
         fi0int = scipy.interpolate.interp1d(self.evi0,self.i0data, kind='cubic', bounds_error=False, fill_value=0.0)      
         i0 = fi0int(self.ev)
         
         #zero out all negative values in the image stack
-        negative_indices = np.where(self.imagestack < 0)
+        negative_indices = np.where(self.absdata < 0)
         if negative_indices:
-            self.imagestack[negative_indices] = 0.01
+            self.absdata[negative_indices] = 0.01
                
 
         for i in range(self.n_ev):
@@ -264,3 +264,32 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
         file.close()
     
         return  
+    
+#----------------------------------------------------------------------   
+#Read x-ray absorption spectrum
+    def read_xas(self, filename):
+        
+        spectrum_common_name = ' '
+ 
+        f = open(str(filename),'r')
+        
+        elist = []
+        ilist = []    
+    
+        for line in f:
+            if line.startswith('*'):
+                if 'Common name' in line:
+                    spectrum_common_name = line.split(':')[-1].strip()
+
+            else:
+                e, i = [float (x) for x in line.split()] 
+                elist.append(e)
+                ilist.append(i)
+                
+        spectrum_evdata = np.array(elist)
+        spectrum_data = np.array(ilist) 
+                
+        f.close()
+        
+        return spectrum_evdata, spectrum_data, spectrum_common_name
+        

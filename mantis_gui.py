@@ -5,11 +5,9 @@
 
 from __future__ import division
 import wx
-import wx.lib.intctrl  
-import wx.lib.masked.numctrl
 import matplotlib as mtplot 
 mtplot.interactive( True )
-mtplot.use( 'WXAgg',warn=False )
+mtplot.use( 'WXAgg', warn=False )
 
 import wxmpl
 import numpy as npy
@@ -38,8 +36,613 @@ class common:
         self.i0_loaded = 0
         self.pca_calculated = 0
         self.cluster_calculated = 0
+        self.spec_anl_calculated = 0
+        
+""" ------------------------------------------------------------------------------------------------"""
+class PageSpectral(wx.Panel):
+    def __init__(self, parent, common, data_struct, stack, anlz):
+        wx.Panel.__init__(self, parent)
+        
+        self.data_struct = data_struct
+        self.stk = stack
+        self.com = common
+        self.anlz = anlz
+        
+        self.i_tspec = 1
+        self.showraw = False
+        self.show_scale_bar = 0
+        
+        self.SetBackgroundColour("White")
+           
+        self.fontsize = self.com.fontsize        
+        
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        hboxT = wx.BoxSizer(wx.HORIZONTAL)
+        hboxB = wx.BoxSizer(wx.HORIZONTAL)
+    
+        #panel 1        
+        panel1 = wx.Panel(self, -1)
+        vbox1 = wx.BoxSizer(wx.VERTICAL)
+        
+        self.tc_spmap = wx.TextCtrl(panel1, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.tc_spmap.SetValue("Spectrum composition map")
+
+        self.MapPanel = wxmpl.PlotPanel(panel1, -1, size =(3.5,3.5), cursor=False, crosshairs=False, location=False, zoom=False)                            
+  
+        vbox1.Add(self.tc_spmap,1, wx.LEFT | wx.TOP | wx.EXPAND, 20)        
+        vbox1.Add(self.MapPanel, 0,  wx.LEFT, 20)
+
+        panel1.SetSizer(vbox1)
+     
+     
+        #panel 2
+        panel2 = wx.Panel(self, -1)
+        vbox2 = wx.BoxSizer(wx.VERTICAL)
+        
+        self.tc_tspec = wx.TextCtrl(panel2, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.tc_tspec.SetValue("Target Spectrum: ")
+        hbox11 = wx.BoxSizer(wx.HORIZONTAL)         
+        
+        self.TSpectrumPanel = wxmpl.PlotPanel(panel2, -1, size=(5.65, 3.5), cursor=False, crosshairs=False, location=False, zoom=False)
+
+        self.slider_tspec = wx.Slider(panel2, -1, 1, 1, 5, style=wx.SL_LEFT )        
+        self.slider_tspec.SetFocus()
+        self.Bind(wx.EVT_SCROLL, self.OnTSScroll, self.slider_tspec)
+
+        hbox11.Add(self.TSpectrumPanel, 0)
+        hbox11.Add(self.slider_tspec, 0,  wx.EXPAND)
+                
+        vbox2.Add(self.tc_tspec, 1, wx.LEFT | wx.TOP | wx.EXPAND, 20)       
+        vbox2.Add(hbox11, 0, wx.LEFT , 20)
+        
+        panel2.SetSizer(vbox2)
+        
+        
+        #panel 3
+        panel3 = wx.Panel(self, -1)
+        sizer1 = wx.StaticBoxSizer(wx.StaticBox(panel3, -1, 'Target Spectrum', size =(100,-1)),orient=wx.VERTICAL)
+        vbox31 = wx.BoxSizer(wx.VERTICAL)
+        vbox31.Add((0,10)) 
+        
+        self.button_loadtspec = wx.Button(panel3, -1, 'Load Spectrum')
+        self.Bind(wx.EVT_BUTTON, self.OnTSpecFromFile, id=self.button_loadtspec.GetId())
+        self.button_loadtspec.Disable()
+        vbox31.Add(self.button_loadtspec, 0, wx.EXPAND)
+        self.button_addflat = wx.Button(panel3, -1, 'Add Flat Spectrum')
+        self.Bind(wx.EVT_BUTTON, self.OnFlatTSpec, id=self.button_addflat.GetId())
+        self.button_addflat.Disable()
+        vbox31.Add(self.button_addflat, 0, wx.EXPAND)
+        self.button_addclspec = wx.Button(panel3, -1, '   Add Cluster Spectra   ')
+        self.Bind(wx.EVT_BUTTON, self.OnAddClusterSpectra, id=self.button_addclspec.GetId())   
+        self.button_addclspec.Disable()     
+        vbox31.Add(self.button_addclspec, 0, wx.EXPAND)
+
+        self.button_save = wx.Button(panel3, -1, 'Save', (10,10))
+        self.Bind(wx.EVT_BUTTON, self.OnSave, id=self.button_save.GetId())
+        self.button_save.Disable()          
+        vbox31.Add(self.button_save, 0, wx.EXPAND)
+        sizer1.Add(vbox31,1, wx.LEFT|wx.RIGHT|wx.EXPAND,2)
+        panel3.SetSizer(sizer1)
         
 
+        
+        #panel 4
+        panel4 = wx.Panel(self, -1)
+        vbox4 = wx.BoxSizer(wx.VERTICAL)
+
+        sizer4 = wx.StaticBoxSizer(wx.StaticBox(panel4, -1, 'Display', size =(500,-1)), orient=wx.VERTICAL)
+
+        sizer41 = wx.StaticBoxSizer(wx.StaticBox(panel4, -1, 'Spectrum', size =(500,-1)), orient=wx.VERTICAL)
+        self.textctrl_sp = wx.TextCtrl(panel4, -1, style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        sizer41.Add(self.textctrl_sp, 1, wx.EXPAND|wx.TOP|wx.LEFT, 5)
+        vbox4.Add(sizer41, 0, wx.EXPAND)
+        
+        self.textctrl_sp.AppendText('Common Name: \n')
+        self.textctrl_sp.AppendText('RMS Error: ')
+        
+        hbox41 = wx.BoxSizer(wx.HORIZONTAL)
+         
+        sizer42 = wx.StaticBoxSizer(wx.StaticBox(panel4, -1, 'Composition Map', size =(240,-1)),  orient=wx.VERTICAL)
+        self.rb_raw = wx.RadioButton(panel4, -1, 'Raw', style=wx.RB_GROUP)
+        self.rb_fit = wx.RadioButton(panel4, -1, 'Fitted')
+        self.Bind(wx.EVT_RADIOBUTTON, self.OnRBRawFit, id=self.rb_raw.GetId())
+        self.Bind(wx.EVT_RADIOBUTTON, self.OnRBRawFit, id=self.rb_fit.GetId())
+        self.rb_fit.SetValue(True)
+
+        self.add_scale_cb = wx.CheckBox(panel4, -1, '  Scale')
+        self.Bind(wx.EVT_CHECKBOX, self.OnShowScale, self.add_scale_cb)
+        
+        sizer42.Add((0,3))
+        sizer42.Add(self.rb_raw)
+        sizer42.Add((0,5))
+        sizer42.Add(self.rb_fit)
+        sizer42.Add((0,10))
+        sizer42.Add(self.add_scale_cb)
+        
+        hbox41.Add(sizer42, 1, wx.EXPAND)
+                
+
+        sizer43 = wx.StaticBoxSizer(wx.StaticBox(panel4, -1, 'Fit Weights', size =(240,-1)),  orient=wx.VERTICAL)
+        hbox42 = wx.BoxSizer(wx.HORIZONTAL)
+        hbox42.Add((3,0))
+        
+        self.tc_spfitlist = wx.TextCtrl(panel4, -1, size=(100, 65), style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        
+        hbox42.Add(self.tc_spfitlist,1,wx.EXPAND)
+        
+        #hbox42.Add((20,0))
+
+        
+        vbox43 = wx.BoxSizer(wx.VERTICAL)
+        self.button_removespec = wx.Button(panel4, -1, 'Remove Spectrum', (10,10))
+        self.Bind(wx.EVT_BUTTON, self.OnRemoveSpectrum, id=self.button_removespec.GetId())   
+        self.button_removespec.Disable()     
+        vbox43.Add(self.button_removespec, 1, wx.EXPAND)
+        self.button_movespup = wx.Button(panel4, -1, 'Move Spectrum Up', (10,10))
+        self.Bind(wx.EVT_BUTTON, self.OnMoveSpectrumUp, id=self.button_movespup.GetId())   
+        self.button_movespup.Disable()     
+        vbox43.Add(self.button_movespup, 1, wx.EXPAND)
+        self.button_movespdown = wx.Button(panel4, -1, 'Move Spectrum Down', (10,10))
+        self.Bind(wx.EVT_BUTTON, self.OnMoveSpectrumDown, id=self.button_movespdown.GetId())   
+        self.button_movespdown.Disable()     
+        vbox43.Add(self.button_movespdown, 1, wx.EXPAND)
+                       
+        sizer43.Add(hbox42)
+               
+            
+        hbox41.Add((10,0))
+        hbox41.Add(sizer43, 1, wx.EXPAND)
+        hbox41.Add(vbox43, 1, wx.EXPAND|wx.ALL, 5)
+        vbox4.Add(hbox41, 1, wx.EXPAND)
+
+        sizer4.Add(vbox4,1, wx.EXPAND)
+        
+        panel4.SetSizer(sizer4)
+        
+        
+        #panel 5
+        panel5 = wx.Panel(self, -1)
+        sizer5 = wx.StaticBoxSizer(wx.StaticBox(panel5, -1, 'Target Spectra'), wx.VERTICAL)
+        
+        hbox51 = wx.BoxSizer(wx.HORIZONTAL)
+        hbox51.Add((0,2))
+         
+        self.tc_speclist = wx.TextCtrl(panel5, -1, style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        hbox51.Add(self.tc_speclist, 1, wx.EXPAND)
+        sizer5.Add(hbox51,1, wx.ALL|wx.EXPAND,2)        
+        panel5.SetSizer(sizer5)
+
+        
+        hboxB.Add(panel2, 0, wx.BOTTOM | wx.TOP, 9)
+        hboxB.Add(panel1, 0, wx.BOTTOM | wx.TOP, 9)
+        hboxT.Add((10,0)) 
+               
+        hboxT.Add(panel3, 1, wx.LEFT | wx.RIGHT | wx.TOP | wx.EXPAND, 10)
+        hboxT.Add(panel4, 3, wx.LEFT | wx.RIGHT |wx.TOP | wx.EXPAND,10)
+        hboxT.Add(panel5, 1, wx.LEFT | wx.RIGHT |wx.TOP | wx.EXPAND,10)
+
+        vbox.Add(hboxT, 0, wx.ALL, 5)
+        
+        vbox.Add(hboxB, 0,  wx.ALL, 5)
+  
+        self.SetSizer(vbox) 
+        
+        
+        
+#----------------------------------------------------------------------
+    def OnTSpecFromFile(self, event):
+        
+
+        try: 
+            wildcard = "Spectrum files (*.xas)|*.xas"
+            dialog = wx.FileDialog(None, "Choose Spectrum file",
+                                    wildcard=wildcard,
+                                    style=wx.OPEN)
+            if dialog.ShowModal() == wx.ID_OK:
+                            filepath = dialog.GetPath()
+                            self.filename = dialog.GetFilename()
+                                                        
+            wx.BeginBusyCursor()    
+                                            
+            self.anlz.read_target_spectrum(filename=filepath)
+            self.com.spec_anl_calculated = 1
+            
+            self.i_tspec = self.anlz.n_target_spectra      
+            self.slider_tspec.SetMax(self.anlz.n_target_spectra)
+            self.slider_tspec.SetValue(self.i_tspec)
+            
+            self.loadTSpectrum()
+            self.loadTargetMap()    
+            self.ShowSpectraList()
+                    
+            wx.EndBusyCursor()
+            
+        except:
+            wx.EndBusyCursor()  
+            wx.MessageBox("Spectrum file not loaded.")
+                                   
+        dialog.Destroy()
+                                 
+        wx.GetApp().TopWindow.refresh_widgets()
+        
+
+#----------------------------------------------------------------------
+    def OnFlatTSpec(self, event):
+
+        try: 
+            wx.BeginBusyCursor() 
+            self.anlz.read_target_spectrum(flat=True)
+            self.com.spec_anl_calculated = 1
+            
+            self.i_tspec = self.anlz.n_target_spectra      
+            self.slider_tspec.SetMax(self.anlz.n_target_spectra)
+            self.slider_tspec.SetValue(self.i_tspec)
+            
+            self.loadTSpectrum()
+            self.loadTargetMap()
+            self.ShowSpectraList()
+        
+            wx.EndBusyCursor()
+            
+        except:
+            wx.EndBusyCursor()  
+            wx.MessageBox("Flat spectrum not loaded.")
+            
+                                                      
+        wx.GetApp().TopWindow.refresh_widgets()
+        
+#----------------------------------------------------------------------
+    def OnAddClusterSpectra(self, event):
+
+        try: 
+            wx.BeginBusyCursor() 
+            self.anlz.add_cluster_target_spectra()
+            self.com.spec_anl_calculated = 1
+            
+            self.i_tspec = self.anlz.n_target_spectra      
+            self.slider_tspec.SetMax(self.anlz.n_target_spectra)
+            self.slider_tspec.SetValue(self.i_tspec)
+            
+            self.loadTSpectrum()
+            self.loadTargetMap()  
+            self.ShowSpectraList()  
+        
+            wx.EndBusyCursor()
+            
+        except:
+            wx.EndBusyCursor()  
+            wx.MessageBox("CLuster spectra not loaded.")
+ 
+                                                        
+        wx.GetApp().TopWindow.refresh_widgets()
+        
+        
+#----------------------------------------------------------------------
+    def OnSave(self, event):
+        
+        fileName = wx.FileSelector('Save', default_extension='png', 
+                                   wildcard=('Portable Network Graphics (*.png)|*.png|' 
+                                             + 'Adobe PDF Files (*.pdf)|*.pdf|All files (*.*)|*.*'), 
+                                              parent=self, flags=wx.SAVE|wx.OVERWRITE_PROMPT) 
+   
+        if not fileName: 
+            return 
+
+        path, ext = os.path.splitext(fileName) 
+        ext = ext[1:].lower() 
+        
+       
+        if ext != 'png' and ext != 'pdf': 
+            error_message = ( 
+                  'Only the PNG and PDF image formats are supported.\n' 
+                 'A file extension of `png\' or `pdf\' must be used.') 
+            wx.MessageBox(error_message, 'Error - Could not save file.', 
+                  parent=self, style=wx.OK|wx.ICON_ERROR) 
+            return 
+   
+        try: 
+            
+            suffix = "." + ext
+                
+            
+            mtplot.rcParams['pdf.fonttype'] = 42
+            
+            
+            from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas   
+            
+            colors=['#FF0000','#000000','#FFFFFF']
+            spanclrmap=mtplot.colors.LinearSegmentedColormap.from_list('spancm',colors)
+                       
+            for i in range (self.anlz.n_target_spectra):
+              
+                #Save composition maps
+                if self.showraw == True:
+                    tsmapimage = self.anlz.target_svd_maps[:,:,i]
+                else:
+                    tsmapimage = self.anlz.target_pcafit_maps[:,:,i] 
+  
+                fig = mtplot.figure.Figure(figsize =(3.5,3.5))
+                canvas = FigureCanvas(fig)
+                fig.clf()
+                axes = fig.gca()
+    
+                divider = make_axes_locatable(axes)
+                ax_cb = divider.new_horizontal(size="3%", pad=0.03)  
+
+                fig.add_axes(ax_cb)
+                axes.set_position([0.03,0.03,0.8,0.94])
+        
+        
+                min_val = npy.min(tsmapimage)
+                max_val = npy.max(tsmapimage)
+                bound = npy.max((npy.abs(min_val), npy.abs(max_val)))
+        
+                if self.show_scale_bar == 1:
+                    um_string = '$\mu m$'
+                    microns = '$'+self.stk.scale_bar_string+' $'+um_string
+                    axes.text(self.stk.scale_bar_pixels_x+10,self.stk.n_cols-9, microns, horizontalalignment='left', verticalalignment='center',
+                              color = 'white', fontsize=14)
+                    #Matplotlib has flipped scales so I'm using rows instead of cols!
+                    p = mtplot.patches.Rectangle((5,self.stk.n_cols-10), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
+                                                 color = 'white', fill = True)
+                    axes.add_patch(p)     
+     
+                im = axes.imshow(tsmapimage, cmap=spanclrmap, vmin = -bound, vmax = bound)
+                cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
+    
+                axes.axis("off") 
+                
+                   
+                fileName_img = fileName[:-len(suffix)]+"_TSmap_" +str(i+1)+"."+ext               
+                fig.savefig(fileName_img)
+                
+                #Save spectra images
+                tspectrum = self.anlz.target_spectra[i, :]
+                tspectrumfit = self.anlz.target_pcafit_spectra[i, :]
+            
+        
+                fig = mtplot.figure.Figure(figsize =(5.65, 3.5))
+                canvas = FigureCanvas(fig)
+                fig.clf()
+                fig.add_axes((0.15,0.15,0.75,0.75))
+                axes = fig.gca()
+        
+                mtplot.rcParams['font.size'] = self.fontsize
+
+                specplot = axes.plot(self.stk.ev,tspectrum, color='black')
+                specplot = axes.plot(self.stk.ev,tspectrumfit, color='green')
+                        
+                axes.set_xlabel('Photon Energy [eV]')
+                axes.set_ylabel('Optical Density')
+
+                fileName_spec = fileName[:-len(suffix)]+"_Tspectrum_" +str(i+1)+"."+ext
+                fig.savefig(fileName_spec)                
+                
+                
+            
+        except IOError, e:
+            if e.strerror:
+                err = e.strerror 
+            else: 
+                err = e 
+   
+            wx.MessageBox('Could not save file: %s' % err, 'Error', 
+                          parent=self, style=wx.OK|wx.ICON_ERROR) 
+    
+#----------------------------------------------------------------------        
+    def OnTSScroll(self, event):
+        sel = event.GetInt()
+        self.i_tspec = sel
+        if self.com.spec_anl_calculated == 1:
+            self.loadTSpectrum()
+            self.loadTargetMap()
+
+#----------------------------------------------------------------------          
+    def OnRBRawFit(self, evt):
+        state = self.rb_raw.GetValue()
+           
+        if state:
+            self.showraw = True
+        else:        
+            self.showraw = False
+            
+        if self.com.spec_anl_calculated == 1:
+            self.loadTSpectrum()
+            self.loadTargetMap()
+            
+#----------------------------------------------------------------------           
+    def OnShowScale(self, event):
+        if self.add_scale_cb.GetValue():
+            self.show_scale_bar = 1
+        else: self.show_scale_bar = 0
+        
+        if self.com.spec_anl_calculated == 1:
+            self.loadTSpectrum()
+            self.loadTargetMap()
+            
+#----------------------------------------------------------------------           
+    def OnRemoveSpectrum(self, event):
+        wx.BeginBusyCursor() 
+        self.anlz.remove_spectrum(self.i_tspec-1)
+        self.com.spec_anl_calculated = 1
+            
+        self.i_tspec = self.i_tspec-1
+        if self.i_tspec<0:
+            self.i_tspec=0
+        self.slider_tspec.SetMax(self.anlz.n_target_spectra)
+        self.slider_tspec.SetValue(self.i_tspec)
+            
+        if self.anlz.tspectrum_loaded == 1:
+            self.loadTSpectrum()
+            self.loadTargetMap()  
+            self.ShowSpectraList()  
+        else:
+            self.com.spec_anl_calculated = 0
+            self.ClearWidgets()
+        
+        wx.EndBusyCursor()
+        
+#----------------------------------------------------------------------           
+    def OnMoveSpectrumDown(self, event):
+        
+        if self.i_tspec < self.anlz.n_target_spectra:
+            self.anlz.move_spectrum(self.i_tspec-1, self.i_tspec)
+            
+            self.i_tspec += 1
+            self.slider_tspec.SetValue(self.i_tspec)
+            self.loadTSpectrum()
+            self.loadTargetMap()  
+            self.ShowSpectraList()
+        
+        
+#----------------------------------------------------------------------           
+    def OnMoveSpectrumUp(self, event):        
+        
+        if self.i_tspec > 1:
+            self.anlz.move_spectrum(self.i_tspec-1, self.i_tspec-2)      
+            
+            self.i_tspec -= 1
+            self.slider_tspec.SetValue(self.i_tspec)
+            self.loadTSpectrum()
+            self.loadTargetMap() 
+            self.ShowSpectraList()
+        
+#----------------------------------------------------------------------           
+    def ClearWidgets(self):
+        fig = self.MapPanel.get_figure()
+        fig.clf()
+        self.MapPanel.draw()
+        fig = self.TSpectrumPanel.get_figure()
+        fig.clf()
+        self.TSpectrumPanel.draw()
+        
+        self.tc_tspec.SetValue("Target Spectrum: ")
+        self.tc_speclist.Clear() 
+        self.tc_spfitlist.Clear()
+        
+        self.com.spec_anl_calculated = 0
+        self.i_tspec = 1
+        self.showraw = False
+        self.rb_fit.SetValue(True)
+        
+        self.slider_tspec.SetValue(self.i_tspec)
+        
+        self.textctrl_sp.Clear()
+        
+        self.textctrl_sp.AppendText('Common Name: \n')
+        self.textctrl_sp.AppendText('RMS Error: ')
+        
+        wx.GetApp().TopWindow.refresh_widgets()
+            
+#----------------------------------------------------------------------           
+    def ShowFitWeights(self):    
+        
+        self.tc_spfitlist.Clear()     
+        
+        norm_factor = 100./npy.sum(npy.absolute(self.anlz.target_pcafit_coeffs[self.i_tspec-1, :]))
+        
+        for i in range(self.anlz.numsigpca):
+            self.tc_spfitlist.AppendText('{0}: {1:5.2f} %'.format(i+1, norm_factor
+                                                    *abs(self.anlz.target_pcafit_coeffs[self.i_tspec-1, i])))
+            if i < self.anlz.numsigpca-1:
+                self.tc_spfitlist.AppendText('\n')
+        self.tc_spfitlist.SetInsertionPoint(0)
+
+#----------------------------------------------------------------------           
+    def ShowSpectraList(self):    
+        
+        self.tc_speclist.Clear()     
+        
+        for i in range(self.anlz.n_target_spectra):
+            self.tc_speclist.AppendText(self.anlz.tspec_names[i])
+            
+            if i < self.anlz.n_target_spectra:
+                self.tc_speclist.AppendText('\n')
+        self.tc_speclist.SetInsertionPoint(0)
+        
+#----------------------------------------------------------------------      
+    def loadTargetMap(self):
+
+        if self.showraw == True:
+            tsmapimage = self.anlz.target_svd_maps[:,:,self.i_tspec-1]
+        else:
+            tsmapimage = self.anlz.target_pcafit_maps[:,:,self.i_tspec-1] 
+        
+        
+        colors=['#FF0000','#000000','#FFFFFF']
+        
+        spanclrmap=mtplot.colors.LinearSegmentedColormap.from_list('spancm',colors)
+                
+        fig = self.MapPanel.get_figure()
+        fig.clf()
+     
+        axes = fig.gca()
+    
+        divider = make_axes_locatable(axes)
+        ax_cb = divider.new_horizontal(size="3%", pad=0.03)  
+
+        fig.add_axes(ax_cb)
+        
+        axes.set_position([0.03,0.03,0.8,0.94])
+        
+        
+        min_val = npy.min(tsmapimage)
+        max_val = npy.max(tsmapimage)
+        bound = npy.max((npy.abs(min_val), npy.abs(max_val)))
+        
+        if self.show_scale_bar == 1:
+            um_string = '$\mu m$'
+            microns = '$'+self.stk.scale_bar_string+' $'+um_string
+            axes.text(self.stk.scale_bar_pixels_x+10,self.stk.n_cols-9, microns, horizontalalignment='left', verticalalignment='center',
+                      color = 'white', fontsize=14)
+            #Matplotlib has flipped scales so I'm using rows instead of cols!
+            p = mtplot.patches.Rectangle((5,self.stk.n_cols-10), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
+                                   color = 'white', fill = True)
+            axes.add_patch(p)     
+     
+        im = axes.imshow(tsmapimage, cmap=spanclrmap, vmin = -bound, vmax = bound)
+        cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
+    
+        axes.axis("off") 
+        self.MapPanel.draw()
+
+        
+        
+#----------------------------------------------------------------------     
+    def loadTSpectrum(self):
+
+        tspectrum = self.anlz.target_spectra[self.i_tspec-1, :]
+        
+        tspectrumfit = self.anlz.target_pcafit_spectra[self.i_tspec-1, :]
+            
+        
+        fig = self.TSpectrumPanel.get_figure()
+        fig.clf()
+        fig.add_axes((0.15,0.15,0.75,0.75))
+        axes = fig.gca()
+        
+        mtplot.rcParams['font.size'] = self.fontsize
+
+        specplot = axes.plot(self.stk.ev,tspectrum, color='black')
+        specplot = axes.plot(self.stk.ev,tspectrumfit, color='green')
+                        
+        axes.set_xlabel('Photon Energy [eV]')
+        axes.set_ylabel('Optical Density')
+        
+        self.TSpectrumPanel.draw()
+        
+        self.tc_tspec.SetValue("Target Spectrum: " + 
+                               self.anlz.tspec_names[self.i_tspec-1])
+        
+        self.textctrl_sp.Clear()
+        
+        self.textctrl_sp.AppendText('Common Name: '+ 
+                                    self.anlz.tspec_names[self.i_tspec-1]+'\n')
+        self.textctrl_sp.AppendText('RMS Error: '+ str('{0:7.5f}').format(self.anlz.target_rms[self.i_tspec-1]))
+        
+        self.ShowFitWeights()
+
+        
 """ ------------------------------------------------------------------------------------------------"""
 class PageCluster(wx.Panel):
     def __init__(self, parent, common, data_struct, stack, anlz):
@@ -131,21 +734,26 @@ class PageCluster(wx.Panel):
         panel3 = wx.Panel(self, -1)
         vbox3 = wx.BoxSizer(wx.VERTICAL)
         
+        fgs = wx.FlexGridSizer(2, 3, 0, 0)
+        
         self.tc_cluster = wx.TextCtrl(panel3, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         self.tc_cluster.SetValue("Cluster ")
         hbox31 = wx.BoxSizer(wx.HORIZONTAL)
-        self.ClusterIndvImagePan = wxmpl.PlotPanel(panel3, -1, size =(2.60,2.60), cursor=False, crosshairs=False, location=False, zoom=False)
+        self.ClusterIndvImagePan = wxmpl.PlotPanel(panel3, -1, size =(2.63,2.63), cursor=False, crosshairs=False, location=False, zoom=False)
     
         self.slidershow = wx.Slider(panel3, -1, self.selcluster, 1, 20, style=wx.SL_LEFT)   
         self.slidershow.Disable()    
         self.slidershow.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnClusterScroll, self.slidershow)
-          
-        hbox31.Add(self.ClusterIndvImagePan, 0)
-        hbox31.Add(self.slidershow, 0,  wx.EXPAND)
         
-        vbox3.Add(self.tc_cluster, 0)        
-        vbox3.Add(hbox31, 0)
+        text3 = wx.StaticText(panel3, -1, 'Cluster Distance Map',  style=wx.ALIGN_LEFT)
+        self.ClusterDistMapPan = wxmpl.PlotPanel(panel3, -1, size =(2.63,2.63), cursor=False, crosshairs=False, location=False, zoom=False)
+        
+          
+        fgs.AddMany([(self.tc_cluster), (wx.StaticText(panel3, -1, ' ')), (text3, 0, wx.LEFT, 15), 
+                     (self.ClusterIndvImagePan), (self.slidershow, 0,  wx.EXPAND), (self.ClusterDistMapPan, 0, wx.LEFT, 15)])
+
+        vbox3.Add(fgs)
 
         panel3.SetSizer(vbox3)
         
@@ -189,7 +797,11 @@ class PageCluster(wx.Panel):
        
         wx.BeginBusyCursor()
         self.calcclusters = False  
-        try: 
+        
+        a=1
+        if a==1:
+        
+        #try: 
             self.CalcClusters()
             self.calcclusters = True
             
@@ -200,11 +812,13 @@ class PageCluster(wx.Panel):
             self.showClusterImage()
             self.showClusterSpectrum()
             self.showIndvClusterImage()     
+            self.showClusterDistanceMap()
             self.com.cluster_calculated = 1       
             wx.EndBusyCursor() 
-        except:
-            self.com.cluster_calculated = 0
-            wx.EndBusyCursor()      
+            
+#        except:
+#            self.com.cluster_calculated = 0
+#            wx.EndBusyCursor()      
             
         wx.GetApp().TopWindow.refresh_widgets()
             
@@ -286,7 +900,7 @@ class PageCluster(wx.Panel):
         
         indvclusterimage = npy.zeros((self.anlz.stack.n_cols, self.anlz.stack.n_rows))+20.      
         ind = npy.where(self.anlz.cluster_indices == self.selcluster-1)    
-        colorcl = min(self.selcluster-1,9)
+        colorcl = min(self.selcluster-1,self.maxclcolors-1)
         indvclusterimage[ind] = colorcl
 
         fig = self.ClusterIndvImagePan.get_figure()
@@ -317,8 +931,14 @@ class PageCluster(wx.Panel):
         axes = fig.gca()
         
         mtplot.rcParams['font.size'] = self.fontsize
-
-        specplot = axes.plot(self.anlz.stack.ev,clusterspectrum)
+        
+        
+        if self.selcluster >= self.maxclcolors:
+            clcolor = self.colors[self.maxclcolors-1]
+        else:
+            clcolor = self.colors[self.selcluster-1]
+        
+        specplot = axes.plot(self.anlz.stack.ev,clusterspectrum, color = clcolor)
         
         axes.set_xlabel('Photon Energy [eV]')
         axes.set_ylabel('Optical Density')
@@ -327,6 +947,27 @@ class PageCluster(wx.Panel):
         self.ClusterSpecPan.draw()
         
         self.tc_clustersp.SetValue("Cluster " + str(self.selcluster)+ " spectrum"  ) 
+        
+        
+#----------------------------------------------------------------------     
+    def showClusterDistanceMap(self):       
+        
+        mapimage = self.anlz.cluster_distances
+        
+        #print self.selpca
+
+        fig = self.ClusterDistMapPan.get_figure()
+        fig.clf()
+        fig.add_axes((0.02,0.02,0.96,0.96))
+        axes = fig.gca()
+        
+        mtplot.rcParams['font.size'] = self.fontsize
+        
+        
+        im = axes.imshow(mapimage, cmap=mtplot.cm.get_cmap('gray'))
+        axes.axis("off")
+       
+        self.ClusterDistMapPan.draw()
         
 #----------------------------------------------------------------------           
     def OnRemove1stpca(self, event):
@@ -398,7 +1039,12 @@ class PageCluster(wx.Panel):
                 fig.add_axes((0.15,0.15,0.75,0.75))
                 axes = fig.gca()
                 mtplot.rcParams['font.size'] = self.fontsize
-                specplot = axes.plot(self.anlz.stack.ev,clusterspectrum)
+                if self.selcluster >= self.maxclcolors:
+                    clcolor = self.colors[self.maxclcolors-1]
+                else:
+                    clcolor = self.colors[self.selcluster-1]
+        
+                specplot = axes.plot(self.anlz.stack.ev,clusterspectrum, color = clcolor)
         
                 axes.set_xlabel('Photon Energy [eV]')
                 axes.set_ylabel('Optical Density')
@@ -433,9 +1079,9 @@ class PageCluster(wx.Panel):
      
         self.bnorm1 = mtplot.colors.BoundaryNorm(colors_i, self.clusterclrmap1.N)
         
-        colors_i = npy.linspace(0,self.maxclcolors,self.maxclcolors+2)
+        colors_i = npy.linspace(0,self.maxclcolors+2,self.maxclcolors+3)
         
-        #use black color for clusters > maxclcolors        
+        #use black color for clusters > maxclcolors, the other 2 colors are for background      
         colors2=['#0000FF','#FF0000','#FFFF00','#33FF33','#B366FF',
                 '#FF470A','#33FFFF','#006600','#CCCC99','#993300',
                 '#000000','#FFFFFF','#EEEEEE']
@@ -443,6 +1089,8 @@ class PageCluster(wx.Panel):
         self.clusterclrmap2=mtplot.colors.LinearSegmentedColormap.from_list('clustercm2',colors2)
      
         self.bnorm2 = mtplot.colors.BoundaryNorm(colors_i, self.clusterclrmap2.N)
+        
+
         
 #----------------------------------------------------------------------     
     def OnShowScatterplots(self, evt):    
@@ -590,6 +1238,7 @@ class Scatterplots(wx.Frame):
             return 
    
         try: 
+            wx.BeginBusyCursor()
             
             suffix = "." + ext
             
@@ -641,9 +1290,12 @@ class Scatterplots(wx.Frame):
             fileName_sct = fileName[:-len(suffix)]+"_CAscatterplot_" +str(i+1)+"."+ext
             mtplot.rcParams['pdf.fonttype'] = 42
             fig.savefig(fileName_sct)
+            
+            wx.EndBusyCursor()
      
             
         except IOError, e:
+            wx.EndBusyCursor()
             if e.strerror:
                 err = e.strerror 
             else: 
@@ -821,7 +1473,6 @@ class PagePCA(wx.Panel):
 #----------------------------------------------------------------------
     def CalcPCA(self):
  
-        self.anlz.setdata(self.stk)
         self.anlz.calculate_pca()
      
         #Keiser criterion
@@ -2581,7 +3232,7 @@ class MainFrame(wx.Frame):
         
         self.data_struct = data_struct.h5()
         self.stk = data_stack.data(self.data_struct)
-        self.anlz = analyze.analyze()
+        self.anlz = analyze.analyze(self.stk)
         self.common = common()
               
 
@@ -2593,11 +3244,14 @@ class MainFrame(wx.Frame):
         self.page1 = PageStack(nb, self.common, self.data_struct, self.stk)
         self.page2 = PagePCA(nb, self.common, self.data_struct, self.stk, self.anlz)
         self.page3 = PageCluster(nb, self.common, self.data_struct, self.stk, self.anlz)
+        self.page4 = PageSpectral(nb, self.common, self.data_struct, self.stk, self.anlz)
 
         # add the pages to the notebook with the label to show on the tab
         nb.AddPage(self.page1, "Image Stack")
         nb.AddPage(self.page2, "PCA")
         nb.AddPage(self.page3, "Cluster Analysis")
+        nb.AddPage(self.page4, "Spectral Analysis")
+        
 
         # finally, put the notebook in a sizer for the panel to manage
         # the layout
@@ -2642,9 +3296,7 @@ class MainFrame(wx.Frame):
         """
         Browse for .stk file
         """
-        a=1
-        if a==1:
-        #try: 
+        try: 
             wildcard =  "HDF5 files (*.hdf5)|*.hdf5|" + "STK files (*.stk)|*.stk|" 
             dialog = wx.FileDialog(None, "Choose a file",
                                     wildcard=wildcard,
@@ -2725,13 +3377,13 @@ class MainFrame(wx.Frame):
 
                 wx.EndBusyCursor()
 
-#        except:
-#
-#            self.common.stack_loaded = 0 
-#            self.common.i0_loaded = 0
-#                               
-#            wx.EndBusyCursor()
-#            wx.MessageBox("Image stack not loaded.")
+        except:
+
+            self.common.stack_loaded = 0 
+            self.common.i0_loaded = 0
+                               
+            wx.EndBusyCursor()
+            wx.MessageBox("Image stack not loaded.")
                    
         dialog.Destroy()
         self.refresh_widgets()
@@ -2814,20 +3466,37 @@ class MainFrame(wx.Frame):
             self.page2.button_savepca.Disable()
             self.page2.slidershow.Disable() 
             self.page3.button_calcca.Disable()
+            self.page4.button_loadtspec.Disable()
+            self.page4.button_addflat.Disable()
         else:
             self.page2.button_savepca.Enable()
             self.page2.slidershow.Enable()
             self.page3.button_calcca.Enable()
-            
+            self.page4.button_loadtspec.Enable()
+            self.page4.button_addflat.Enable()            
             
         if self.common.cluster_calculated == 0:   
             self.page3.button_scatterplots.Disable()
             self.page3.button_savecluster.Disable()
             self.page3.slidershow.Disable()
+            self.page4.button_addclspec.Disable()
         else:
             self.page3.button_scatterplots.Enable()
             self.page3.button_savecluster.Enable()  
-            self.page3.slidershow.Enable()          
+            self.page3.slidershow.Enable()
+            self.page4.button_addclspec.Enable()
+            
+        if self.common.spec_anl_calculated == 0:
+            self.page4.button_removespec.Disable()
+            self.page4.button_movespdown.Disable()
+            self.page4.button_movespup.Disable()
+            self.page4.button_save.Disable()
+        else:
+            self.page4.button_removespec.Enable()
+            self.page4.button_movespdown.Enable()
+            self.page4.button_movespup.Enable()
+            self.page4.button_save.Enable()          
+                  
             
         self.page1.ResetDisplaySettings()
             
@@ -2897,6 +3566,10 @@ class MainFrame(wx.Frame):
         fig.clf()
         self.page3.ClusterSpecPan.draw()
         
+        fig = self.page3.ClusterDistMapPan.get_figure()
+        fig.clf()
+        self.page3.ClusterDistMapPan.draw()       
+       
         self.page3.selcluster = 1
         self.page3.slidershow.SetValue(self.page3.selcluster)
         self.page3.numclusters = 5
@@ -2905,6 +3578,10 @@ class MainFrame(wx.Frame):
         self.page3.tc_clustersp.SetValue("Cluster spectrum")
         self.page3.wo_1st_pca = 0
         self.page3.remove1stpcacb.SetValue(False)
+
+        
+        #page 4
+        self.page4.ClearWidgets()
             
 #---------------------------------------------------------------------- 
 class AboutFrame(wx.Frame):
