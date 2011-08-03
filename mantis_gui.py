@@ -34,9 +34,9 @@ class common:
         self.cluster_calculated = 0
         self.spec_anl_calculated = 0
 
-        self.font = wx.SystemSettings_GetFont(wx.SYS_SYSTEM_FONT)
-        self.font.SetPointSize(12)   
-        #self.font = wx.Font(10, wx.SWISS, wx.NORMAL, wx.NORMAL)
+        self.font = wx.SystemSettings_GetFont(wx.SYS_DEFAULT_GUI_FONT)
+        self.font.SetPointSize(8)   
+
 
 """ ------------------------------------------------------------------------------------------------"""
 class PageSpectral(wx.Panel):
@@ -67,7 +67,6 @@ class PageSpectral(wx.Panel):
         self.tc_spmap = wx.TextCtrl(panel1, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         self.tc_spmap.SetFont(self.com.font)
         self.tc_spmap.SetValue("Spectrum composition map")
-        self.tc_spmap.Disable()
 
         
         self.MapPanel = wxmpl.PlotPanel(panel1, -1, size =(3.5,3.5), cursor=False, crosshairs=False, location=False, zoom=False)                            
@@ -86,7 +85,6 @@ class PageSpectral(wx.Panel):
         self.tc_tspec = wx.TextCtrl(panel2, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         self.tc_tspec.SetFont(self.com.font)
         self.tc_tspec.SetValue("Target Spectrum: ")
-        self.tc_tspec.Disable()
         hbox11 = wx.BoxSizer(wx.HORIZONTAL)         
         
         self.TSpectrumPanel = wxmpl.PlotPanel(panel2, -1, size=(5.65, 3.5), cursor=False, crosshairs=False, location=False, zoom=False)
@@ -1754,7 +1752,6 @@ class PageStack(wx.Panel):
         self.tc_imageeng = wx.TextCtrl(panel1, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         self.tc_imageeng.SetFont(self.com.font)
         self.tc_imageeng.SetValue("Image at energy: ")
-        self.tc_imageeng.Disable()
 
        
         hbox11 = wx.BoxSizer(wx.HORIZONTAL)
@@ -1782,7 +1779,6 @@ class PageStack(wx.Panel):
         self.tc_spec = wx.TextCtrl(panel2, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         self.tc_spec.SetValue("Spectrum at point: ")
         self.tc_spec.SetFont(self.com.font)
-        self.tc_spec.Disable()
           
         
         self.SpectrumPanel = wxmpl.PlotPanel(panel2, -1, size=(5.75, 3.5), cursor=False, crosshairs=False, location=False, zoom=False)
@@ -1898,26 +1894,26 @@ class PageStack(wx.Panel):
         fgs41.AddMany([(min), (self.slider_brightness_min, 0, wx.EXPAND), (max), 
             (self.slider_brightness_max, 0, wx.EXPAND),(gamma), (self.slider_gamma, 0, wx.EXPAND)])
       
-        hbox42.Add(fgs41, 0, wx.EXPAND)
+        hbox42.Add(fgs41, 1, wx.EXPAND)
         hbox42.Add((20,0))
 
         
         vbox43 = wx.BoxSizer(wx.VERTICAL)
-        self.button_despike = wx.Button(panel4, -1, 'Despike', size = (10,10))
+        self.button_despike = wx.Button(panel4, -1, 'Despike')
         self.button_despike.SetFont(self.com.font)
         #self.Bind(wx.EVT_BUTTON, self.onDespike, id=self.button_despike.GetId())   
         self.button_despike.Disable()     
-        vbox43.Add(self.button_despike, 1, wx.EXPAND)
+        vbox43.Add(self.button_despike, 0, wx.EXPAND)
         self.button_resetdisplay = wx.Button(panel4, -1, 'Reset')
         self.button_resetdisplay.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.onResetDisplaySettings, id=self.button_resetdisplay.GetId())   
         self.button_resetdisplay.Disable()     
-        vbox43.Add(self.button_resetdisplay, 1, wx.EXPAND)
+        vbox43.Add(self.button_resetdisplay, 0, wx.EXPAND)
         self.button_displaycolor = wx.Button(panel4, -1, 'Color Table...')
         self.button_displaycolor.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.onSetColorTable, id=self.button_displaycolor.GetId())   
         self.button_displaycolor.Disable()     
-        vbox43.Add(self.button_displaycolor, 1, wx.EXPAND)
+        vbox43.Add(self.button_displaycolor, 0, wx.EXPAND)
         
         hbox42.Add(vbox43, 1, wx.EXPAND)                   
         sizer43.Add(hbox42)
