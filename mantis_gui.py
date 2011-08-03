@@ -1,7 +1,3 @@
-'''
-
-@author: Mirna Lerotic
-'''
 
 from __future__ import division
 import wx
@@ -37,7 +33,11 @@ class common:
         self.pca_calculated = 0
         self.cluster_calculated = 0
         self.spec_anl_calculated = 0
-        
+
+        self.font = wx.SystemSettings_GetFont(wx.SYS_SYSTEM_FONT)
+        self.font.SetPointSize(12)   
+        #self.font = wx.Font(10, wx.SWISS, wx.NORMAL, wx.NORMAL)
+
 """ ------------------------------------------------------------------------------------------------"""
 class PageSpectral(wx.Panel):
     def __init__(self, parent, common, data_struct, stack, anlz):
@@ -65,11 +65,15 @@ class PageSpectral(wx.Panel):
         vbox1 = wx.BoxSizer(wx.VERTICAL)
         
         self.tc_spmap = wx.TextCtrl(panel1, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.tc_spmap.SetFont(self.com.font)
         self.tc_spmap.SetValue("Spectrum composition map")
+        self.tc_spmap.Disable()
 
+        
         self.MapPanel = wxmpl.PlotPanel(panel1, -1, size =(3.5,3.5), cursor=False, crosshairs=False, location=False, zoom=False)                            
   
-        vbox1.Add(self.tc_spmap,1, wx.LEFT | wx.TOP | wx.EXPAND, 20)        
+        vbox1.Add((0,10))
+        vbox1.Add(self.tc_spmap,1, wx.LEFT | wx.EXPAND, 20)        
         vbox1.Add(self.MapPanel, 0,  wx.LEFT, 20)
 
         panel1.SetSizer(vbox1)
@@ -80,7 +84,9 @@ class PageSpectral(wx.Panel):
         vbox2 = wx.BoxSizer(wx.VERTICAL)
         
         self.tc_tspec = wx.TextCtrl(panel2, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.tc_tspec.SetFont(self.com.font)
         self.tc_tspec.SetValue("Target Spectrum: ")
+        self.tc_tspec.Disable()
         hbox11 = wx.BoxSizer(wx.HORIZONTAL)         
         
         self.TSpectrumPanel = wxmpl.PlotPanel(panel2, -1, size=(5.65, 3.5), cursor=False, crosshairs=False, location=False, zoom=False)
@@ -91,8 +97,9 @@ class PageSpectral(wx.Panel):
 
         hbox11.Add(self.TSpectrumPanel, 0)
         hbox11.Add(self.slider_tspec, 0,  wx.EXPAND)
-                
-        vbox2.Add(self.tc_tspec, 1, wx.LEFT | wx.TOP | wx.EXPAND, 20)       
+          
+        vbox2.Add((0,10))
+        vbox2.Add(self.tc_tspec, 1, wx.LEFT | wx.EXPAND, 20)       
         vbox2.Add(hbox11, 0, wx.LEFT , 20)
         
         panel2.SetSizer(vbox2)
@@ -100,24 +107,30 @@ class PageSpectral(wx.Panel):
         
         #panel 3
         panel3 = wx.Panel(self, -1)
-        sizer1 = wx.StaticBoxSizer(wx.StaticBox(panel3, -1, 'Target Spectrum', size =(100,-1)),orient=wx.VERTICAL)
+        sb = wx.StaticBox(panel3, -1, 'Target Spectrum')
+        sb.SetBackgroundColour("white")
+        sizer1 = wx.StaticBoxSizer(sb, orient=wx.VERTICAL)
         vbox31 = wx.BoxSizer(wx.VERTICAL)
         vbox31.Add((0,10)) 
         
         self.button_loadtspec = wx.Button(panel3, -1, 'Load Spectrum')
+        self.button_loadtspec.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnTSpecFromFile, id=self.button_loadtspec.GetId())
         self.button_loadtspec.Disable()
         vbox31.Add(self.button_loadtspec, 0, wx.EXPAND)
         self.button_addflat = wx.Button(panel3, -1, 'Add Flat Spectrum')
+        self.button_addflat.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnFlatTSpec, id=self.button_addflat.GetId())
         self.button_addflat.Disable()
         vbox31.Add(self.button_addflat, 0, wx.EXPAND)
-        self.button_addclspec = wx.Button(panel3, -1, '   Add Cluster Spectra   ')
+        self.button_addclspec = wx.Button(panel3, -1, 'Add Cluster Spectra')
+        self.button_addclspec.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnAddClusterSpectra, id=self.button_addclspec.GetId())   
         self.button_addclspec.Disable()     
         vbox31.Add(self.button_addclspec, 0, wx.EXPAND)
 
         self.button_save = wx.Button(panel3, -1, 'Save', (10,10))
+        self.button_save.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnSave, id=self.button_save.GetId())
         self.button_save.Disable()          
         vbox31.Add(self.button_save, 0, wx.EXPAND)
@@ -129,11 +142,15 @@ class PageSpectral(wx.Panel):
         #panel 4
         panel4 = wx.Panel(self, -1)
         vbox4 = wx.BoxSizer(wx.VERTICAL)
+        sb = wx.StaticBox(panel4, -1, 'Display')
+        sb.SetBackgroundColour("white")
+        sizer4 = wx.StaticBoxSizer(sb, orient=wx.VERTICAL)
 
-        sizer4 = wx.StaticBoxSizer(wx.StaticBox(panel4, -1, 'Display', size =(500,-1)), orient=wx.VERTICAL)
-
-        sizer41 = wx.StaticBoxSizer(wx.StaticBox(panel4, -1, 'Spectrum', size =(500,-1)), orient=wx.VERTICAL)
+        sb = wx.StaticBox(panel4, -1, 'Spectrum')
+        sb.SetBackgroundColour("white")
+        sizer41 = wx.StaticBoxSizer(sb, orient=wx.VERTICAL)
         self.textctrl_sp = wx.TextCtrl(panel4, -1, style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.textctrl_sp.SetFont(self.com.font)
         sizer41.Add(self.textctrl_sp, 1, wx.EXPAND|wx.TOP|wx.LEFT, 5)
         vbox4.Add(sizer41, 0, wx.EXPAND)
         
@@ -141,15 +158,20 @@ class PageSpectral(wx.Panel):
         self.textctrl_sp.AppendText('RMS Error: ')
         
         hbox41 = wx.BoxSizer(wx.HORIZONTAL)
-         
-        sizer42 = wx.StaticBoxSizer(wx.StaticBox(panel4, -1, 'Composition Map', size =(240,-1)),  orient=wx.VERTICAL)
+        
+        sb = wx.StaticBox(panel4, -1, 'Composition Map')
+        sb.SetBackgroundColour("white")
+        sizer42 = wx.StaticBoxSizer(sb,  orient=wx.VERTICAL)
         self.rb_raw = wx.RadioButton(panel4, -1, 'Raw', style=wx.RB_GROUP)
         self.rb_fit = wx.RadioButton(panel4, -1, 'Fitted')
+        self.rb_raw.SetFont(self.com.font)
+        self.rb_fit.SetFont(self.com.font)
         self.Bind(wx.EVT_RADIOBUTTON, self.OnRBRawFit, id=self.rb_raw.GetId())
         self.Bind(wx.EVT_RADIOBUTTON, self.OnRBRawFit, id=self.rb_fit.GetId())
         self.rb_fit.SetValue(True)
 
         self.add_scale_cb = wx.CheckBox(panel4, -1, '  Scale')
+        self.add_scale_cb.SetFont(self.com.font)
         self.Bind(wx.EVT_CHECKBOX, self.OnShowScale, self.add_scale_cb)
         
         sizer42.Add((0,3))
@@ -161,12 +183,14 @@ class PageSpectral(wx.Panel):
         
         hbox41.Add(sizer42, 1, wx.EXPAND)
                 
-
-        sizer43 = wx.StaticBoxSizer(wx.StaticBox(panel4, -1, 'Fit Weights', size =(240,-1)),  orient=wx.VERTICAL)
+        sb = wx.StaticBox(panel4, -1, 'Fit Weights')
+        sb.SetBackgroundColour("white")
+        sizer43 = wx.StaticBoxSizer(sb,  orient=wx.VERTICAL)
         hbox42 = wx.BoxSizer(wx.HORIZONTAL)
         hbox42.Add((3,0))
         
-        self.tc_spfitlist = wx.TextCtrl(panel4, -1, size=(100, 65), style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.tc_spfitlist = wx.TextCtrl(panel4, -1, style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.tc_spfitlist.SetFont(self.com.font)
         
         hbox42.Add(self.tc_spfitlist,1,wx.EXPAND)
         
@@ -174,18 +198,21 @@ class PageSpectral(wx.Panel):
 
         
         vbox43 = wx.BoxSizer(wx.VERTICAL)
-        self.button_removespec = wx.Button(panel4, -1, 'Remove Spectrum', (10,10))
+        self.button_removespec = wx.Button(panel4, -1, 'Remove Spectrum')
+        self.button_removespec.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnRemoveSpectrum, id=self.button_removespec.GetId())   
         self.button_removespec.Disable()     
-        vbox43.Add(self.button_removespec, 1, wx.EXPAND)
-        self.button_movespup = wx.Button(panel4, -1, 'Move Spectrum Up', (10,10))
+        vbox43.Add(self.button_removespec, 0, wx.EXPAND)
+        self.button_movespup = wx.Button(panel4, -1, 'Move Spectrum Up')
+        self.button_movespup.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnMoveSpectrumUp, id=self.button_movespup.GetId())   
         self.button_movespup.Disable()     
-        vbox43.Add(self.button_movespup, 1, wx.EXPAND)
-        self.button_movespdown = wx.Button(panel4, -1, 'Move Spectrum Down', (10,10))
+        vbox43.Add(self.button_movespup, 0, wx.EXPAND)
+        self.button_movespdown = wx.Button(panel4, -1, 'Move Spectrum Down')
+        self.button_movespdown.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnMoveSpectrumDown, id=self.button_movespdown.GetId())   
         self.button_movespdown.Disable()     
-        vbox43.Add(self.button_movespdown, 1, wx.EXPAND)
+        vbox43.Add(self.button_movespdown, 0, wx.EXPAND)
                        
         sizer43.Add(hbox42)
                
@@ -202,12 +229,15 @@ class PageSpectral(wx.Panel):
         
         #panel 5
         panel5 = wx.Panel(self, -1)
-        sizer5 = wx.StaticBoxSizer(wx.StaticBox(panel5, -1, 'Target Spectra'), wx.VERTICAL)
+        sb = wx.StaticBox(panel5, -1, 'Target Spectra')
+        sb.SetBackgroundColour("white")
+        sizer5 = wx.StaticBoxSizer(sb, orient= wx.VERTICAL)
         
         hbox51 = wx.BoxSizer(wx.HORIZONTAL)
         hbox51.Add((0,2))
          
         self.tc_speclist = wx.TextCtrl(panel5, -1, style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.tc_speclist.SetFont(self.com.font)
         hbox51.Add(self.tc_speclist, 1, wx.EXPAND)
         sizer5.Add(hbox51,1, wx.ALL|wx.EXPAND,2)        
         panel5.SetSizer(sizer5)
@@ -223,7 +253,7 @@ class PageSpectral(wx.Panel):
 
         vbox.Add(hboxT, 0, wx.ALL, 5)
         
-        vbox.Add(hboxB, 0,  wx.ALL, 5)
+        vbox.Add(hboxB, 0, wx.LEFT | wx.RIGHT, 5)
   
         self.SetSizer(vbox) 
         
@@ -236,11 +266,11 @@ class PageSpectral(wx.Panel):
         try: 
             wildcard = "Spectrum files (*.xas)|*.xas"
             dialog = wx.FileDialog(None, "Choose Spectrum file",
-                                    wildcard=wildcard,
-                                    style=wx.OPEN)
+                                   style=wx.OPEN)
+            dialog.SetWildcard(wildcard)
             if dialog.ShowModal() == wx.ID_OK:
-                            filepath = dialog.GetPath()
-                            self.filename = dialog.GetFilename()
+                filepath = dialog.GetPath()
+                self.filename = dialog.GetFilename()
                                                         
             wx.BeginBusyCursor()    
                                             
@@ -320,10 +350,13 @@ class PageSpectral(wx.Panel):
 #----------------------------------------------------------------------
     def OnSave(self, event):
         
-        fileName = wx.FileSelector('Save', default_extension='png', 
-                                   wildcard=('Portable Network Graphics (*.png)|*.png|' 
-                                             + 'Adobe PDF Files (*.pdf)|*.pdf|All files (*.*)|*.*'), 
-                                              parent=self, flags=wx.SAVE|wx.OVERWRITE_PROMPT) 
+        wildcard = 'Portable Network Graphics (*.png)|*.png|Adobe PDF Files (*.pdf)|*.pdf|All files (*.*)|*.*'
+      
+        fileName = wx.FileSelector('Save', default_extension='png', wildcard = wildcard,
+                                   parent=self, flags=wx.SAVE|wx.OVERWRITE_PROMPT) 
+        
+        
+        
    
         if not fileName: 
             return 
@@ -668,18 +701,22 @@ class PageCluster(wx.Panel):
         panel1 = wx.Panel(self, -1)
         sizer1 = wx.StaticBoxSizer(wx.StaticBox(panel1, -1, 'Cluster analysis'), wx.VERTICAL)
         self.button_calcca = wx.Button(panel1, -1, 'Calculate Clusters', (10, 10))
+        self.button_calcca.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnCalcClusters, id=self.button_calcca.GetId())   
         self.button_calcca.Disable()     
         self.button_scatterplots = wx.Button(panel1, -1, 'Show scatter plots...', (10, 10))
+        self.button_scatterplots.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnShowScatterplots, id=self.button_scatterplots.GetId())
         self.button_scatterplots.Disable()
         self.button_savecluster = wx.Button(panel1, -1, 'Save CA Results...', (10, 10))
+        self.button_savecluster.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnSave, id=self.button_savecluster.GetId())
         self.button_savecluster.Disable()
         
         
         hbox11 = wx.BoxSizer(wx.HORIZONTAL)
         text1 = wx.StaticText(panel1, -1, 'Number of clusters',  style=wx.ALIGN_LEFT)
+        text1.SetFont(self.com.font)
         self.nclusterspin = wx.SpinCtrl(panel1, -1, '',  size= (60, -1), style=wx.ALIGN_LEFT)
         self.nclusterspin.SetRange(2,20)
         self.nclusterspin.SetValue(self.numclusters)
@@ -694,6 +731,7 @@ class PageCluster(wx.Panel):
         hbox12 = wx.BoxSizer(wx.HORIZONTAL)
         hbox12.Add((20,0))
         self.remove1stpcacb = wx.CheckBox(panel1, -1, 'Reduce thickness effects')
+        self.remove1stpcacb.SetFont(self.com.font)
         self.Bind(wx.EVT_CHECKBOX, self.OnRemove1stpca, self.remove1stpcacb)
         hbox12.Add(self.remove1stpcacb, 0, wx.EXPAND|wx.TOP, 15)
         hbox12.Add((20,0))
@@ -722,6 +760,7 @@ class PageCluster(wx.Panel):
         
         self.tc_clustercomp = wx.TextCtrl(panel2, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         self.tc_clustercomp.SetValue("Composite cluster image")        
+        self.tc_clustercomp.SetFont(self.com.font)
         self.ClusterImagePan = wxmpl.PlotPanel(panel2, -1, size =(3.40,3.40), cursor=False, crosshairs=True, location=False, zoom=False)                              
         wxmpl.EVT_POINT(self, self.ClusterImagePan.GetId(), self.OnPointClusterImage)   
         vbox2.Add(self.tc_clustercomp, 0, wx.EXPAND) 
@@ -738,6 +777,7 @@ class PageCluster(wx.Panel):
         
         self.tc_cluster = wx.TextCtrl(panel3, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         self.tc_cluster.SetValue("Cluster ")
+        self.tc_cluster.SetFont(self.com.font)
         hbox31 = wx.BoxSizer(wx.HORIZONTAL)
         self.ClusterIndvImagePan = wxmpl.PlotPanel(panel3, -1, size =(2.63,2.63), cursor=False, crosshairs=False, location=False, zoom=False)
     
@@ -747,6 +787,7 @@ class PageCluster(wx.Panel):
         self.Bind(wx.EVT_SCROLL, self.OnClusterScroll, self.slidershow)
         
         text3 = wx.StaticText(panel3, -1, 'Cluster Distance Map',  style=wx.ALIGN_LEFT)
+        text3.SetFont(self.com.font)
         self.ClusterDistMapPan = wxmpl.PlotPanel(panel3, -1, size =(2.63,2.63), cursor=False, crosshairs=False, location=False, zoom=False)
         
           
@@ -764,7 +805,8 @@ class PageCluster(wx.Panel):
         
         self.tc_clustersp = wx.TextCtrl(panel4, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         self.tc_clustersp.SetValue("Cluster spectrum")
-        
+        self.tc_clustersp.SetFont(self.com.font)        
+
         self.ClusterSpecPan = wxmpl.PlotPanel(panel4, -1, size =(5.7,3.40), cursor=False, crosshairs=False, location=False, zoom=False)
         
         vbox4.Add(self.tc_clustersp, 0, wx.EXPAND)        
@@ -1158,10 +1200,12 @@ class Scatterplots(wx.Frame):
         hbox = wx.BoxSizer(wx.HORIZONTAL)
         
         self.button_savescatt = wx.Button(panel, -1, 'Save')
+        self.button_savescatt.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnSaveScatt, id=self.button_savescatt.GetId())
         hbox.Add(self.button_savescatt, -1, wx.ALIGN_RIGHT|wx.RIGHT, 20)
         
         button_close = wx.Button(panel, -1, 'Close')
+        button_close.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnClose, id=button_close.GetId())
         hbox.Add(button_close, -1, wx.ALIGN_RIGHT|wx.RIGHT, 40)
 
@@ -1332,6 +1376,7 @@ class PagePCA(wx.Panel):
         vbox1 = wx.BoxSizer(wx.VERTICAL)
         
         self.tc_PCAcomp = wx.TextCtrl(panel1, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.tc_PCAcomp.SetFont(self.com.font)
         self.tc_PCAcomp.SetValue("PCA component ")
         
         hbox11 = wx.BoxSizer(wx.HORIZONTAL)
@@ -1359,16 +1404,19 @@ class PagePCA(wx.Panel):
                 
         sizer1 = wx.StaticBoxSizer(wx.StaticBox(panel2, -1, 'PCA'), wx.VERTICAL)
         self.button_calcpca = wx.Button(panel2, -1, 'Calculate PCA', (10, 10))
+        self.button_calcpca.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnCalcPCA, id=self.button_calcpca.GetId())     
         self.button_calcpca.Disable()   
         sizer1.Add(self.button_calcpca, 0, wx.EXPAND)
         self.button_savepca = wx.Button(panel2, -1, 'Save PCA Results...', (10, 10))
+        self.button_savepca.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnSave, id=self.button_savepca.GetId())
         self.button_savepca.Disable()
         sizer1.Add(self.button_savepca, 0, wx.EXPAND)
         
         hbox21 = wx.BoxSizer(wx.HORIZONTAL)
         text1 = wx.StaticText(panel2, -1, 'Number of significant components',  style=wx.ALIGN_LEFT)
+        text1.SetFont(self.com.font)
         self.npcaspin = wx.SpinCtrl(panel2, -1, '',  size= (60, -1), style=wx.ALIGN_LEFT)
         self.npcaspin.SetRange(1,20)
         self.Bind(wx.EVT_SPINCTRL, self.OnNPCAspin, self.npcaspin)
@@ -1379,6 +1427,7 @@ class PagePCA(wx.Panel):
               
         hbox22 = wx.BoxSizer(wx.HORIZONTAL)
         text2 = wx.StaticText(panel2, -1, 'Cumulative variance', style=wx.ALIGN_LEFT)
+        text2.SetFont(self.com.font)
         self.vartc = wx.StaticText(panel2, -1, '0%',  style=wx.ALIGN_LEFT)
         hbox22.Add(text2, 0)
         hbox22.Add(self.vartc, 0, wx.LEFT , 10)
@@ -1397,6 +1446,7 @@ class PagePCA(wx.Panel):
              
         vbox3 = wx.BoxSizer(wx.VERTICAL)
         self.text_pcaspec = wx.TextCtrl(panel3, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.text_pcaspec.SetFont(self.com.font)
         self.text_pcaspec.SetValue("PCA spectrum ")        
         vbox3.Add(self.text_pcaspec, 0)
         vbox3.Add(self.PCASpecPan, 0)        
@@ -1410,6 +1460,7 @@ class PagePCA(wx.Panel):
         
         vbox4 = wx.BoxSizer(wx.VERTICAL)
         text4 = wx.TextCtrl(panel4, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        text4.SetFont(self.com.font)
         text4.SetValue("PCA eigenvalues ")        
         vbox4.Add(text4, 0)
         vbox4.Add(self.PCAEvalsPan, 0)
@@ -1499,11 +1550,10 @@ class PagePCA(wx.Panel):
             
 #----------------------------------------------------------------------    
     def OnSave(self, event):     
-               
+        
+        wildcard = 'Portable Network Graphics (*.png)|*.png|Adobe PDF Files (*.pdf)|*.pdf|All files (*.*)|*.*'               
         fileName = wx.FileSelector('Save Plot', default_extension='png', 
-                                   wildcard=('Portable Network Graphics (*.png)|*.png|' 
-                                             + 'Adobe PDF Files (*.pdf)|*.pdf|All files (*.*)|*.*'), 
-                                              parent=self, flags=wx.SAVE|wx.OVERWRITE_PROMPT) 
+                                   wildcard=wildcard, parent=self, flags=wx.SAVE|wx.OVERWRITE_PROMPT) 
    
         if not fileName: 
             return 
@@ -1664,7 +1714,7 @@ class PageStack(wx.Panel):
         self.data_struct = data_struct
         self.stk = stack
         self.com = common                  
-        self.SetBackgroundColour("White")
+        self.SetBackgroundColour("white")
         
         self.filename = " "
        
@@ -1702,7 +1752,11 @@ class PageStack(wx.Panel):
         vbox1 = wx.BoxSizer(wx.VERTICAL)
         
         self.tc_imageeng = wx.TextCtrl(panel1, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.tc_imageeng.SetFont(self.com.font)
         self.tc_imageeng.SetValue("Image at energy: ")
+        self.tc_imageeng.Disable()
+
+       
         hbox11 = wx.BoxSizer(wx.HORIZONTAL)
    
         self.AbsImagePanel = wxmpl.PlotPanel(panel1, -1, size =(3.5,3.5), cursor=False, crosshairs=True, location=False, zoom=False)
@@ -1727,6 +1781,8 @@ class PageStack(wx.Panel):
         
         self.tc_spec = wx.TextCtrl(panel2, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         self.tc_spec.SetValue("Spectrum at point: ")
+        self.tc_spec.SetFont(self.com.font)
+        self.tc_spec.Disable()
           
         
         self.SpectrumPanel = wxmpl.PlotPanel(panel2, -1, size=(5.75, 3.5), cursor=False, crosshairs=False, location=False, zoom=False)
@@ -1740,27 +1796,32 @@ class PageStack(wx.Panel):
         
         #panel 3
         panel3 = wx.Panel(self, -1)
-        sizer1 = wx.StaticBoxSizer(wx.StaticBox(panel3, -1, 'Preprocess', size =(100,-1)),orient=wx.VERTICAL)
+        sizer1 = wx.StaticBoxSizer(wx.StaticBox(panel3, -1, 'Preprocess'),orient=wx.VERTICAL)
         vbox31 = wx.BoxSizer(wx.VERTICAL)
         vbox31.Add((0,10)) 
         
-        self.button_limitev = wx.Button(panel3, -1, '  Limit energy range...  ', (10,10))
+        self.button_limitev = wx.Button(panel3, -1, 'Limit energy range...')
         self.Bind(wx.EVT_BUTTON, self.OnLimitEv, id=self.button_limitev.GetId())
+        self.button_limitev.SetFont(self.com.font)
         self.button_limitev.Disable()
         vbox31.Add(self.button_limitev, 0, wx.EXPAND)
-        self.button_i0ffile = wx.Button(panel3, -1, 'I0 from file...', (10,10))
+        self.button_i0ffile = wx.Button(panel3, -1, 'I0 from file...')
+        self.button_i0ffile.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnI0FFile, id=self.button_i0ffile.GetId())
         self.button_i0ffile.Disable()
         vbox31.Add(self.button_i0ffile, 0, wx.EXPAND)
-        self.button_i0histogram = wx.Button(panel3, -1, 'I0 from histogram...', (10,10))
+        self.button_i0histogram = wx.Button(panel3, -1, 'I0 from histogram...')
+        self.button_i0histogram.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnI0histogram, id=self.button_i0histogram.GetId())   
         self.button_i0histogram.Disable()     
         vbox31.Add(self.button_i0histogram, 0, wx.EXPAND)
-        self.button_showi0 = wx.Button(panel3, -1, 'Show I0...', (10,10))
+        self.button_showi0 = wx.Button(panel3, -1, 'Show I0...')
+        self.button_showi0.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnShowI0, id=self.button_showi0.GetId())   
         self.button_showi0.Disable()
         vbox31.Add(self.button_showi0, 0, wx.EXPAND)
-        self.button_save = wx.Button(panel3, -1, 'Save', (10,10))
+        self.button_save = wx.Button(panel3, -1, 'Save')
+        self.button_save.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnSave, id=self.button_save.GetId())
         self.button_save.Disable()          
         vbox31.Add(self.button_save, 0, wx.EXPAND)
@@ -1772,19 +1833,24 @@ class PageStack(wx.Panel):
         #panel 4
         panel4 = wx.Panel(self, -1)
         vbox4 = wx.BoxSizer(wx.VERTICAL)
+        sb = wx.StaticBox(panel4, -1, 'Display')
+        sb.SetBackgroundColour("White")
+        sizer4 = wx.StaticBoxSizer(sb, orient=wx.VERTICAL)
+        sb = wx.StaticBox(panel4, -1, 'File')
+        sb.SetBackgroundColour("White")
+        sizer41 = wx.StaticBoxSizer(sb, orient=wx.VERTICAL)
 
-        sizer4 = wx.StaticBoxSizer(wx.StaticBox(panel4, -1, 'Display', size =(500,-1)), orient=wx.VERTICAL)
-
-        sizer41 = wx.StaticBoxSizer(wx.StaticBox(panel4, -1, 'File', size =(500,-1)), orient=wx.VERTICAL)
         self.textctrl = wx.TextCtrl(panel4, -1, style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         sizer41.Add(self.textctrl, 1, wx.EXPAND|wx.TOP|wx.LEFT, 5)
         vbox4.Add(sizer41, 0, wx.EXPAND)
         
         hbox41 = wx.BoxSizer(wx.HORIZONTAL)
          
-        sizer42 = wx.StaticBoxSizer(wx.StaticBox(panel4, -1, 'Image', size =(240,-1)),  orient=wx.VERTICAL)
+        sizer42 = wx.StaticBoxSizer(wx.StaticBox(panel4, -1, 'Image'),  orient=wx.VERTICAL)
         self.rb_flux = wx.RadioButton(panel4, -1, 'Flux', style=wx.RB_GROUP)
         self.rb_od = wx.RadioButton(panel4, -1, 'Optical Density')
+        self.rb_flux.SetFont(self.com.font)
+        self.rb_od.SetFont(self.com.font)
         self.Bind(wx.EVT_RADIOBUTTON, self.onrb_fluxod, id=self.rb_flux.GetId())
         self.Bind(wx.EVT_RADIOBUTTON, self.onrb_fluxod, id=self.rb_od.GetId())
         
@@ -1792,6 +1858,7 @@ class PageStack(wx.Panel):
         self.rb_od.Disable()
 
         self.add_scale_cb = wx.CheckBox(panel4, -1, '  Scale')
+        self.add_scale_cb.SetFont(self.com.font)
         self.Bind(wx.EVT_CHECKBOX, self.OnShowScale, self.add_scale_cb)
 
         sizer42.Add((0,3))
@@ -1804,13 +1871,15 @@ class PageStack(wx.Panel):
         hbox41.Add(sizer42, 0, wx.EXPAND)
                 
 
-        sizer43 = wx.StaticBoxSizer(wx.StaticBox(panel4, -1, 'Display settings', size =(240,-1)),  orient=wx.VERTICAL)
+        sizer43 = wx.StaticBoxSizer(wx.StaticBox(panel4, -1, 'Display settings'),  orient=wx.VERTICAL)
         hbox42 = wx.BoxSizer(wx.HORIZONTAL)
         hbox42.Add((15,0))
 
         fgs41 = wx.FlexGridSizer(3, 2, 2, 5)
         min = wx.StaticText(panel4, label="Minimum")
+        min.SetFont(self.com.font)
         max = wx.StaticText(panel4, label="Maximum")
+        max.SetFont(self.com.font)
         self.slider_brightness_min = wx.Slider(panel4, -1, self.dispbrightness_min, 0, 49, style=wx.SL_HORIZONTAL)        
         self.slider_brightness_min.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnScrollBrightnessMin, self.slider_brightness_min)
@@ -1820,28 +1889,32 @@ class PageStack(wx.Panel):
         self.Bind(wx.EVT_SCROLL, self.OnScrollBrightnessMax, self.slider_brightness_max)        
         
         gamma = wx.StaticText(panel4, label="Gamma")
+        gamma.SetFont(self.com.font)
         self.slider_gamma = wx.Slider(panel4, -1, self.displaygamma, 1, 20, style=wx.SL_HORIZONTAL)        
         self.slider_gamma.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnScrollGamma, self.slider_gamma)
 
         
-        fgs41.AddMany([(min), (self.slider_brightness_min, 1, wx.EXPAND), (max), 
-            (self.slider_brightness_max, 1, wx.EXPAND),(gamma), (self.slider_gamma, 1, wx.EXPAND)])
-        fgs41.AddGrowableRow(3, 1)
-        hbox42.Add(fgs41, 1, wx.EXPAND)
+        fgs41.AddMany([(min), (self.slider_brightness_min, 0, wx.EXPAND), (max), 
+            (self.slider_brightness_max, 0, wx.EXPAND),(gamma), (self.slider_gamma, 0, wx.EXPAND)])
+      
+        hbox42.Add(fgs41, 0, wx.EXPAND)
         hbox42.Add((20,0))
 
         
         vbox43 = wx.BoxSizer(wx.VERTICAL)
-        self.button_despike = wx.Button(panel4, -1, 'Despike', (10,10))
+        self.button_despike = wx.Button(panel4, -1, 'Despike', size = (10,10))
+        self.button_despike.SetFont(self.com.font)
         #self.Bind(wx.EVT_BUTTON, self.onDespike, id=self.button_despike.GetId())   
         self.button_despike.Disable()     
         vbox43.Add(self.button_despike, 1, wx.EXPAND)
-        self.button_resetdisplay = wx.Button(panel4, -1, 'Reset', (10,10))
+        self.button_resetdisplay = wx.Button(panel4, -1, 'Reset')
+        self.button_resetdisplay.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.onResetDisplaySettings, id=self.button_resetdisplay.GetId())   
         self.button_resetdisplay.Disable()     
         vbox43.Add(self.button_resetdisplay, 1, wx.EXPAND)
-        self.button_displaycolor = wx.Button(panel4, -1, 'Color Table...', (10,10))
+        self.button_displaycolor = wx.Button(panel4, -1, 'Color Table...')
+        self.button_displaycolor.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.onSetColorTable, id=self.button_displaycolor.GetId())   
         self.button_displaycolor.Disable()     
         vbox43.Add(self.button_displaycolor, 1, wx.EXPAND)
@@ -1864,34 +1937,40 @@ class PageStack(wx.Panel):
         
         vbox51 = wx.BoxSizer(wx.VERTICAL)
         vbox51.Add((0,2))
-        self.button_addROI = wx.Button(panel5, -1, 'Add ROI', (10,10))
+        self.button_addROI = wx.Button(panel5, -1, 'Add ROI')
+        self.button_addROI.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnAddROI, id=self.button_addROI.GetId())
         self.button_addROI.Disable()
         vbox51.Add(self.button_addROI, 0, wx.EXPAND)
         
-        self.button_acceptROI = wx.Button(panel5, -1, 'Accept ROI', (10,10))
+        self.button_acceptROI = wx.Button(panel5, -1, 'Accept ROI')
+        self.button_acceptROI.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnAcceptROI, id=self.button_acceptROI.GetId())   
         self.button_acceptROI.Disable()     
         vbox51.Add(self.button_acceptROI, 0, wx.EXPAND)
         
-        self.button_resetROI = wx.Button(panel5, -1, 'Reset ROI', (10,10))
+        self.button_resetROI = wx.Button(panel5, -1, 'Reset ROI')
+        self.button_resetROI.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnResetROI, id=self.button_resetROI.GetId())
         self.button_resetROI.Disable()
         vbox51.Add(self.button_resetROI, 0, wx.EXPAND) 
 
-        self.button_setROII0 = wx.Button(panel5, -1, 'Set ROI As I0', (10,10))
+        self.button_setROII0 = wx.Button(panel5, -1, 'Set ROI As I0')
+        self.button_setROII0.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnSetROII0, id=self.button_setROII0.GetId())
         self.button_setROII0.Disable()
         vbox51.Add(self.button_setROII0, 0, wx.EXPAND)
         
-        self.button_saveROIspectr = wx.Button(panel5, -1, 'Save ROI Spectrum...', (10,10))
+        self.button_saveROIspectr = wx.Button(panel5, -1, 'Save ROI Spectrum...')
+        self.button_saveROIspectr.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnSaveROISpectrum, id=self.button_saveROIspectr.GetId())   
         self.button_saveROIspectr.Disable()     
         vbox51.Add(self.button_saveROIspectr, 0, wx.EXPAND)
         
         vbox51.Add((0,8))        
         
-        self.button_spectralROI = wx.Button(panel5, -1, 'Spectral ROI...', (10,10))
+        self.button_spectralROI = wx.Button(panel5, -1, 'Spectral ROI...')
+        self.button_spectralROI.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnSpectralROI, id=self.button_spectralROI.GetId())   
         self.button_spectralROI.Disable()     
         vbox51.Add(self.button_spectralROI, 0, wx.EXPAND)
@@ -2093,11 +2172,11 @@ class PageStack(wx.Panel):
         try: 
             wildcard = "I0 files (*.xas)|*.xas"
             dialog = wx.FileDialog(None, "Choose i0 file",
-                                    wildcard=wildcard,
-                                    style=wx.OPEN)
+                                   wildcard=wildcard,
+                                   style=wx.OPEN)
             if dialog.ShowModal() == wx.ID_OK:
-                            filepath_i0 = dialog.GetPath()
-                            self.filename = dialog.GetFilename()
+                filepath_i0 = dialog.GetPath()
+                self.filename = dialog.GetFilename()
                                                         
             wx.BeginBusyCursor()                                    
                         
@@ -2116,6 +2195,7 @@ class PageStack(wx.Panel):
             wx.EndBusyCursor()
             
         except:
+            wx.BeginBusyCursor()  
             self.com.i0_loaded = 0        
             wx.EndBusyCursor()  
             wx.MessageBox("I0 file not loaded.")
@@ -2469,7 +2549,7 @@ class PageStack(wx.Panel):
     def OnSaveROISpectrum(self, event):  
                
         fileName = wx.FileSelector('Save ROI Spectrum (.xas)', default_extension='xas', 
-                                   wildcard=('XAS (*.xas)|*.xas|'), 
+                                   wildcard=('XAS (*.xas)|*.xas'), 
                                               parent=self, flags=wx.SAVE|wx.OVERWRITE_PROMPT) 
    
         if not fileName: 
@@ -3234,6 +3314,8 @@ class MainFrame(wx.Frame):
         self.stk = data_stack.data(self.data_struct)
         self.anlz = analyze.analyze(self.stk)
         self.common = common()
+        
+        self.SetFont(self.common.font)
               
 
         # Here we create a panel and a notebook on the panel
@@ -3297,13 +3379,13 @@ class MainFrame(wx.Frame):
         Browse for .stk file
         """
         try: 
-            wildcard =  "HDF5 files (*.hdf5)|*.hdf5|" + "STK files (*.stk)|*.stk|" 
+            wildcard =  "HDF5 files (*.hdf5)|*.hdf5|STK files (*.stk)|*.stk" 
             dialog = wx.FileDialog(None, "Choose a file",
-                                    wildcard=wildcard,
-                                    style=wx.OPEN)
+                                   style=wx.OPEN)
+            dialog.SetWildcard(wildcard)
             if dialog.ShowModal() == wx.ID_OK:
-                            filepath = dialog.GetPath()
-                            self.page1.filename = dialog.GetFilename()
+                filepath = dialog.GetPath()
+                self.page1.filename = dialog.GetFilename()
                                   
             basename, extension = os.path.splitext(self.page1.filename)      
             
@@ -3664,6 +3746,6 @@ def main():
     splash.Destroy()
     app.MainLoop()
 
-
 if __name__ == '__main__':
     main()
+
