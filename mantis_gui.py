@@ -35,8 +35,7 @@ class common:
         self.spec_anl_calculated = 0
 
         self.font = wx.SystemSettings_GetFont(wx.SYS_DEFAULT_GUI_FONT)
-        self.font.SetPointSize(8)   
-
+        
 
 """ ------------------------------------------------------------------------------------------------"""
 class PageSpectral(wx.Panel):
@@ -1894,7 +1893,7 @@ class PageStack(wx.Panel):
         fgs41.AddMany([(min), (self.slider_brightness_min, 0, wx.EXPAND), (max), 
             (self.slider_brightness_max, 0, wx.EXPAND),(gamma), (self.slider_gamma, 0, wx.EXPAND)])
       
-        hbox42.Add(fgs41, 1, wx.EXPAND)
+        hbox42.Add(fgs41, 0, wx.EXPAND)
         hbox42.Add((20,0))
 
         
@@ -1909,7 +1908,7 @@ class PageStack(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self.onResetDisplaySettings, id=self.button_resetdisplay.GetId())   
         self.button_resetdisplay.Disable()     
         vbox43.Add(self.button_resetdisplay, 0, wx.EXPAND)
-        self.button_displaycolor = wx.Button(panel4, -1, 'Color Table...')
+        self.button_displaycolor = wx.Button(panel4, -1, '   Color Table...   ')
         self.button_displaycolor.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.onSetColorTable, id=self.button_displaycolor.GetId())   
         self.button_displaycolor.Disable()     
