@@ -191,7 +191,7 @@ class PageSpectral(wx.Panel):
         
         hbox42.Add(self.tc_spfitlist,1,wx.EXPAND)
         
-        #hbox42.Add((20,0))
+        sizer43.Add(hbox42,1,wx.EXPAND)       
 
         
         vbox43 = wx.BoxSizer(wx.VERTICAL)
@@ -211,7 +211,7 @@ class PageSpectral(wx.Panel):
         self.button_movespdown.Disable()     
         vbox43.Add(self.button_movespdown, 0, wx.EXPAND)
                        
-        sizer43.Add(hbox42)
+
                
             
         hbox41.Add((10,0))
@@ -2290,9 +2290,11 @@ class PageStack(wx.Panel):
     def OnShowScale(self, event):
         if self.add_scale_cb.GetValue():
             self.show_scale_bar = 1
-        else: self.show_scale_bar = 0
+        else: 
+            self.show_scale_bar = 0
         
-        self.loadImage()
+        if self.com.stack_loaded == 1:
+            self.loadImage()
              
 #----------------------------------------------------------------------
     def onResetDisplaySettings(self, event):
@@ -3371,9 +3373,11 @@ class MainFrame(wx.Frame):
 #----------------------------------------------------------------------
     def onBrowse(self, event):
         """
-        Browse for .stk file
+        Browse for .hdf5 or .stk file
         """
-        try: 
+        a=1
+        if a==1:
+        #try: 
             wildcard =  "HDF5 files (*.hdf5)|*.hdf5|STK files (*.stk)|*.stk" 
             dialog = wx.FileDialog(None, "Choose a file",
                                    style=wx.OPEN)
@@ -3389,7 +3393,9 @@ class MainFrame(wx.Frame):
             
                 if self.common.stack_loaded == 1:
                     self.new_stack_refresh()  
-                    self.anlz = analyze.analyze()                   
+                    self.data_struct = data_struct.h5()
+                    self.stk = data_stack.data(self.data_struct)
+                    self.anlz = analyze.analyze(self.stk)                 
                 self.stk.read_stk(filepath)        
                 self.page1.slider_eng.SetRange(0,self.stk.n_ev-1)
                 self.iev = int(self.stk.n_ev/3)
@@ -3422,7 +3428,9 @@ class MainFrame(wx.Frame):
                 
                 if self.common.stack_loaded == 1:
                     self.new_stack_refresh()  
-                    self.anlz = analyze.analyze()              
+                    self.data_struct = data_struct.h5()
+                    self.stk = data_stack.data(self.data_struct)
+                    self.anlz = analyze.analyze(self.stk)                 
             
                 self.stk.read_h5(filepath)
                          
@@ -3454,13 +3462,13 @@ class MainFrame(wx.Frame):
 
                 wx.EndBusyCursor()
 
-        except:
-
-            self.common.stack_loaded = 0 
-            self.common.i0_loaded = 0
-                               
-            wx.EndBusyCursor()
-            wx.MessageBox("Image stack not loaded.")
+#        except:
+#
+#            self.common.stack_loaded = 0 
+#            self.common.i0_loaded = 0
+#                               
+#            wx.EndBusyCursor()
+#            wx.MessageBox("Image stack not loaded.")
                    
         dialog.Destroy()
         self.refresh_widgets()

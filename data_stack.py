@@ -167,7 +167,7 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
         self.od = np.empty((self.n_cols, self.n_rows, self.n_ev))
         
         #little hack to deal with rounding errors
-        #self.evi0[self.evi0.size-1] += 0.001
+        self.evi0[self.evi0.size-1] += 0.001
         
         fi0int = scipy.interpolate.interp1d(self.evi0,self.i0data, kind='cubic', bounds_error=False, fill_value=0.0)      
         i0 = fi0int(self.ev)
