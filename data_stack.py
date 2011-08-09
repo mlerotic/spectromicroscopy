@@ -3,6 +3,7 @@ Created on Jun 20, 2011
 
 @author: Mirna Lerotic
 '''
+from __future__ import division
 
 import numpy as np
 import scipy.interpolate
@@ -291,5 +292,76 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
                 
         f.close()
         
+        if spectrum_evdata[-1]<spectrum_evdata[0]:
+            spectrum_evdata = spectrum_evdata[::-1]
+            spectrum_data = spectrum_data[::-1]
+        
         return spectrum_evdata, spectrum_data, spectrum_common_name
+        
+    
+#----------------------------------------------------------------------   
+#Register images using Fourier Shift Theorem
+    def register_images(self, ref_image, image2, maxshift = 5, have_ref_img_fft = False):
+        
+        ref_fft = np.fft.fftshift(np.fft.fft2(np.fft.fftshift(ref_image)))
+        img2_fft = np.fft.fftshift(np.fft.fft2(np.fft.fftshift(image2)))
+        
+        fr = (ref_fft*img2_fft.conjugate())/(np.abs(ref_fft)*np.abs(img2_fft))
+        fr = np.fft.fftshift(np.fft.ifft2(np.fft.fftshift(fr)))
+        fr = np.abs(fr)
+        
+        shape = ref_image.shape
+        
+        xc, yc = np.unravel_index(np.argmax(fr), shape)
+        
+        xshift = xc - np.float(shape[0])/2.0
+        yshift = yc - np.float(shape[1])/2.0
+        
+        print 'x shift = ', xshift
+        print 'y shift = ', yshift
+
+
+#----------------------------------------------------------------------   
+#Quadratic peak fit: Fits the 3 data pairs to y=a+bx+cx^2, returning fit=[a,b,c]'
+#  and xpeak at position of inflection'
+    def peak_fit(self, x, y):
+        
+        y1y0=y[1]-y[0]
+        y2y0=y[2]-y[0]
+        x1x0=x[1]-x[0]
+        x2x0=x[2]-x[0]
+        x1x0sq=x[1]*x[1]-x[0]*x[0]
+        x2x0sq=x[2]*x[2]-x[0]*x[0]
+        
+        c_num=y2y0*x1x0-y1y0*x2x0
+        c_denom=x2x0sq*x1x0-x1x0sq*x2x0
+        
+        if c_denom == 0:
+            print 'Divide by zero error'
+            return 
+
+        c=c_num/np.float(c_denom)
+        if x1x0 == 0:
+            print 'Divide by zero error'
+            return
+
+        b=(y1y0-c*x1x0sq)/np.float(x1x0)
+        a=y(0)-b*x(0)-c*x(0)*x(0)
+  
+        fit=[a,b,c]
+        if c == 0:
+            xpeak=0.
+            print 'Cannot find xpeak'
+            return
+        else:
+            #Constrain the fit to be within these three points. 
+            xpeak=-b/(2.*c)
+            if xpeak > x[0]:
+                xpeak = x[0]
+            if xpeak < x[2]:
+                xpeak = x[2]
+        
+        return xpeak, fit
+        
+        
         

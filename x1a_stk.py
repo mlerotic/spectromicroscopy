@@ -3,6 +3,7 @@ Created on Oct 25, 2010
 
 @author: Mirna Lerotic
 '''
+from __future__ import division
 
 import numpy as np
 import scipy.interpolate

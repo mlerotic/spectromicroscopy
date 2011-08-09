@@ -8,6 +8,8 @@ https://confluence.aps.anl.gov/display/NX/Format+Data+Exchange+Spectromicroscopy
 
 @authors: Mirna Lerotic & Nicholas Schwarz
 '''
+from __future__ import division
+
 import numpy as np
 import scipy as scy
 import h5py 

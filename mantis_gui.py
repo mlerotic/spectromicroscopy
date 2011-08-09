@@ -837,10 +837,8 @@ class PageCluster(wx.Panel):
         wx.BeginBusyCursor()
         self.calcclusters = False  
         
-        a=1
-        if a==1:
-        
-        #try: 
+
+        try: 
             self.CalcClusters()
             self.calcclusters = True
             
@@ -855,9 +853,9 @@ class PageCluster(wx.Panel):
             self.com.cluster_calculated = 1       
             wx.EndBusyCursor() 
             
-#        except:
-#            self.com.cluster_calculated = 0
-#            wx.EndBusyCursor()      
+        except:
+            self.com.cluster_calculated = 0
+            wx.EndBusyCursor()      
             
         wx.GetApp().TopWindow.refresh_widgets()
             
@@ -1793,13 +1791,8 @@ class PageStack(wx.Panel):
         panel3 = wx.Panel(self, -1)
         sizer1 = wx.StaticBoxSizer(wx.StaticBox(panel3, -1, 'Preprocess'),orient=wx.VERTICAL)
         vbox31 = wx.BoxSizer(wx.VERTICAL)
-        vbox31.Add((0,10)) 
-        
-        self.button_limitev = wx.Button(panel3, -1, 'Limit energy range...')
-        self.Bind(wx.EVT_BUTTON, self.OnLimitEv, id=self.button_limitev.GetId())
-        self.button_limitev.SetFont(self.com.font)
-        self.button_limitev.Disable()
-        vbox31.Add(self.button_limitev, 0, wx.EXPAND)
+        vbox31.Add((0,3))        
+
         self.button_i0ffile = wx.Button(panel3, -1, 'I0 from file...')
         self.button_i0ffile.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnI0FFile, id=self.button_i0ffile.GetId())
@@ -1815,6 +1808,23 @@ class PageStack(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self.OnShowI0, id=self.button_showi0.GetId())   
         self.button_showi0.Disable()
         vbox31.Add(self.button_showi0, 0, wx.EXPAND)
+        
+        vbox31.Add((0,3))
+        
+        self.button_limitev = wx.Button(panel3, -1, 'Limit energy range...')
+        self.Bind(wx.EVT_BUTTON, self.OnLimitEv, id=self.button_limitev.GetId())
+        self.button_limitev.SetFont(self.com.font)
+        self.button_limitev.Disable()
+        vbox31.Add(self.button_limitev, 0, wx.EXPAND)
+        
+        self.button_align = wx.Button(panel3, -1, 'Align images')
+        self.Bind(wx.EVT_BUTTON, self.OnAlignImgs, id=self.button_align.GetId())
+        self.button_align.SetFont(self.com.font)
+        self.button_align.Disable()
+        vbox31.Add(self.button_align, 0, wx.EXPAND)
+        
+        vbox31.Add((0,3))
+        
         self.button_save = wx.Button(panel3, -1, 'Save')
         self.button_save.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnSave, id=self.button_save.GetId())
@@ -2066,20 +2076,27 @@ class PageStack(wx.Panel):
 
 #----------------------------------------------------------------------          
     def loadSpectrum(self, xpos, ypos):
-
-        self.spectrum = self.stk.od3d[xpos,ypos, :]
-
+        
         fig = self.SpectrumPanel.get_figure()
         fig.clf()
         fig.add_axes((0.15,0.15,0.75,0.75))
         axes = fig.gca()
         
+        if self.com.i0_loaded == 1:
+            self.spectrum = self.stk.od3d[xpos,ypos, :]
+            axes.set_xlabel('Photon Energy [eV]')
+            axes.set_ylabel('Optical Density')
+        else:
+            self.spectrum = self.stk.absdata[xpos,ypos, :]
+            axes.set_xlabel('Photon Energy [eV]')
+            axes.set_ylabel('Flux')
+
+        
         mtplot.rcParams['font.size'] = self.fontsize
 
         specplot = axes.plot(self.stk.ev,self.spectrum)
         
-        axes.set_xlabel('Photon Energy [eV]')
-        axes.set_ylabel('Optical Density')
+
         
         axes.axvline(x=self.stk.ev[self.iev], color = 'g', alpha=0.5)
 
@@ -2095,6 +2112,8 @@ class PageStack(wx.Panel):
         self.iev = self.sel
         if self.com.stack_loaded == 1:
             self.loadImage()
+            self.loadSpectrum(self.ix, self.iy)
+
             
                    
 #----------------------------------------------------------------------  
@@ -2122,7 +2141,7 @@ class PageStack(wx.Panel):
         x = evt.xdata
         y = evt.ydata
         
-        if (self.com.i0_loaded == 1) and (self.addroi == 0):      
+        if (self.com.stack_loaded == 1) and (self.addroi == 0):      
             self.ix = int(npy.floor(y))           
             self.iy = int(npy.floor(x))  
                     
@@ -2271,6 +2290,18 @@ class PageStack(wx.Panel):
    
             wx.MessageBox('Could not save file: %s' % err, 'Error', 
                           parent=self, style=wx.OK|wx.ICON_ERROR) 
+
+
+#----------------------------------------------------------------------    
+    def OnAlignImgs(self, event):  
+        refimg = self.stk.absdata[:,:,self.iev].copy()
+        img2 = self.stk.absdata[:,:,self.iev+20].copy()
+        
+        img2 = npy.roll(img2, 3, axis=0)
+        img2 = npy.roll(img2, -2, axis=1)
+
+        
+        self.stk.register_images(refimg, img2)
 
 
 #----------------------------------------------------------------------          
@@ -3352,6 +3383,10 @@ class MainFrame(wx.Frame):
         openTool = self.toolbar.AddSimpleTool(wx.ID_OPEN, open_ico, "Open", "Open stack")
         self.Bind(wx.EVT_MENU, self.onBrowse, openTool)
         
+        open_sl_ico = logos.getslBitmap()
+        openslTool = self.toolbar.AddSimpleTool(101, open_sl_ico, "Open .sl files", "Open .sl files")   
+        self.Bind(wx.EVT_MENU, self.onOpenSL, openslTool)
+        
         save_ico = wx.ArtProvider.GetBitmap(wx.ART_FILE_SAVE, wx.ART_TOOLBAR, (16,16))
         saveTool = self.toolbar.AddSimpleTool(wx.ID_SAVE, save_ico, "Save", "Save analysis")
         self.toolbar.EnableTool(wx.ID_SAVE, False)       
@@ -3365,7 +3400,7 @@ class MainFrame(wx.Frame):
         help_ico = wx.ArtProvider.GetBitmap(wx.ART_INFORMATION, wx.ART_TOOLBAR, (16,16))
         helpTool = self.toolbar.AddSimpleTool(wx.ID_HELP, help_ico, "About", "About")
         self.Bind(wx.EVT_MENU, self.onAbout, helpTool)
-        
+    
                
  
         self.toolbar.Realize()
@@ -3375,9 +3410,7 @@ class MainFrame(wx.Frame):
         """
         Browse for .hdf5 or .stk file
         """
-        a=1
-        if a==1:
-        #try: 
+        try: 
             wildcard =  "HDF5 files (*.hdf5)|*.hdf5|STK files (*.stk)|*.stk" 
             dialog = wx.FileDialog(None, "Choose a file",
                                    style=wx.OPEN)
@@ -3418,6 +3451,7 @@ class MainFrame(wx.Frame):
                 
                 self.page1.ResetDisplaySettings()
                 self.page1.loadImage()
+                self.page1.loadSpectrum(self.ix, self.iy)
                 self.page1.textctrl.SetValue(self.page1.filename)
                 
 
@@ -3462,16 +3496,88 @@ class MainFrame(wx.Frame):
 
                 wx.EndBusyCursor()
 
-#        except:
-#
-#            self.common.stack_loaded = 0 
-#            self.common.i0_loaded = 0
-#                               
-#            wx.EndBusyCursor()
-#            wx.MessageBox("Image stack not loaded.")
+        except:
+
+            self.common.stack_loaded = 0 
+            self.common.i0_loaded = 0
+                               
+            wx.EndBusyCursor()
+            wx.MessageBox("Image stack not loaded.")
                    
         dialog.Destroy()
         self.refresh_widgets()
+        
+        
+#----------------------------------------------------------------------
+    def onOpenSL(self, event):
+        """
+        Browse for .sl files
+        """
+        
+       
+            
+        try:
+
+            #wildcard =  "SL files (*.sl)|*.sl" 
+            dialog = wx.DirDialog(None, "Choose a directory",
+                                   style=wx.DD_DIR_MUST_EXIST)
+            #dialog.SetWildcard(wildcard)
+            if dialog.ShowModal() == wx.ID_OK:
+                directory = dialog.GetPath()
+            
+            StackListFrame(directory, self.common, self.stk, self.data_struct).Show()
+            
+
+#                                  
+#            basename, extension = os.path.splitext(self.page1.filename)      
+#            
+#            if extension == '.sl':
+#                wx.BeginBusyCursor()     
+#            
+#                if self.common.stack_loaded == 1:
+#                    self.new_stack_refresh()  
+#                    self.data_struct = data_struct.h5()
+#                    self.stk = data_stack.data(self.data_struct)
+#                    self.anlz = analyze.analyze(self.stk)     
+#                                
+#                #self.stk.read_stk(filepath)  
+#                #read sl list...  
+#                     
+#                self.page1.slider_eng.SetRange(0,self.stk.n_ev-1)
+#                self.iev = int(self.stk.n_ev/3)
+#                self.page1.iev = self.iev
+#                self.page1.slider_eng.SetValue(self.iev)
+#            
+#                x=self.stk.n_cols
+#                y=self.stk.n_rows
+#                z=self.iev               
+#                self.page1.imgrgb = npy.zeros(x*y*3,dtype = "uint8")        
+#                self.page1.maxval = npy.amax(self.stk.imagestack)
+#            
+#                self.ix = int(x/2)
+#                self.iy = int(y/2)
+#                
+#                self.page1.ix = self.ix
+#                self.page1.iy = self.iy
+#                        
+#                self.common.stack_loaded = 1
+#                
+#                self.page1.ResetDisplaySettings()
+#                self.page1.loadImage()
+#                self.page1.textctrl.SetValue(self.page1.filename)
+#                
+#
+#                wx.EndBusyCursor()
+#
+        except:
+
+
+            self.common.stack_loaded = 0 
+            self.common.i0_loaded = 0
+                               
+            wx.EndBusyCursor()
+            wx.MessageBox(".sm files not loaded.")
+                   
         
 #----------------------------------------------------------------------
     def onSaveAsH5(self, event):
@@ -3516,6 +3622,7 @@ class MainFrame(wx.Frame):
             self.page1.button_i0ffile.Disable()
             self.page1.button_i0histogram.Disable() 
             self.page1.button_save.Disable() 
+            self.page1.button_align.Disable()
             self.page1.button_addROI.Disable()
             self.page1.button_spectralROI.Disable()
             self.page1.button_resetdisplay.Disable() 
@@ -3524,7 +3631,8 @@ class MainFrame(wx.Frame):
         else:
             self.page1.button_i0ffile.Enable()
             self.page1.button_i0histogram.Enable() 
-            self.page1.button_save.Enable()     
+            self.page1.button_save.Enable()   
+            self.page1.button_align.Enable()  
             self.page1.button_addROI.Enable()  
             self.page1.button_spectralROI.Enable()
             self.page1.button_resetdisplay.Enable() 
@@ -3667,7 +3775,234 @@ class MainFrame(wx.Frame):
         
         #page 4
         self.page4.ClearWidgets()
+        
+        
+#---------------------------------------------------------------------- 
+class StackListFrame(wx.Frame):
+
+    def __init__(self, filepath, com, stack, data_struct):
+        
+        self.data_struct = data_struct
+        self.stk = stack
+        self.common = com
+        
+        try: 
+            from netCDF4 import Dataset
+            import sm_netcdf
+            self.sm = sm_netcdf.sm(data_struct)
             
+        except:
+            wx.MessageBox("Could not import netCDF4 library.")
+            return
+            
+            
+        wx.Frame.__init__(self, wx.GetApp().TopWindow, title = "Stack File List", size=(410, 510))
+            
+        ico = logos.getlogo_2l_32Icon()
+        self.SetIcon(ico)
+        
+        self.filepath = filepath
+        
+        self.have1st = 0
+        self.havelast = 0
+        self.file1st = ' '
+        self.filelast = ' '
+        
+        
+        self.com = wx.GetApp().TopWindow.common         
+        self.fontsize = self.com.fontsize
+        
+        self.SetBackgroundColour("White")
+        
+        vboxtop = wx.BoxSizer(wx.VERTICAL)
+        
+        
+        panel1 = wx.Panel(self, -1)
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        
+        self.textt = wx.TextCtrl(panel1,-1, 'Select first stack file', 
+                                 style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        vbox.Add(self.textt, 0)
+        
+        self.filelist = wx.wx.ListCtrl(panel1,-1,style=wx.LC_REPORT)
+        self.filelist.InsertColumn(0,".sm files", width=150)
+        self.filelist.InsertColumn(1,"X", width=50)
+        self.filelist.InsertColumn(2,"Y", width=50)
+        self.filelist.InsertColumn(3,"eV", width=70)
+        
+        self.filelist.SetFont(self.com.font)
+        self.filelist.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.OnFileList)
+        vbox.Add(self.filelist, 1, wx.EXPAND)
+        
+        
+        self.tc_first = wx.TextCtrl(panel1,-1, 'First stack file: ', size = (300,20),
+                                    style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.tc_last = wx.TextCtrl(panel1,-1, 'Last stack file: ', size = (300,20),
+                                   style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        
+        vbox.Add(self.tc_first,0, wx.TOP, 10)
+        vbox.Add(self.tc_last, 0, wx.TOP, 10)
+        
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
+        
+        
+        self.button_accept = wx.Button(panel1, -1, 'Accept')
+        self.button_accept.Disable()
+        self.Bind(wx.EVT_BUTTON, self.OnAccept, id=self.button_accept.GetId())
+        hbox.Add(self.button_accept, 0, wx.ALL|wx.ALIGN_RIGHT, 10)
+        
+        button_cancel = wx.Button(panel1, -1, 'Cancel')
+        self.Bind(wx.EVT_BUTTON, self.OnCancel, id=button_cancel.GetId())
+        hbox.Add(button_cancel, 0, wx.ALL|wx.ALIGN_RIGHT,10)
+        
+        vbox.Add(hbox, 0, wx.ALIGN_RIGHT )
+      
+        panel1.SetSizer(vbox)
+        
+        vboxtop.Add(panel1, 1, wx.ALL|wx.EXPAND,20)
+        
+        self.SetSizer(vboxtop)
+        
+        self.ShowFileList()
+        
+        
+#----------------------------------------------------------------------           
+    def ShowFileList(self):    
+        
+                
+        self.sm_files = [x for x in os.listdir(self.filepath) if x.endswith('.sm')]
+
+        count = 0
+        
+        for i in range(len(self.sm_files)):
+            #print sm_files
+            filename = self.sm_files[i]
+            file = os.path.join(self.filepath, filename)
+            
+            filever, ncols, nrows, iev = self.sm.read_sm_header(file)
+            
+            if filever > 0:           
+                self.filelist.InsertStringItem(count,filename)
+                self.filelist.SetStringItem(count,1,str(ncols))
+                self.filelist.SetStringItem(count,2,str(nrows))
+                self.filelist.SetStringItem(count,3,'{0:5.2f}'.format(iev))
+                count += 1
+            else:
+                continue
+            
+
+    
+#----------------------------------------------------------------------          
+    def OnFileList(self, evt):
+        
+        if (self.have1st == 1) and (self.havelast==1):
+            self.have1st = 0
+            self.havelast = 0
+            self.button_accept.Disable()
+            self.tc_first.SetValue('First stack file: ')
+            self.tc_last.SetValue('Last stack file: ')
+            
+        
+        fn =  evt.GetText()
+        if self.have1st == 0:
+            self.tc_first.SetValue('First stack file: ' + fn) 
+            self.textt.SetValue('Select last stack file')
+            self.file1st = fn
+            self.have1st = 1
+        elif self.havelast == 0:
+            self.tc_last.SetValue('Last stack file: ' + fn) 
+            self.textt.SetValue('Select first stack file')         
+            self.filelast = fn
+            self.button_accept.Enable()
+            self.havelast = 1
+
+        
+        
+#----------------------------------------------------------------------        
+    def OnAccept(self, evt):
+        
+        
+        ind1st = self.sm_files.index(self.file1st) 
+        indlast = self.sm_files.index(self.filelast)
+        
+        filelist = self.sm_files[ind1st:indlast+1]
+
+        self.sm.read_sm_list(filelist, self.filepath, self.data_struct)
+        
+        
+        
+        #fill the gui structure data
+        self.stk.absdata = self.data_struct.exchange.detector[0].data
+        
+        datadim = npy.int32(self.stk.absdata.shape)
+        self.stk.n_cols = datadim[0].copy()
+        self.stk.n_rows =  datadim[1].copy()
+        self.stk.ev = self.data_struct.exchange.detector[0].energy 
+        self.stk.n_ev = npy.int32(self.stk.ev.shape[0]).copy()
+        
+        npixels = self.stk.n_cols*self.stk.n_rows*self.stk.n_ev
+        
+        
+        self.stk.x_dist = self.data_struct.exchange.detector[0].ds['x'] 
+        self.stk.y_dist = self.data_struct.exchange.detector[0].ds['y']
+        
+        
+        verbose = 0
+        
+        if verbose == 1: 
+
+            print 'File creation date ', self.data_struct.file_creation_datetime
+            print 'Data array shape: ', self.stk.absdata.shape
+            print 'n columns ', self.stk.n_cols
+            print 'n_rows ', self.stk.n_rows
+            print 'n_ev ', self.stk.n_ev
+            print 'ev array ', self.stk.ev
+            #print 'x dist ', self.x_dist
+            #print 'y_dist ', self.y_dist
+
+
+        
+        self.stk.imagestack = npy.empty((self.stk.n_cols*self.stk.n_rows*self.stk.n_ev))
+        self.stk.imagestack = npy.reshape(self.stk.absdata, (self.stk.n_cols*self.stk.n_rows*self.stk.n_ev), order='F')
+        
+        self.stk.original_n_cols = self.stk.n_cols.copy()
+        self.stk.original_n_rows = self.stk.n_rows.copy()
+        self.stk.original_n_ev = self.stk.n_ev.copy()
+        self.stk.original_ev = self.stk.ev.copy()
+        self.stk.original_absdata = self.stk.absdata.copy()
+        
+               
+      
+
+        wx.GetApp().TopWindow.page1.iev = int(self.stk.n_ev/3)
+   
+        wx.GetApp().TopWindow.ix = int(self.stk.n_cols/2)
+        wx.GetApp().TopWindow.iy = int(self.stk.n_rows/2)
+                        
+        self.common.stack_loaded = 1
+        
+        wx.GetApp().TopWindow.refresh_widgets()
+        wx.GetApp().TopWindow.page1.ResetDisplaySettings()
+        wx.GetApp().TopWindow.page1.filename = filelist[0]
+        wx.GetApp().TopWindow.page1.textctrl.SetValue(filelist[0])
+        
+        
+#        #Fix the slider on Page 1! 
+        wx.GetApp().TopWindow.page1.slider_eng.SetRange(0,self.stk.n_ev-1)
+        wx.GetApp().TopWindow.page1.iev = self.stk.n_ev/2
+        wx.GetApp().TopWindow.page1.slider_eng.SetValue(wx.GetApp().TopWindow.page1.iev)
+        
+        wx.GetApp().TopWindow.page1.loadSpectrum(wx.GetApp().TopWindow.page1.ix, wx.GetApp().TopWindow.page1.iy)
+        wx.GetApp().TopWindow.page1.loadImage()
+        
+        self.Close(True)
+        
+#---------------------------------------------------------------------- 
+    def OnCancel(self, evt):
+        self.Close(True)
+               
+        
+        
 #---------------------------------------------------------------------- 
 class AboutFrame(wx.Frame):
 
