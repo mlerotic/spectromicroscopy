@@ -7,6 +7,7 @@ from __future__ import division
 
 import numpy as np
 import scipy.interpolate
+import scipy.ndimage
 import h5py 
 import datetime 
 
@@ -53,18 +54,23 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
         self.original_n_ev = 0
         self.original_n_rows = 0
         self.original_od3d = 0
+        
            
 #----------------------------------------------------------------------   
     def read_stk_i0(self, filename):
         x1a_stk.x1astk.read_stk_i0(self,filename)
         self.calculate_optical_density()
         
-        self.fill_h5_struct_from_stk()
+        self.fill_h5_struct_normalization()
+        
+        
 
 #---------------------------------------------------------------------- 
     def read_stk(self, filename):    
         self.new_data()  
         x1a_stk.x1astk.read_stk(self, filename)
+        
+        self.fill_h5_struct_from_stk()
         
         self.scale_bar()
   
@@ -73,11 +79,15 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
         self.new_data()  
         aps_hdf5.h5.read_h5(self, filename, self.data_struct)
         
-        self.calculate_optical_density()
+        if self.data_struct.spectromicroscopy.normalization.white_spectrum.any():
+            self.calculate_optical_density()
+
+            
         self.scale_bar()
         
 #---------------------------------------------------------------------- 
     def fill_h5_struct_from_stk(self):   
+        
         
         now = datetime.datetime.now()
         
@@ -105,11 +115,20 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
         self.data_struct.exchange.add_dark_data()
         
         
-        self.data_struct.spectromicroscopy.add_normalization(white_spectrum=self.i0data, 
-                                                                white_spectrum_energy = self.evi0, 
-                                                                white_spectrum_energy_units='eV')
+        
         self.data_struct.spectromicroscopy.add_beamline()
         self.data_struct.spectromicroscopy.add_positions()
+        
+        
+        self.data_struct.spectromicroscopy.add_normalization()
+        
+        
+#---------------------------------------------------------------------- 
+    def fill_h5_struct_normalization(self):   
+        
+        self.data_struct.spectromicroscopy.normalization.white_spectrum=self.i0data 
+        self.data_struct.spectromicroscopy.normalization.white_spectrum_energy = self.evi0
+        self.data_struct.spectromicroscopy.normalization.white_spectrum_energy_units='eV'
         
         self.data_struct.spectromicroscopy.optical_density = self.od
         
@@ -144,7 +163,8 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
 
         self.calculate_optical_density()   
         
-        self.fill_h5_struct_from_stk() 
+        self.fill_h5_struct_normalization()
+        
     
         return    
     
@@ -156,7 +176,7 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
 
         self.calculate_optical_density()
         
-        self.fill_h5_struct_from_stk()
+        self.self.fill_h5_struct_normalization()
     
         return  
     
@@ -174,10 +194,10 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
         i0 = fi0int(self.ev)
         
         #zero out all negative values in the image stack
-        negative_indices = np.where(self.absdata < 0)
+        negative_indices = np.where(self.absdata <= 0)
         if negative_indices:
             self.absdata[negative_indices] = 0.01
-               
+                           
 
         for i in range(self.n_ev):
             self.od[:,:,i] = - np.log(self.absdata[:,:,i]/i0[i])
@@ -188,11 +208,12 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
             self.od[nan_indices] = 0
             
         self.od3d = self.od.copy()
+        
 
         #Optical density matrix is rearranged into n_pixelsxn_ev
         self.od = np.reshape(self.od, (n_pixels, self.n_ev), order='F')
         self.original_od3d = self.od3d.copy()
-        
+
         return
     
 #----------------------------------------------------------------------   
@@ -303,10 +324,11 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
 #Register images using Fourier Shift Theorem
     def register_images(self, ref_image, image2, maxshift = 5, have_ref_img_fft = False):
         
-        ref_fft = np.fft.fftshift(np.fft.fft2(np.fft.fftshift(ref_image)))
+        if have_ref_img_fft == False:
+            self.ref_fft = np.fft.fftshift(np.fft.fft2(np.fft.fftshift(ref_image)))
         img2_fft = np.fft.fftshift(np.fft.fft2(np.fft.fftshift(image2)))
         
-        fr = (ref_fft*img2_fft.conjugate())/(np.abs(ref_fft)*np.abs(img2_fft))
+        fr = (self.ref_fft*img2_fft.conjugate())/(np.abs(self.ref_fft)*np.abs(img2_fft))
         fr = np.fft.fftshift(np.fft.ifft2(np.fft.fftshift(fr)))
         fr = np.abs(fr)
         
@@ -314,11 +336,79 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
         
         xc, yc = np.unravel_index(np.argmax(fr), shape)
         
-        xshift = xc - np.float(shape[0])/2.0
-        yshift = yc - np.float(shape[1])/2.0
+        # Limit the search to 1 pixel border
+        if xc == 0:
+            xc=1
+        if xc == shape[0]-1:
+            xc = shape[0]-2
+            
+        if yc == 0:
+            yc=1
+        if yc == shape[1]-1:
+            yc = shape[1]-2
+            
+        #Use peak fit to find the shifts 
+        xpts = xc+[-1,0,1]
+        ypts = fr[xpts,yc]     
+        xf, fit = self.peak_fit(xpts, ypts)
+
+        xpts = yc+[-1,0,1]
+        ypts = fr[xc,xpts]     
+        yf, fit = self.peak_fit(xpts, ypts)   
+              
         
-        print 'x shift = ', xshift
-        print 'y shift = ', yshift
+        xshift = xf - np.float(shape[0])/2.0
+        yshift = yf - np.float(shape[1])/2.0
+        
+                
+        return xshift, yshift
+    
+
+#----------------------------------------------------------------------   
+#Apply image registration
+    def apply_image_registration(self, image, xshift, yshift):
+        
+        shape = image.shape
+        nx = shape[0]
+        ny = shape[1]
+        
+        outofboundariesval = np.sum(image)/float(nx*ny)        
+        shifted_img = scipy.ndimage.interpolation.shift(image,[xshift,yshift],
+                                                        mode='constant', 
+                                                        cval=outofboundariesval)
+        
+        return shifted_img
+    
+#----------------------------------------------------------------------   
+#Apply image registration
+    def crop_registed_images(self, images, xshifts, yshifts):
+        
+        min_xshift = np.min(xshifts)
+        max_xshift = np.max(xshifts)
+        
+        min_yshift = np.min(yshifts)
+        max_yshift = np.max(yshifts)
+        
+        # if the image is moved to the right (positive) we need to crop the left side 
+        xleft = np.ceil(max_xshift)
+        if xleft < 0:
+            xleft = 0
+        # if the image is moved to the left (negative) we need to crop the right side 
+        xright = np.floor(self.n_cols+min_xshift)
+        if xright>(self.n_cols):
+            xright = self.n_cols
+        
+        ybottom = np.ceil(max_yshift)
+        if ybottom <0:
+            ybottom = 0
+        ytop = np.floor(self.n_rows+min_yshift)
+        if ytop > (self.n_rows):
+            ytop = self.n_rows
+            
+            
+        cropped_stack = images[xleft:xright, ybottom:ytop, :]
+        
+        return cropped_stack
 
 
 #----------------------------------------------------------------------   
@@ -328,11 +418,11 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
         
         y1y0=y[1]-y[0]
         y2y0=y[2]-y[0]
-        x1x0=x[1]-x[0]
-        x2x0=x[2]-x[0]
-        x1x0sq=x[1]*x[1]-x[0]*x[0]
-        x2x0sq=x[2]*x[2]-x[0]*x[0]
-        
+        x1x0=np.float(x[1]-x[0])
+        x2x0=np.float(x[2]-x[0])
+        x1x0sq=np.float(x[1]*x[1]-x[0]*x[0])
+        x2x0sq=np.float(x[2]*x[2]-x[0]*x[0])
+                
         c_num=y2y0*x1x0-y1y0*x2x0
         c_denom=x2x0sq*x1x0-x1x0sq*x2x0
         
@@ -346,7 +436,7 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
             return
 
         b=(y1y0-c*x1x0sq)/np.float(x1x0)
-        a=y(0)-b*x(0)-c*x(0)*x(0)
+        a=y[0]-b*x[0]-c*x[0]*x[0]
   
         fit=[a,b,c]
         if c == 0:
@@ -355,11 +445,11 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
             return
         else:
             #Constrain the fit to be within these three points. 
-            xpeak=-b/(2.*c)
-            if xpeak > x[0]:
-                xpeak = x[0]
-            if xpeak < x[2]:
-                xpeak = x[2]
+            xpeak=-b/(2.0*c)
+            if xpeak < x[0]:
+                xpeak = np.float(x[0])
+            if xpeak > x[2]:
+                xpeak = np.float(x[2])
         
         return xpeak, fit
         

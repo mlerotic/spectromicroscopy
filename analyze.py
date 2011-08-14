@@ -25,6 +25,25 @@ class analyze:
         self.tspectrum_loaded = 0
         self.n_target_spectra = 0
         self.tspec_names = []
+        
+#----------------------------------------------------------------------   
+# Calculate pca 
+    def delete_data(self):
+        
+        self.target_spectra = 0
+        self.tspectrum_loaded = 0
+        self.n_target_spectra = 0
+        self.tspec_names = []
+        
+        self.pcaimages = 0
+        self.pcaimagebounds = 0
+        self.eigenvals = 0
+        self.eigenvecs = 0
+        
+        self.cluster_distances = 0
+        self.clustersizes = 0
+        self.cluster_indices = 0
+        self.clusterspectra = 0
                     
 #----------------------------------------------------------------------   
 # Calculate pca 

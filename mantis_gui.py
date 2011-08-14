@@ -1011,8 +1011,7 @@ class PageCluster(wx.Panel):
         if self.remove1stpcacb.GetValue():
             self.wo_1st_pca = 1
         else: self.wo_1st_pca = 0
-        
-        #recalculate CA!
+
         
         
 #----------------------------------------------------------------------    
@@ -1817,7 +1816,7 @@ class PageStack(wx.Panel):
         self.button_limitev.Disable()
         vbox31.Add(self.button_limitev, 0, wx.EXPAND)
         
-        self.button_align = wx.Button(panel3, -1, 'Align images')
+        self.button_align = wx.Button(panel3, -1, 'Align images...')
         self.Bind(wx.EVT_BUTTON, self.OnAlignImgs, id=self.button_align.GetId())
         self.button_align.SetFont(self.com.font)
         self.button_align.Disable()
@@ -2072,7 +2071,8 @@ class PageStack(wx.Panel):
         
         self.AbsImagePanel.draw()
         
-        self.tc_imageeng.SetValue("Image at energy: " +str(self.stk.ev[self.iev])+" eV")
+        self.tc_imageeng.SetValue("Image at energy: {0:5.2f} eV".format(float(self.stk.ev[self.iev])))
+
 
 #----------------------------------------------------------------------          
     def loadSpectrum(self, xpos, ypos):
@@ -2121,7 +2121,7 @@ class PageStack(wx.Panel):
         x = evt.xdata
         y = evt.ydata
         
-        if (self.com.i0_loaded == 1) and (self.addroi == 0):      
+        if (self.com.stack_loaded == 1) and (self.addroi == 0):      
             if x < self.stk.ev[0]:
                 sel_ev = 0
             elif x > self.stk.ev[self.stk.n_ev-1]:
@@ -2134,6 +2134,8 @@ class PageStack(wx.Panel):
 
             self.loadSpectrum(self.ix, self.iy)
             self.loadImage()
+            
+            self.slider_eng.SetValue(self.iev)
             
                    
 #----------------------------------------------------------------------  
@@ -2294,14 +2296,8 @@ class PageStack(wx.Panel):
 
 #----------------------------------------------------------------------    
     def OnAlignImgs(self, event):  
-        refimg = self.stk.absdata[:,:,self.iev].copy()
-        img2 = self.stk.absdata[:,:,self.iev+20].copy()
         
-        img2 = npy.roll(img2, 3, axis=0)
-        img2 = npy.roll(img2, -2, axis=1)
-
-        
-        self.stk.register_images(refimg, img2)
+        ImageRegistration(self.com, self.stk).Show()
 
 
 #----------------------------------------------------------------------          
@@ -2647,7 +2643,7 @@ class ShowHistogram(wx.Frame):
         hbox2 = wx.BoxSizer(wx.HORIZONTAL)
         sizer2 = wx.StaticBoxSizer(wx.StaticBox(panel, -1, 'I0 pixels'), orient=wx.VERTICAL)
         self.textctrl = wx.TextCtrl(panel, -1, size = (565, 20), style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
-        self.textctrl.SetValue('Selection: [ '+str(self.histmin) + ' kHz, '+ str(self.histmax)+' kHz ]' )
+        self.textctrl.SetValue('Selection: [ {0:5.2f} kHz, {1:5.2f} kHz ]'.format(float(self.histmin), float(self.histmax)))
         self.textctrl.SetBackgroundColour("White")
         sizer2.Add(self.textctrl, 0)
         
@@ -2748,8 +2744,8 @@ class ShowHistogram(wx.Frame):
         self.histmin = x1
         self.histmax = x2
 
-        self.textctrl.SetValue('Selection: [ '+str(self.histmin) + ' kHz, '+ str(self.histmax)+' kHz ]' )
-
+        self.textctrl.SetValue('Selection: [ {0:5.2f} kHz, {1:5.2f} kHz ]'.format(float(self.histmin), float(self.histmax)))
+    
         self.draw_histogram()
         self.draw_image()
 
@@ -2853,10 +2849,9 @@ class LimitEv(wx.Frame):
         
         self.SpectrumPanel.draw()
         
-        self.textctrl.SetValue("Min energy " + str(self.stack.original_ev[self.limitevmin]) + " eV\n"
-                              + "Max energy " + str(self.stack.original_ev[self.limitevmax]) + " eV")
-        
-        
+        self.textctrl.SetValue('Min energy {0:5.2f} eV\n'.format(float(self.stack.original_ev[self.limitevmin]))
+                              + 'Max energy {0:5.2f} eV'.format(float(self.stack.original_ev[self.limitevmax])))
+
 #----------------------------------------------------------------------        
     def OnSelection(self, evt):
 
@@ -2905,7 +2900,645 @@ class LimitEv(wx.Frame):
         self.Close(True)
         
         
+#---------------------------------------------------------------------- 
+class ImageRegistration(wx.Frame):
+
+    title = "Image Registration"
+
+    def __init__(self, common, stack):
+        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(900, 700))
                
+        ico = logos.getlogo_2l_32Icon()
+        self.SetIcon(ico)
+        
+        self.SetBackgroundColour("White") 
+        
+        self.stack = stack
+        self.com = common         
+        self.fontsize = self.com.fontsize
+        
+        self.have_ref_image = 0
+        self.regist_calculated = 0
+        
+        self.iev = 0
+        self.ref_image_index = 0
+        self.ref_image = 0
+        
+        self.man_align = 0
+        self.man_xref = 0
+        self.man_yref = 0
+        
+        self.man_xs = npy.zeros((self.stack.n_ev))
+        self.man_ys = npy.zeros((self.stack.n_ev))
+        
+        self.aligned_stack = self.stack.absdata.copy()
+        
+        
+        self.xshifts = npy.zeros((self.stack.n_ev))
+        self.yshifts = npy.zeros((self.stack.n_ev))
+                                  
+        
+        #panel 1        
+        panel1 = wx.Panel(self, -1)
+        vbox1 = wx.BoxSizer(wx.VERTICAL)
+        
+        self.tc_imageeng = wx.TextCtrl(panel1, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.tc_imageeng.SetFont(self.com.font)
+        self.tc_imageeng.SetValue("Image at energy: ")
+       
+        hbox11 = wx.BoxSizer(wx.HORIZONTAL)
+   
+        self.AbsImagePanel = wxmpl.PlotPanel(panel1, -1, size =(3.0,3.0), cursor=True, crosshairs=False, location=False, zoom=False)
+        wxmpl.EVT_POINT(panel1, self.AbsImagePanel.GetId(), self.OnPointCorrimage)
+
+                    
+        self.slider_eng = wx.Slider(panel1, -1, self.iev, 0, self.stack.n_ev-1, style=wx.SL_LEFT )        
+        self.slider_eng.SetFocus()
+        self.Bind(wx.EVT_SCROLL, self.OnScrollEng, self.slider_eng)
+
+        hbox11.Add(self.AbsImagePanel, 0)
+        hbox11.Add(self.slider_eng, 0,  wx.EXPAND)
+        
+        vbox1.Add(self.tc_imageeng,1, wx.EXPAND)        
+        vbox1.Add(hbox11, 0)
+
+        panel1.SetSizer(vbox1)
+        
+        
+#        
+#        #panel 2        
+#        panel2 = wx.Panel(self, -1)
+#        vbox2 = wx.BoxSizer(wx.VERTICAL)
+#        
+#        tc2 = wx.TextCtrl(panel2, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+#        tc2.SetFont(self.com.font)
+#        tc2.SetValue('Coherence matrix')
+#
+#        self.CohImagePanel = wxmpl.PlotPanel(panel2, -1, size =(2.4,2.4), cursor=False, crosshairs=True, location=False, zoom=False)
+#                                      
+#        vbox2.Add(tc2,1, wx.EXPAND)        
+#        vbox2.Add(self.CohImagePanel, 0)
+#
+#        panel2.SetSizer(vbox2)
+        
+        
+        #panel 3
+        panel3 = wx.Panel(self, -1)
+        vbox3 = wx.BoxSizer(wx.VERTICAL)
+        
+        tc3= wx.TextCtrl(panel3, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        tc3.SetValue('Image shifts')
+        tc3.SetFont(self.com.font)
+          
+        self.ShiftsPanel = wxmpl.PlotPanel(panel3, -1, size=(4.5, 2.8), cursor=False, crosshairs=False, location=False, zoom=False)
+        wxmpl.EVT_POINT(panel3, self.ShiftsPanel.GetId(), self.OnPlotShifts)
+        
+        vbox3.Add(tc3, 1, wx.EXPAND)       
+        vbox3.Add(self.ShiftsPanel, 0)
+        
+        panel3.SetSizer(vbox3)
+        
+        
+        #panel 4
+        panel4 = wx.Panel(self, -1)
+        sizer1 = wx.StaticBoxSizer(wx.StaticBox(panel4, -1, 'Registration'),orient=wx.VERTICAL)
+        vbox41 = wx.BoxSizer(wx.VERTICAL)
+        vbox41.Add((0,3))        
+
+        self.button_refimg = wx.Button(panel4, -1, 'Set as Reference Image')
+        self.button_refimg.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.SetRefImage, id=self.button_refimg.GetId())
+        vbox41.Add(self.button_refimg, 0, wx.EXPAND)
+        
+        self.button_register = wx.Button(panel4, -1, 'Register Images')
+        self.button_register.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.OnCalcRegistration, id=self.button_register.GetId())   
+        self.button_register.Disable()     
+        vbox41.Add(self.button_register, 0, wx.EXPAND)
+        
+        self.button_crop = wx.Button(panel4, -1, 'Crop Aligned Images')
+        self.button_crop.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.OnCropShifts, id=self.button_crop.GetId())   
+        self.button_crop.Disable()
+        vbox41.Add(self.button_crop, 0, wx.EXPAND)
+        
+        self.tc_shift = wx.TextCtrl(panel4, -1, style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.tc_shift.SetFont(self.com.font)
+        vbox41.Add(self.tc_shift, 1, wx.EXPAND|wx.TOP|wx.BOTTOM, 10)
+        
+        
+        self.tc_shift.AppendText('X shift: {0:5.2f} \n'.format(self.yshifts[self.iev]))
+        self.tc_shift.AppendText('Y shift: {0:5.2f} '.format(self.xshifts[self.iev]))
+        
+        
+        sizer1.Add(vbox41,1, wx.LEFT|wx.RIGHT|wx.EXPAND,2)
+        panel4.SetSizer(sizer1)
+        
+        
+        #panel 5        
+        panel5 = wx.Panel(self, -1)
+        vbox5 = wx.BoxSizer(wx.VERTICAL)
+        
+        tc5 = wx.TextCtrl(panel5, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        tc5.SetFont(self.com.font)
+        tc5.SetValue('Reference image')
+
+        self.RefImagePanel = wxmpl.PlotPanel(panel5, -1, size =(3.0,3.0), cursor=True, crosshairs=False, location=False, zoom=False)
+        wxmpl.EVT_POINT(panel5, self.RefImagePanel.GetId(), self.OnPointRefimage)
+        
+        vbox5.Add(tc5,1, wx.EXPAND)        
+        vbox5.Add(self.RefImagePanel, 0)
+
+        panel5.SetSizer(vbox5)
+        
+        
+        #panel 6
+        panel6 = wx.Panel(self, -1)
+        sizer6 = wx.StaticBoxSizer(wx.StaticBox(panel6, -1, 'Manual Alignment'),orient=wx.VERTICAL)
+        vbox61 = wx.BoxSizer(wx.VERTICAL)
+        vbox61.Add((0,3))        
+        
+#        hbox61 = wx.BoxSizer(wx.HORIZONTAL)
+#        hbox61.Add((5,0))
+#        self.manalcb = wx.CheckBox(panel6, -1, 'Enable Manual Alignment')
+#        self.manalcb.SetFont(self.com.font)
+#        self.Bind(wx.EVT_CHECKBOX, self.OnUseManAlign, self.manalcb)
+#        hbox61.Add(self.manalcb, 0, wx.EXPAND|wx.TOP, 15)
+#        hbox61.Add((5,0))
+#        vbox61.Add(hbox61,1, wx.EXPAND)
+#        
+        self.button_manalign = wx.Button(panel6, -1, 'Pick a point on reference image')
+        self.button_manalign.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.OnPickRefPoint, id=self.button_manalign.GetId())
+        self.button_manalign.Disable()
+        vbox61.Add(self.button_manalign, 0, wx.EXPAND)
+        
+        self.button_pick2ndpoint = wx.Button(panel6, -1, 'Pick a corresponding point')
+        self.button_pick2ndpoint.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.OnPickCorrPoint, id=self.button_pick2ndpoint.GetId())
+        self.button_pick2ndpoint.Disable()
+        vbox61.Add(self.button_pick2ndpoint, 0, wx.EXPAND)
+        
+        self.button_applyman = wx.Button(panel6, -1, 'Apply manual shifts')
+        self.button_applyman.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.OnApplyManShifts, id=self.button_applyman.GetId())
+        self.button_applyman.Disable()
+        vbox61.Add(self.button_applyman, 0, wx.EXPAND)
+        
+        
+        self.textctrl_ms = wx.TextCtrl(panel6, -1, style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.textctrl_ms.SetFont(self.com.font)
+        vbox61.Add(self.textctrl_ms, 1, wx.EXPAND|wx.TOP|wx.BOTTOM, 10)
+        
+        self.textctrl_ms.AppendText('X manual shift: \n')
+        self.textctrl_ms.AppendText('Y manual shift: ')
+        
+        
+        
+        sizer6.Add(vbox61,1, wx.LEFT|wx.RIGHT|wx.EXPAND,2)
+        panel6.SetSizer(sizer6)
+        
+        #panel 7
+        panel7 = wx.Panel(self, -1)
+        vbox7 = wx.BoxSizer(wx.VERTICAL)
+        
+        self.button_remove = wx.Button(panel7, -1, 'Remove image')
+        self.button_remove.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.OnRemoveImage, id=self.button_remove.GetId())    
+        vbox7.Add(self.button_remove, 0, wx.EXPAND)
+        
+        self.button_accept = wx.Button(panel7, -1, 'Accept changes')
+        self.button_accept.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.OnAccept, id=self.button_accept.GetId())
+        self.button_accept.Disable()
+        vbox7.Add(self.button_accept, 0, wx.EXPAND)
+        
+        self.button_close = wx.Button(panel7, -1, 'Dismiss changes')
+        self.button_close.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.OnClose, id=self.button_close.GetId())
+
+        vbox7.Add(self.button_close, 0, wx.EXPAND)
+        
+        panel7.SetSizer(vbox7)
+               
+        
+        hboxtop = wx.BoxSizer(wx.HORIZONTAL)
+        
+        vboxL = wx.BoxSizer(wx.VERTICAL)
+        vboxR = wx.BoxSizer(wx.VERTICAL)
+        
+        vboxL.Add(panel4, 1, wx.EXPAND|wx.ALL, 20)
+        vboxL.Add(panel6, 1, wx.EXPAND|wx.ALL, 20)
+        vboxL.Add(panel7, 1, wx.EXPAND|wx.ALL, 20)
+        
+        hboxRT = wx.BoxSizer(wx.HORIZONTAL)
+        hboxRB = wx.BoxSizer(wx.HORIZONTAL)
+        
+        hboxRT.Add(panel1, 0, wx.RIGHT, 25)
+        hboxRT.Add(panel5)
+        
+        hboxRB.Add(panel3, 0, wx.RIGHT, 10)
+        #hboxRB.Add(panel2)
+        
+        vboxR.Add((0,20))
+        vboxR.Add(hboxRT)
+        vboxR.Add((0,20))
+        vboxR.Add(hboxRB)
+        
+        hboxtop.Add(vboxL)
+        hboxtop.Add((20,0))
+        hboxtop.Add(vboxR)
+        
+        self.SetSizer(hboxtop)
+        
+        self.ShowImage()
+
+        
+        
+#----------------------------------------------------------------------        
+    def ShowImage(self):
+               
+        image = self.aligned_stack[:,:,self.iev]
+            
+            
+        fig = self.AbsImagePanel.get_figure()
+        fig.clf()
+        fig.add_axes((0.02,0.02,0.96,0.96))
+        axes = fig.gca()  
+             
+
+        im = axes.imshow(image, cmap=mtplot.cm.get_cmap('gray')) 
+       
+        axes.axis("off") 
+        self.AbsImagePanel.draw()
+        
+        
+        self.tc_imageeng.SetValue('Image at energy: {0:5.2f} eV'.format(float(self.stack.ev[self.iev])))
+        
+        self.tc_shift.Clear()
+        self.tc_shift.AppendText('X shift: {0:5.2f} \n'.format(self.yshifts[self.iev]))
+        self.tc_shift.AppendText('Y shift: {0:5.2f} '.format(self.xshifts[self.iev]))
+        
+#----------------------------------------------------------------------            
+    def OnScrollEng(self, event):
+        self.sel = event.GetInt()
+        self.iev = self.sel
+        
+        self.ShowImage()
+            
+
+#----------------------------------------------------------------------        
+    def SetRefImage(self, event):
+        
+        self.ref_image_index = self.iev
+               
+        self.ref_image = self.aligned_stack[:,:,self.iev].copy()
+        
+        self.ShowRefImage()
+        self.have_ref_image = 1
+        
+        self.UpdateWidgets()
+        
+
+#----------------------------------------------------------------------        
+    def ShowRefImage(self):
+
+        fig = self.RefImagePanel.get_figure()
+        fig.clf()
+        fig.add_axes((0.02,0.02,0.96,0.96))
+        axes = fig.gca()
+    
+        im = axes.imshow(self.ref_image, cmap=mtplot.cm.get_cmap('gray')) 
+         
+        if self.man_align > 0:           
+            lx=mtplot.lines.Line2D([self.man_yref,self.man_yref], [0,self.stack.n_rows],color='green')
+            ly=mtplot.lines.Line2D([0,self.stack.n_cols], [self.man_xref,self.man_xref] ,color='green')
+            axes.add_line(lx)
+            axes.add_line(ly)
+    
+        axes.axis("off") 
+
+        self.RefImagePanel.draw()
+        
+
+#----------------------------------------------------------------------        
+    def OnRemoveImage(self, event):
+        
+        self.stack.absdata = npy.delete(self.stack.absdata, self.iev, axis=2)  
+        
+        self.aligned_stack = npy.delete(self.aligned_stack, self.iev, axis=2)
+        
+        self.stack.n_ev = self.stack.n_ev - 1
+        self.stack.ev = npy.delete(self.stack.ev, self.iev) 
+
+        self.stack.imagestack = npy.empty((self.stack.n_cols*self.stack.n_rows*self.stack.n_ev))
+        self.stack.imagestack = npy.reshape(self.stack.absdata, (self.stack.n_cols*self.stack.n_rows*self.stack.n_ev), order='F')
+        
+        self.stack.original_n_ev = self.stack.n_ev.copy()
+        self.stack.original_ev = self.stack.ev.copy()
+        self.stack.original_absdata = self.stack.absdata.copy()
+        
+        self.xshifts = npy.delete(self.xshifts, self.iev) 
+        self.yshifts = npy.delete(self.yshifts, self.iev) 
+        
+        self.stack.data_struct.exchange.detector[0].data = self.stack.absdata
+        self.stack.data_struct.exchange.detector[0].energy = self.stack.ev
+        
+        if self.com.i0_loaded == 1:
+            self.stack.calculate_optical_density()
+            
+        self.iev = self.iev-1
+        if self.iev < 0:
+            self.iev = 0
+
+        self.ShowImage() 
+        
+        
+        wx.GetApp().TopWindow.page1.slider_eng.SetRange(0,self.stack.n_ev-1)
+        wx.GetApp().TopWindow.page1.iev = self.stack.n_ev/2
+        wx.GetApp().TopWindow.page1.slider_eng.SetValue(wx.GetApp().TopWindow.page1.iev)
+        
+        wx.GetApp().TopWindow.page1.loadSpectrum(wx.GetApp().TopWindow.page1.ix, wx.GetApp().TopWindow.page1.iy)
+        wx.GetApp().TopWindow.page1.loadImage() 
+
+#----------------------------------------------------------------------            
+    def OnCalcRegistration(self, event):
+        
+        wx.BeginBusyCursor()
+
+        for i in range(self.stack.n_ev):
+
+            img2 = self.aligned_stack[:,:,i]  
+               
+            if i==0:     
+                xshift, yshift = self.stack.register_images(self.ref_image, img2, 
+                                                          have_ref_img_fft = False)   
+            elif i==self.ref_image_index:
+                xshift = 0
+                yshift = 0       
+            else:
+                xshift, yshift = self.stack.register_images(self.ref_image, img2, 
+                                                          have_ref_img_fft = True)
+            
+            self.xshifts[i] = xshift
+            self.yshifts[i] = yshift
+            self.PlotShifts()
+            
+        #Apply shifts
+        for i in range(self.stack.n_ev):
+            img = self.aligned_stack[:,:,i]
+            if (abs(self.xshifts[i])>0.02) or (abs(self.yshifts[i])>0.02):
+                shifted_img = self.stack.apply_image_registration(img, 
+                                                                  self.xshifts[i], 
+                                                                  self.yshifts[i])
+                self.aligned_stack[:,:,i] = shifted_img
+
+                
+        self.regist_calculated = 1
+        self.iev = 0
+        self.ShowImage()
+        self.slider_eng.SetValue(self.iev)
+        
+        self.UpdateWidgets()
+        
+            
+        wx.EndBusyCursor()
+        
+#----------------------------------------------------------------------            
+    def OnCropShifts(self, event):
+        
+        wx.BeginBusyCursor()
+        
+        self.aligned_stack = self.stack.crop_registed_images(self.aligned_stack, 
+                                                             self.xshifts,
+                                                             self.yshifts)
+        
+        
+        self.iev = 0
+        self.ShowImage()
+        self.slider_eng.SetValue(self.iev)
+        
+        wx.EndBusyCursor()
+        
+        
+#----------------------------------------------------------------------            
+    def OnPickRefPoint(self, event):    
+        self.man_align = 1   
+    
+#----------------------------------------------------------------------  
+    def OnPointRefimage(self, evt):
+        
+        x = evt.xdata
+        y = evt.ydata
+        
+        if (self.man_align == 1):      
+            self.man_xref = int(npy.floor(y))           
+            self.man_yref = int(npy.floor(x))  
+                    
+            if self.man_xref<0 :
+                self.man_xref=0
+            if self.man_xref>self.stack.n_cols :
+                self.man_xref=self.stack.n_cols
+            if self.man_yref<0 :
+                self.man_yref=0
+            if self.man_yref>self.stack.n_rows :
+                self.man_yref=self.stack.n_rows 
+                
+            
+            self.UpdateWidgets()
+            
+            self.ShowRefImage()
+            
+            
+            
+#----------------------------------------------------------------------            
+    def OnPickCorrPoint(self, event):    
+
+        self.man_align = 2   
+    
+#----------------------------------------------------------------------  
+    def OnPointCorrimage(self, evt):
+        
+        x = evt.xdata
+        y = evt.ydata
+        
+        if (self.man_align == 2):      
+            xcorr = int(npy.floor(y))           
+            ycorr = int(npy.floor(x))  
+                    
+            if xcorr<0 :
+                xcorr=0
+            if xcorr>self.stack.n_cols :
+                xcorr=self.stack.n_cols
+            if ycorr<0 :
+                ycorr=0
+            if ycorr>self.stack.n_rows :
+                ycorr=self.stack.n_rows 
+                
+        
+            self.man_xs[self.iev] = self.man_xref - xcorr
+            self.man_ys[self.iev] = self.man_yref - ycorr
+                
+            
+            self.textctrl_ms.Clear()
+            self.textctrl_ms.AppendText('X manual shift:  {0:5.2f} \n'.format(self.man_ys[self.iev]))
+            self.textctrl_ms.AppendText('Y manual shift:  {0:5.2f}'.format(self.man_xs[self.iev]))
+            
+            self.UpdateWidgets()
+            
+#----------------------------------------------------------------------            
+    def OnApplyManShifts(self, event):
+        
+        for i in range(self.stack.n_ev):
+            
+            img = self.aligned_stack[:,:,i]
+            if (abs(self.man_xs[i])>0.02) or (abs(self.man_ys[i])>0.02):
+                shifted_img = self.stack.apply_image_registration(img, 
+                                                                  self.man_xs[i], 
+                                                                  self.man_ys[i])
+                self.aligned_stack[:,:,i] = shifted_img
+                
+                self.xshifts[i] = self.xshifts[i] + self.man_xs[i]
+                self.yshifts[i] = self.yshifts[i] + self.man_ys[i]
+
+                
+            self.man_xs[i] = 0
+            self.man_ys[i] = 0
+                
+        self.regist_calculated = 1
+        self.man_align = 0
+        
+        self.ShowRefImage()
+        self.PlotShifts()
+        
+        self.textctrl_ms.Clear()
+        self.textctrl_ms.AppendText('X manual shift: \n')
+        self.textctrl_ms.AppendText('Y manual shift: ')
+        
+        self.UpdateWidgets()
+        
+
+        self.ShowImage()
+        
+        
+      
+                    
+#----------------------------------------------------------------------            
+    def OnAccept(self, event):
+        
+        self.stack.absdata = self.aligned_stack  
+        
+        datadim = npy.int32(self.stack.absdata.shape)
+        
+        
+        self.stack.n_cols = datadim[0].copy()
+        self.stack.n_rows =  datadim[1].copy()
+        
+        
+        self.stack.imagestack = npy.reshape(self.stack.absdata, (self.stack.n_cols*self.stack.n_rows*self.stack.n_ev), order='F')
+        
+        self.stack.original_absdata = self.stack.absdata.copy()
+        
+
+        
+        if self.com.i0_loaded == 1:
+            self.stack.calculate_optical_density()
+
+        
+        self.stack.data_struct.exchange.detector[0].data = self.stack.absdata
+        self.stack.data_struct.exchange.detector[0].energy = self.stack.ev
+        
+        
+        wx.GetApp().TopWindow.page1.slider_eng.SetRange(0,self.stack.n_ev-1)
+        wx.GetApp().TopWindow.page1.iev = self.stack.n_ev/2
+        wx.GetApp().TopWindow.page1.slider_eng.SetValue(wx.GetApp().TopWindow.page1.iev)
+        
+        wx.GetApp().TopWindow.page1.ix = int(self.stack.n_cols/2)
+        wx.GetApp().TopWindow.page1.iy = int(self.stack.n_rows/2)
+        
+        wx.GetApp().TopWindow.page1.loadSpectrum(wx.GetApp().TopWindow.page1.ix, wx.GetApp().TopWindow.page1.iy)
+        wx.GetApp().TopWindow.page1.loadImage()
+        
+        
+        self.Close(True)
+        
+#----------------------------------------------------------------------              
+    def OnClose(self, evt):
+        self.Close(True)   
+        
+        
+#----------------------------------------------------------------------          
+    def PlotShifts(self):
+        
+        fig = self.ShiftsPanel.get_figure()
+        fig.clf()
+        fig.add_axes((0.15,0.15,0.75,0.75))
+        axes = fig.gca()
+        
+        
+        mtplot.rcParams['font.size'] = self.fontsize
+        
+        #Matplotlib has inverted axes! 
+        axes.set_xlabel('Photon Energy [eV]')
+        axes.set_ylabel('Shifts [x-red, y-green]')
+
+        plot = axes.plot(self.stack.ev,self.xshifts, color='green')
+        plot = axes.plot(self.stack.ev,self.yshifts, color='red')
+        
+        
+        self.ShiftsPanel.draw()
+        
+#----------------------------------------------------------------------  
+    def OnPlotShifts(self, evt):
+        x = evt.xdata
+        y = evt.ydata
+        
+        if self.xshifts.any():      
+            if x < self.stack.ev[0]:
+                sel_ev = 0
+            elif x > self.stack.ev[self.stack.n_ev-1]:
+                sel_ev = self.stack.n_ev-1
+            else:
+                indx = npy.abs(self.stack.ev - x).argmin()
+                sel_ev = indx
+                
+            self.iev = sel_ev                   
+
+            self.ShowImage()
+            
+            self.slider_eng.SetValue(self.iev)
+        
+
+#----------------------------------------------------------------------  
+    def UpdateWidgets(self):
+        
+        
+        if self.have_ref_image == 1:
+            self.button_register.Enable()
+            self.button_manalign.Enable()
+        else:
+            self.button_register.Disable()
+            self.button_manalign.Disable()
+        
+        if self.regist_calculated == 1:
+            self.button_crop.Enable()
+            self.button_accept.Enable()
+        else:
+            self.button_crop.Disable()
+            self.button_accept.Disable() 
+                       
+        if self.man_align == 0:
+            self.button_pick2ndpoint.Disable()
+            self.button_applyman.Disable()
+        elif self.man_align == 1:
+            self.button_pick2ndpoint.Enable() 
+        elif self.man_align == 2:
+            self.button_applyman.Enable()
+       
+               
+        
+        
+        
 #---------------------------------------------------------------------- 
 class SpectralROI(wx.Frame):
 
@@ -3410,6 +4043,7 @@ class MainFrame(wx.Frame):
         """
         Browse for .hdf5 or .stk file
         """
+
         try: 
             wildcard =  "HDF5 files (*.hdf5)|*.hdf5|STK files (*.stk)|*.stk" 
             dialog = wx.FileDialog(None, "Choose a file",
@@ -3426,9 +4060,9 @@ class MainFrame(wx.Frame):
             
                 if self.common.stack_loaded == 1:
                     self.new_stack_refresh()  
-                    self.data_struct = data_struct.h5()
-                    self.stk = data_stack.data(self.data_struct)
-                    self.anlz = analyze.analyze(self.stk)                 
+                    self.stk.new_data()
+                    self.stk.data_struct.delete_data()
+                    self.anlz.delete_data()       
                 self.stk.read_stk(filepath)        
                 self.page1.slider_eng.SetRange(0,self.stk.n_ev-1)
                 self.iev = int(self.stk.n_ev/3)
@@ -3439,7 +4073,7 @@ class MainFrame(wx.Frame):
                 y=self.stk.n_rows
                 z=self.iev               
                 self.page1.imgrgb = npy.zeros(x*y*3,dtype = "uint8")        
-                self.page1.maxval = npy.amax(self.stk.imagestack)
+                self.page1.maxval = npy.amax(self.stk.absdata)
             
                 self.ix = int(x/2)
                 self.iy = int(y/2)
@@ -3462,9 +4096,9 @@ class MainFrame(wx.Frame):
                 
                 if self.common.stack_loaded == 1:
                     self.new_stack_refresh()  
-                    self.data_struct = data_struct.h5()
-                    self.stk = data_stack.data(self.data_struct)
-                    self.anlz = analyze.analyze(self.stk)                 
+                    self.stk.new_data()
+                    self.stk.data_struct.delete_data()
+                    self.anlz.delete_data()                
             
                 self.stk.read_h5(filepath)
                          
@@ -3483,7 +4117,9 @@ class MainFrame(wx.Frame):
                 self.iy = y/2
                         
                 self.common.stack_loaded = 1
-                self.common.i0_loaded = 1
+                
+                if self.stk.data_struct.spectromicroscopy.normalization.white_spectrum.any():
+                    self.common.i0_loaded = 1
                 
                 self.page1.ix = self.ix
                 self.page1.iy = self.iy
@@ -3513,8 +4149,6 @@ class MainFrame(wx.Frame):
         """
         Browse for .sl files
         """
-        
-       
             
         try:
 
@@ -3527,48 +4161,6 @@ class MainFrame(wx.Frame):
             
             StackListFrame(directory, self.common, self.stk, self.data_struct).Show()
             
-
-#                                  
-#            basename, extension = os.path.splitext(self.page1.filename)      
-#            
-#            if extension == '.sl':
-#                wx.BeginBusyCursor()     
-#            
-#                if self.common.stack_loaded == 1:
-#                    self.new_stack_refresh()  
-#                    self.data_struct = data_struct.h5()
-#                    self.stk = data_stack.data(self.data_struct)
-#                    self.anlz = analyze.analyze(self.stk)     
-#                                
-#                #self.stk.read_stk(filepath)  
-#                #read sl list...  
-#                     
-#                self.page1.slider_eng.SetRange(0,self.stk.n_ev-1)
-#                self.iev = int(self.stk.n_ev/3)
-#                self.page1.iev = self.iev
-#                self.page1.slider_eng.SetValue(self.iev)
-#            
-#                x=self.stk.n_cols
-#                y=self.stk.n_rows
-#                z=self.iev               
-#                self.page1.imgrgb = npy.zeros(x*y*3,dtype = "uint8")        
-#                self.page1.maxval = npy.amax(self.stk.imagestack)
-#            
-#                self.ix = int(x/2)
-#                self.iy = int(y/2)
-#                
-#                self.page1.ix = self.ix
-#                self.page1.iy = self.iy
-#                        
-#                self.common.stack_loaded = 1
-#                
-#                self.page1.ResetDisplaySettings()
-#                self.page1.loadImage()
-#                self.page1.textctrl.SetValue(self.page1.filename)
-#                
-#
-#                wx.EndBusyCursor()
-#
         except:
 
 
@@ -3628,6 +4220,7 @@ class MainFrame(wx.Frame):
             self.page1.button_resetdisplay.Disable() 
             self.page1.button_despike.Disable()   
             self.page1.button_displaycolor.Disable()
+            self.toolbar.EnableTool(wx.ID_SAVEAS, False)
         else:
             self.page1.button_i0ffile.Enable()
             self.page1.button_i0histogram.Enable() 
@@ -3638,6 +4231,8 @@ class MainFrame(wx.Frame):
             self.page1.button_resetdisplay.Enable() 
             #self.page1.button_despike.Enable() 
             self.page1.button_displaycolor.Enable()
+            self.toolbar.EnableTool(wx.ID_SAVEAS, True)  
+            
             
         if self.common.i0_loaded == 0:
             self.page1.button_limitev.Disable()
@@ -3645,14 +4240,13 @@ class MainFrame(wx.Frame):
             self.page1.rb_flux.Disable()
             self.page1.rb_od.Disable()
             self.page2.button_calcpca.Disable()
-            self.toolbar.EnableTool(wx.ID_SAVEAS, False)
         else:
             self.page1.button_limitev.Enable()
             self.page1.button_showi0.Enable()
             self.page1.rb_flux.Enable()
             self.page1.rb_od.Enable()   
             self.page2.button_calcpca.Enable() 
-            self.toolbar.EnableTool(wx.ID_SAVEAS, True)  
+            
             
             
         if self.common.pca_calculated == 0:      
@@ -3697,6 +4291,7 @@ class MainFrame(wx.Frame):
             
 #----------------------------------------------------------------------        
     def new_stack_refresh(self):
+        
         
         self.common.i0_loaded = 0
         self.common.pca_calculated = 0
@@ -3970,6 +4565,8 @@ class StackListFrame(wx.Frame):
         self.stk.original_n_ev = self.stk.n_ev.copy()
         self.stk.original_ev = self.stk.ev.copy()
         self.stk.original_absdata = self.stk.absdata.copy()
+        
+        self.stk.fill_h5_struct_from_stk()
         
                
       

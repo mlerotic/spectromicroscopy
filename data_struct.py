@@ -123,11 +123,13 @@ class exchange:
         
 #---------------------------------------------------------------------- 
     def add_white_data(self, white_data = 0.0, white_data_units=''):  
+
         self.white_data.append(white_data)
         self.white_data_units.append(white_data_units)
         
 #---------------------------------------------------------------------- 
     def add_dark_data(self, dark_data = 0, dark_data_units =''):  
+
         self.dark_data.append(dark_data)
         self.dark_data_units.append(dark_data_units)
         
@@ -177,6 +179,7 @@ class spectromicroscopy:
         
 #---------------------------------------------------------------------- 
     def add_positions(self,  positions = 0, positions_units = '', positions_names = ''):   
+
         self.positions.append(positions)
         self.positions_units.append(positions_units)
         self.positions_names.append(positions_names)
@@ -232,6 +235,38 @@ class h5:
         
 #       spectromicroscopy/[HDF5 group]
         self.spectromicroscopy = spectromicroscopy()
+        
+      #---------------------------------------------------------------------- 
+    def delete_data(self):  
+                #implements [string] comma separated string that tells the user which entries file contains
+        self.implements = ' '
+#        version [1.01] file version 
+        self.version = ' '
+        #file_creation_date [string - ISO 8601 format]
+        self.file_creation_datetime = ' '
+        #comment [string]
+        self.comment = ' '       
+#        primary_beam_energy [double]
+#            @units[string] 
+        self.primary_beam_energy = 0
+        self.primary_beam_energy_units = ' '
+
+
+# Make H5 group initialization into function calls
+
+#        experimenter/ [HDF5 group]
+        self.experimenter = []
+        #can have experimenter1, experimenter 2....
+        
+#        sample/ [HDF5 group]
+        self.sample = []    
+
+#       exchange/[HDF5 group]
+        self.exchange = exchange()
+        
+#       spectromicroscopy/[HDF5 group]
+        self.spectromicroscopy = spectromicroscopy()
+        
         
 #---------------------------------------------------------------------- 
     def add_experimenter(self,  name = '', role = '', affiliation = '', address = '', phone = '',

@@ -225,7 +225,6 @@ class h5:
             print 'evi0 ', self.evi0
         
 
-        
         self.imagestack = np.empty((self.n_cols*self.n_rows*self.n_ev))
         self.imagestack = np.reshape(self.absdata, (self.n_cols*self.n_rows*self.n_ev), order='F')
         
@@ -341,7 +340,6 @@ class h5:
         # Spectromicroscopy HDF5 group
         # /spectromicroscopy
         spectromicroscopyGrp = f.create_group('spectromicroscopy')
-        
         ds = spectromicroscopyGrp.create_dataset('positions', data = data_struct.spectromicroscopy.positions)
         ds.attrs['units'] = data_struct.spectromicroscopy.positions_units
         ds.attrs['names'] = data_struct.spectromicroscopy.positions_names
