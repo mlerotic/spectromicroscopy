@@ -37,12 +37,12 @@ class x1astk:
         self.msec = np.fromfile(f, np.float32, self.n_ev)
         self.msec.byteswap(True)   
         
-        self.imagestack = np.fromfile(f, np.float32, self.n_cols*self.n_rows*self.n_ev)
-        self.imagestack.byteswap(True)     
+        imagestack = np.fromfile(f, np.float32, self.n_cols*self.n_rows*self.n_ev)
+        imagestack.byteswap(True)     
                
         self.absdata = np.empty((self.n_cols, self.n_rows, self.n_ev))
                 
-        self.absdata = np.reshape(self.imagestack, (self.n_cols, self.n_rows, self.n_ev), order='F')       
+        self.absdata = np.reshape(imagestack, (self.n_cols, self.n_rows, self.n_ev), order='F')       
 
         f.close()
         

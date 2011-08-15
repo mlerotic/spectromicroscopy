@@ -8,6 +8,7 @@ from __future__ import division
 import numpy as np
 import scipy.interpolate
 import scipy.spatial
+import scipy.ndimage
 from scipy.cluster.vq import  kmeans2
 
 import warnings

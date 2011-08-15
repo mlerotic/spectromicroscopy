@@ -33,8 +33,7 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
         self.y_dist = 0
 
         self.ev = 0 
-        self.msec = 0
-        self.imagestack = 0             
+        self.msec = 0          
         self.absdata = 0
 
         self.original_n_cols = 0
@@ -452,6 +451,109 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
                 xpeak = np.float(x[2])
         
         return xpeak, fit
+        
+        
+#-----------------------------------------------------------------------------
+#Despike image using Enhanced Lee Filter
+    def despike(self, image, leefilt_percent = 50.0):
+        
+        fimg = self.lee_filter(image)
+        
+        leefilt_max = np.amax(fimg)
+        threshold = (1.+0.01*leefilt_percent)*leefilt_max
+    
+        
+        datadim = np.int32(image.shape)
+
+        ncols = datadim[0].copy()
+        nrows =  datadim[1].copy()
+              
+        spikes = np.where(image > threshold)
+        n_spikes = fimg[spikes].shape[0]
+        
+
+        result_img = image.copy()
+        
+        if n_spikes > 0:
+
+            xsp = spikes[0]
+            ysp = spikes[1]
+            for i in range(n_spikes):
+                ix = xsp[i]
+                iy = ysp[i]
+                print ix,iy
+                if ix == 0:
+                    ix1 = 1
+                    ix2 = 2
+                elif ix == (ncols-1):
+                    ix1 = ncols-2
+                    ix2 = ncols -3
+                else:
+                    ix1 = ix - 1
+                    ix2 = ix + 1
+                    
+                if iy == 0:
+                    iy1 = 1
+                    iy2 = 2
+                elif iy == (nrows-1):
+                    iy1 = nrows-2
+                    iy2 = nrows-3
+                else:
+                    iy1 = iy - 1
+                    iy2 = iy + 1      
+                 
+                print result_img[ix,iy]
+                result_img[ix,iy] = 0.25*(image[ix1,iy]+image[ix2,iy]+
+                                          image[ix,iy1]+image[ix,iy2])  
+                print result_img[ix,iy]
+            
+        return result_img        
+                                        
+            
+#-----------------------------------------------------------------------------   
+# Lee filter
+    def lee_filter(self, image):
+    
+        nbox = 5 #The size of the filter box is 2N+1.  The default value is 5.
+        sig = 5.0 #Estimate of the standard deviation.  The default is 5.
+        
+        delta = int((nbox - 1)/2) #width of window
+        
+        datadim = np.int32(image.shape)
+        
+        
+        n_cols = datadim[0].copy()
+        n_rows =  datadim[1].copy()
+        
+        Imean = np.zeros((n_cols,n_rows))
+        scipy.ndimage.filters.uniform_filter(image, size=nbox, output=Imean)
+        
+        Imean2 = Imean**2
+        
+        #variance
+        z = np.empty((n_cols,n_rows))
+        
+
+        for l in range(delta, n_cols-delta):
+            for s in range(delta, n_rows-delta):    
+                
+                z[l,s] = np.sum((image[l-delta:l+delta,s-delta:s+delta]-Imean[l,s])**2)
+                
+
+        z = z / float(nbox**2-1.0)
+        
+        z = (z + Imean2)/float(1.0+sig**2)-Imean2
+        
+        ind = np.where(z < 0)
+        n_ind = z[ind].shape[0]
+        if n_ind > 0:
+            z[ind] = 0
+        
+        lf_image = Imean + (image-Imean)*(z/(Imean2*sig**2+z))
+        
+        return lf_image
+        
+        
         
         
         

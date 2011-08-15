@@ -1718,6 +1718,7 @@ class PageStack(wx.Panel):
         self.sel = 50
         self.showflux = True
         self.fontsize = self.com.fontsize
+        self.show_colorbar = 0
         
         self.dispbrightness_min = 0
         self.dispbrightness_max = 100
@@ -1864,13 +1865,19 @@ class PageStack(wx.Panel):
         self.add_scale_cb = wx.CheckBox(panel4, -1, '  Scale')
         self.add_scale_cb.SetFont(self.com.font)
         self.Bind(wx.EVT_CHECKBOX, self.OnShowScale, self.add_scale_cb)
+        
+        self.add_colbar_cb = wx.CheckBox(panel4, -1, '  Colorbar')
+        self.add_colbar_cb.SetFont(self.com.font)
+        self.Bind(wx.EVT_CHECKBOX, self.OnShowColBar, self.add_colbar_cb)
 
         sizer42.Add((0,3))
         sizer42.Add(self.rb_flux)
-        sizer42.Add((0,5))
+        sizer42.Add((0,3))
         sizer42.Add(self.rb_od)
         sizer42.Add((0,10))
         sizer42.Add(self.add_scale_cb)
+        sizer42.Add((0,3))
+        sizer42.Add(self.add_colbar_cb)
         
         hbox41.Add(sizer42, 0, wx.EXPAND)
                 
@@ -1909,7 +1916,7 @@ class PageStack(wx.Panel):
         vbox43 = wx.BoxSizer(wx.VERTICAL)
         self.button_despike = wx.Button(panel4, -1, 'Despike')
         self.button_despike.SetFont(self.com.font)
-        #self.Bind(wx.EVT_BUTTON, self.onDespike, id=self.button_despike.GetId())   
+        self.Bind(wx.EVT_BUTTON, self.OnDespike, id=self.button_despike.GetId())   
         self.button_despike.Disable()     
         vbox43.Add(self.button_despike, 0, wx.EXPAND)
         self.button_resetdisplay = wx.Button(panel4, -1, 'Reset')
@@ -2006,50 +2013,62 @@ class PageStack(wx.Panel):
 
 #----------------------------------------------------------------------        
     def loadImage(self):
-               
-        self.image = 0     
+                  
         
         if self.defaultdisplay == 1.0:
             #use a pointer to the data not a copy
             if self.showflux:
                 #Show flux image      
-                self.image = self.stk.absdata[:,:,self.iev]#.copy() 
+                image = self.stk.absdata[:,:,self.iev]#.copy() 
             else:
                 #Show OD image
-                self.image = self.stk.od3d[:,:,self.iev]#.copy()
+                image = self.stk.od3d[:,:,self.iev]#.copy()
         else:   
             #Adjustment to the data display setting has been made so make a copy
             if self.showflux:
-                self.image = self.stk.absdata[:,:,self.iev].copy() 
+                image = self.stk.absdata[:,:,self.iev].copy() 
             else:
-                self.image = self.stk.od3d[:,:,self.iev].copy() 
+                image = self.stk.od3d[:,:,self.iev].copy() 
                 
-
 
                       
         fig = self.AbsImagePanel.get_figure()
         fig.clf()
-        fig.add_axes((0.02,0.02,0.96,0.96))
-        axes = fig.gca()
+        
+        if self.show_colorbar == 0:
+            fig.add_axes((0.02,0.02,0.96,0.96))
+            axes = fig.gca()
+
+        else:
+            axes = fig.gca()
+            divider = make_axes_locatable(axes)
+            axcb = divider.new_horizontal(size="3%", pad=0.03)  
+
+            fig.add_axes(axcb)
+        
+            axes.set_position([0.03,0.03,0.8,0.94])
+            
+
         fig.patch.set_alpha(1.0)
         
         if (self.line != None) and (self.addroi == 1):
             axes.add_line(self.line)
             
-         
+
+        
 
         if self.defaultdisplay == 1.0:
-            im = axes.imshow(self.image, cmap=mtplot.cm.get_cmap(self.colortable)) 
+            im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable)) 
         else:
-            imgmax = npy.amax(self.image)
-            imgmin = npy.amin(self.image)
+            imgmax = npy.amax(image)
+            imgmin = npy.amin(image)
             if (self.gamma != 1.0) or (imgmin < 0.0):
-                self.image = (self.image-imgmin)/(imgmax-imgmin)
+                image = (image-imgmin)/(imgmax-imgmin)
                 imgmax = 1.0
                 imgmin = 0.0
                 if (self.gamma != 1.0):
-                    self.image = npy.power(self.image, self.gamma)
-            im = axes.imshow(self.image, cmap=mtplot.cm.get_cmap(self.colortable), 
+                    image = npy.power(image, self.gamma)
+            im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable), 
                              vmin=(imgmin+imgmax*self.brightness_min),vmax=imgmax*self.brightness_max)
             
         if (self.showROImask == 1) and (self.addroi == 1):
@@ -2057,7 +2076,8 @@ class PageStack(wx.Panel):
          
         axes.axis("off") 
         
-
+        if self.show_colorbar == 1:
+            cbar = axes.figure.colorbar(im, orientation='vertical',cax=axcb) 
         
         if self.show_scale_bar == 1:
             um_string = '$\mu m$'
@@ -2322,6 +2342,17 @@ class PageStack(wx.Panel):
         
         if self.com.stack_loaded == 1:
             self.loadImage()
+            
+ #----------------------------------------------------------------------           
+    def OnShowColBar(self, event):
+        if self.add_colbar_cb.GetValue():
+            self.show_colorbar = 1
+        else: 
+            self.show_colorbar = 0
+        
+        if self.com.stack_loaded == 1:
+            self.loadImage()
+             
              
 #----------------------------------------------------------------------
     def onResetDisplaySettings(self, event):
@@ -2603,6 +2634,22 @@ class PageStack(wx.Panel):
 #----------------------------------------------------------------------        
     def OnSpectralROI(self, evt):    
         SpectralROI(self.com, self.stk).Show()
+        
+#----------------------------------------------------------------------        
+    def OnDespike(self, evt):    
+
+        image = self.stk.absdata[:,:,self.iev] 
+       
+        image = self.stk.despike(image)
+        
+        
+        self.stack.data_struct.exchange.detector[0].data = self.stack.absdata
+        
+        if self.com.i0_loaded:
+            self.stk.calculate_optical_density()
+        
+        self.loadImage()
+        
                
 #---------------------------------------------------------------------- 
 class ShowHistogram(wx.Frame):
@@ -2704,7 +2751,7 @@ class ShowHistogram(wx.Frame):
     def draw_image(self):
         
    
-        self.image = self.stack.absdata[:,:,self.stack.n_ev/2].copy() 
+        image = self.stack.absdata[:,:,self.stack.n_ev/2].copy() 
        
         fluxmin = self.histmin
         fluxmax = self.histmax
@@ -2727,7 +2774,7 @@ class ShowHistogram(wx.Frame):
         axes = fig.gca()
         fig.patch.set_alpha(1.0) 
       
-        im = axes.imshow(self.image, cmap=mtplot.cm.get_cmap("gray")) 
+        im = axes.imshow(image, cmap=mtplot.cm.get_cmap("gray")) 
 
         im_red = axes.imshow(redpix_masked,cmap=mtplot.cm.get_cmap("autumn"))  
          
@@ -3230,9 +3277,6 @@ class ImageRegistration(wx.Frame):
         
         self.stack.n_ev = self.stack.n_ev - 1
         self.stack.ev = npy.delete(self.stack.ev, self.iev) 
-
-        self.stack.imagestack = npy.empty((self.stack.n_cols*self.stack.n_rows*self.stack.n_ev))
-        self.stack.imagestack = npy.reshape(self.stack.absdata, (self.stack.n_cols*self.stack.n_rows*self.stack.n_ev), order='F')
         
         self.stack.original_n_ev = self.stack.n_ev.copy()
         self.stack.original_ev = self.stack.ev.copy()
@@ -3434,9 +3478,6 @@ class ImageRegistration(wx.Frame):
         self.stack.n_cols = datadim[0].copy()
         self.stack.n_rows =  datadim[1].copy()
         
-        
-        self.stack.imagestack = npy.reshape(self.stack.absdata, (self.stack.n_cols*self.stack.n_rows*self.stack.n_ev), order='F')
-        
         self.stack.original_absdata = self.stack.absdata.copy()
         
 
@@ -3444,7 +3485,6 @@ class ImageRegistration(wx.Frame):
         if self.com.i0_loaded == 1:
             self.stack.calculate_optical_density()
 
-        
         self.stack.data_struct.exchange.detector[0].data = self.stack.absdata
         self.stack.data_struct.exchange.detector[0].energy = self.stack.ev
         
@@ -4229,7 +4269,7 @@ class MainFrame(wx.Frame):
             self.page1.button_addROI.Enable()  
             self.page1.button_spectralROI.Enable()
             self.page1.button_resetdisplay.Enable() 
-            #self.page1.button_despike.Enable() 
+            self.page1.button_despike.Enable() 
             self.page1.button_displaycolor.Enable()
             self.toolbar.EnableTool(wx.ID_SAVEAS, True)  
             
@@ -4557,9 +4597,6 @@ class StackListFrame(wx.Frame):
 
 
         
-        self.stk.imagestack = npy.empty((self.stk.n_cols*self.stk.n_rows*self.stk.n_ev))
-        self.stk.imagestack = npy.reshape(self.stk.absdata, (self.stk.n_cols*self.stk.n_rows*self.stk.n_ev), order='F')
-        
         self.stk.original_n_cols = self.stk.n_cols.copy()
         self.stk.original_n_rows = self.stk.n_rows.copy()
         self.stk.original_n_ev = self.stk.n_ev.copy()
@@ -4568,8 +4605,7 @@ class StackListFrame(wx.Frame):
         
         self.stk.fill_h5_struct_from_stk()
         
-               
-      
+                   
 
         wx.GetApp().TopWindow.page1.iev = int(self.stk.n_ev/3)
    

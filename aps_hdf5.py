@@ -225,8 +225,6 @@ class h5:
             print 'evi0 ', self.evi0
         
 
-        self.imagestack = np.empty((self.n_cols*self.n_rows*self.n_ev))
-        self.imagestack = np.reshape(self.absdata, (self.n_cols*self.n_rows*self.n_ev), order='F')
         
         self.original_n_cols = self.n_cols.copy()
         self.original_n_rows = self.n_rows.copy()
