@@ -35,7 +35,7 @@ class common:
         self.spec_anl_calculated = 0
 
         self.font = wx.SystemSettings_GetFont(wx.SYS_DEFAULT_GUI_FONT)
-        
+
 
 """ ------------------------------------------------------------------------------------------------"""
 class PageSpectral(wx.Panel):
@@ -2469,12 +2469,14 @@ class PageStack(wx.Panel):
         sb.SetBackgroundColour("White")
         sizer41 = wx.StaticBoxSizer(sb, orient=wx.VERTICAL)
 
-        self.textctrl = wx.TextCtrl(panel4, -1, style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
-        sizer41.Add(self.textctrl, 1, wx.EXPAND|wx.TOP|wx.LEFT, 5)
-        vbox4.Add(sizer41, 0, wx.EXPAND)
+        hbox40 = wx.BoxSizer(wx.HORIZONTAL)    
+        self.textctrl = wx.TextCtrl(panel4, -1, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        sizer41.Add(self.textctrl, 0, wx.EXPAND|wx.TOP|wx.LEFT, 5)
+        hbox40.Add(sizer41, 1, wx.EXPAND)
+        vbox4.Add(hbox40, 0, wx.EXPAND)
         
+    
         hbox41 = wx.BoxSizer(wx.HORIZONTAL)
-         
         sizer42 = wx.StaticBoxSizer(wx.StaticBox(panel4, -1, 'Image'),  orient=wx.VERTICAL)
         self.rb_flux = wx.RadioButton(panel4, -1, 'Flux', style=wx.RB_GROUP)
         self.rb_od = wx.RadioButton(panel4, -1, 'Optical Density')
@@ -2515,7 +2517,7 @@ class PageStack(wx.Panel):
         min.SetFont(self.com.font)
         max = wx.StaticText(panel4, label="Maximum")
         max.SetFont(self.com.font)
-        self.slider_brightness_min = wx.Slider(panel4, -1, self.dispbrightness_min, 0, 49, style=wx.SL_HORIZONTAL)        
+        self.slider_brightness_min = wx.Slider(panel4, -1, self.dispbrightness_min, 0, 49, size= (50,20), style=wx.SL_HORIZONTAL)        
         self.slider_brightness_min.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnScrollBrightnessMin, self.slider_brightness_min)
         
@@ -2538,7 +2540,7 @@ class PageStack(wx.Panel):
 
         
         vbox43 = wx.BoxSizer(wx.VERTICAL)
-        self.button_despike = wx.Button(panel4, -1, 'Despike')
+        self.button_despike = wx.Button(panel4, -1, 'Despike', (100,10))
         self.button_despike.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnDespike, id=self.button_despike.GetId())   
         self.button_despike.Disable()     
@@ -2554,7 +2556,7 @@ class PageStack(wx.Panel):
         self.button_displaycolor.Disable()     
         vbox43.Add(self.button_displaycolor, 0, wx.EXPAND)
         
-        hbox42.Add(vbox43, 1, wx.EXPAND)                   
+        hbox42.Add(vbox43, 0, wx.EXPAND)                   
         sizer43.Add(hbox42)
     
         hbox41.Add((10,0))
@@ -3726,7 +3728,7 @@ class ImageRegistration(wx.Frame):
     title = "Image Registration"
 
     def __init__(self, common, stack):
-        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(900, 700))
+        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(920, 700))
                
         ico = logos.getlogo_2l_32Icon()
         self.SetIcon(ico)
@@ -5281,15 +5283,14 @@ class StackListFrame(wx.Frame):
         panel1 = wx.Panel(self, -1)
         vbox = wx.BoxSizer(wx.VERTICAL)
         
-        hbox = wx.BoxSizer(wx.HORIZONTAL)
         
         self.textt = wx.TextCtrl(panel1,-1, 'Select first stack file', 
                                  style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         self.textt.SetFont(self.com.font)
         
         
-        hbox.Add(self.textt, 1, wx.EXPAND)
-        vbox.Add(hbox, 0)
+        vbox.Add(self.textt, 0, wx.EXPAND)
+
         
         self.filelist = wx.wx.ListCtrl(panel1,-1,style=wx.LC_REPORT)
         self.filelist.InsertColumn(0,".sm files", width=150)
