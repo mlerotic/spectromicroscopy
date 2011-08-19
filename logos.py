@@ -6006,12 +6006,10 @@ sl = PyEmbeddedImage(
     "Ft1+cif9zsu72Xcn7q28T7xf9EDtQdlD3YfVP1v+3Njv3H9qwHeg89HcR/cGhYPP/pH1jw9D"
     "BY+Zj8uGDYbrnjg+OTniP3L96fynQ89kzyaeF/6i/suuFxYvfvjV69fO0ZjRoZfyl5O/bXyl"
     "/erA6xmv28bCxh6+yXgzMV70VvvtwXfcdx3vo98PT+R8IH8o/2j5sfVT0Kf7kxmTk/8EA5jz"
-    "/GMzLdsAAAAgY0hSTQAAeiUAAICDAAD5/wAAgOkAAHUwAADqYAAAOpgAABdvkl/FRgAAANBJ"
-    "REFUeNrUk1ERgzAQRJduDaQSqAQsYIFKiAUqoRbQgIQigUqgEkBC+rPpbBn44qs3c3Nwlxwv"
-    "y6VIKeGInXDQDjcAyewPkjPJRHIk2VqtVD6RrC3/bdDZgsmeG9Wj3mffTBJngUTFC4AFQK1c"
-    "r3yp2O9p8FbstHkAcLN1ucGwp0Ft58+o0VBH5cv1ETLBAuAK4A7gBSCIplU9rEh/CKoNcdai"
-    "ZTJsEQT5E0AjDWojc6ssRtfAf517XBHMpsfkcxA0Cz5IjaHufSAU/3+ZPgMAW5lIC+OinEkA"
-    "AAAASUVORK5CYII=")
+    "/GMzLdsAAAAgY0hSTQAAeiUAAICDAAD5/wAAgOkAAHUwAADqYAAAOpgAABdvkl/FRgAAAH5J"
+    "REFUeNpi/P//PwMuoKyojFsSClgIKUhvnsGgpG2MVa48yJSBiYFCwIjuBWKc3bnuNNwFLOQ4"
+    "GxlQ7AUWbM6eWZuB09k4Y4EUZ5MUjdjAvatnKTMA2YtkGXD3/l1Gkg1AdjZZYYAtZkgyANnZ"
+    "WA14dv8W+XmBmPSPywWAAQBMZTCs9912YAAAAABJRU5ErkJggg==")
 getslData = sl.GetData
 getslImage = sl.GetImage
 getslBitmap = sl.GetBitmap

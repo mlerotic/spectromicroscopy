@@ -349,104 +349,42 @@ class PageSpectral(wx.Panel):
         
         wildcard = 'Portable Network Graphics (*.png)|*.png|Adobe PDF Files (*.pdf)|*.pdf|All files (*.*)|*.*'
       
-        fileName = wx.FileSelector('Save', default_extension='png', wildcard = wildcard,
+        self.SaveFileName = wx.FileSelector('Save', default_extension='png', wildcard = wildcard,
                                    parent=self, flags=wx.SAVE|wx.OVERWRITE_PROMPT) 
         
         
-        
    
-        if not fileName: 
+        if not self.SaveFileName: 
             return 
+        
+        SaveWinP4(self.SaveFileName).Show()
+        
+        
+#----------------------------------------------------------------------
+    def Save(self, spec_png = True, spec_pdf = False, img_png = True, img_pdf = False):
 
-        path, ext = os.path.splitext(fileName) 
+        path, ext = os.path.splitext(self.SaveFileName) 
         ext = ext[1:].lower() 
         
        
-        if ext != 'png' and ext != 'pdf': 
-            error_message = ( 
-                  'Only the PNG and PDF image formats are supported.\n' 
-                 'A file extension of `png\' or `pdf\' must be used.') 
-            wx.MessageBox(error_message, 'Error - Could not save file.', 
-                  parent=self, style=wx.OK|wx.ICON_ERROR) 
-            return 
+#        if ext != 'png' and ext != 'pdf': 
+#            error_message = ( 
+#                  'Only the PNG and PDF image formats are supported.\n' 
+#                 'A file extension of `png\' or `pdf\' must be used.') 
+#            wx.MessageBox(error_message, 'Error - Could not save file.', 
+#                  parent=self, style=wx.OK|wx.ICON_ERROR) 
+#            return 
    
         try: 
-            
-            suffix = "." + ext
+            if img_png:
+                self.SaveMaps(png_pdf=1)
+            if img_pdf:
+                self.SaveMaps(png_pdf=2)
                 
-            
-            mtplot.rcParams['pdf.fonttype'] = 42
-            
-            
-            from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas   
-            
-            colors=['#FF0000','#000000','#FFFFFF']
-            spanclrmap=mtplot.colors.LinearSegmentedColormap.from_list('spancm',colors)
-                       
-            for i in range (self.anlz.n_target_spectra):
-              
-                #Save composition maps
-                if self.showraw == True:
-                    tsmapimage = self.anlz.target_svd_maps[:,:,i]
-                else:
-                    tsmapimage = self.anlz.target_pcafit_maps[:,:,i] 
-  
-                fig = mtplot.figure.Figure(figsize =(3.5,3.5))
-                canvas = FigureCanvas(fig)
-                fig.clf()
-                axes = fig.gca()
-    
-                divider = make_axes_locatable(axes)
-                ax_cb = divider.new_horizontal(size="3%", pad=0.03)  
-
-                fig.add_axes(ax_cb)
-                axes.set_position([0.03,0.03,0.8,0.94])
-        
-        
-                min_val = npy.min(tsmapimage)
-                max_val = npy.max(tsmapimage)
-                bound = npy.max((npy.abs(min_val), npy.abs(max_val)))
-        
-                if self.show_scale_bar == 1:
-                    um_string = '$\mu m$'
-                    microns = '$'+self.stk.scale_bar_string+' $'+um_string
-                    axes.text(self.stk.scale_bar_pixels_x+10,self.stk.n_cols-9, microns, horizontalalignment='left', verticalalignment='center',
-                              color = 'white', fontsize=14)
-                    #Matplotlib has flipped scales so I'm using rows instead of cols!
-                    p = mtplot.patches.Rectangle((5,self.stk.n_cols-10), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
-                                                 color = 'white', fill = True)
-                    axes.add_patch(p)     
-     
-                im = axes.imshow(tsmapimage, cmap=spanclrmap, vmin = -bound, vmax = bound)
-                cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
-    
-                axes.axis("off") 
-                
-                   
-                fileName_img = fileName[:-len(suffix)]+"_TSmap_" +str(i+1)+"."+ext               
-                fig.savefig(fileName_img)
-                
-                #Save spectra images
-                tspectrum = self.anlz.target_spectra[i, :]
-                tspectrumfit = self.anlz.target_pcafit_spectra[i, :]
-            
-        
-                fig = mtplot.figure.Figure(figsize =(5.65, 3.5))
-                canvas = FigureCanvas(fig)
-                fig.clf()
-                fig.add_axes((0.15,0.15,0.75,0.75))
-                axes = fig.gca()
-        
-                mtplot.rcParams['font.size'] = self.fontsize
-
-                specplot = axes.plot(self.stk.ev,tspectrum, color='black')
-                specplot = axes.plot(self.stk.ev,tspectrumfit, color='green')
-                        
-                axes.set_xlabel('Photon Energy [eV]')
-                axes.set_ylabel('Optical Density')
-
-                fileName_spec = fileName[:-len(suffix)]+"_Tspectrum_" +str(i+1)+"."+ext
-                fig.savefig(fileName_spec)                
+            if spec_png:    
+                self.SaveSpectra(png_pdf=1)
+            if spec_pdf:
+                self.SaveSpectra(png_pdf=2)
                 
                 
             
@@ -458,6 +396,116 @@ class PageSpectral(wx.Panel):
    
             wx.MessageBox('Could not save file: %s' % err, 'Error', 
                           parent=self, style=wx.OK|wx.ICON_ERROR) 
+            
+#----------------------------------------------------------------------
+    def SaveSpectra(self, png_pdf=1):
+        
+        
+        from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas   
+        mtplot.rcParams['pdf.fonttype'] = 42
+            
+        colors=['#FF0000','#000000','#FFFFFF']
+        spanclrmap=mtplot.colors.LinearSegmentedColormap.from_list('spancm',colors)
+        
+        if png_pdf == 1:   
+            ext = 'png'
+        else:
+            ext = 'pdf'
+        suffix = "." + ext
+        
+        
+        for i in range (self.anlz.n_target_spectra):
+            #Save spectra images
+            tspectrum = self.anlz.target_spectra[i, :]
+            tspectrumfit = self.anlz.target_pcafit_spectra[i, :]
+            
+            diff = npy.abs(tspectrum-tspectrumfit)
+            
+        
+            fig = mtplot.figure.Figure(figsize =(5.65, 3.5))
+            canvas = FigureCanvas(fig)
+            fig.clf()
+            fig.add_axes((0.15,0.15,0.75,0.75))
+            axes = fig.gca()
+        
+            mtplot.rcParams['font.size'] = self.fontsize
+
+            line1 = axes.plot(self.stk.ev,tspectrum, color='black', label = 'Raw data')
+            line2 = axes.plot(self.stk.ev,tspectrumfit, color='green', label = 'Fit')
+        
+            line3 = axes.plot(self.stk.ev,diff, color='grey', label = 'Abs(Raw-Fit)')
+            
+            fontP = mtplot.font_manager.FontProperties()
+            fontP.set_size('small')
+       
+            axes.legend(loc=4, prop = fontP)
+                        
+            axes.set_xlabel('Photon Energy [eV]')
+            axes.set_ylabel('Optical Density')
+
+            fileName_spec = self.SaveFileName[:-len(suffix)]+"_Tspectrum_" +str(i+1)+"."+ext
+            fig.savefig(fileName_spec)    
+            
+#----------------------------------------------------------------------
+    def SaveMaps(self, png_pdf=1):            
+            
+            
+        from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas  
+        mtplot.rcParams['pdf.fonttype'] = 42 
+            
+        colors=['#FF0000','#000000','#FFFFFF']
+        spanclrmap=mtplot.colors.LinearSegmentedColormap.from_list('spancm',colors)
+            
+        if png_pdf == 1:   
+            ext = 'png'
+        else:
+            ext = 'pdf'
+        suffix = "." + ext                       
+                       
+            
+        for i in range (self.anlz.n_target_spectra):
+              
+            #Save composition maps
+            if self.showraw == True:
+                tsmapimage = self.anlz.target_svd_maps[:,:,i]
+            else:
+                tsmapimage = self.anlz.target_pcafit_maps[:,:,i] 
+  
+            fig = mtplot.figure.Figure(figsize =(3.5,3.5))
+            canvas = FigureCanvas(fig)
+            fig.clf()
+            axes = fig.gca()
+    
+            divider = make_axes_locatable(axes)
+            ax_cb = divider.new_horizontal(size="3%", pad=0.03)  
+
+            fig.add_axes(ax_cb)
+            axes.set_position([0.03,0.03,0.8,0.94])
+        
+        
+            min_val = npy.min(tsmapimage)
+            max_val = npy.max(tsmapimage)
+            bound = npy.max((npy.abs(min_val), npy.abs(max_val)))
+        
+            if self.show_scale_bar == 1:
+                um_string = '$\mu m$'
+                microns = '$'+self.stk.scale_bar_string+' $'+um_string
+                axes.text(self.stk.scale_bar_pixels_x+10,self.stk.n_cols-9, microns, horizontalalignment='left', verticalalignment='center',
+                              color = 'white', fontsize=14)
+                #Matplotlib has flipped scales so I'm using rows instead of cols!
+                p = mtplot.patches.Rectangle((5,self.stk.n_cols-10), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
+                                            color = 'white', fill = True)
+                axes.add_patch(p)     
+     
+            im = axes.imshow(tsmapimage, cmap=spanclrmap, vmin = -bound, vmax = bound)
+            cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
+    
+            axes.axis("off") 
+                
+                   
+            fileName_img = self.SaveFileName[:-len(suffix)]+"_TSmap_" +str(i+1)+"."+ext               
+            fig.savefig(fileName_img)
+            
     
 #----------------------------------------------------------------------        
     def OnTSScroll(self, event):
@@ -644,6 +692,8 @@ class PageSpectral(wx.Panel):
         tspectrum = self.anlz.target_spectra[self.i_tspec-1, :]
         
         tspectrumfit = self.anlz.target_pcafit_spectra[self.i_tspec-1, :]
+        
+        diff = npy.abs(tspectrum-tspectrumfit)
             
         
         fig = self.TSpectrumPanel.get_figure()
@@ -653,8 +703,16 @@ class PageSpectral(wx.Panel):
         
         mtplot.rcParams['font.size'] = self.fontsize
 
-        specplot = axes.plot(self.stk.ev,tspectrum, color='black')
-        specplot = axes.plot(self.stk.ev,tspectrumfit, color='green')
+        line1 = axes.plot(self.stk.ev,tspectrum, color='black', label = 'Raw data')
+        line2 = axes.plot(self.stk.ev,tspectrumfit, color='green', label = 'Fit')
+        
+        line3 = axes.plot(self.stk.ev,diff, color='grey', label = 'Abs(Raw-Fit)')
+        
+
+        fontP = mtplot.font_manager.FontProperties()
+        fontP.set_size('small')
+       
+        axes.legend(loc=4, prop = fontP)
                         
         axes.set_xlabel('Photon Energy [eV]')
         axes.set_ylabel('Optical Density')
@@ -671,6 +729,133 @@ class PageSpectral(wx.Panel):
         self.textctrl_sp.AppendText('RMS Error: '+ str('{0:7.5f}').format(self.anlz.target_rms[self.i_tspec-1]))
         
         self.ShowFitWeights()
+        
+        
+#---------------------------------------------------------------------- 
+class SaveWinP4(wx.Frame):
+    
+    title = "Save"
+
+    def __init__(self, filename):
+        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(230, 280))
+               
+        ico = logos.getlogo_2l_32Icon()
+        self.SetIcon(ico)
+        
+        self.SetBackgroundColour("White") 
+
+        
+        self.com = wx.GetApp().TopWindow.common         
+        self.fontsize = self.com.fontsize   
+        
+        
+        path, ext = os.path.splitext(filename) 
+        ext = ext[1:].lower()   
+        suffix = "." + ext
+        path, fn = os.path.split(filename)
+        filename = fn[:-len(suffix)]+"_.*"
+            
+        
+        
+        vboxtop = wx.BoxSizer(wx.VERTICAL)
+        
+        stf = wx.StaticText(self, -1, 'Filename: ',  style=wx.ALIGN_LEFT, size =(200, 20))
+        stf.SetFont(self.com.font)
+        vboxtop.Add(stf,0,wx.TOP|wx.LEFT, 10)
+        vboxtop.Add((0,3))
+        stf = wx.StaticText(self, -1, filename,  style=wx.ALIGN_LEFT, size =(200, 20))
+        stf.SetFont(self.com.font)
+        vboxtop.Add(stf,0,wx.LEFT, 10)
+        
+        panel1 = wx.Panel(self, -1)
+        
+        gridtop = wx.FlexGridSizer(3, 3, vgap=20, hgap=20)
+    
+        fontb = wx.SystemSettings_GetFont(wx.SYS_DEFAULT_GUI_FONT)
+        fontb.SetWeight(wx.BOLD)
+        
+        
+        st1 = wx.StaticText(panel1, -1, 'Save',  style=wx.ALIGN_LEFT)
+        st1.SetFont(fontb)
+        st2 = wx.StaticText(panel1, -1, '.pdf',  style=wx.ALIGN_LEFT)
+        st2.SetFont(fontb)
+        st3 = wx.StaticText(panel1, -1, '.png',  style=wx.ALIGN_LEFT)
+        st3.SetFont(fontb)
+        
+        st4 = wx.StaticText(panel1, -1, '_spectrum',  style=wx.ALIGN_LEFT)
+        st4.SetFont(self.com.font)
+        
+        self.cb1 = wx.CheckBox(panel1, -1, '')
+        self.cb1.SetFont(self.com.font)
+        self.cb1.Set3StateValue(wx.CHK_CHECKED)
+        
+        self.cb2 = wx.CheckBox(panel1, -1, '')
+        self.cb2.SetFont(self.com.font)
+        
+        st5 = wx.StaticText(panel1, -1, '_image',  style=wx.ALIGN_LEFT)
+        st5.SetFont(self.com.font)
+        
+        self.cb3 = wx.CheckBox(panel1, -1, '')
+        self.cb3.SetFont(self.com.font)
+        self.cb3.Set3StateValue(wx.CHK_CHECKED)
+        
+        self.cb4 = wx.CheckBox(panel1, -1, '')
+        self.cb4.SetFont(self.com.font)
+
+        
+        gridtop.Add(st1, 0)
+        gridtop.Add(st2, 0)
+        gridtop.Add(st3, 0)
+                
+        gridtop.Add(st4, 0)
+        gridtop.Add(self.cb1, 0)
+        gridtop.Add(self.cb2, 0)              
+  
+        gridtop.Add(st5, 0)
+        gridtop.Add(self.cb3, 0)
+        gridtop.Add(self.cb4, 0)  
+        
+        panel1.SetSizer(gridtop)
+        
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
+        panel2 = wx.Panel(self, -1)
+        button_save = wx.Button(panel2, -1, 'Save')
+        self.Bind(wx.EVT_BUTTON, self.OnSave, id=button_save.GetId())
+        hbox.Add(button_save, 0, wx.LEFT,5)
+        
+        button_cancel = wx.Button(panel2, -1, 'Cancel')
+        self.Bind(wx.EVT_BUTTON, self.OnCancel, id=button_cancel.GetId())
+        hbox.Add(button_cancel, 0, wx.LEFT,10)
+        
+        panel2.SetSizer(hbox)
+        
+        
+        vboxtop.Add(panel1, 1, wx.ALL | wx.EXPAND, 20)
+        vboxtop.Add(panel2, 0, wx.ALL | wx.EXPAND, 20) 
+        
+        self.SetSizer(vboxtop)    
+        
+        
+#----------------------------------------------------------------------        
+    def OnSave(self, evt):
+        
+        sp_pdf = self.cb1.GetValue()
+        sp_png = self.cb2.GetValue()
+        im_pdf = self.cb3.GetValue()
+        im_png = self.cb4.GetValue()
+        
+        self.Close(True) 
+        wx.GetApp().TopWindow.page4.Save(spec_png = sp_png, 
+                                         spec_pdf = sp_pdf, 
+                                         img_png = im_png, 
+                                         img_pdf = im_pdf)
+        
+
+#---------------------------------------------------------------------- 
+    def OnCancel(self, evt):
+        self.Close(True)  
+                
+                     
 
         
 """ ------------------------------------------------------------------------------------------------"""
@@ -1017,78 +1202,153 @@ class PageCluster(wx.Panel):
 #----------------------------------------------------------------------    
     def OnSave(self, event):     
                
-        fileName = wx.FileSelector('Save', default_extension='png', 
+        self.SaveFileName = wx.FileSelector('Save', default_extension='png', 
                                    wildcard=('Portable Network Graphics (*.png)|*.png|' 
                                              + 'Adobe PDF Files (*.pdf)|*.pdf|All files (*.*)|*.*'), 
                                               parent=self, flags=wx.SAVE|wx.OVERWRITE_PROMPT) 
    
-        if not fileName: 
+        if not self.SaveFileName: 
             return 
-
-        path, ext = os.path.splitext(fileName) 
+        
+        SaveWinP3(self.SaveFileName).Show()
+        
+        
+#----------------------------------------------------------------------    
+    def Save(self, spec_png = True, spec_pdf = False, 
+             img_png = True, img_pdf = False, 
+             indimgs_png = True, indimgs_pdf = False,
+             scatt_png = True, scatt_pdf = False): 
+        
+        path, ext = os.path.splitext(self.SaveFileName) 
         ext = ext[1:].lower() 
         
        
-        if ext != 'png' and ext != 'pdf': 
-            error_message = ( 
-                  'Only the PNG and PDF image formats are supported.\n' 
-                 'A file extension of `png\' or `pdf\' must be used.') 
-            wx.MessageBox(error_message, 'Error - Could not save file.', 
-                  parent=self, style=wx.OK|wx.ICON_ERROR) 
-            return 
+#        if ext != 'png' and ext != 'pdf': 
+#            error_message = ( 
+#                  'Only the PNG and PDF image formats are supported.\n' 
+#                 'A file extension of `png\' or `pdf\' must be used.') 
+#            wx.MessageBox(error_message, 'Error - Could not save file.', 
+#                  parent=self, style=wx.OK|wx.ICON_ERROR) 
+#            return 
    
         try: 
-            
-            suffix = "." + ext
-            
-            fileName_evals = fileName[:-len(suffix)]+"_CAcimg."+ext          
-            
             mtplot.rcParams['pdf.fonttype'] = 42
             
-            fig = self.ClusterImagePan.get_figure()
-            fig.savefig(fileName_evals)
+            if img_png:
+                ext = 'png'
+                suffix = "." + ext
             
+                fileName_evals = self.SaveFileName[:-len(suffix)]+"_CAcimg."+ext          
             
-            from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas          
-            for i in range (self.numclusters):
+                fig = self.ClusterImagePan.get_figure()
+                fig.savefig(fileName_evals)
+                
+            
+            if img_pdf:
+                ext = 'pdf'
+                suffix = "." + ext
+            
+                fileName_evals = self.SaveFileName[:-len(suffix)]+"_CAcimg."+ext          
+            
+                fig = self.ClusterImagePan.get_figure()
+                fig.savefig(fileName_evals)
+                            
+            
+            from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas    
+            mtplot.rcParams['pdf.fonttype'] = 42
+                  
+            ext = 'png'
+            suffix = "." + ext
+                
+            if indimgs_png:
+                for i in range (self.numclusters):
               
-                indvclusterimage = npy.zeros((self.anlz.stack.n_cols, self.anlz.stack.n_rows))+20.      
-                ind = npy.where(self.anlz.cluster_indices == i)    
-                colorcl = min(i,9)
-                indvclusterimage[ind] = colorcl
+                    indvclusterimage = npy.zeros((self.anlz.stack.n_cols, self.anlz.stack.n_rows))+20.      
+                    ind = npy.where(self.anlz.cluster_indices == i)    
+                    colorcl = min(i,9)
+                    indvclusterimage[ind] = colorcl
 
-                fig = mtplot.figure.Figure(figsize =(3.5,3.5))
-                canvas = FigureCanvas(fig)
-                fig.add_axes((0.02,0.02,0.96,0.96))
-                axes = fig.gca()      
-                mtplot.rcParams['font.size'] = self.fontsize        
-                im = axes.imshow(indvclusterimage, cmap=self.clusterclrmap2, norm=self.bnorm2)
-                axes.axis("off")
+                    fig = mtplot.figure.Figure(figsize =(3.5,3.5))
+                    canvas = FigureCanvas(fig)
+                    fig.add_axes((0.02,0.02,0.96,0.96))
+                    axes = fig.gca()      
+                    mtplot.rcParams['font.size'] = self.fontsize        
+                    im = axes.imshow(indvclusterimage, cmap=self.clusterclrmap2, norm=self.bnorm2)
+                    axes.axis("off")
                    
-                fileName_img = fileName[:-len(suffix)]+"_CAimg_" +str(i+1)+"."+ext               
-                fig.savefig(fileName_img)
+                    fileName_img = self.SaveFileName[:-len(suffix)]+"_CAimg_" +str(i+1)+"."+ext               
+                    fig.savefig(fileName_img)
                 
-                
-                clusterspectrum = self.anlz.clusterspectra[i, ]
-                fig = mtplot.figure.Figure(figsize =(5.9,3.5))
-                canvas = FigureCanvas(fig)
-                fig.add_axes((0.15,0.15,0.75,0.75))
-                axes = fig.gca()
-                mtplot.rcParams['font.size'] = self.fontsize
-                if self.selcluster >= self.maxclcolors:
-                    clcolor = self.colors[self.maxclcolors-1]
-                else:
-                    clcolor = self.colors[self.selcluster-1]
+            if spec_png:
+                for i in range (self.numclusters):
+                   
+                    clusterspectrum = self.anlz.clusterspectra[i, ]
+                    fig = mtplot.figure.Figure(figsize =(5.9,3.5))
+                    canvas = FigureCanvas(fig)
+                    fig.add_axes((0.15,0.15,0.75,0.75))
+                    axes = fig.gca()
+                    mtplot.rcParams['font.size'] = self.fontsize
+                    if i >= self.maxclcolors:
+                        clcolor = self.colors[self.maxclcolors-1]
+                    else:
+                        clcolor = self.colors[i]
         
-                specplot = axes.plot(self.anlz.stack.ev,clusterspectrum, color = clcolor)
+                    specplot = axes.plot(self.anlz.stack.ev,clusterspectrum, color = clcolor)
         
-                axes.set_xlabel('Photon Energy [eV]')
-                axes.set_ylabel('Optical Density')
+                    axes.set_xlabel('Photon Energy [eV]')
+                    axes.set_ylabel('Optical Density')
 
-                fileName_spec = fileName[:-len(suffix)]+"_CAspectrum_" +str(i+1)+"."+ext
-                fig.savefig(fileName_spec)                
+                    fileName_spec = self.SaveFileName[:-len(suffix)]+"_CAspectrum_" +str(i+1)+"."+ext
+                    fig.savefig(fileName_spec)                
                 
+            ext = 'pdf'
+            suffix = "." + ext
                 
+            if indimgs_pdf:
+                for i in range (self.numclusters):
+              
+                    indvclusterimage = npy.zeros((self.anlz.stack.n_cols, self.anlz.stack.n_rows))+20.      
+                    ind = npy.where(self.anlz.cluster_indices == i)    
+                    colorcl = min(i,9)
+                    indvclusterimage[ind] = colorcl
+
+                    fig = mtplot.figure.Figure(figsize =(3.5,3.5))
+                    canvas = FigureCanvas(fig)
+                    fig.add_axes((0.02,0.02,0.96,0.96))
+                    axes = fig.gca()      
+                    mtplot.rcParams['font.size'] = self.fontsize        
+                    im = axes.imshow(indvclusterimage, cmap=self.clusterclrmap2, norm=self.bnorm2)
+                    axes.axis("off")
+                   
+                    fileName_img = self.SaveFileName[:-len(suffix)]+"_CAimg_" +str(i+1)+"."+ext               
+                    fig.savefig(fileName_img)
+                
+            if spec_pdf:
+                for i in range (self.numclusters):
+                   
+                    clusterspectrum = self.anlz.clusterspectra[i, ]
+                    fig = mtplot.figure.Figure(figsize =(5.9,3.5))
+                    canvas = FigureCanvas(fig)
+                    fig.add_axes((0.15,0.15,0.75,0.75))
+                    axes = fig.gca()
+                    mtplot.rcParams['font.size'] = self.fontsize
+                    if i >= self.maxclcolors:
+                        clcolor = self.colors[self.maxclcolors-1]
+                    else:
+                        clcolor = self.colors[i]
+        
+                    specplot = axes.plot(self.anlz.stack.ev,clusterspectrum, color = clcolor)
+        
+                    axes.set_xlabel('Photon Energy [eV]')
+                    axes.set_ylabel('Optical Density')
+
+                    fileName_spec = self.SaveFileName[:-len(suffix)]+"_CAspectrum_" +str(i+1)+"."+ext
+                    fig.savefig(fileName_spec) 
+                    
+            if scatt_png:
+                self.SaveScatt(png_pdf = 1)
+            if scatt_pdf:
+                self.SaveScatt(png_pdf = 2)                   
             
         except IOError, e:
             if e.strerror:
@@ -1099,7 +1359,93 @@ class PageCluster(wx.Panel):
             wx.MessageBox('Could not save file: %s' % err, 'Error', 
                           parent=self, style=wx.OK|wx.ICON_ERROR) 
   
+  
+#----------------------------------------------------------------------    
+#If png_pdg = 1 save png, if =2 save pdf
+    def SaveScatt(self, png_pdf = 1): 
+          
+        od_reduced = self.anlz.pcaimages[:,:,0:self.anlz.numsigpca]        
+        od_reduced = npy.reshape(od_reduced, (self.stk.n_cols*self.stk.n_rows,self.anlz.numsigpca), order='F')
 
+        clindices = self.anlz.cluster_indices
+        clindices = npy.reshape(clindices, (self.stk.n_cols*self.stk.n_rows), order='F')
+        
+        path, ext = os.path.splitext(self.SaveFileName) 
+        ext = ext[1:].lower() 
+        
+        if png_pdf == 1:
+            ext = 'png'
+        else:
+            ext = 'pdf'
+        
+   
+        try: 
+            wx.BeginBusyCursor()
+            
+            suffix = "." + ext
+            
+            nplots = 0
+            for ip in range(self.anlz.numsigpca):
+                for jp in range(self.anlz.numsigpca):
+                    if jp >= (ip+1):
+                        nplots = nplots+1    
+            nplotsrows = npy.ceil(nplots/2)    
+            
+            plotsize = 2.5    
+            
+            from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas  
+            
+            if nplots > 1 :
+                fig = mtplot.figure.Figure(figsize =(6.0,plotsize*nplotsrows))
+                fig.subplots_adjust(wspace = 0.4, hspace = 0.4)
+            else:
+                fig = mtplot.figure.Figure(figsize =(3.0,2.5))
+                fig.subplots_adjust(bottom = 0.2, left = 0.2)
+                
+            canvas = FigureCanvas(fig)
+            #axes = fig.gca()
+            mtplot.rcParams['font.size'] = 6   
+            
+                                   
+            pplot = 1
+            for ip in range(self.anlz.numsigpca):
+                for jp in range(self.anlz.numsigpca):
+                    if jp >= (ip+1):
+                        
+
+                        x_comp = od_reduced[:,ip]
+                        y_comp = od_reduced[:,jp]
+                        if nplots > 1 :
+                            axes = fig.add_subplot(nplotsrows,2, pplot)
+                        else:
+                            axes = fig.add_subplot(1,1,1)
+                            
+                        pplot = pplot+1
+                        
+                        for i in range(self.numclusters):
+                            thiscluster = npy.where(clindices == i)
+                            axes.plot(x_comp[thiscluster], y_comp[thiscluster],'.',color=self.colors[i],alpha=0.5)
+                        axes.set_xlabel('Component '+str(ip+1))
+                        axes.set_ylabel('Component '+str(jp+1))
+                            
+    
+            fileName_sct = self.SaveFileName[:-len(suffix)]+"_CAscatterplot_" +str(i+1)+"."+ext
+            mtplot.rcParams['pdf.fonttype'] = 42
+            fig.savefig(fileName_sct)
+            
+            wx.EndBusyCursor()
+     
+            
+        except IOError, e:
+            wx.EndBusyCursor()
+            if e.strerror:
+                err = e.strerror 
+            else: 
+                err = e 
+   
+            wx.MessageBox('Could not save file: %s' % err, 'Error', 
+                          parent=self, style=wx.OK|wx.ICON_ERROR) 
+            
         
 #----------------------------------------------------------------------     
     def MakeColorTable(self):
@@ -1193,10 +1539,6 @@ class Scatterplots(wx.Frame):
         
         hbox = wx.BoxSizer(wx.HORIZONTAL)
         
-        self.button_savescatt = wx.Button(panel, -1, 'Save')
-        self.button_savescatt.SetFont(self.com.font)
-        self.Bind(wx.EVT_BUTTON, self.OnSaveScatt, id=self.button_savescatt.GetId())
-        hbox.Add(self.button_savescatt, -1, wx.ALIGN_RIGHT|wx.RIGHT, 20)
         
         button_close = wx.Button(panel, -1, 'Close')
         button_close.SetFont(self.com.font)
@@ -1250,101 +1592,173 @@ class Scatterplots(wx.Frame):
       
         self.ScatterPPanel.draw()
        
-#----------------------------------------------------------------------    
-    def OnSaveScatt(self, event): 
-          
-               
-        fileName = wx.FileSelector('Save Plots', default_extension='png', 
-                                   wildcard=('Portable Network Graphics (*.png)|*.png|' 
-                                             + 'Adobe PDF Files (*.pdf)|*.pdf|All files (*.*)|*.*'), 
-                                              parent=self, flags=wx.SAVE|wx.OVERWRITE_PROMPT) 
-        
-   
-        if not fileName: 
-            return 
 
-        path, ext = os.path.splitext(fileName) 
-        ext = ext[1:].lower() 
-        
-       
-        if ext != 'png' and ext != 'pdf': 
-            error_message = ( 
-                  'Only the PNG and PDF image formats are supported.\n' 
-                 'A file extension of `png\' or `pdf\' must be used.') 
-            wx.MessageBox(error_message, 'Error - Could not save file.', 
-                  parent=self, style=wx.OK|wx.ICON_ERROR) 
-            return 
-   
-        try: 
-            wx.BeginBusyCursor()
-            
-            suffix = "." + ext
-            
-            nplots = 0
-            for ip in range(self.numsigpca):
-                for jp in range(self.numsigpca):
-                    if jp >= (ip+1):
-                        nplots = nplots+1    
-            nplotsrows = npy.ceil(nplots/2)    
-            
-            plotsize = 2.5    
-            
-            from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas  
-            
-            if nplots > 1 :
-                fig = mtplot.figure.Figure(figsize =(6.0,plotsize*nplotsrows))
-                fig.subplots_adjust(wspace = 0.4, hspace = 0.4)
-            else:
-                fig = mtplot.figure.Figure(figsize =(3.0,2.5))
-                fig.subplots_adjust(bottom = 0.2, left = 0.2)
-                
-            canvas = FigureCanvas(fig)
-            #axes = fig.gca()
-            mtplot.rcParams['font.size'] = 6   
-            
-                                   
-            pplot = 1
-            for ip in range(self.numsigpca):
-                for jp in range(self.numsigpca):
-                    if jp >= (ip+1):
-                        
-
-                        x_comp = self.od_reduced[:,ip]
-                        y_comp = self.od_reduced[:,jp]
-                        if nplots > 1 :
-                            axes = fig.add_subplot(nplotsrows,2, pplot)
-                        else:
-                            axes = fig.add_subplot(1,1,1)
-                            
-                        pplot = pplot+1
-                        
-                        for i in range(self.numclusters):
-                            thiscluster = npy.where(self.clindices == i)
-                            axes.plot(x_comp[thiscluster], y_comp[thiscluster],'.',color=self.colors[i],alpha=0.5)
-                        axes.set_xlabel('Component '+str(ip+1))
-                        axes.set_ylabel('Component '+str(jp+1))
-                            
-    
-            fileName_sct = fileName[:-len(suffix)]+"_CAscatterplot_" +str(i+1)+"."+ext
-            mtplot.rcParams['pdf.fonttype'] = 42
-            fig.savefig(fileName_sct)
-            
-            wx.EndBusyCursor()
-     
-            
-        except IOError, e:
-            wx.EndBusyCursor()
-            if e.strerror:
-                err = e.strerror 
-            else: 
-                err = e 
-   
-            wx.MessageBox('Could not save file: %s' % err, 'Error', 
-                          parent=self, style=wx.OK|wx.ICON_ERROR) 
   
 #----------------------------------------------------------------------              
     def OnClose(self, evt):
         self.Close(True)       
+        
+        
+        
+#---------------------------------------------------------------------- 
+class SaveWinP3(wx.Frame):
+    
+    title = "Save"
+
+    def __init__(self, filename):
+        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(250, 350))
+               
+        ico = logos.getlogo_2l_32Icon()
+        self.SetIcon(ico)
+        
+        self.SetBackgroundColour("White") 
+
+        
+        self.com = wx.GetApp().TopWindow.common         
+        self.fontsize = self.com.fontsize   
+        
+        
+        path, ext = os.path.splitext(filename) 
+        ext = ext[1:].lower()   
+        suffix = "." + ext
+        path, fn = os.path.split(filename)
+        filename = fn[:-len(suffix)]+"_.*"
+            
+        
+        
+        vboxtop = wx.BoxSizer(wx.VERTICAL)
+        
+        stf = wx.StaticText(self, -1, 'Filename: ',  style=wx.ALIGN_LEFT, size =(200, 20))
+        stf.SetFont(self.com.font)
+        vboxtop.Add(stf,0,wx.TOP|wx.LEFT, 10)
+        vboxtop.Add((0,3))
+        stf = wx.StaticText(self, -1, filename,  style=wx.ALIGN_LEFT, size =(200, 20))
+        stf.SetFont(self.com.font)
+        vboxtop.Add(stf,0,wx.LEFT, 10)
+        
+        panel1 = wx.Panel(self, -1)
+        
+        gridtop = wx.FlexGridSizer(5, 3, vgap=20, hgap=20)
+    
+        fontb = wx.SystemSettings_GetFont(wx.SYS_DEFAULT_GUI_FONT)
+        fontb.SetWeight(wx.BOLD)
+        
+        
+        st1 = wx.StaticText(panel1, -1, 'Save',  style=wx.ALIGN_LEFT)
+        st1.SetFont(fontb)
+        st2 = wx.StaticText(panel1, -1, '.pdf',  style=wx.ALIGN_LEFT)
+        st2.SetFont(fontb)
+        st3 = wx.StaticText(panel1, -1, '.png',  style=wx.ALIGN_LEFT)
+        st3.SetFont(fontb)
+        
+        st4 = wx.StaticText(panel1, -1, '_spectra',  style=wx.ALIGN_LEFT)
+        st4.SetFont(self.com.font)
+        
+        self.cb1 = wx.CheckBox(panel1, -1, '')
+        self.cb1.SetFont(self.com.font)
+        self.cb1.Set3StateValue(wx.CHK_CHECKED)
+        
+        self.cb2 = wx.CheckBox(panel1, -1, '')
+        self.cb2.SetFont(self.com.font)
+        
+        st5 = wx.StaticText(panel1, -1, '_composite_images',  style=wx.ALIGN_LEFT)
+        st5.SetFont(self.com.font)
+        
+        self.cb3 = wx.CheckBox(panel1, -1, '')
+        self.cb3.SetFont(self.com.font)
+        self.cb3.Set3StateValue(wx.CHK_CHECKED)
+        
+        self.cb4 = wx.CheckBox(panel1, -1, '')
+        self.cb4.SetFont(self.com.font)
+        
+        
+        st6 = wx.StaticText(panel1, -1, '_individual_images',  style=wx.ALIGN_LEFT)
+        st6.SetFont(self.com.font)
+        
+        self.cb5 = wx.CheckBox(panel1, -1, '')
+        self.cb5.SetFont(self.com.font)
+        self.cb5.Set3StateValue(wx.CHK_CHECKED)
+        
+        self.cb6 = wx.CheckBox(panel1, -1, '')
+        self.cb6.SetFont(self.com.font)
+        
+        st7 = wx.StaticText(panel1, -1, '_scatter_plots',  style=wx.ALIGN_LEFT)
+        st7.SetFont(self.com.font)
+        
+        self.cb7 = wx.CheckBox(panel1, -1, '')
+        self.cb7.SetFont(self.com.font)
+        self.cb7.Set3StateValue(wx.CHK_CHECKED)
+        
+        self.cb8 = wx.CheckBox(panel1, -1, '')
+        self.cb8.SetFont(self.com.font)
+
+        
+        gridtop.Add(st1, 0)
+        gridtop.Add(st2, 0)
+        gridtop.Add(st3, 0)
+                
+        gridtop.Add(st4, 0)
+        gridtop.Add(self.cb1, 0)
+        gridtop.Add(self.cb2, 0)              
+  
+        gridtop.Add(st5, 0)
+        gridtop.Add(self.cb3, 0)
+        gridtop.Add(self.cb4, 0)  
+        
+        gridtop.Add(st6, 0)
+        gridtop.Add(self.cb5, 0)
+        gridtop.Add(self.cb6, 0)  
+        
+        gridtop.Add(st7, 0)
+        gridtop.Add(self.cb7, 0)
+        gridtop.Add(self.cb8, 0) 
+        
+        panel1.SetSizer(gridtop)
+        
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
+        panel2 = wx.Panel(self, -1)
+        button_save = wx.Button(panel2, -1, 'Save')
+        self.Bind(wx.EVT_BUTTON, self.OnSave, id=button_save.GetId())
+        hbox.Add(button_save, 0, wx.LEFT,5)
+        
+        button_cancel = wx.Button(panel2, -1, 'Cancel')
+        self.Bind(wx.EVT_BUTTON, self.OnCancel, id=button_cancel.GetId())
+        hbox.Add(button_cancel, 0, wx.LEFT,10)
+        
+        panel2.SetSizer(hbox)
+        
+        
+        vboxtop.Add(panel1, 1, wx.ALL | wx.EXPAND, 20)
+        vboxtop.Add(panel2, 0, wx.ALL | wx.EXPAND, 20) 
+        
+        self.SetSizer(vboxtop)    
+        
+#----------------------------------------------------------------------        
+    def OnSave(self, evt):
+        
+        sp_pdf = self.cb1.GetValue()
+        sp_png = self.cb2.GetValue()
+        im_pdf = self.cb3.GetValue()
+        im_png = self.cb4.GetValue()
+        indim_pdf = self.cb5.GetValue()
+        indim_png = self.cb6.GetValue()
+        scatt_pdf = self.cb7.GetValue()
+        scatt_png = self.cb8.GetValue()
+        
+        self.Close(True) 
+        wx.GetApp().TopWindow.page3.Save(spec_png = sp_png, 
+                                         spec_pdf = sp_pdf, 
+                                         img_png = im_png, 
+                                         img_pdf = im_pdf,
+                                         indimgs_png = indim_png, 
+                                         indimgs_pdf = indim_pdf,
+                                         scatt_png = scatt_png,
+                                         scatt_pdf = scatt_pdf)
+
+#---------------------------------------------------------------------- 
+    def OnCancel(self, evt):
+        self.Close(True)  
+                
     
 """ ------------------------------------------------------------------------------------------------"""
 class PagePCA(wx.Panel):
@@ -1546,73 +1960,137 @@ class PagePCA(wx.Panel):
     def OnSave(self, event):     
         
         wildcard = 'Portable Network Graphics (*.png)|*.png|Adobe PDF Files (*.pdf)|*.pdf|All files (*.*)|*.*'               
-        fileName = wx.FileSelector('Save Plot', default_extension='png', 
+        self.SaveFileName = wx.FileSelector('Save Plot', default_extension='png', 
                                    wildcard=wildcard, parent=self, flags=wx.SAVE|wx.OVERWRITE_PROMPT) 
    
-        if not fileName: 
+        if not self.SaveFileName: 
             return 
+        
+        SaveWinP2(self.SaveFileName).Show()
 
-        path, ext = os.path.splitext(fileName) 
+
+            
+#----------------------------------------------------------------------    
+    def Save(self, spec_png = True, spec_pdf = False, img_png = True, 
+             img_pdf = False, evals_png = True, evals_pdf = False): 
+        
+        path, ext = os.path.splitext(self.SaveFileName) 
         ext = ext[1:].lower() 
         
        
-        if ext != 'png' and ext != 'pdf': 
-            error_message = ( 
-                  'Only the PNG and PDF image formats are supported.\n' 
-                 'A file extension of `png\' or `pdf\' must be used.') 
-            wx.MessageBox(error_message, 'Error - Could not save file.'+error_message, 
-                  parent=self, style=wx.OK|wx.ICON_ERROR) 
-            return 
+#        if ext != 'png' and ext != 'pdf': 
+#            error_message = ( 
+#                  'Only the PNG and PDF image formats are supported.\n' 
+#                 'A file extension of `png\' or `pdf\' must be used.') 
+#            wx.MessageBox(error_message, 'Error - Could not save file.'+error_message, 
+#                  parent=self, style=wx.OK|wx.ICON_ERROR) 
+#            return 
    
         try: 
-            
-            suffix = "." + ext
-            fileName_evals = fileName[:-len(suffix)]+"_PCAevals."+ext
+
+            mtplot.rcParams['pdf.fonttype'] = 42
+            if evals_png:
+                ext = 'png'
+                suffix = "." + ext
+                fileName_evals = self.SaveFileName[:-len(suffix)]+"_PCAevals."+ext
+                            
+                fig = self.PCAEvalsPan.get_figure()
+                fig.savefig(fileName_evals)
+                
+            if evals_pdf:
+                ext = 'pdf'
+                suffix = "." + ext
+                fileName_evals = self.SaveFileName[:-len(suffix)]+"_PCAevals."+ext
+                            
+                fig = self.PCAEvalsPan.get_figure()
+                fig.savefig(fileName_evals)                
+
+                        
+            from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
             mtplot.rcParams['pdf.fonttype'] = 42
             
-            fig = self.PCAEvalsPan.get_figure()
-            fig.savefig(fileName_evals)
-            
-            from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-            
-            
-            for i in range (self.numsigpca):
+            ext = 'png'
+            suffix = "." + ext        
+                
+            if img_png:
+                for i in range (self.numsigpca):
               
-                self.pcaimage = self.anlz.pcaimages[:,:,i]
+                    self.pcaimage = self.anlz.pcaimages[:,:,i]
               
-                fig = mtplot.figure.Figure(figsize =(4.0,3.5))
-                canvas = FigureCanvas(fig)
-                axes = fig.gca()
-                divider = make_axes_locatable(axes)
-                ax_cb = divider.new_horizontal(size="3%", pad=0.03)  
-                fig.add_axes(ax_cb)
-                axes.set_position([0.03,0.03,0.8,0.94])
-                bound = self.anlz.pcaimagebounds[i]       
-                mtplot.rcParams['font.size'] = self.fontsize        
+                    fig = mtplot.figure.Figure(figsize =(4.0,3.5))
+                    canvas = FigureCanvas(fig)
+                    axes = fig.gca()
+                    divider = make_axes_locatable(axes)
+                    ax_cb = divider.new_horizontal(size="3%", pad=0.03)  
+                    fig.add_axes(ax_cb)
+                    axes.set_position([0.03,0.03,0.8,0.94])
+                    bound = self.anlz.pcaimagebounds[i]       
+                    mtplot.rcParams['font.size'] = self.fontsize        
         
-                im = axes.imshow(self.pcaimage, cmap=mtplot.cm.get_cmap("seismic_r"), vmin = -bound, vmax = bound)
-                cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
-                axes.axis("off") 
+                    im = axes.imshow(self.pcaimage, cmap=mtplot.cm.get_cmap("seismic_r"), vmin = -bound, vmax = bound)
+                    cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
+                    axes.axis("off") 
                                 
-                fileName_img = fileName[:-len(suffix)]+"_PCA_" +str(i+1)+"."+ext
-                fig.savefig(fileName_img)
+                    fileName_img = self.SaveFileName[:-len(suffix)]+"_PCA_" +str(i+1)+"."+ext
+                    fig.savefig(fileName_img)
             
+            if spec_png:
+                for i in range (self.numsigpca):
                 
-                self.pcaspectrum = self.anlz.eigenvecs[:,i]
-                fig = mtplot.figure.Figure(figsize =(5.65,3.5))
-                canvas = FigureCanvas(fig)
-                fig.add_axes((0.15,0.15,0.75,0.75))
-                axes = fig.gca()
-                mtplot.rcParams['font.size'] = self.fontsize
-                specplot = axes.plot(self.stk.ev,self.pcaspectrum)    
-                axes.set_xlabel('Photon Energy [eV]')
-                axes.set_ylabel('Optical Density')
+                    self.pcaspectrum = self.anlz.eigenvecs[:,i]
+                    fig = mtplot.figure.Figure(figsize =(5.65,3.5))
+                    canvas = FigureCanvas(fig)
+                    fig.add_axes((0.15,0.15,0.75,0.75))
+                    axes = fig.gca()
+                    mtplot.rcParams['font.size'] = self.fontsize
+                    specplot = axes.plot(self.stk.ev,self.pcaspectrum)    
+                    axes.set_xlabel('Photon Energy [eV]')
+                    axes.set_ylabel('Optical Density')
                 
-                fileName_spec = fileName[:-len(suffix)]+"_PCAspectrum_" +str(i+1)+"."+ext
-                fig.savefig(fileName_spec)
+                    fileName_spec = self.SaveFileName[:-len(suffix)]+"_PCAspectrum_" +str(i+1)+"."+ext
+                    fig.savefig(fileName_spec)
                 
                 
+            ext = 'pdf'
+            suffix = "." + ext        
                 
+            if img_pdf:
+                for i in range (self.numsigpca):
+              
+                    self.pcaimage = self.anlz.pcaimages[:,:,i]
+              
+                    fig = mtplot.figure.Figure(figsize =(4.0,3.5))
+                    canvas = FigureCanvas(fig)
+                    axes = fig.gca()
+                    divider = make_axes_locatable(axes)
+                    ax_cb = divider.new_horizontal(size="3%", pad=0.03)  
+                    fig.add_axes(ax_cb)
+                    axes.set_position([0.03,0.03,0.8,0.94])
+                    bound = self.anlz.pcaimagebounds[i]       
+                    mtplot.rcParams['font.size'] = self.fontsize        
+        
+                    im = axes.imshow(self.pcaimage, cmap=mtplot.cm.get_cmap("seismic_r"), vmin = -bound, vmax = bound)
+                    cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
+                    axes.axis("off") 
+                                
+                    fileName_img = self.SaveFileName[:-len(suffix)]+"_PCA_" +str(i+1)+"."+ext
+                    fig.savefig(fileName_img)
+            
+            if spec_pdf:
+                for i in range (self.numsigpca):
+                
+                    self.pcaspectrum = self.anlz.eigenvecs[:,i]
+                    fig = mtplot.figure.Figure(figsize =(5.65,3.5))
+                    canvas = FigureCanvas(fig)
+                    fig.add_axes((0.15,0.15,0.75,0.75))
+                    axes = fig.gca()
+                    mtplot.rcParams['font.size'] = self.fontsize
+                    specplot = axes.plot(self.stk.ev,self.pcaspectrum)    
+                    axes.set_xlabel('Photon Energy [eV]')
+                    axes.set_ylabel('Optical Density')
+                
+                    fileName_spec = self.SaveFileName[:-len(suffix)]+"_PCAspectrum_" +str(i+1)+"."+ext
+                    fig.savefig(fileName_spec)                
             
         except IOError, e:
             if e.strerror:
@@ -1698,6 +2176,152 @@ class PagePCA(wx.Panel):
         axes.set_ylabel('Optical Density')
         
         self.PCASpecPan.draw()
+        
+        
+        
+#---------------------------------------------------------------------- 
+class SaveWinP2(wx.Frame):
+    
+    title = "Save"
+
+    def __init__(self, filename):
+        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(230, 310))
+               
+        ico = logos.getlogo_2l_32Icon()
+        self.SetIcon(ico)
+        
+        self.SetBackgroundColour("White") 
+
+        
+        self.com = wx.GetApp().TopWindow.common         
+        self.fontsize = self.com.fontsize   
+        
+        
+        path, ext = os.path.splitext(filename) 
+        ext = ext[1:].lower()   
+        suffix = "." + ext
+        path, fn = os.path.split(filename)
+        filename = fn[:-len(suffix)]+"_.*"
+            
+        
+        
+        vboxtop = wx.BoxSizer(wx.VERTICAL)
+        
+        stf = wx.StaticText(self, -1, 'Filename: ',  style=wx.ALIGN_LEFT, size =(200, 20))
+        stf.SetFont(self.com.font)
+        vboxtop.Add(stf,0,wx.TOP|wx.LEFT, 10)
+        vboxtop.Add((0,3))
+        stf = wx.StaticText(self, -1, filename,  style=wx.ALIGN_LEFT, size =(200, 20))
+        stf.SetFont(self.com.font)
+        vboxtop.Add(stf,0,wx.LEFT, 10)
+        
+        panel1 = wx.Panel(self, -1)
+        
+        gridtop = wx.FlexGridSizer(4, 3, vgap=20, hgap=20)
+    
+        fontb = wx.SystemSettings_GetFont(wx.SYS_DEFAULT_GUI_FONT)
+        fontb.SetWeight(wx.BOLD)
+        
+        
+        st1 = wx.StaticText(panel1, -1, 'Save',  style=wx.ALIGN_LEFT)
+        st1.SetFont(fontb)
+        st2 = wx.StaticText(panel1, -1, '.pdf',  style=wx.ALIGN_LEFT)
+        st2.SetFont(fontb)
+        st3 = wx.StaticText(panel1, -1, '.png',  style=wx.ALIGN_LEFT)
+        st3.SetFont(fontb)
+        
+        st4 = wx.StaticText(panel1, -1, '_spectra',  style=wx.ALIGN_LEFT)
+        st4.SetFont(self.com.font)
+        
+        self.cb1 = wx.CheckBox(panel1, -1, '')
+        self.cb1.SetFont(self.com.font)
+        self.cb1.Set3StateValue(wx.CHK_CHECKED)
+        
+        self.cb2 = wx.CheckBox(panel1, -1, '')
+        self.cb2.SetFont(self.com.font)
+        
+        st5 = wx.StaticText(panel1, -1, '_images',  style=wx.ALIGN_LEFT)
+        st5.SetFont(self.com.font)
+        
+        self.cb3 = wx.CheckBox(panel1, -1, '')
+        self.cb3.SetFont(self.com.font)
+        self.cb3.Set3StateValue(wx.CHK_CHECKED)
+        
+        self.cb4 = wx.CheckBox(panel1, -1, '')
+        self.cb4.SetFont(self.com.font)
+        
+        
+        st6 = wx.StaticText(panel1, -1, '_eigenvals',  style=wx.ALIGN_LEFT)
+        st6.SetFont(self.com.font)
+        
+        self.cb5 = wx.CheckBox(panel1, -1, '')
+        self.cb5.SetFont(self.com.font)
+        self.cb5.Set3StateValue(wx.CHK_CHECKED)
+        
+        self.cb6 = wx.CheckBox(panel1, -1, '')
+        self.cb6.SetFont(self.com.font)
+
+        
+        gridtop.Add(st1, 0)
+        gridtop.Add(st2, 0)
+        gridtop.Add(st3, 0)
+                
+        gridtop.Add(st4, 0)
+        gridtop.Add(self.cb1, 0)
+        gridtop.Add(self.cb2, 0)              
+  
+        gridtop.Add(st5, 0)
+        gridtop.Add(self.cb3, 0)
+        gridtop.Add(self.cb4, 0)  
+        
+        gridtop.Add(st6, 0)
+        gridtop.Add(self.cb5, 0)
+        gridtop.Add(self.cb6, 0)  
+        
+        panel1.SetSizer(gridtop)
+        
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
+        panel2 = wx.Panel(self, -1)
+        button_save = wx.Button(panel2, -1, 'Save')
+        self.Bind(wx.EVT_BUTTON, self.OnSave, id=button_save.GetId())
+        hbox.Add(button_save, 0, wx.LEFT,5)
+        
+        button_cancel = wx.Button(panel2, -1, 'Cancel')
+        self.Bind(wx.EVT_BUTTON, self.OnCancel, id=button_cancel.GetId())
+        hbox.Add(button_cancel, 0, wx.LEFT,10)
+        
+        panel2.SetSizer(hbox)
+        
+        
+        vboxtop.Add(panel1, 1, wx.ALL | wx.EXPAND, 20)
+        vboxtop.Add(panel2, 0, wx.ALL | wx.EXPAND, 20) 
+        
+        self.SetSizer(vboxtop)    
+        
+#----------------------------------------------------------------------        
+    def OnSave(self, evt):
+        
+        sp_pdf = self.cb1.GetValue()
+        sp_png = self.cb2.GetValue()
+        im_pdf = self.cb3.GetValue()
+        im_png = self.cb4.GetValue()
+        ev_pdf = self.cb5.GetValue()
+        ev_png = self.cb6.GetValue()
+        
+        self.Close(True) 
+        wx.GetApp().TopWindow.page2.Save(spec_png = sp_png, 
+                                         spec_pdf = sp_pdf, 
+                                         img_png = im_png, 
+                                         img_pdf = im_pdf,
+                                         evals_png = ev_png, 
+                                         evals_pdf = ev_pdf)
+
+#---------------------------------------------------------------------- 
+    def OnCancel(self, evt):
+        self.Close(True)  
+                
+                
+                
  
 
 """ ------------------------------------------------------------------------------------------------"""
@@ -1825,7 +2449,7 @@ class PageStack(wx.Panel):
         
         vbox31.Add((0,3))
         
-        self.button_save = wx.Button(panel3, -1, 'Save')
+        self.button_save = wx.Button(panel3, -1, 'Save...')
         self.button_save.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnSave, id=self.button_save.GetId())
         self.button_save.Disable()          
@@ -2267,42 +2891,68 @@ class PageStack(wx.Panel):
         
 #----------------------------------------------------------------------    
     def OnSave(self, event):     
+        
+        
                
-        fileName = wx.FileSelector('Save Plot', default_extension='png', 
+        self.SaveFileName = wx.FileSelector('Save Plot', default_extension='png', 
                                    wildcard=('Portable Network Graphics (*.png)|*.png|' 
                                              + 'Adobe PDF Files (*.pdf)|*.pdf|All files (*.*)|*.*'), 
                                               parent=self, flags=wx.SAVE|wx.OVERWRITE_PROMPT) 
    
-        if not fileName: 
+        if not self.SaveFileName: 
             return 
+        
+        SaveWinP1(self.SaveFileName).Show()
 
-        path, ext = os.path.splitext(fileName) 
+
+   
+   
+#----------------------------------------------------------------------    
+    def Save(self, spec_png = True, spec_pdf = False, img_png = True, img_pdf = False): 
+
+        
+        path, ext = os.path.splitext(self.SaveFileName) 
         ext = ext[1:].lower() 
         
        
-        if ext != 'png' and ext != 'pdf': 
-            error_message = ( 
-                  'Only the PNG and PDF image formats are supported.\n' 
-                 'A file extension of `png\' or `pdf\' must be used.') 
-            wx.MessageBox(error_message, 'Error - Could not save file.', 
-                  parent=self, style=wx.OK|wx.ICON_ERROR) 
-            return 
-   
+#        if ext != 'png' and ext != 'pdf': 
+#            error_message = ( 
+#                  'Only the PNG and PDF image formats are supported.\n' 
+#                 'A file extension of `png\' or `pdf\' must be used.') 
+#            wx.MessageBox(error_message, 'Error - Could not save file.', 
+#                  parent=self, style=wx.OK|wx.ICON_ERROR) 
+#            return 
+#        
+        
         try: 
-            
+            ext = 'png'
             suffix = "." + ext
-            fileName_spec = fileName[:-len(suffix)]+"_spectrum."+ext
-
             mtplot.rcParams['pdf.fonttype'] = 42
             
-            fig = self.SpectrumPanel.get_figure()
-            fig.savefig(fileName_spec)
+            if spec_png:
+                fileName_spec = self.SaveFileName[:-len(suffix)]+"_spectrum."+ext
+                            
+                fig = self.SpectrumPanel.get_figure()
+                fig.savefig(fileName_spec)
 
+            if img_png:
+                fileName_img = self.SaveFileName[:-len(suffix)]+"_" +str(self.stk.ev[self.iev])+"eV."+ext
+                fig = self.AbsImagePanel.get_figure()
+                fig.savefig(fileName_img)
+                
+            ext = 'pdf'
+            suffix = "." + ext
             
-            fileName_img = fileName[:-len(suffix)]+"_" +str(self.stk.ev[self.iev])+"eV."+ext
-            fig = self.AbsImagePanel.get_figure()
-            fig.savefig(fileName_img)
+            if spec_pdf:
+                fileName_spec = self.SaveFileName[:-len(suffix)]+"_spectrum."+ext
+            
+                fig = self.SpectrumPanel.get_figure()
+                fig.savefig(fileName_spec)
 
+            if img_pdf:
+                fileName_img = self.SaveFileName[:-len(suffix)]+"_" +str(self.stk.ev[self.iev])+"eV."+ext
+                fig = self.AbsImagePanel.get_figure()
+                fig.savefig(fileName_img)
             
         except IOError, e:
             if e.strerror:
@@ -2650,7 +3300,130 @@ class PageStack(wx.Panel):
         
         self.loadImage()
         
+        
+#---------------------------------------------------------------------- 
+class SaveWinP1(wx.Frame):
+    
+    title = "Save"
+
+    def __init__(self, filename):
+        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(230, 280))
                
+        ico = logos.getlogo_2l_32Icon()
+        self.SetIcon(ico)
+        
+        self.SetBackgroundColour("White") 
+
+        
+        self.com = wx.GetApp().TopWindow.common         
+        self.fontsize = self.com.fontsize   
+        
+        
+        path, ext = os.path.splitext(filename) 
+        ext = ext[1:].lower()   
+        suffix = "." + ext
+        path, fn = os.path.split(filename)
+        filename = fn[:-len(suffix)]+"_.*"
+            
+        
+        
+        vboxtop = wx.BoxSizer(wx.VERTICAL)
+        
+        stf = wx.StaticText(self, -1, 'Filename: ',  style=wx.ALIGN_LEFT, size =(200, 20))
+        stf.SetFont(self.com.font)
+        vboxtop.Add(stf,0,wx.TOP|wx.LEFT, 10)
+        vboxtop.Add((0,3))
+        stf = wx.StaticText(self, -1, filename,  style=wx.ALIGN_LEFT, size =(200, 20))
+        stf.SetFont(self.com.font)
+        vboxtop.Add(stf,0,wx.LEFT, 10)
+        
+        panel1 = wx.Panel(self, -1)
+        
+        gridtop = wx.FlexGridSizer(3, 3, vgap=20, hgap=20)
+    
+        fontb = wx.SystemSettings_GetFont(wx.SYS_DEFAULT_GUI_FONT)
+        fontb.SetWeight(wx.BOLD)
+        
+        
+        st1 = wx.StaticText(panel1, -1, 'Save',  style=wx.ALIGN_LEFT)
+        st1.SetFont(fontb)
+        st2 = wx.StaticText(panel1, -1, '.pdf',  style=wx.ALIGN_LEFT)
+        st2.SetFont(fontb)
+        st3 = wx.StaticText(panel1, -1, '.png',  style=wx.ALIGN_LEFT)
+        st3.SetFont(fontb)
+        
+        st4 = wx.StaticText(panel1, -1, '_spectrum',  style=wx.ALIGN_LEFT)
+        st4.SetFont(self.com.font)
+        
+        self.cb1 = wx.CheckBox(panel1, -1, '')
+        self.cb1.SetFont(self.com.font)
+        self.cb1.Set3StateValue(wx.CHK_CHECKED)
+        
+        self.cb2 = wx.CheckBox(panel1, -1, '')
+        self.cb2.SetFont(self.com.font)
+        
+        st5 = wx.StaticText(panel1, -1, '_image',  style=wx.ALIGN_LEFT)
+        st5.SetFont(self.com.font)
+        
+        self.cb3 = wx.CheckBox(panel1, -1, '')
+        self.cb3.SetFont(self.com.font)
+        self.cb3.Set3StateValue(wx.CHK_CHECKED)
+        
+        self.cb4 = wx.CheckBox(panel1, -1, '')
+        self.cb4.SetFont(self.com.font)
+
+        
+        gridtop.Add(st1, 0)
+        gridtop.Add(st2, 0)
+        gridtop.Add(st3, 0)
+                
+        gridtop.Add(st4, 0)
+        gridtop.Add(self.cb1, 0)
+        gridtop.Add(self.cb2, 0)              
+  
+        gridtop.Add(st5, 0)
+        gridtop.Add(self.cb3, 0)
+        gridtop.Add(self.cb4, 0)  
+        
+        panel1.SetSizer(gridtop)
+        
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
+        panel2 = wx.Panel(self, -1)
+        button_save = wx.Button(panel2, -1, 'Save')
+        self.Bind(wx.EVT_BUTTON, self.OnSave, id=button_save.GetId())
+        hbox.Add(button_save, 0, wx.LEFT,5)
+        
+        button_cancel = wx.Button(panel2, -1, 'Cancel')
+        self.Bind(wx.EVT_BUTTON, self.OnCancel, id=button_cancel.GetId())
+        hbox.Add(button_cancel, 0, wx.LEFT,10)
+        
+        panel2.SetSizer(hbox)
+        
+        
+        vboxtop.Add(panel1, 1, wx.ALL | wx.EXPAND, 20)
+        vboxtop.Add(panel2, 0, wx.ALL | wx.EXPAND, 20) 
+        
+        self.SetSizer(vboxtop)    
+        
+#----------------------------------------------------------------------        
+    def OnSave(self, evt):
+        
+        sp_pdf = self.cb1.GetValue()
+        sp_png = self.cb2.GetValue()
+        im_pdf = self.cb3.GetValue()
+        im_png = self.cb4.GetValue()
+        
+        self.Close(True) 
+        wx.GetApp().TopWindow.page1.Save(spec_png = sp_png, 
+                                         spec_pdf = sp_pdf, 
+                                         img_png = im_png, 
+                                         img_pdf = im_pdf)
+
+#---------------------------------------------------------------------- 
+    def OnCancel(self, evt):
+        self.Close(True)  
+                
+                     
 #---------------------------------------------------------------------- 
 class ShowHistogram(wx.Frame):
 
@@ -2983,6 +3756,8 @@ class ImageRegistration(wx.Frame):
         
         self.xshifts = npy.zeros((self.stack.n_ev))
         self.yshifts = npy.zeros((self.stack.n_ev))
+        
+        self.showccorr = 0
                                   
         
         #panel 1        
@@ -3012,21 +3787,21 @@ class ImageRegistration(wx.Frame):
         panel1.SetSizer(vbox1)
         
         
-#        
-#        #panel 2        
-#        panel2 = wx.Panel(self, -1)
-#        vbox2 = wx.BoxSizer(wx.VERTICAL)
-#        
-#        tc2 = wx.TextCtrl(panel2, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
-#        tc2.SetFont(self.com.font)
-#        tc2.SetValue('Coherence matrix')
-#
-#        self.CohImagePanel = wxmpl.PlotPanel(panel2, -1, size =(2.4,2.4), cursor=False, crosshairs=True, location=False, zoom=False)
-#                                      
-#        vbox2.Add(tc2,1, wx.EXPAND)        
-#        vbox2.Add(self.CohImagePanel, 0)
-#
-#        panel2.SetSizer(vbox2)
+        
+        #panel 2        
+        panel2 = wx.Panel(self, -1)
+        vbox2 = wx.BoxSizer(wx.VERTICAL)
+        
+        tc2 = wx.TextCtrl(panel2, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        tc2.SetFont(self.com.font)
+        tc2.SetValue('Cross-correlation')
+
+        self.CscorrPanel = wxmpl.PlotPanel(panel2, -1, size =(2.4,2.4), cursor=False, crosshairs=True, location=False, zoom=False)
+                                      
+        vbox2.Add(tc2,1, wx.EXPAND)        
+        vbox2.Add(self.CscorrPanel, 0)
+
+        panel2.SetSizer(vbox2)
         
         
         #panel 3
@@ -3037,7 +3812,7 @@ class ImageRegistration(wx.Frame):
         tc3.SetValue('Image shifts')
         tc3.SetFont(self.com.font)
           
-        self.ShiftsPanel = wxmpl.PlotPanel(panel3, -1, size=(4.5, 2.8), cursor=False, crosshairs=False, location=False, zoom=False)
+        self.ShiftsPanel = wxmpl.PlotPanel(panel3, -1, size=(4.0, 2.4), cursor=False, crosshairs=False, location=False, zoom=False)
         wxmpl.EVT_POINT(panel3, self.ShiftsPanel.GetId(), self.OnPlotShifts)
         
         vbox3.Add(tc3, 1, wx.EXPAND)       
@@ -3071,11 +3846,21 @@ class ImageRegistration(wx.Frame):
         
         self.tc_shift = wx.TextCtrl(panel4, -1, style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         self.tc_shift.SetFont(self.com.font)
-        vbox41.Add(self.tc_shift, 1, wx.EXPAND|wx.TOP|wx.BOTTOM, 10)
+        vbox41.Add(self.tc_shift, 1, wx.EXPAND|wx.TOP|wx.BOTTOM, 5)
         
         
         self.tc_shift.AppendText('X shift: {0:5.2f} \n'.format(self.yshifts[self.iev]))
         self.tc_shift.AppendText('Y shift: {0:5.2f} '.format(self.xshifts[self.iev]))
+        
+        hbox41 = wx.BoxSizer(wx.HORIZONTAL)
+        hbox41.Add((5,0))
+        self.showcscor_cb = wx.CheckBox(panel4, -1, 'Show Cross-correlation')
+        self.showcscor_cb.SetFont(self.com.font)
+        self.Bind(wx.EVT_CHECKBOX, self.OnShowCCorr, self.showcscor_cb)
+        hbox41.Add(self.showcscor_cb, 0)
+        hbox41.Add((5,0))
+        vbox41.Add(hbox41,0, wx.EXPAND)
+
         
         
         sizer1.Add(vbox41,1, wx.LEFT|wx.RIGHT|wx.EXPAND,2)
@@ -3104,16 +3889,7 @@ class ImageRegistration(wx.Frame):
         sizer6 = wx.StaticBoxSizer(wx.StaticBox(panel6, -1, 'Manual Alignment'),orient=wx.VERTICAL)
         vbox61 = wx.BoxSizer(wx.VERTICAL)
         vbox61.Add((0,3))        
-        
-#        hbox61 = wx.BoxSizer(wx.HORIZONTAL)
-#        hbox61.Add((5,0))
-#        self.manalcb = wx.CheckBox(panel6, -1, 'Enable Manual Alignment')
-#        self.manalcb.SetFont(self.com.font)
-#        self.Bind(wx.EVT_CHECKBOX, self.OnUseManAlign, self.manalcb)
-#        hbox61.Add(self.manalcb, 0, wx.EXPAND|wx.TOP, 15)
-#        hbox61.Add((5,0))
-#        vbox61.Add(hbox61,1, wx.EXPAND)
-#        
+                
         self.button_manalign = wx.Button(panel6, -1, 'Pick a point on reference image')
         self.button_manalign.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnPickRefPoint, id=self.button_manalign.GetId())
@@ -3185,7 +3961,7 @@ class ImageRegistration(wx.Frame):
         hboxRT.Add(panel5)
         
         hboxRB.Add(panel3, 0, wx.RIGHT, 10)
-        #hboxRB.Add(panel2)
+        hboxRB.Add(panel2)
         
         vboxR.Add((0,20))
         vboxR.Add(hboxRT)
@@ -3266,6 +4042,53 @@ class ImageRegistration(wx.Frame):
         axes.axis("off") 
 
         self.RefImagePanel.draw()
+
+
+#----------------------------------------------------------------------        
+    def ShowCrossCorrelation(self, ccorr, xshift, yshift):
+
+        fig = self.CscorrPanel.get_figure()
+    
+        fig.clf()
+        fig.add_axes((0.02,0.02,0.96,0.96))
+        axes = fig.gca()
+    
+        im = axes.imshow(ccorr, cmap=mtplot.cm.get_cmap('gray')) 
+        
+        nx = ccorr.shape[0]
+        ny = ccorr.shape[1]
+        xcenter = xshift + npy.float(nx)/2.0
+        ycenter = yshift + npy.float(ny)/2.0
+        
+        xl = xcenter-10
+        if xl<0:
+            xl=0
+        xr = xcenter+10
+        if xr>nx-1:
+            xr=nx-1
+        yl = ycenter-10
+        if yl<0:
+            yl=0
+        yr = ycenter+10
+        if yr>ny-1:
+            yr=ny-1       
+                   
+        lx=mtplot.lines.Line2D([ycenter,ycenter], [xl,xr],color='green')
+        ly=mtplot.lines.Line2D([yl,yr], [xcenter,xcenter] ,color='green')
+        axes.add_line(lx)
+        axes.add_line(ly)
+         
+    
+        axes.axis("off") 
+
+        self.CscorrPanel.draw()        
+        
+#----------------------------------------------------------------------           
+    def OnShowCCorr(self, event):
+        if self.showcscor_cb.GetValue():
+            self.showccorr = 1
+        else: 
+            self.showccorr = 0
         
 
 #----------------------------------------------------------------------        
@@ -3315,18 +4138,21 @@ class ImageRegistration(wx.Frame):
             img2 = self.aligned_stack[:,:,i]  
                
             if i==0:     
-                xshift, yshift = self.stack.register_images(self.ref_image, img2, 
+                xshift, yshift, ccorr = self.stack.register_images(self.ref_image, img2, 
                                                           have_ref_img_fft = False)   
             elif i==self.ref_image_index:
                 xshift = 0
                 yshift = 0       
             else:
-                xshift, yshift = self.stack.register_images(self.ref_image, img2, 
+                xshift, yshift, ccorr = self.stack.register_images(self.ref_image, img2, 
                                                           have_ref_img_fft = True)
             
             self.xshifts[i] = xshift
             self.yshifts[i] = yshift
             self.PlotShifts()
+            
+            if self.showccorr == 1:
+                self.ShowCrossCorrelation(ccorr, xshift, yshift)
             
         #Apply shifts
         for i in range(self.stack.n_ev):
@@ -4053,20 +4879,20 @@ class MainFrame(wx.Frame):
         self.toolbar.SetToolBitmapSize((16,16))
          
         open_ico = wx.ArtProvider.GetBitmap(wx.ART_FILE_OPEN, wx.ART_TOOLBAR, (16,16))
-        openTool = self.toolbar.AddSimpleTool(wx.ID_OPEN, open_ico, "Open", "Open stack")
+        openTool = self.toolbar.AddSimpleTool(wx.ID_OPEN, open_ico, "Open stack .hdf5 or .stk", "Open stack .hdf5 or .stk")
         self.Bind(wx.EVT_MENU, self.onBrowse, openTool)
         
         open_sl_ico = logos.getslBitmap()
-        openslTool = self.toolbar.AddSimpleTool(101, open_sl_ico, "Open .sl files", "Open .sl files")   
+        openslTool = self.toolbar.AddSimpleTool(101, open_sl_ico, "Open directory with file sequence", "Open direcory with file sequence")   
         self.Bind(wx.EVT_MENU, self.onOpenSL, openslTool)
         
         save_ico = wx.ArtProvider.GetBitmap(wx.ART_FILE_SAVE, wx.ART_TOOLBAR, (16,16))
-        saveTool = self.toolbar.AddSimpleTool(wx.ID_SAVE, save_ico, "Save", "Save analysis")
+        saveTool = self.toolbar.AddSimpleTool(wx.ID_SAVE, save_ico, "Save analysis", "Save analysis")
         self.toolbar.EnableTool(wx.ID_SAVE, False)       
         #self.Bind(wx.EVT_MENU, self.onBrowse, saveTool)     
         
         saveas_ico = wx.ArtProvider.GetBitmap(wx.ART_FILE_SAVE_AS, wx.ART_TOOLBAR, (16,16))
-        saveasTool = self.toolbar.AddSimpleTool(wx.ID_SAVEAS, saveas_ico, "Convert .stk to .hdf5", "Convert .stk to .hdf5")
+        saveasTool = self.toolbar.AddSimpleTool(wx.ID_SAVEAS, saveas_ico, "Save as .hdf5", "Save as .hdf5")
         self.Bind(wx.EVT_MENU, self.onSaveAsH5, saveasTool)
         self.toolbar.EnableTool(wx.ID_SAVEAS, False)
         
@@ -4455,9 +5281,15 @@ class StackListFrame(wx.Frame):
         panel1 = wx.Panel(self, -1)
         vbox = wx.BoxSizer(wx.VERTICAL)
         
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
+        
         self.textt = wx.TextCtrl(panel1,-1, 'Select first stack file', 
                                  style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
-        vbox.Add(self.textt, 0)
+        self.textt.SetFont(self.com.font)
+        
+        
+        hbox.Add(self.textt, 1, wx.EXPAND)
+        vbox.Add(hbox, 0)
         
         self.filelist = wx.wx.ListCtrl(panel1,-1,style=wx.LC_REPORT)
         self.filelist.InsertColumn(0,".sm files", width=150)
@@ -4474,6 +5306,8 @@ class StackListFrame(wx.Frame):
                                     style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         self.tc_last = wx.TextCtrl(panel1,-1, 'Last stack file: ', size = (300,20),
                                    style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.tc_first.SetFont(self.com.font)
+        self.tc_last.SetFont(self.com.font)
         
         vbox.Add(self.tc_first,0, wx.TOP, 10)
         vbox.Add(self.tc_last, 0, wx.TOP, 10)
@@ -4483,11 +5317,13 @@ class StackListFrame(wx.Frame):
         
         self.button_accept = wx.Button(panel1, -1, 'Accept')
         self.button_accept.Disable()
+        self.button_accept.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnAccept, id=self.button_accept.GetId())
         hbox.Add(self.button_accept, 0, wx.ALL|wx.ALIGN_RIGHT, 10)
         
         button_cancel = wx.Button(panel1, -1, 'Cancel')
         self.Bind(wx.EVT_BUTTON, self.OnCancel, id=button_cancel.GetId())
+        button_cancel.SetFont(self.com.font)
         hbox.Add(button_cancel, 0, wx.ALL|wx.ALIGN_RIGHT,10)
         
         vbox.Add(hbox, 0, wx.ALIGN_RIGHT )

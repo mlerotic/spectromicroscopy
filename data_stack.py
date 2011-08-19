@@ -90,7 +90,7 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
         
         now = datetime.datetime.now()
         
-        self.data_struct.implements = 'base, exchange, spectromicroscopy'
+        self.data_struct.implements = 'base:exchange:spectromicroscopy'
         self.data_struct.version = '0.9'
         self.data_struct.file_creation_datetime = now.strftime("%Y-%m-%dT%H:%M")
         self.data_struct.comment = 'Converted from .stk',
@@ -360,7 +360,7 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
         yshift = yf - np.float(shape[1])/2.0
         
                 
-        return xshift, yshift
+        return xshift, yshift, fr
     
 
 #----------------------------------------------------------------------   
