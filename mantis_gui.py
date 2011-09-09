@@ -1,3 +1,20 @@
+# 
+#   This file is part of Mantis, a Multivariate ANalysis Tool for Spectromicroscopy.
+# 
+#   Copyright (C) 2011 Mirna Lerotic, 2nd Look
+#   http://2ndlook.co/products.html
+#   License: GNU GPL v3
+#
+#   Mantis is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or
+#   any later version.
+#
+#   Mantis is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details <http://www.gnu.org/licenses/>.
+
 
 from __future__ import division
 import wx
@@ -20,6 +37,9 @@ import logos
 
 Winsizex = 1000
 Winsizey = 740
+
+PlotH = 3.46
+PlotW = PlotH*1.61803
 
 
 
@@ -68,7 +88,7 @@ class PageSpectral(wx.Panel):
         self.tc_spmap.SetValue("Spectrum composition map")
 
         
-        self.MapPanel = wxmpl.PlotPanel(panel1, -1, size =(3.5,3.5), cursor=False, crosshairs=False, location=False, zoom=False)                            
+        self.MapPanel = wxmpl.PlotPanel(panel1, -1, size =(PlotH, PlotH), cursor=False, crosshairs=False, location=False, zoom=False)                            
   
         vbox1.Add((0,10))
         vbox1.Add(self.tc_spmap,1, wx.LEFT | wx.EXPAND, 20)        
@@ -86,7 +106,7 @@ class PageSpectral(wx.Panel):
         self.tc_tspec.SetValue("Target Spectrum: ")
         hbox11 = wx.BoxSizer(wx.HORIZONTAL)         
         
-        self.TSpectrumPanel = wxmpl.PlotPanel(panel2, -1, size=(5.65, 3.5), cursor=False, crosshairs=False, location=False, zoom=False)
+        self.TSpectrumPanel = wxmpl.PlotPanel(panel2, -1, size=(PlotW, PlotH), cursor=False, crosshairs=False, location=False, zoom=False)
 
         self.slider_tspec = wx.Slider(panel2, -1, 1, 1, 5, style=wx.SL_LEFT )        
         self.slider_tspec.SetFocus()
@@ -249,6 +269,8 @@ class PageSpectral(wx.Panel):
         hboxT.Add(panel5, 1, wx.LEFT | wx.RIGHT |wx.TOP | wx.EXPAND,10)
 
         vbox.Add(hboxT, 0, wx.ALL, 5)
+        
+        vbox.Add((0, 20))
         
         vbox.Add(hboxB, 0, wx.LEFT | wx.RIGHT, 5)
   
@@ -422,7 +444,7 @@ class PageSpectral(wx.Panel):
             diff = npy.abs(tspectrum-tspectrumfit)
             
         
-            fig = mtplot.figure.Figure(figsize =(5.65, 3.5))
+            fig = mtplot.figure.Figure(figsize =(PlotW, PlotH))
             canvas = FigureCanvas(fig)
             fig.clf()
             fig.add_axes((0.15,0.15,0.75,0.75))
@@ -471,7 +493,7 @@ class PageSpectral(wx.Panel):
             else:
                 tsmapimage = self.anlz.target_pcafit_maps[:,:,i] 
   
-            fig = mtplot.figure.Figure(figsize =(3.5,3.5))
+            fig = mtplot.figure.Figure(figsize =(PlotH, PlotH))
             canvas = FigureCanvas(fig)
             fig.clf()
             axes = fig.gca()
@@ -943,7 +965,7 @@ class PageCluster(wx.Panel):
         self.tc_clustercomp = wx.TextCtrl(panel2, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         self.tc_clustercomp.SetValue("Composite cluster image")        
         self.tc_clustercomp.SetFont(self.com.font)
-        self.ClusterImagePan = wxmpl.PlotPanel(panel2, -1, size =(3.40,3.40), cursor=False, crosshairs=True, location=False, zoom=False)                              
+        self.ClusterImagePan = wxmpl.PlotPanel(panel2, -1, size =(PlotH, PlotH), cursor=False, crosshairs=True, location=False, zoom=False)                              
         wxmpl.EVT_POINT(self, self.ClusterImagePan.GetId(), self.OnPointClusterImage)   
         vbox2.Add(self.tc_clustercomp, 0, wx.EXPAND) 
         vbox2.Add(self.ClusterImagePan, 0)   
@@ -961,7 +983,7 @@ class PageCluster(wx.Panel):
         self.tc_cluster.SetValue("Cluster ")
         self.tc_cluster.SetFont(self.com.font)
         hbox31 = wx.BoxSizer(wx.HORIZONTAL)
-        self.ClusterIndvImagePan = wxmpl.PlotPanel(panel3, -1, size =(2.63,2.63), cursor=False, crosshairs=False, location=False, zoom=False)
+        self.ClusterIndvImagePan = wxmpl.PlotPanel(panel3, -1, size =(PlotH*0.73, PlotH*0.73), cursor=False, crosshairs=False, location=False, zoom=False)
     
         self.slidershow = wx.Slider(panel3, -1, self.selcluster, 1, 20, style=wx.SL_LEFT)   
         self.slidershow.Disable()    
@@ -970,11 +992,11 @@ class PageCluster(wx.Panel):
         
         text3 = wx.StaticText(panel3, -1, 'Cluster Distance Map',  style=wx.ALIGN_LEFT)
         text3.SetFont(self.com.font)
-        self.ClusterDistMapPan = wxmpl.PlotPanel(panel3, -1, size =(2.63,2.63), cursor=False, crosshairs=False, location=False, zoom=False)
+        self.ClusterDistMapPan = wxmpl.PlotPanel(panel3, -1, size =(PlotH*0.73, PlotH*0.73), cursor=False, crosshairs=False, location=False, zoom=False)
         
           
         fgs.AddMany([(self.tc_cluster), (wx.StaticText(panel3, -1, ' ')), (text3, 0, wx.LEFT, 15), 
-                     (self.ClusterIndvImagePan), (self.slidershow, 0,  wx.EXPAND), (self.ClusterDistMapPan, 0, wx.LEFT, 15)])
+                     (self.ClusterIndvImagePan), (self.slidershow, 0,  wx.EXPAND), (self.ClusterDistMapPan, 0, wx.LEFT, 20)])
 
         vbox3.Add(fgs)
 
@@ -989,7 +1011,7 @@ class PageCluster(wx.Panel):
         self.tc_clustersp.SetValue("Cluster spectrum")
         self.tc_clustersp.SetFont(self.com.font)        
 
-        self.ClusterSpecPan = wxmpl.PlotPanel(panel4, -1, size =(5.7,3.40), cursor=False, crosshairs=False, location=False, zoom=False)
+        self.ClusterSpecPan = wxmpl.PlotPanel(panel4, -1, size =(PlotW, PlotH), cursor=False, crosshairs=False, location=False, zoom=False)
         
         vbox4.Add(self.tc_clustersp, 0, wx.EXPAND)        
         vbox4.Add(self.ClusterSpecPan, 0)
@@ -1268,7 +1290,7 @@ class PageCluster(wx.Panel):
                     colorcl = min(i,9)
                     indvclusterimage[ind] = colorcl
 
-                    fig = mtplot.figure.Figure(figsize =(3.5,3.5))
+                    fig = mtplot.figure.Figure(figsize =(PlotH, PlotH))
                     canvas = FigureCanvas(fig)
                     fig.add_axes((0.02,0.02,0.96,0.96))
                     axes = fig.gca()      
@@ -1283,7 +1305,7 @@ class PageCluster(wx.Panel):
                 for i in range (self.numclusters):
                    
                     clusterspectrum = self.anlz.clusterspectra[i, ]
-                    fig = mtplot.figure.Figure(figsize =(5.9,3.5))
+                    fig = mtplot.figure.Figure(figsize =(PlotW, PlotH))
                     canvas = FigureCanvas(fig)
                     fig.add_axes((0.15,0.15,0.75,0.75))
                     axes = fig.gca()
@@ -1312,7 +1334,7 @@ class PageCluster(wx.Panel):
                     colorcl = min(i,9)
                     indvclusterimage[ind] = colorcl
 
-                    fig = mtplot.figure.Figure(figsize =(3.5,3.5))
+                    fig = mtplot.figure.Figure(figsize =(PlotH, PlotH))
                     canvas = FigureCanvas(fig)
                     fig.add_axes((0.02,0.02,0.96,0.96))
                     axes = fig.gca()      
@@ -1327,7 +1349,7 @@ class PageCluster(wx.Panel):
                 for i in range (self.numclusters):
                    
                     clusterspectrum = self.anlz.clusterspectra[i, ]
-                    fig = mtplot.figure.Figure(figsize =(5.9,3.5))
+                    fig = mtplot.figure.Figure(figsize =(PlotW, PlotH))
                     canvas = FigureCanvas(fig)
                     fig.add_axes((0.15,0.15,0.75,0.75))
                     axes = fig.gca()
@@ -1775,6 +1797,9 @@ class PagePCA(wx.Panel):
         self.selpca = 1       
         self.numsigpca = 2
         
+        pw = PlotW*0.97
+        ph = PlotH*0.97
+        
           
         self.fontsize = self.com.fontsize
         
@@ -1789,7 +1814,7 @@ class PagePCA(wx.Panel):
         
         hbox11 = wx.BoxSizer(wx.HORIZONTAL)
    
-        self.PCAImagePan = wxmpl.PlotPanel(panel1, -1, size =(3.9,3.4), cursor=False, crosshairs=False, location=False, zoom=False)
+        self.PCAImagePan = wxmpl.PlotPanel(panel1, -1, size =(ph*1.10, ph), cursor=False, crosshairs=False, location=False, zoom=False)
                               
         self.slidershow = wx.Slider(panel1, -1, self.selpca, 1, 20, style=wx.SL_LEFT)
         self.slidershow.Disable()          
@@ -1850,7 +1875,7 @@ class PagePCA(wx.Panel):
         #panel 3
         panel3 = wx.Panel(self, -1)
         
-        self.PCASpecPan = wxmpl.PlotPanel(panel3, -1, size =(5.4,3.4), cursor=False, crosshairs=False, location=False, zoom=False)
+        self.PCASpecPan = wxmpl.PlotPanel(panel3, -1, size =(pw, ph), cursor=False, crosshairs=False, location=False, zoom=False)
              
         vbox3 = wx.BoxSizer(wx.VERTICAL)
         self.text_pcaspec = wx.TextCtrl(panel3, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
@@ -1864,7 +1889,7 @@ class PagePCA(wx.Panel):
         #panel 4
         panel4 = wx.Panel(self, -1)
              
-        self.PCAEvalsPan = wxmpl.PlotPanel(panel4, -1, size =(5.4,2.6), cursor=False, crosshairs=False, location=False, zoom=False)
+        self.PCAEvalsPan = wxmpl.PlotPanel(panel4, -1, size =(pw, ph*0.75), cursor=False, crosshairs=False, location=False, zoom=False)
         
         vbox4 = wx.BoxSizer(wx.VERTICAL)
         text4 = wx.TextCtrl(panel4, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
@@ -1880,7 +1905,7 @@ class PagePCA(wx.Panel):
         
         gridtop = wx.FlexGridSizer(2, 2, vgap=10, hgap=20)
         gridtop.Add(panel2, 0, wx.LEFT|wx.TOP, 20)
-        gridtop.Add(panel4, 0, wx.ALIGN_RIGHT)
+        gridtop.Add(panel4, 0, wx.ALIGN_LEFT)
         
         gridtop.Add(panel1, 0)
         gridtop.Add(panel3, 0, wx.ALIGN_RIGHT)
@@ -2017,7 +2042,7 @@ class PagePCA(wx.Panel):
               
                     self.pcaimage = self.anlz.pcaimages[:,:,i]
               
-                    fig = mtplot.figure.Figure(figsize =(4.0,3.5))
+                    fig = mtplot.figure.Figure(figsize =(PlotH*1.15, PlotH))
                     canvas = FigureCanvas(fig)
                     axes = fig.gca()
                     divider = make_axes_locatable(axes)
@@ -2038,7 +2063,7 @@ class PagePCA(wx.Panel):
                 for i in range (self.numsigpca):
                 
                     self.pcaspectrum = self.anlz.eigenvecs[:,i]
-                    fig = mtplot.figure.Figure(figsize =(5.65,3.5))
+                    fig = mtplot.figure.Figure(figsize =(PlotW, PlotH))
                     canvas = FigureCanvas(fig)
                     fig.add_axes((0.15,0.15,0.75,0.75))
                     axes = fig.gca()
@@ -2059,7 +2084,7 @@ class PagePCA(wx.Panel):
               
                     self.pcaimage = self.anlz.pcaimages[:,:,i]
               
-                    fig = mtplot.figure.Figure(figsize =(4.0,3.5))
+                    fig = mtplot.figure.Figure(figsize =(PlotH*1.15, PlotH))
                     canvas = FigureCanvas(fig)
                     axes = fig.gca()
                     divider = make_axes_locatable(axes)
@@ -2080,7 +2105,7 @@ class PagePCA(wx.Panel):
                 for i in range (self.numsigpca):
                 
                     self.pcaspectrum = self.anlz.eigenvecs[:,i]
-                    fig = mtplot.figure.Figure(figsize =(5.65,3.5))
+                    fig = mtplot.figure.Figure(figsize =(PlotW, PlotH))
                     canvas = FigureCanvas(fig)
                     fig.add_axes((0.15,0.15,0.75,0.75))
                     axes = fig.gca()
@@ -2377,7 +2402,7 @@ class PageStack(wx.Panel):
        
         hbox11 = wx.BoxSizer(wx.HORIZONTAL)
    
-        self.AbsImagePanel = wxmpl.PlotPanel(panel1, -1, size =(3.5,3.5), cursor=False, crosshairs=True, location=False, zoom=False)
+        self.AbsImagePanel = wxmpl.PlotPanel(panel1, -1, size =(PlotH, PlotH), cursor=False, crosshairs=True, location=False, zoom=False)
         wxmpl.EVT_POINT(panel1, self.AbsImagePanel.GetId(), self.OnPointAbsimage)
                               
         self.slider_eng = wx.Slider(panel1, -1, self.sel, 0, 100, style=wx.SL_LEFT )        
@@ -2402,7 +2427,7 @@ class PageStack(wx.Panel):
         self.tc_spec.SetFont(self.com.font)
           
         
-        self.SpectrumPanel = wxmpl.PlotPanel(panel2, -1, size=(5.75, 3.5), cursor=False, crosshairs=False, location=False, zoom=False)
+        self.SpectrumPanel = wxmpl.PlotPanel(panel2, -1, size=(PlotW, PlotH), cursor=False, crosshairs=False, location=False, zoom=False)
         wxmpl.EVT_POINT(panel2, self.SpectrumPanel.GetId(), self.OnPointSpectrum)
         
         vbox2.Add(self.tc_spec, 1, wx.LEFT | wx.TOP | wx.EXPAND, 20)       
@@ -2706,12 +2731,14 @@ class PageStack(wx.Panel):
             cbar = axes.figure.colorbar(im, orientation='vertical',cax=axcb) 
         
         if self.show_scale_bar == 1:
+            startx = int(self.stk.n_rows*0.05)
+            starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
             um_string = '$\mu m$'
             microns = '$'+self.stk.scale_bar_string+' $'+um_string
-            axes.text(self.stk.scale_bar_pixels_x+10,self.stk.n_cols-9, microns, horizontalalignment='left', verticalalignment='center',
+            axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center',
                       color = 'black', fontsize=14)
             #Matplotlib has flipped scales so I'm using rows instead of cols!
-            p = mtplot.patches.Rectangle((5,self.stk.n_cols-10), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
+            p = mtplot.patches.Rectangle((startx,starty), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
                                    color = 'black', fill = True)
             axes.add_patch(p)
         
@@ -3602,7 +3629,8 @@ class LimitEv(wx.Frame):
         
         self.evlimited = 0
         self.limitevmin = 0
-        self.limitevmax = self.stack.original_n_ev-1
+        self.limitevmax = self.stack.n_ev-1
+        
         
         vboxtop = wx.BoxSizer(wx.VERTICAL)
         
@@ -3650,8 +3678,8 @@ class LimitEv(wx.Frame):
 #----------------------------------------------------------------------        
     def draw_limitev_plot(self):
         
-        odtotal = self.stack.original_od3d.sum(axis=0)   
-        odtotal = odtotal.sum(axis=0)/(self.stack.original_n_rows*self.stack.original_n_cols) 
+        odtotal = self.stack.od3d.sum(axis=0)   
+        odtotal = odtotal.sum(axis=0)/(self.stack.n_rows*self.stack.n_cols) 
         
         fig = self.SpectrumPanel.get_figure()
         fig.clf()
@@ -3660,19 +3688,19 @@ class LimitEv(wx.Frame):
         
         mtplot.rcParams['font.size'] = self.fontsize
 
-        specplot = self.axes.plot(self.stack.original_ev,odtotal)
+        specplot = self.axes.plot(self.stack.ev,odtotal)
         
         self.axes.set_xlabel('Photon Energy [eV]')
         self.axes.set_ylabel('Optical Density')
         
         if self.evlimited == 1:
-            self.axes.axvspan(self.stack.original_ev[self.limitevmin], self.stack.original_ev[self.limitevmax], facecolor='g', alpha=0.5)
+            self.axes.axvspan(self.stack.ev[self.limitevmin], self.stack.ev[self.limitevmax], facecolor='g', alpha=0.5)
 
         
         self.SpectrumPanel.draw()
         
-        self.textctrl.SetValue('Min energy {0:5.2f} eV\n'.format(float(self.stack.original_ev[self.limitevmin]))
-                              + 'Max energy {0:5.2f} eV'.format(float(self.stack.original_ev[self.limitevmax])))
+        self.textctrl.SetValue('Min energy {0:5.2f} eV\n'.format(float(self.stack.ev[self.limitevmin]))
+                              + 'Max energy {0:5.2f} eV'.format(float(self.stack.ev[self.limitevmax])))
 
 #----------------------------------------------------------------------        
     def OnSelection(self, evt):
@@ -3682,8 +3710,8 @@ class LimitEv(wx.Frame):
 
         
         
-        self.limitevmin = npy.abs(self.stack.original_ev-x1).argmin()
-        self.limitevmax = npy.abs(self.stack.original_ev-x2).argmin()
+        self.limitevmin = npy.abs(self.stack.ev-x1).argmin()
+        self.limitevmax = npy.abs(self.stack.ev-x2).argmin()
         
         self.evlimited = 1
              
@@ -3694,14 +3722,14 @@ class LimitEv(wx.Frame):
         #change the energy range to limitevmin-limitev-max  
         #print self.stack.n_ev, self.stack.ev.shape
         self.stack.n_ev = self.limitevmax+1-self.limitevmin
-        self.stack.ev = self.stack.original_ev[self.limitevmin:self.limitevmax+1]
+        self.stack.ev = self.stack.ev[self.limitevmin:self.limitevmax+1]
         
         #print self.stack.n_ev, self.stack.ev.shape
         
         
-        self.stack.absdata = self.stack.original_absdata[:,:,self.limitevmin:self.limitevmax+1]
+        self.stack.absdata = self.stack.absdata[:,:,self.limitevmin:self.limitevmax+1]
         
-        self.stack.od3d = self.stack.original_od3d[:,:,self.limitevmin:self.limitevmax+1]
+        self.stack.od3d = self.stack.od3d[:,:,self.limitevmin:self.limitevmax+1]
         
         self.stack.od = self.stack.od3d.copy()
         
@@ -4103,9 +4131,6 @@ class ImageRegistration(wx.Frame):
         self.stack.n_ev = self.stack.n_ev - 1
         self.stack.ev = npy.delete(self.stack.ev, self.iev) 
         
-        self.stack.original_n_ev = self.stack.n_ev.copy()
-        self.stack.original_ev = self.stack.ev.copy()
-        self.stack.original_absdata = self.stack.absdata.copy()
         
         self.xshifts = npy.delete(self.xshifts, self.iev) 
         self.yshifts = npy.delete(self.yshifts, self.iev) 
@@ -4305,9 +4330,7 @@ class ImageRegistration(wx.Frame):
         
         self.stack.n_cols = datadim[0].copy()
         self.stack.n_rows =  datadim[1].copy()
-        
-        self.stack.original_absdata = self.stack.absdata.copy()
-        
+               
 
         
         if self.com.i0_loaded == 1:
@@ -4433,7 +4456,7 @@ class SpectralROI(wx.Frame):
         self.i0selected = 0        
         
                 
-        self.odtotal = self.stack.original_od3d.sum(axis=0)   
+        self.odtotal = self.stack.od3d.sum(axis=0)   
         self.odtotal = self.odtotal.sum(axis=0)/(self.stack.n_rows*self.stack.n_cols) 
         
         self.image_i0 = npy.zeros((self.stack.n_cols, self.stack.n_rows))
@@ -4911,9 +4934,9 @@ class MainFrame(wx.Frame):
         """
         Browse for .hdf5 or .stk file
         """
-
+        
         try: 
-            wildcard =  "HDF5 files (*.hdf5)|*.hdf5|STK files (*.stk)|*.stk" 
+            wildcard =  "HDF5 files (*.hdf5)|*.hdf5|STK files (*.stk)|*.stk|TXRM (*.txrm)|*.txrm" 
             dialog = wx.FileDialog(None, "Choose a file",
                                    style=wx.OPEN)
             dialog.SetWildcard(wildcard)
@@ -4922,6 +4945,7 @@ class MainFrame(wx.Frame):
                 self.page1.filename = dialog.GetFilename()
                                   
             basename, extension = os.path.splitext(self.page1.filename)      
+            
             
             if extension == '.stk':
                 wx.BeginBusyCursor()     
@@ -4999,6 +5023,43 @@ class MainFrame(wx.Frame):
                 
 
                 wx.EndBusyCursor()
+                
+            if extension == '.txrm':
+                wx.BeginBusyCursor()     
+            
+                if self.common.stack_loaded == 1:
+                    self.new_stack_refresh()  
+                    self.stk.new_data()
+                    self.stk.data_struct.delete_data()
+                    self.anlz.delete_data()  
+                         
+                self.stk.read_txrm(filepath)        
+                self.page1.slider_eng.SetRange(0,self.stk.n_ev-1)
+                self.iev = int(self.stk.n_ev/3)
+                self.page1.iev = self.iev
+                self.page1.slider_eng.SetValue(self.iev)
+            
+                x=self.stk.n_cols
+                y=self.stk.n_rows
+                z=self.iev               
+                self.page1.imgrgb = npy.zeros(x*y*3,dtype = "uint8")        
+                self.page1.maxval = npy.amax(self.stk.absdata)
+            
+                self.ix = int(x/2)
+                self.iy = int(y/2)
+                
+                self.page1.ix = self.ix
+                self.page1.iy = self.iy
+                        
+                self.common.stack_loaded = 1
+                
+                self.page1.ResetDisplaySettings()
+                self.page1.loadImage()
+                self.page1.loadSpectrum(self.ix, self.iy)
+                self.page1.textctrl.SetValue(self.page1.filename)
+                
+
+                wx.EndBusyCursor()                
 
         except:
 
@@ -5434,11 +5495,6 @@ class StackListFrame(wx.Frame):
 
 
         
-        self.stk.original_n_cols = self.stk.n_cols.copy()
-        self.stk.original_n_rows = self.stk.n_rows.copy()
-        self.stk.original_n_ev = self.stk.n_ev.copy()
-        self.stk.original_ev = self.stk.ev.copy()
-        self.stk.original_absdata = self.stk.absdata.copy()
         
         self.stk.fill_h5_struct_from_stk()
         

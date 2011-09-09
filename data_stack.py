@@ -1,8 +1,21 @@
-'''
-Created on Jun 20, 2011
+# 
+#   This file is part of Mantis, a Multivariate ANalysis Tool for Spectromicroscopy.
+# 
+#   Copyright (C) 2011 Mirna Lerotic, 2nd Look
+#   http://2ndlook.co/products.html
+#   License: GNU GPL v3
+#
+#   Mantis is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or
+#   any later version.
+#
+#   Mantis is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details <http://www.gnu.org/licenses/>.
 
-@author: Mirna Lerotic
-'''
+
 from __future__ import division
 
 import numpy as np
@@ -13,13 +26,15 @@ import datetime
 
 import x1a_stk
 import aps_hdf5
+import xradia_xrm
 import data_struct
 
 #----------------------------------------------------------------------
-class data(x1a_stk.x1astk,aps_hdf5.h5):
+class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm):
     def __init__(self, data_struct):
         x1a_stk.x1astk.__init__(self)
         aps_hdf5.h5.__init__(self)
+        xradia_xrm.xrm.__init__(self)
         
         self.data_struct = data_struct
 
@@ -32,27 +47,16 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
         self.x_dist = 0       
         self.y_dist = 0
 
-        self.ev = 0 
-        self.msec = 0          
+        self.ev = 0         
         self.absdata = 0
 
-        self.original_n_cols = 0
-        self.original_n_rows = 0
-        self.original_n_ev = 0
-        self.original_ev = 0
-        self.original_absdata = 0
         
         self.i0data =0
         self.evi0 = 0
         
         self.od = 0
         self.od3d = 0
-        self.original_absdata = 0
-        self.original_ev = 0
-        self.original_n_cols = 0
-        self.original_n_ev = 0
-        self.original_n_rows = 0
-        self.original_od3d = 0
+        
         
            
 #----------------------------------------------------------------------   
@@ -82,6 +86,14 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
             self.calculate_optical_density()
 
             
+        self.scale_bar()
+        
+#---------------------------------------------------------------------- 
+    def read_txrm(self, filename):    
+        self.new_data()  
+        xradia_xrm.xrm.read_xrm(self, filename, self.data_struct)
+        
+                
         self.scale_bar()
         
 #---------------------------------------------------------------------- 
@@ -211,7 +223,6 @@ class data(x1a_stk.x1astk,aps_hdf5.h5):
 
         #Optical density matrix is rearranged into n_pixelsxn_ev
         self.od = np.reshape(self.od, (n_pixels, self.n_ev), order='F')
-        self.original_od3d = self.od3d.copy()
 
         return
     

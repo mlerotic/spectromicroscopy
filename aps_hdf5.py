@@ -1,13 +1,24 @@
-'''
-Created on Jun 12, 2011
+# 
+#   This file is part of Mantis, a Multivariate ANalysis Tool for Spectromicroscopy.
+# 
+#   Copyright (C) 2011 Mirna Lerotic - 2nd Look, Nicholas Schwarz
+#   http://2ndlook.co/products.html
+#   License: GNU GPL v3
+#
+#   Mantis is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or
+#   any later version.
+#
+#   Mantis is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details <http://www.gnu.org/licenses/>.
 
-File format details can be found on 
+# File format details can be found on 
+#https://confluence.aps.anl.gov/display/NX/Data+Exchange+Basics
+ 
 
-https://confluence.aps.anl.gov/display/NX/Format+Data+Exchange+Spectromicroscopy 
-
-
-@authors: Mirna Lerotic & Nicholas Schwarz
-'''
 from __future__ import division
 
 import numpy as np
@@ -225,12 +236,6 @@ class h5:
             print 'evi0 ', self.evi0
         
 
-        
-        self.original_n_cols = self.n_cols.copy()
-        self.original_n_rows = self.n_rows.copy()
-        self.original_n_ev = self.n_ev.copy()
-        self.original_ev = self.ev.copy()
-        self.original_absdata = self.absdata.copy()
                 
         return
     
