@@ -169,7 +169,10 @@ class PageSpectral(wx.Panel):
         self.textctrl_sp = wx.TextCtrl(panel4, -1, style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         self.textctrl_sp.SetFont(self.com.font)
         sizer41.Add(self.textctrl_sp, 1, wx.EXPAND|wx.TOP|wx.LEFT, 5)
-        vbox4.Add(sizer41, 0, wx.EXPAND)
+      
+        hbox40 = wx.BoxSizer(wx.HORIZONTAL)    
+        hbox40.Add(sizer41, 1, wx.EXPAND)
+        vbox4.Add(hbox40, 0, wx.EXPAND)
         
         self.textctrl_sp.AppendText('Common Name: \n')
         self.textctrl_sp.AppendText('RMS Error: ')
@@ -270,7 +273,7 @@ class PageSpectral(wx.Panel):
 
         vbox.Add(hboxT, 0, wx.ALL, 5)
         
-        vbox.Add((0, 20))
+        vbox.Add((0, 10))
         
         vbox.Add(hboxB, 0, wx.LEFT | wx.RIGHT, 5)
   
