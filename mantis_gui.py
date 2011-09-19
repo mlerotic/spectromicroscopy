@@ -145,6 +145,12 @@ class PageSpectral(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self.OnAddClusterSpectra, id=self.button_addclspec.GetId())   
         self.button_addclspec.Disable()     
         vbox31.Add(self.button_addclspec, 0, wx.EXPAND)
+        
+        self.button_showrgb = wx.Button(panel3, -1, 'Composite RGB image...')
+        self.button_showrgb.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.OnCompositeRGB, id=self.button_showrgb.GetId())   
+        self.button_showrgb.Disable()     
+        vbox31.Add(self.button_showrgb, 0, wx.EXPAND)        
 
         self.button_save = wx.Button(panel3, -1, 'Save', (10,10))
         self.button_save.SetFont(self.com.font)
@@ -368,7 +374,11 @@ class PageSpectral(wx.Panel):
                                                         
         wx.GetApp().TopWindow.refresh_widgets()
         
-        
+#----------------------------------------------------------------------
+    def OnCompositeRGB(self, event):
+
+        ShowCompositeRBGmap(self.com, self.anlz).Show()
+                
 #----------------------------------------------------------------------
     def OnSave(self, event):
         
@@ -755,6 +765,202 @@ class PageSpectral(wx.Panel):
         
         self.ShowFitWeights()
         
+#---------------------------------------------------------------------- 
+class ShowCompositeRBGmap(wx.Frame):
+
+    title = "Composite RBG Map"
+
+    def __init__(self, common, anlz):
+        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(630, 470))
+               
+        ico = logos.getlogo_2l_32Icon()
+        self.SetIcon(ico)
+        
+        self.SetBackgroundColour("White") 
+        
+        self.com = common 
+        self.anlz = anlz
+        
+        self.com = wx.GetApp().TopWindow.common         
+        self.fontsize = self.com.fontsize
+        
+        
+        self.n_cols = self.anlz.stack.n_cols 
+        self.n_rows = self.anlz.stack.n_rows
+        
+        self.rgbimage = npy.zeros((self.n_cols, self.n_rows, 3), dtype=float)
+        
+    
+        vboxtop = wx.BoxSizer(wx.HORIZONTAL)
+        
+        panel = wx.Panel(self, -1)
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        hbox1 = wx.BoxSizer(wx.HORIZONTAL)       
+       
+        sizer1 = wx.StaticBoxSizer(wx.StaticBox(panel, -1, 'RBG spectra'), orient=wx.VERTICAL)
+
+        fgs1 = wx.FlexGridSizer(3, 2, 2, 5)
+        r = wx.StaticText(panel, label="Red")
+        r.SetFont(self.com.font)
+        g = wx.StaticText(panel, label="Green")
+        g.SetFont(self.com.font)
+        b = wx.StaticText(panel, label="Blue")
+        b.SetFont(self.com.font)        
+        
+        
+        self.combor = wx.ComboBox(panel, size=(150, -1), choices=self.anlz.tspec_names, style=wx.CB_READONLY)       
+        self.Bind(wx.EVT_COMBOBOX, self.OnSelectR, self.combor)
+        self.combor.SetToolTip(wx.ToolTip("select spectrum from dropdown-list"))
+        
+        self.combog = wx.ComboBox(panel, size=(150, -1), choices=self.anlz.tspec_names, style=wx.CB_READONLY)
+        self.Bind(wx.EVT_COMBOBOX, self.OnSelectG, self.combog)        
+        self.combog.SetToolTip(wx.ToolTip("select spectrum from dropdown-list"))
+        
+        self.combob = wx.ComboBox(panel, size=(150, -1), choices=self.anlz.tspec_names, style=wx.CB_READONLY)        
+        self.Bind(wx.EVT_COMBOBOX, self.OnSelectB, self.combob)
+        self.combob.SetToolTip(wx.ToolTip("select spectrum from dropdown-list"))
+        
+        fgs1.AddMany([(r), (self.combor, 0, wx.EXPAND), (g), 
+            (self.combog, 0, wx.EXPAND),(b), (self.combob, 0, wx.EXPAND)])
+        
+        sizer1.Add(fgs1, 0, wx.EXPAND|wx.ALL, 10)
+                
+        hbox1.Add(sizer1, 0,  wx.LEFT|wx.RIGHT ,20)
+
+
+        self.RGBImagePanel = wxmpl.PlotPanel(panel, -1, size =(PlotH,PlotH), cursor=False, crosshairs=False, location=False, zoom=False)
+        hbox1.Add(self.RGBImagePanel, 0)
+        
+        vbox.Add(hbox1, 0, wx.EXPAND| wx.TOP, 20) 
+        
+             
+        hbox2 = wx.BoxSizer(wx.HORIZONTAL)
+               
+        button_save = wx.Button(panel, -1, 'Save image')
+        self.Bind(wx.EVT_BUTTON, self.OnSave, id=button_save.GetId())
+        hbox2.Add(button_save, 1, wx.ALL,20)
+        
+        button_close = wx.Button(panel, -1, 'Dismiss')
+        self.Bind(wx.EVT_BUTTON, self.OnClose, id=button_close.GetId())
+        hbox2.Add(button_close, 1, wx.ALL ,20)
+        
+        vbox.Add(hbox2, 0, wx.EXPAND|wx.TOP, 10 )
+        
+        panel.SetSizer(vbox)
+        
+        vboxtop.Add(panel,1, wx.EXPAND )
+        
+        self.SetSizer(vboxtop)
+        
+        
+#----------------------------------------------------------------------           
+    def OnSelectR(self, event):
+        item = event.GetSelection()
+        tsmap = self.anlz.target_pcafit_maps[:,:,item].copy()
+
+        scale_min = tsmap.min()
+        scale_max = tsmap.max()
+
+        tsmap = tsmap.clip(min=scale_min, max=scale_max)
+        tsmap = (tsmap -scale_min) / (scale_max - scale_min)
+        indices = npy.where(tsmap < 0)
+        tsmap[indices] = 0.0
+        indices = npy.where(tsmap > 1)
+        tsmap[indices] = 1.0
+    
+        self.rgbimage[:,:,0] = tsmap
+        
+        self.draw_image()
+        
+#----------------------------------------------------------------------           
+    def OnSelectG(self, event):
+        item = event.GetSelection()
+        tsmap = self.anlz.target_pcafit_maps[:,:,item].copy()
+
+        scale_min = tsmap.min()
+        scale_max = tsmap.max()
+
+        tsmap = tsmap.clip(min=scale_min, max=scale_max)
+        tsmap = (tsmap -scale_min) / (scale_max - scale_min)
+        indices = npy.where(tsmap < 0)
+        tsmap[indices] = 0.0
+        indices = npy.where(tsmap > 1)
+        tsmap[indices] = 1.0
+    
+        self.rgbimage[:,:,1] = tsmap
+        
+        self.draw_image()
+        
+#----------------------------------------------------------------------           
+    def OnSelectB(self, event):
+        item = event.GetSelection()
+        tsmap = self.anlz.target_pcafit_maps[:,:,item].copy()
+
+        scale_min = tsmap.min()
+        scale_max = tsmap.max()
+
+        tsmap = tsmap.clip(min=scale_min, max=scale_max)
+        tsmap = (tsmap -scale_min) / (scale_max - scale_min)
+        indices = npy.where(tsmap < 0)
+        tsmap[indices] = 0.0
+        indices = npy.where(tsmap > 1)
+        tsmap[indices] = 1.0
+    
+        self.rgbimage[:,:,2] = tsmap
+        
+        self.draw_image()
+        
+#----------------------------------------------------------------------        
+    def draw_image(self):
+               
+               
+        fig = self.RGBImagePanel.get_figure()
+        fig.clf()
+        fig.add_axes((0.02,0.02,0.96,0.96))
+        
+        
+        axes = fig.gca()
+        fig.patch.set_alpha(1.0) 
+      
+        im = axes.imshow(self.rgbimage) 
+
+         
+        axes.axis("off")  
+        self.RGBImagePanel.draw()
+        
+#----------------------------------------------------------------------              
+    def OnSave(self, evt):
+
+        wildcard = 'Portable Network Graphics (*.png)|*.png|Adobe PDF Files (*.pdf)|*.pdf'               
+        SaveFileName = wx.FileSelector('Save Plot', default_extension='png', 
+                                   wildcard=wildcard, parent=self, flags=wx.SAVE|wx.OVERWRITE_PROMPT) 
+        
+        if not SaveFileName: 
+            return      
+        path, ext = os.path.splitext(SaveFileName) 
+        ext = ext[1:].lower() 
+        
+       
+        if ext != 'png' and ext != 'pdf': 
+            error_message = ( 
+                  'Only the PNG and PDF image formats are supported.\n' 
+                 'A file extension of `png\' or `pdf\' must be used.') 
+            wx.MessageBox(error_message, 'Error - Could not save file.'+error_message, 
+                  parent=self, style=wx.OK|wx.ICON_ERROR) 
+            return 
+   
+
+        mtplot.rcParams['pdf.fonttype'] = 42
+
+                            
+        fig = self.RGBImagePanel.get_figure()
+        fig.savefig(SaveFileName)
+                
+   
+
+#----------------------------------------------------------------------              
+    def OnClose(self, evt):
+        self.Close(True)             
         
 #---------------------------------------------------------------------- 
 class SaveWinP4(wx.Frame):
@@ -5210,11 +5416,13 @@ class MainFrame(wx.Frame):
             self.page4.button_movespdown.Disable()
             self.page4.button_movespup.Disable()
             self.page4.button_save.Disable()
+            self.page4.button_showrgb.Disable() 
         else:
             self.page4.button_removespec.Enable()
             self.page4.button_movespdown.Enable()
             self.page4.button_movespup.Enable()
-            self.page4.button_save.Enable()          
+            self.page4.button_save.Enable() 
+            self.page4.button_showrgb.Enable()          
                   
             
         self.page1.ResetDisplaySettings()
