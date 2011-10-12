@@ -2134,6 +2134,7 @@ class PagePCA(wx.Panel):
         self.selpca = 1       
         self.numsigpca = 2
         self.slidershow.SetValue(self.selpca)
+
         try: 
             self.CalcPCA()
             self.calcpca = True
@@ -2340,7 +2341,8 @@ class PagePCA(wx.Panel):
 #----------------------------------------------------------------------      
     def showEvals(self):
         
-        self.pcaevals = self.anlz.eigenvals[0:40]
+        evalmax = npy.min([self.stk.n_ev-1, 40])
+        self.pcaevals = self.anlz.eigenvals[0:evalmax]
         
 
         fig = self.PCAEvalsPan.get_figure()
@@ -2350,7 +2352,7 @@ class PagePCA(wx.Panel):
         
         mtplot.rcParams['font.size'] = self.fontsize
        
-        evalsplot = axes.semilogy(npy.arange(1,41), self.pcaevals,'b.')    
+        evalsplot = axes.semilogy(npy.arange(1,evalmax+1), self.pcaevals,'b.')    
         
         axes.set_xlabel('Principal Component')
         axes.set_ylabel('Log(Eigenvalue)')
@@ -5143,7 +5145,7 @@ class MainFrame(wx.Frame):
         """
         Browse for .hdf5 or .stk file
         """
-        
+
         try: 
             wildcard =  "HDF5 files (*.hdf5)|*.hdf5|STK files (*.stk)|*.stk|TXRM (*.txrm)|*.txrm" 
             dialog = wx.FileDialog(None, "Choose a file",

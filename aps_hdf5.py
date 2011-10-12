@@ -114,6 +114,7 @@ class h5:
                                            energy = dseng[...], 
                                            energy_units = dseng.attrs['units'])
         
+        
         axes = data_struct.exchange.detector[0].axes
         axes_list =  axes.split(':')
         
@@ -213,8 +214,22 @@ class h5:
         npixels = self.n_cols*self.n_rows*self.n_ev
         
         
+        #Check if the energies are consecutive, if they are not sort the data
+        consec = 0
+        for i in range(self.n_ev - 1):
+            if self.ev[i] > self.ev[i+1]:
+                consec = 1
+                break
+        if consec == 1:
+            print "sort the data"
+            sortind = np.argsort(self.ev)
+            self.ev = self.ev[sortind]
+            self.absdata = self.absdata[:,:,sortind]
+        
+        
         self.x_dist = data_struct.exchange.detector[0].ds['x'] 
         self.y_dist = data_struct.exchange.detector[0].ds['y']
+                
         
         self.i0data = data_struct.spectromicroscopy.normalization.white_spectrum           
         self.evi0 = data_struct.spectromicroscopy.normalization.white_spectrum_energy
@@ -229,11 +244,11 @@ class h5:
             print 'n_rows ', self.n_rows
             print 'n_ev ', self.n_ev
             print 'ev array ', self.ev
-            #print 'x dist ', self.x_dist
-            #print 'y_dist ', self.y_dist
+            print 'x dist ', self.x_dist
+            print 'y_dist ', self.y_dist
             print 'type ', type 
-            print 'i0 data ', self.i0data
-            print 'evi0 ', self.evi0
+            #print 'i0 data ', self.i0data
+            #print 'evi0 ', self.evi0
         
 
                 
