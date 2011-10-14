@@ -5771,7 +5771,7 @@ class AboutFrame(wx.Frame):
 
         
         font3 = wx.Font(12, wx.SWISS, wx.NORMAL, wx.NORMAL)
-        text3 = wx.StaticText(panel, 0, '''Mantis 1.0  
+        text3 = wx.StaticText(panel, 0, '''Mantis 1.07
 Developed by Mirna Lerotic''')
         text3.SetFont(font3)
              
