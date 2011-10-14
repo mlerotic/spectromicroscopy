@@ -32,6 +32,7 @@ import data_struct
 import data_stack
 import analyze
 import logos
+import nnma
 
 
 
@@ -56,6 +57,42 @@ class common:
 
         self.font = wx.SystemSettings_GetFont(wx.SYS_DEFAULT_GUI_FONT)
 
+
+""" ------------------------------------------------------------------------------------------------"""
+class PageNnma(wx.Panel):
+    def __init__(self, parent, common, data_struct, stack, nnma):
+        wx.Panel.__init__(self, parent)
+        
+        self.data_struct = data_struct
+        self.stk = stack
+        self.com = common
+        self.nnma = nnma
+        
+
+        panel1 = wx.Panel(self, -1)
+        sb = wx.StaticBox(panel1, -1, 'Nnma')
+        sb.SetBackgroundColour("white")
+        sizer1 = wx.StaticBoxSizer(sb, orient=wx.VERTICAL)
+        vbox31 = wx.BoxSizer(wx.VERTICAL)
+        vbox31.Add((0,10)) 
+        
+        self.button_1= wx.Button(panel1, -1, 'Print something')
+        self.button_1.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.OnButton1, id=self.button_1.GetId())
+        vbox31.Add(self.button_1, 0, wx.EXPAND)
+        
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        
+        vbox.Add(panel1, 0, wx.ALL, 20)
+  
+        self.SetSizer(vbox) 
+        
+#----------------------------------------------------------------------
+    def OnButton1(self, event):
+        
+        self.nnma.printi0()
+
+        
 
 """ ------------------------------------------------------------------------------------------------"""
 class PageSpectral(wx.Panel):
@@ -5076,6 +5113,7 @@ class MainFrame(wx.Frame):
         self.data_struct = data_struct.h5()
         self.stk = data_stack.data(self.data_struct)
         self.anlz = analyze.analyze(self.stk)
+        self.nnma = nnma.nnma(self.stk)
         self.common = common()
         
         self.SetFont(self.common.font)
@@ -5090,12 +5128,14 @@ class MainFrame(wx.Frame):
         self.page2 = PagePCA(nb, self.common, self.data_struct, self.stk, self.anlz)
         self.page3 = PageCluster(nb, self.common, self.data_struct, self.stk, self.anlz)
         self.page4 = PageSpectral(nb, self.common, self.data_struct, self.stk, self.anlz)
+        #self.page5 = PageNnma(nb, self.common, self.data_struct, self.stk, self.nnma)
 
         # add the pages to the notebook with the label to show on the tab
         nb.AddPage(self.page1, "Image Stack")
         nb.AddPage(self.page2, "PCA")
         nb.AddPage(self.page3, "Cluster Analysis")
         nb.AddPage(self.page4, "Spectral Analysis")
+        #nb.AddPage(self.page5, "NNM Analysis")
         
 
         # finally, put the notebook in a sizer for the panel to manage
