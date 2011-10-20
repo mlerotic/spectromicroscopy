@@ -5148,6 +5148,7 @@ class MainFrame(wx.Frame):
         self.Show(True) 
         
         
+        
 #----------------------------------------------------------------------        
     def initToolbar(self):
 
@@ -5185,8 +5186,9 @@ class MainFrame(wx.Frame):
         """
         Browse for .hdf5 or .stk file
         """
-
-        try: 
+        a=1
+        if a==1:
+        #try: 
             wildcard =  "HDF5 files (*.hdf5)|*.hdf5|STK files (*.stk)|*.stk|TXRM (*.txrm)|*.txrm" 
             dialog = wx.FileDialog(None, "Choose a file",
                                    style=wx.OPEN)
@@ -5204,7 +5206,7 @@ class MainFrame(wx.Frame):
                 if self.common.stack_loaded == 1:
                     self.new_stack_refresh()  
                     self.stk.new_data()
-                    self.stk.data_struct.delete_data()
+                    #self.stk.data_struct.delete_data()
                     self.anlz.delete_data()       
                 self.stk.read_stk(filepath)        
                 self.page1.slider_eng.SetRange(0,self.stk.n_ev-1)
@@ -5240,7 +5242,7 @@ class MainFrame(wx.Frame):
                 if self.common.stack_loaded == 1:
                     self.new_stack_refresh()  
                     self.stk.new_data()
-                    self.stk.data_struct.delete_data()
+                    #self.stk.data_struct.delete_data()
                     self.anlz.delete_data()                
             
                 self.stk.read_h5(filepath)
@@ -5261,7 +5263,7 @@ class MainFrame(wx.Frame):
                         
                 self.common.stack_loaded = 1
                 
-                if self.stk.data_struct.spectromicroscopy.normalization.white_spectrum.any():
+                if self.stk.data_struct.spectromicroscopy.normalization.white_spectrum is not None:
                     self.common.i0_loaded = 1
                 
                 self.page1.ix = self.ix
@@ -5281,7 +5283,7 @@ class MainFrame(wx.Frame):
                 if self.common.stack_loaded == 1:
                     self.new_stack_refresh()  
                     self.stk.new_data()
-                    self.stk.data_struct.delete_data()
+                    #self.stk.data_struct.delete_data()
                     self.anlz.delete_data()  
                          
                 self.stk.read_txrm(filepath)        
@@ -5312,13 +5314,13 @@ class MainFrame(wx.Frame):
 
                 wx.EndBusyCursor()                
 
-        except:
-
-            self.common.stack_loaded = 0 
-            self.common.i0_loaded = 0
-                               
-            wx.EndBusyCursor()
-            wx.MessageBox("Image stack not loaded.")
+#        except:
+#
+#            self.common.stack_loaded = 0 
+#            self.common.i0_loaded = 0
+#                               
+#            wx.EndBusyCursor()
+#            wx.MessageBox("Image stack not loaded.")
                    
         dialog.Destroy()
         self.refresh_widgets()
@@ -5357,8 +5359,8 @@ class MainFrame(wx.Frame):
         """
         Browse for .hdf5 file
         """
-
-        try: 
+        if True:
+        #try: 
             wildcard = "HDF5 files (*.hdf5)|*.hdf5"
             dialog = wx.FileDialog(None, "Save as .hdf5", wildcard=wildcard,
                                     style=wx.SAVE|wx.OVERWRITE_PROMPT)
@@ -5371,10 +5373,10 @@ class MainFrame(wx.Frame):
             self.stk.write_h5(filepath, self.data_struct)    
             wx.EndBusyCursor()      
 
-        except:
-
-            wx.EndBusyCursor()
-            wx.MessageBox("Could not save HDF5 file.")
+#        except:
+#
+#            wx.EndBusyCursor()
+#            wx.MessageBox("Could not save HDF5 file.")
                    
         dialog.Destroy()
         self.refresh_widgets()

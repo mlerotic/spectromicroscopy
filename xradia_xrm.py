@@ -170,40 +170,35 @@ class xrm:
                 
                 
         #Fill the data structure with data: 
-        self.data_struct.implements = 'base:exchange:spectromicroscopy'
-        self.data_struct.version = '0.9'
-        self.data_struct.file_creation_datetime = date
-        self.data_struct.comment = 'Converted from .txrm (Xradia file format)',
+        self.data_struct.implements = 'information:exchange:spectromicroscopy'
+        self.data_struct.version = '1.0'
+        
+        
+        self.data_struct.information.file_creation_datetime = date
+        self.data_struct.information.comment = 'Converted from .txrm (Xradia file format)',
         
 
-        self.data_struct.add_experimenter(name = analyst)
+        self.data_struct.information.experimenter.name = analyst
         
-        self.data_struct.add_sample(name = sample)
+        self.data_struct.information.sample.name = sample
         
+        self.data_struct.exchange.data = self.absdata
+        self.data_struct.exchange.data_signal = 1
+        self.data_struct.exchange.data_axes='x:y'
         
-        self.data_struct.exchange.add_detector(data=self.absdata, 
-                                                  signal = 1, 
-                                                  axes='x:y', 
-                                                  energy=self.ev, 
-                                                  energy_units = 'ev')
+        self.data_struct.exchange.energy=self.ev
+        self.data_struct.exchange.energy_units = 'ev'
+        
         
         #Since we do not have a scanning microscope we fill the x_dist and y_dist from pixel_size
         self.x_dist = np.arange(np.float(self.n_cols))*pixelsize
         self.y_dist = np.arange(np.float(self.n_rows))*pixelsize
     
-        self.data_struct.exchange.detector[0].add_dimscale(key = 'x', units = 'um', data = self.x_dist)
-        self.data_struct.exchange.detector[0].add_dimscale(key = 'y', units = 'um', data = self.y_dist)
-        
-        self.data_struct.exchange.add_white_data()
-        self.data_struct.exchange.add_dark_data()
-        
-        
-        
-        self.data_struct.spectromicroscopy.add_beamline()
-        self.data_struct.spectromicroscopy.add_positions()
-        
-        
-        self.data_struct.spectromicroscopy.add_normalization()
+        self.data_struct.exchange.x = self.x_dist
+        self.data_struct.exchange.x_units = 'um'
+        self.data_struct.exchange.y = self.y_dist
+        self.data_struct.exchange.y_units = 'um'     
+          
           
         return
     

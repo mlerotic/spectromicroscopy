@@ -82,7 +82,7 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm):
         self.new_data()  
         aps_hdf5.h5.read_h5(self, filename, self.data_struct)
         
-        if self.data_struct.spectromicroscopy.normalization.white_spectrum.any():
+        if self.data_struct.spectromicroscopy.normalization.white_spectrum is not None:
             self.calculate_optical_density()
 
             
@@ -102,44 +102,32 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm):
         
         now = datetime.datetime.now()
         
-        self.data_struct.implements = 'base:exchange:spectromicroscopy'
-        self.data_struct.version = '0.9'
-        self.data_struct.file_creation_datetime = now.strftime("%Y-%m-%dT%H:%M")
-        self.data_struct.comment = 'Converted from .stk',
+        self.data_struct.implements = 'information:exchange:spectromicroscopy'
+        self.data_struct.version = '1.0'
         
-        self.data_struct.add_experimenter()
+        self.data_struct.information.file_creation_datetime = now.strftime("%Y-%m-%dT%H:%M")
+        self.data_struct.information.comment = 'Converted from .stk',
+        
+        
+        self.data_struct.exchange.data = self.absdata
+        self.data_struct.exchange.data_signal = 1
+        self.data_struct.exchange.data_axes='x:y'
+        
+        self.data_struct.exchange.energy=self.ev
+        self.data_struct.exchange.energy_units = 'ev'
+        
+        
+        self.data_struct.exchange.x = self.x_dist
+        self.data_struct.exchange.y = self.y_dist
+        
 
-        self.data_struct.add_sample()
-        
-        
-        self.data_struct.exchange.add_detector(data=self.absdata, 
-                                                  signal = 1, 
-                                                  axes='x:y', 
-                                                  energy=self.ev, 
-                                                  energy_units = 'ev')
-        
-        
-        self.data_struct.exchange.detector[0].add_dimscale(key = 'x', units = 'um', data = self.x_dist)
-        self.data_struct.exchange.detector[0].add_dimscale(key = 'y', units = 'um', data = self.y_dist)
-        
-        self.data_struct.exchange.add_white_data()
-        self.data_struct.exchange.add_dark_data()
-        
-        
-        
-        self.data_struct.spectromicroscopy.add_beamline()
-        self.data_struct.spectromicroscopy.add_positions()
-        
-        
-        self.data_struct.spectromicroscopy.add_normalization()
-        
         
 #---------------------------------------------------------------------- 
     def fill_h5_struct_normalization(self):   
         
-        self.data_struct.spectromicroscopy.normalization.white_spectrum=self.i0data 
+        self.data_struct.spectromicroscopy.normalization.white_spectrum = self.i0data 
         self.data_struct.spectromicroscopy.normalization.white_spectrum_energy = self.evi0
-        self.data_struct.spectromicroscopy.normalization.white_spectrum_energy_units='eV'
+        self.data_struct.spectromicroscopy.normalization.white_spectrum_energy_units = 'eV'
         
         self.data_struct.spectromicroscopy.optical_density = self.od
         
