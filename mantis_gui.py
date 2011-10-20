@@ -4910,8 +4910,12 @@ class SpectralROI(wx.Frame):
 #---------------------------------------------------------------------- 
 class PlotFrame(wx.Frame):
 
-    def __init__(self, datax, datay):
-        wx.Frame.__init__(self, wx.GetApp().TopWindow, title = "I0 data", size=(630, 500))
+    def __init__(self, datax, datay, title = "I0 data"):
+        wx.Frame.__init__(self, wx.GetApp().TopWindow, title = title, size=(630, 500))
+        
+        self.datax = datax
+        self.datay = datay
+        self.title = title
         
         ico = logos.getlogo_2l_32Icon()
         self.SetIcon(ico)
@@ -4932,10 +4936,17 @@ class PlotFrame(wx.Frame):
         vbox.Add(self.PlotPanel, 0, wx.ALL, 20)
         
 
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
         
+        button_save = wx.Button(panel, -1, 'Save Spectrum')
+        self.Bind(wx.EVT_BUTTON, self.OnSave, id=button_save.GetId())
+        hbox.Add(button_save, 0, wx.ALL | wx.ALIGN_RIGHT ,20)        
+                
         button_close = wx.Button(panel, -1, 'Close')
         self.Bind(wx.EVT_BUTTON, self.OnClose, id=button_close.GetId())
-        vbox.Add(button_close, 0, wx.ALL | wx.ALIGN_RIGHT ,20)
+        hbox.Add(button_close, 0, wx.ALL | wx.ALIGN_RIGHT ,20)
+        
+        vbox.Add(hbox)
         
 
         panel.SetSizer(vbox)
@@ -4967,9 +4978,74 @@ class PlotFrame(wx.Frame):
         
         self.PlotPanel.draw()
         
+#----------------------------------------------------------------------
+    def OnSave(self, event):
+
+
+        try: 
+            wildcard = "xas files (*.xas)|*.xas"
+            dialog = wx.FileDialog(None, "Save as .xas", wildcard=wildcard,
+                                    style=wx.SAVE|wx.OVERWRITE_PROMPT)
+
+            if dialog.ShowModal() == wx.ID_OK:
+                            filepath = dialog.GetPath()
+                            
+            wx.BeginBusyCursor()                  
+            self.Save(filepath)    
+            wx.EndBusyCursor()      
+
+        except:
+
+            wx.EndBusyCursor()
+            wx.MessageBox("Could not save .xas file.")
+                   
+        dialog.Destroy()
+
+        
+        return
+
+#----------------------------------------------------------------------
+    def Save(self, filename):
+            
+        file = open(filename, 'w')
+        print>>file, '*********************  X-ray Absorption Data  ********************'
+        print>>file, '*'
+        print>>file, '* Formula: '
+        print>>file, '* Common name: ', self.title
+        print>>file, '* Edge: '
+        print>>file, '* Acquisition mode: '
+        print>>file, '* Source and purity: ' 
+        print>>file, '* Comments: Stack list ROI ""'
+        print>>file, '* Delta eV: '
+        print>>file, '* Min eV: '
+        print>>file, '* Max eV: '
+        print>>file, '* Y axis: '
+        print>>file, '* Contact person: '
+        print>>file, '* Write date: '
+        print>>file, '* Journal: '
+        print>>file, '* Authors: '
+        print>>file, '* Title: '
+        print>>file, '* Volume: '
+        print>>file, '* Issue number: '
+        print>>file, '* Year: '
+        print>>file, '* Pages: '
+        print>>file, '* Booktitle: '
+        print>>file, '* Editors: '
+        print>>file, '* Publisher: '
+        print>>file, '* Address: '
+        print>>file, '*--------------------------------------------------------------'
+        dim = self.datax.shape
+        n=dim[0]
+        for ie in range(n):
+            print>>file, '\t%.6f\t%.6f' %(self.datax[ie], self.datay[ie])
+        
+        file.close()
+    
+        
 #----------------------------------------------------------------------              
     def OnClose(self, evt):
         self.Close(True)
+        
         
         
 #---------------------------------------------------------------------- 
@@ -5186,9 +5262,8 @@ class MainFrame(wx.Frame):
         """
         Browse for .hdf5 or .stk file
         """
-        a=1
-        if a==1:
-        #try: 
+
+        try: 
             wildcard =  "HDF5 files (*.hdf5)|*.hdf5|STK files (*.stk)|*.stk|TXRM (*.txrm)|*.txrm" 
             dialog = wx.FileDialog(None, "Choose a file",
                                    style=wx.OPEN)
@@ -5314,13 +5389,13 @@ class MainFrame(wx.Frame):
 
                 wx.EndBusyCursor()                
 
-#        except:
-#
-#            self.common.stack_loaded = 0 
-#            self.common.i0_loaded = 0
-#                               
-#            wx.EndBusyCursor()
-#            wx.MessageBox("Image stack not loaded.")
+        except:
+
+            self.common.stack_loaded = 0 
+            self.common.i0_loaded = 0
+                               
+            wx.EndBusyCursor()
+            wx.MessageBox("Image stack not loaded.")
                    
         dialog.Destroy()
         self.refresh_widgets()
@@ -5359,8 +5434,8 @@ class MainFrame(wx.Frame):
         """
         Browse for .hdf5 file
         """
-        if True:
-        #try: 
+
+        try: 
             wildcard = "HDF5 files (*.hdf5)|*.hdf5"
             dialog = wx.FileDialog(None, "Save as .hdf5", wildcard=wildcard,
                                     style=wx.SAVE|wx.OVERWRITE_PROMPT)
@@ -5373,10 +5448,10 @@ class MainFrame(wx.Frame):
             self.stk.write_h5(filepath, self.data_struct)    
             wx.EndBusyCursor()      
 
-#        except:
-#
-#            wx.EndBusyCursor()
-#            wx.MessageBox("Could not save HDF5 file.")
+        except:
+
+            wx.EndBusyCursor()
+            wx.MessageBox("Could not save HDF5 file.")
                    
         dialog.Destroy()
         self.refresh_widgets()
