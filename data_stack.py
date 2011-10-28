@@ -106,7 +106,7 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm):
         self.data_struct.version = '1.0'
         
         self.data_struct.information.file_creation_datetime = now.strftime("%Y-%m-%dT%H:%M")
-        self.data_struct.information.comment = 'Converted from .stk',
+        self.data_struct.information.comment = 'Converted from .stk'
         
         
         self.data_struct.exchange.data = self.absdata

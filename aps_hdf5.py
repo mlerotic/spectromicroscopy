@@ -364,14 +364,19 @@ class h5:
             if 'normalization' in spectromicroscopyGrp:
                 normGrp = spectromicroscopyGrp['normalization']
                 ws = normGrp['white_spectrum']
-                data_struct.spectromicroscopy.normalization.white_spectrum = ws[...]
-                if 'units' in ws.attrs:
-                    data_struct.spectromicroscopy.normalization.white_spectrum_units = ws.attrs['units']
-                wse = normGrp['white_spectrum_energy']
-                data_struct.spectromicroscopy.normalization.white_spectrum_energy = wse[...]
-                if 'units' in ws.attrs:
-                    data_struct.spectromicroscopy.normalization.white_spectrum_energy_units = wse.attrs['units']
-      
+                #Check if white_spectrum is an array
+                wspectrum = ws[...]
+                try:
+                    a = wspectrum[10]
+                    data_struct.spectromicroscopy.normalization.white_spectrum = ws[...]
+                    if 'units' in ws.attrs:
+                        data_struct.spectromicroscopy.normalization.white_spectrum_units = ws.attrs['units']
+                    wse = normGrp['white_spectrum_energy']
+                    data_struct.spectromicroscopy.normalization.white_spectrum_energy = wse[...]
+                    if 'units' in ws.attrs:
+                        data_struct.spectromicroscopy.normalization.white_spectrum_energy_units = wse.attrs['units']
+                except:
+                    pass
 
         # Close
         f.close()
