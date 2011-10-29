@@ -3570,7 +3570,7 @@ class PageStack(wx.Panel):
         image = self.stk.despike(image)
         
         
-        self.stack.data_struct.exchange.detector[0].data = self.stack.absdata
+        self.stack.data_struct.exchange.data = self.stack.absdata
         
         if self.com.i0_loaded:
             self.stk.calculate_optical_density()
@@ -4383,8 +4383,8 @@ class ImageRegistration(wx.Frame):
         self.xshifts = npy.delete(self.xshifts, self.iev) 
         self.yshifts = npy.delete(self.yshifts, self.iev) 
         
-        self.stack.data_struct.exchange.detector[0].data = self.stack.absdata
-        self.stack.data_struct.exchange.detector[0].energy = self.stack.ev
+        self.stack.data_struct.exchange.data = self.stack.absdata
+        self.stack.data_struct.exchange.energy = self.stack.ev
         
         if self.com.i0_loaded == 1:
             self.stack.calculate_optical_density()
@@ -4584,8 +4584,8 @@ class ImageRegistration(wx.Frame):
         if self.com.i0_loaded == 1:
             self.stack.calculate_optical_density()
 
-        self.stack.data_struct.exchange.detector[0].data = self.stack.absdata
-        self.stack.data_struct.exchange.detector[0].energy = self.stack.ev
+        self.stack.data_struct.exchange.data = self.stack.absdata
+        self.stack.data_struct.exchange.energy = self.stack.ev
         
         
         wx.GetApp().TopWindow.page1.slider_eng.SetRange(0,self.stack.n_ev-1)
@@ -5795,35 +5795,21 @@ class StackListFrame(wx.Frame):
         
         
         #fill the gui structure data
-        self.stk.absdata = self.data_struct.exchange.detector[0].data
+        self.stk.absdata = self.data_struct.exchange.data
         
         datadim = npy.int32(self.stk.absdata.shape)
         self.stk.n_cols = datadim[0].copy()
         self.stk.n_rows =  datadim[1].copy()
-        self.stk.ev = self.data_struct.exchange.detector[0].energy 
+        self.stk.ev = self.data_struct.exchange.energy 
         self.stk.n_ev = npy.int32(self.stk.ev.shape[0]).copy()
         
         npixels = self.stk.n_cols*self.stk.n_rows*self.stk.n_ev
         
         
-        self.stk.x_dist = self.data_struct.exchange.detector[0].ds['x'] 
-        self.stk.y_dist = self.data_struct.exchange.detector[0].ds['y']
+        self.stk.x_dist = self.data_struct.exchange.x 
+        self.stk.y_dist = self.data_struct.exchange.y
         
         
-        verbose = 0
-        
-        if verbose == 1: 
-
-            print 'File creation date ', self.data_struct.file_creation_datetime
-            print 'Data array shape: ', self.stk.absdata.shape
-            print 'n columns ', self.stk.n_cols
-            print 'n_rows ', self.stk.n_rows
-            print 'n_ev ', self.stk.n_ev
-            print 'ev array ', self.stk.ev
-            #print 'x dist ', self.x_dist
-            #print 'y_dist ', self.y_dist
-
-
         
         
         self.stk.fill_h5_struct_from_stk()
