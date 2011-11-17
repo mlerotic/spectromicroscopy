@@ -100,6 +100,8 @@ class sm:
         
         x_direction = getattr(fcdf,'fast_direction')
         y_direction = getattr(fcdf,'slow_direction')
+        
+        dwell_msec = getattr(fcdf,'dwell_msec')
                 
         x_dist = (np.arange(npix)-np.fix(npix/2.0)) * x_direction * x_pixel_um + x_center_um
         y_dist = (np.arange(npix)-np.fix(npix/2.0)) * y_direction * y_pixel_um + y_center_um         
@@ -107,15 +109,13 @@ class sm:
         
         self.ds.implements = 'base, exchange, spectromicroscopy'
         self.ds.version = '0.9'
-        self.ds.file_creation_datetime = netCDF4.chartostring(getattr(fcdf,'systime'))
-        self.ds.comment = netCDF4.chartostring(getattr(fcdf,'comments1'))
+        self.ds.information.file_creation_datetime = netCDF4.chartostring(getattr(fcdf,'systime'))
+        self.ds.information.comment = netCDF4.chartostring(getattr(fcdf,'comments1'))
         
-        self.ds.add_experimenter(name = netCDF4.chartostring(getattr(fcdf,'scientist')))
+        self.ds.information.experimenter.name = netCDF4.chartostring(getattr(fcdf,'scientist'))
 
-        self.ds.add_sample(name = netCDF4.chartostring(getattr(fcdf,'sample')))
+        self.ds.information.sample.name = netCDF4.chartostring(getattr(fcdf,'sample'))
         
-        self.ds.add_exchange(collection_datetime = netCDF4.chartostring(getattr(fcdf,'systime')))
-       
         
         fcdf.close()
         
@@ -139,13 +139,19 @@ class sm:
             absdata = absdata[:,:, ::-1]
             
         
-        self.ds.exchange.add_detector(data=absdata,
-                                      signal = 1, 
-                                      axes='x:y', 
-                                      energy=ev, 
-                                      energy_units = 'ev')
         
-        self.ds.exchange.detector[0].add_dimscale(key = 'x', units = 'um', data = x_dist)
-        self.ds.exchange.detector[0].add_dimscale(key = 'y', units = 'um', data = y_dist)
+        self.ds.exchange.data = absdata
+        self.ds.exchange.data_signal = 1
+        self.ds.exchange.data_axes='x:y'
+        
+        self.ds.exchange.energy=ev
+        self.ds.exchange.energy_units = 'ev'
+        
+        
+        self.ds.exchange.x = x_dist
+        self.ds.exchange.x_units = 'um'
+        self.ds.exchange.y = y_dist
+        self.ds.exchange.y_units = 'um'        
+        self.ds.spectromicroscopy.data_dwell = dwell_msec
         
         return

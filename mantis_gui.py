@@ -5485,7 +5485,7 @@ class MainFrame(wx.Frame):
             #dialog.SetWildcard(wildcard)
             if dialog.ShowModal() == wx.ID_OK:
                 directory = dialog.GetPath()
-            
+
             StackListFrame(directory, self.common, self.stk, self.data_struct).Show()
             
         except:
@@ -5494,7 +5494,6 @@ class MainFrame(wx.Frame):
             self.common.stack_loaded = 0 
             self.common.i0_loaded = 0
                                
-            wx.EndBusyCursor()
             wx.MessageBox(".sm files not loaded.")
                    
         
@@ -5879,11 +5878,10 @@ class StackListFrame(wx.Frame):
         self.stk.x_dist = self.data_struct.exchange.x 
         self.stk.y_dist = self.data_struct.exchange.y
         
-        
+        self.stk.data_dwell = self.data_struct.spectromicroscopy.data_dwell
         
         
         self.stk.fill_h5_struct_from_stk()
-        
                    
 
         wx.GetApp().TopWindow.page1.iev = int(self.stk.n_ev/3)

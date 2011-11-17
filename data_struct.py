@@ -240,6 +240,9 @@ class spectromicroscopy(object):
     normalization = normalization()
         
     optical_density = Descr()
+    
+    data_dwell = Descr()
+    i0_dwell = Descr()
         
 
 # HDF5 Root Group
