@@ -137,6 +137,7 @@ class xrm:
             struct_fmt = "<{}f".format(nimgs)
             exptimes = struct.unpack(struct_fmt, data)
             if verbose: print "ImageInfo/ExpTimes: \n ",  exptimes
+            
                 
         # 10 float; 5 uint16 (unsigned 16-bit (2-byte) integers)
         if ole.exists('ImageInfo/DataType'):                  
@@ -198,6 +199,8 @@ class xrm:
         self.data_struct.exchange.x_units = 'um'
         self.data_struct.exchange.y = self.y_dist
         self.data_struct.exchange.y_units = 'um'     
+        
+        self.data_dwell = exptimes
           
           
         return

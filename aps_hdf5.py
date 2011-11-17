@@ -418,6 +418,9 @@ class h5:
         self.i0data = data_struct.spectromicroscopy.normalization.white_spectrum           
         self.evi0 = data_struct.spectromicroscopy.normalization.white_spectrum_energy
         
+        self.data_dwell = None
+        self.i0_dwell = None
+        
         verbose = 0
         
         if verbose == 1: 

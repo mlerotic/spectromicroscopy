@@ -48,7 +48,9 @@ class x1astk:
         self.ev.byteswap(True)   
         
         msec = np.fromfile(f, np.float32, self.n_ev)
-        msec.byteswap(True)   
+        msec.byteswap(True) 
+         
+        self.data_dwell = msec
         
         imagestack = np.fromfile(f, np.float32, self.n_cols*self.n_rows*self.n_ev)
         imagestack.byteswap(True)     
@@ -87,6 +89,8 @@ class x1astk:
         self.i0data = np.array(ilist) 
                 
         f.close()
+        
+        self.i0_dwell = None
            
     
         return

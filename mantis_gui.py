@@ -2043,6 +2043,7 @@ class PagePCA(wx.Panel):
         self.selpca = 1       
         self.numsigpca = 2
         
+        
         pw = PlotW*0.97
         ph = PlotH*0.97
         
@@ -2171,6 +2172,9 @@ class PagePCA(wx.Panel):
         self.selpca = 1       
         self.numsigpca = 2
         self.slidershow.SetValue(self.selpca)
+        
+        scrollmax = npy.min([self.stk.n_ev, 20])
+        self.slidershow.SetMax(scrollmax)
 
         try: 
             self.CalcPCA()
@@ -2378,7 +2382,7 @@ class PagePCA(wx.Panel):
 #----------------------------------------------------------------------      
     def showEvals(self):
         
-        evalmax = npy.min([self.stk.n_ev-1, 40])
+        evalmax = npy.min([self.stk.n_ev, 40])
         self.pcaevals = self.anlz.eigenvals[0:evalmax]
         
 
@@ -3106,8 +3110,9 @@ class PageStack(wx.Panel):
         
     def OnI0FFile(self, event):
 
+
         try: 
-            wildcard = "I0 files (*.xas)|*.xas"
+            wildcard = "I0 files (*.xas)|*.xas|SDF I0 files (*.hdr)|*.hdr"
             dialog = wx.FileDialog(None, "Choose i0 file",
                                    wildcard=wildcard,
                                    style=wx.OPEN)
@@ -3115,33 +3120,55 @@ class PageStack(wx.Panel):
                 filepath_i0 = dialog.GetPath()
                 self.filename = dialog.GetFilename()
                                                         
-            wx.BeginBusyCursor()                                    
-                        
-            x=self.stk.n_cols
-            y=self.stk.n_rows
-            z=self.iev               
-
-            self.ix = x/2
-            self.iy = y/2
-
-            self.stk.read_stk_i0(filepath_i0)
+            basename, extension = os.path.splitext(self.filename)      
             
-            self.loadSpectrum(self.ix, self.iy)
-            self.loadImage()
-            self.com.i0_loaded = 1
-            wx.EndBusyCursor()
+            
+            if extension == '.hdr':
+                wx.BeginBusyCursor()                                    
+
+                x=self.stk.n_cols
+                y=self.stk.n_rows
+                z=self.iev               
+
+                self.ix = x/2
+                self.iy = y/2
+                self.stk.read_sdf_i0(filepath_i0)
+                self.loadSpectrum(self.ix, self.iy)
+                self.loadImage()
+                self.com.i0_loaded = 1
+                wx.EndBusyCursor()
+                
+                
+            elif extension == '.xas':
+                wx.BeginBusyCursor()                                    
+
+                x=self.stk.n_cols
+                y=self.stk.n_rows
+                z=self.iev               
+
+                self.ix = x/2
+                self.iy = y/2
+
+                self.stk.read_stk_i0(filepath_i0)
+
+                self.loadSpectrum(self.ix, self.iy)
+                self.loadImage()
+                self.com.i0_loaded = 1
+                wx.EndBusyCursor()
+
             
         except:
             wx.BeginBusyCursor()  
             self.com.i0_loaded = 0        
             wx.EndBusyCursor()  
             wx.MessageBox("I0 file not loaded.")
-            
+            import sys; print sys.exc_info()
                        
         dialog.Destroy()
                           
         wx.GetApp().TopWindow.refresh_widgets()
 
+        
         
         
 #----------------------------------------------------------------------       
@@ -5263,16 +5290,58 @@ class MainFrame(wx.Frame):
         Browse for .hdf5 or .stk file
         """
 
+        """
+        Browse for .hdf5 or .stk or .hdr file
+        """
+
         try: 
-            wildcard =  "HDF5 files (*.hdf5)|*.hdf5|STK files (*.stk)|*.stk|TXRM (*.txrm)|*.txrm" 
-            dialog = wx.FileDialog(None, "Choose a file",
-                                   style=wx.OPEN)
+            wildcard =  "HDF5 files (*.hdf5)|*.hdf5|SDF files (*.hdr)|*.hdr|STK files (*.stk)|*.stk|TXRM (*.txrm)|*.txrm" 
+            dialog = wx.FileDialog(None, "Choose a file", style=wx.OPEN)
+            
             dialog.SetWildcard(wildcard)
             if dialog.ShowModal() == wx.ID_OK:
                 filepath = dialog.GetPath()
                 self.page1.filename = dialog.GetFilename()
                                   
             basename, extension = os.path.splitext(self.page1.filename)      
+            
+            
+            
+            if extension == '.hdr':
+                wx.BeginBusyCursor()     
+            
+                if self.common.stack_loaded == 1:
+                    self.new_stack_refresh()  
+                    self.stk.new_data()
+                    #self.stk.data_struct.delete_data()
+                    self.anlz.delete_data()    
+                self.stk.read_sdf(filepath)        
+                self.page1.slider_eng.SetRange(0,self.stk.n_ev-1)
+                self.iev = int(self.stk.n_ev/3)
+                self.page1.iev = self.iev
+                self.page1.slider_eng.SetValue(self.iev)
+            
+                x=self.stk.n_cols
+                y=self.stk.n_rows
+                z=self.iev               
+                self.page1.imgrgb = npy.zeros(x*y*3,dtype = "uint8")        
+                self.page1.maxval = npy.amax(self.stk.absdata)
+            
+                self.ix = int(x/2)
+                self.iy = int(y/2)
+                
+                self.page1.ix = self.ix
+                self.page1.iy = self.iy
+                        
+                self.common.stack_loaded = 1
+                
+                self.page1.ResetDisplaySettings()
+                self.page1.loadImage()
+                self.page1.loadSpectrum(self.ix, self.iy)
+                self.page1.textctrl.SetValue(self.page1.filename)
+                
+
+                wx.EndBusyCursor()
             
             
             if extension == '.stk':
@@ -5396,6 +5465,7 @@ class MainFrame(wx.Frame):
                                
             wx.EndBusyCursor()
             wx.MessageBox("Image stack not loaded.")
+            import sys; print sys.exc_info()
                    
         dialog.Destroy()
         self.refresh_widgets()
@@ -5874,7 +5944,7 @@ class AboutFrame(wx.Frame):
 
         
         font3 = wx.Font(12, wx.SWISS, wx.NORMAL, wx.NORMAL)
-        text3 = wx.StaticText(panel, 0, '''Mantis 1.07
+        text3 = wx.StaticText(panel, 0, '''Mantis 1.10
 Developed by Mirna Lerotic''')
         text3.SetFont(font3)
              

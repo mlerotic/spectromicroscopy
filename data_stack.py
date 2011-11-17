@@ -27,14 +27,16 @@ import datetime
 import x1a_stk
 import aps_hdf5
 import xradia_xrm
+import accel_sdf
 import data_struct
 
 #----------------------------------------------------------------------
-class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm):
+class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
     def __init__(self, data_struct):
         x1a_stk.x1astk.__init__(self)
         aps_hdf5.h5.__init__(self)
         xradia_xrm.xrm.__init__(self)
+        accel_sdf.sdfstk.__init__(self)
         
         self.data_struct = data_struct
 
@@ -67,11 +69,26 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm):
         self.fill_h5_struct_normalization()
         
         
+#----------------------------------------------------------------------   
+    def read_sdf_i0(self, filename):
+        accel_sdf.sdfstk.read_sdf_i0(self,filename)
+        self.calculate_optical_density()
+        
+        self.fill_h5_struct_normalization()
 
 #---------------------------------------------------------------------- 
     def read_stk(self, filename):    
         self.new_data()  
         x1a_stk.x1astk.read_stk(self, filename)
+        
+        self.fill_h5_struct_from_stk()
+        
+        self.scale_bar()
+        
+#---------------------------------------------------------------------- 
+    def read_sdf(self, filename):    
+        self.new_data()  
+        accel_sdf.sdfstk.read_sdf(self, filename)
         
         self.fill_h5_struct_from_stk()
         
@@ -159,6 +176,8 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm):
 
         self.evi0 = self.ev.copy()
         self.i0data = self.i0datahist 
+        
+        self.i0_dwell = self.data_dwell
 
         self.calculate_optical_density()   
         
@@ -191,6 +210,9 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm):
         
         fi0int = scipy.interpolate.interp1d(self.evi0,self.i0data, kind='cubic', bounds_error=False, fill_value=0.0)      
         i0 = fi0int(self.ev)
+        
+        if self.i0_dwell is not None:
+            i0 = i0*(self.data_dwell/self.i0_dwell)
         
         #zero out all negative values in the image stack
         negative_indices = np.where(self.absdata <= 0)
