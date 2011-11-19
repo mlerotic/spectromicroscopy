@@ -107,8 +107,8 @@ class sm:
         y_dist = (np.arange(npix)-np.fix(npix/2.0)) * y_direction * y_pixel_um + y_center_um         
         
         
-        self.ds.implements = 'base, exchange, spectromicroscopy'
-        self.ds.version = '0.9'
+        self.ds.implements = 'information:exchange:spectromicroscopy'
+        self.ds.version = '1.0'
         self.ds.information.file_creation_datetime = netCDF4.chartostring(getattr(fcdf,'systime'))
         self.ds.information.comment = netCDF4.chartostring(getattr(fcdf,'comments1'))
         

@@ -108,6 +108,14 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
 #---------------------------------------------------------------------- 
     def read_txrm(self, filename):    
         self.new_data()  
+        xradia_xrm.xrm.read_txrm(self, filename, self.data_struct)
+        
+                
+        self.scale_bar()
+        
+#---------------------------------------------------------------------- 
+    def read_xrm(self, filename):    
+        self.new_data()  
         xradia_xrm.xrm.read_xrm(self, filename, self.data_struct)
         
                 
@@ -211,7 +219,8 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
         fi0int = scipy.interpolate.interp1d(self.evi0,self.i0data, kind='cubic', bounds_error=False, fill_value=0.0)      
         i0 = fi0int(self.ev)
         
-        if self.i0_dwell is not None:
+        if (self.data_dwell is not None) and (self.i0_dwell is not None):
+
             i0 = i0*(self.data_dwell/self.i0_dwell)
         
         #zero out all negative values in the image stack

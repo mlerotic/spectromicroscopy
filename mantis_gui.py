@@ -5295,7 +5295,7 @@ class MainFrame(wx.Frame):
         """
 
         try: 
-            wildcard =  "HDF5 files (*.hdf5)|*.hdf5|SDF files (*.hdr)|*.hdr|STK files (*.stk)|*.stk|TXRM (*.txrm)|*.txrm" 
+            wildcard =  "HDF5 files (*.hdf5)|*.hdf5|SDF files (*.hdr)|*.hdr|STK files (*.stk)|*.stk|TXRM (*.txrm)|*.txrm|XRM (*.xrm)|*.xrm" 
             dialog = wx.FileDialog(None, "Choose a file", style=wx.OPEN)
             
             dialog.SetWildcard(wildcard)
@@ -5456,8 +5456,46 @@ class MainFrame(wx.Frame):
                 self.page1.textctrl.SetValue(self.page1.filename)
                 
 
-                wx.EndBusyCursor()                
+                wx.EndBusyCursor()  
+                
+                              
+            if extension == '.xrm':
+                wx.BeginBusyCursor()     
+            
+                if self.common.stack_loaded == 1:
+                    self.new_stack_refresh()  
+                    self.stk.new_data()
+                    #self.stk.data_struct.delete_data()
+                    self.anlz.delete_data()  
+                         
+                self.stk.read_xrm(filepath)        
+                self.page1.slider_eng.SetRange(0,self.stk.n_ev-1)
+                self.iev = int(self.stk.n_ev/3)
+                self.page1.iev = self.iev
+                self.page1.slider_eng.SetValue(self.iev)
+            
+                x=self.stk.n_cols
+                y=self.stk.n_rows
+                z=self.iev               
+                self.page1.imgrgb = npy.zeros(x*y*3,dtype = "uint8")        
+                self.page1.maxval = npy.amax(self.stk.absdata)
+            
+                self.ix = int(x/2)
+                self.iy = int(y/2)
+                
+                self.page1.ix = self.ix
+                self.page1.iy = self.iy
+                        
+                self.common.stack_loaded = 1
+                
+                self.page1.ResetDisplaySettings()
+                self.page1.loadImage()
+                self.page1.loadSpectrum(self.ix, self.iy)
+                self.page1.textctrl.SetValue(self.page1.filename)
+                
 
+                wx.EndBusyCursor()   
+                
         except:
 
             self.common.stack_loaded = 0 
@@ -5476,7 +5514,7 @@ class MainFrame(wx.Frame):
         """
         Browse for .sl files
         """
-            
+
         try:
 
             #wildcard =  "SL files (*.sl)|*.sl" 
@@ -5495,7 +5533,7 @@ class MainFrame(wx.Frame):
             self.common.i0_loaded = 0
                                
             wx.MessageBox(".sm files not loaded.")
-                   
+            import sys; print sys.exc_info()
         
 #----------------------------------------------------------------------
     def onSaveAsH5(self, event):
@@ -5709,15 +5747,7 @@ class StackListFrame(wx.Frame):
         self.stk = stack
         self.common = com
         
-        try: 
-            from netCDF4 import Dataset
-            import sm_netcdf
-            self.sm = sm_netcdf.sm(data_struct)
-            
-        except:
-            wx.MessageBox("Could not import netCDF4 library.")
-            return
-            
+           
             
         wx.Frame.__init__(self, wx.GetApp().TopWindow, title = "Stack File List", size=(410, 510))
             
@@ -5730,6 +5760,8 @@ class StackListFrame(wx.Frame):
         self.havelast = 0
         self.file1st = ' '
         self.filelast = ' '
+        
+        self.filetype = ''
         
         
         self.com = wx.GetApp().TopWindow.common         
@@ -5753,7 +5785,7 @@ class StackListFrame(wx.Frame):
 
         
         self.filelist = wx.wx.ListCtrl(panel1,-1,style=wx.LC_REPORT)
-        self.filelist.InsertColumn(0,".sm files", width=150)
+        self.filelist.InsertColumn(0,"File list", width=150)
         self.filelist.InsertColumn(1,"X", width=50)
         self.filelist.InsertColumn(2,"Y", width=50)
         self.filelist.InsertColumn(3,"eV", width=70)
@@ -5803,27 +5835,77 @@ class StackListFrame(wx.Frame):
         
                 
         self.sm_files = [x for x in os.listdir(self.filepath) if x.endswith('.sm')]
-
-        count = 0
         
-        for i in range(len(self.sm_files)):
-            #print sm_files
-            filename = self.sm_files[i]
-            file = os.path.join(self.filepath, filename)
+        if self.sm_files:
             
-            filever, ncols, nrows, iev = self.sm.read_sm_header(file)
+            self.filetype = 'sm'
             
-            if filever > 0:           
-                self.filelist.InsertStringItem(count,filename)
-                self.filelist.SetStringItem(count,1,str(ncols))
-                self.filelist.SetStringItem(count,2,str(nrows))
-                self.filelist.SetStringItem(count,3,'{0:5.2f}'.format(iev))
-                count += 1
-            else:
-                continue
+            try: 
+                from netCDF4 import Dataset
+                import sm_netcdf
+                self.sm = sm_netcdf.sm(data_struct)
             
+            except:
+                wx.MessageBox("Could not import netCDF4 library.")
+                return
 
-    
+            count = 0
+        
+            for i in range(len(self.sm_files)):
+                #print sm_files
+                filename = self.sm_files[i]
+                file = os.path.join(self.filepath, filename)
+            
+                filever, ncols, nrows, iev = self.sm.read_sm_header(file)
+            
+                if filever > 0:           
+                    self.filelist.InsertStringItem(count,filename)
+                    self.filelist.SetStringItem(count,1,str(ncols))
+                    self.filelist.SetStringItem(count,2,str(nrows))
+                    self.filelist.SetStringItem(count,3,'{0:5.2f}'.format(iev))
+                    count += 1
+                else:
+                    continue
+                
+
+            return
+         
+            
+        self.xrm_files = [x for x in os.listdir(self.filepath) if x.endswith('.xrm')] 
+        
+
+
+        if self.xrm_files:
+            
+            self.filetype = 'xrm'
+            
+            import xradia_xrm
+            self.xrm = xradia_xrm.xrm()
+
+            count = 0
+        
+            for i in range(len(self.xrm_files)):
+                #print sm_files
+                filename = self.xrm_files[i]
+                file = os.path.join(self.filepath, filename)
+            
+                ncols, nrows, iev = self.xrm.read_xrm_fileinfo(file)
+            
+                if ncols > 0:           
+                    self.filelist.InsertStringItem(count,filename)
+                    self.filelist.SetStringItem(count,1,str(ncols))
+                    self.filelist.SetStringItem(count,2,str(nrows))
+                    self.filelist.SetStringItem(count,3,'{0:5.2f}'.format(iev))
+                    count += 1
+                else:
+                    continue
+                
+        self.sm_files = self.xrm_files
+        return
+        
+        
+        
+                    
 #----------------------------------------------------------------------          
     def OnFileList(self, evt):
         
@@ -5859,8 +5941,13 @@ class StackListFrame(wx.Frame):
         
         filelist = self.sm_files[ind1st:indlast+1]
 
-        self.sm.read_sm_list(filelist, self.filepath, self.data_struct)
-        
+        if self.filetype == 'sm':
+            self.sm.read_sm_list(filelist, self.filepath, self.data_struct)
+        elif self.filetype == 'xrm':
+            self.xrm.read_xrm_list(filelist, self.filepath, self.data_struct)
+        else:
+            print 'Wrong file type'
+            return
         
         
         #fill the gui structure data
