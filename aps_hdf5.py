@@ -367,7 +367,6 @@ class h5:
                 #Check if white_spectrum is an array
                 wspectrum = ws[...]
                 try:
-                    a = wspectrum[10]
                     data_struct.spectromicroscopy.normalization.white_spectrum = ws[...]
                     if 'units' in ws.attrs:
                         data_struct.spectromicroscopy.normalization.white_spectrum_units = ws.attrs['units']
