@@ -2724,6 +2724,12 @@ class PageStack(wx.Panel):
         self.button_align.Disable()
         vbox31.Add(self.button_align, 0, wx.EXPAND)
         
+        self.button_slideshow = wx.Button(panel3, -1, 'Play stack slideshow')
+        self.Bind(wx.EVT_BUTTON, self.OnSlideshow, id=self.button_slideshow.GetId())
+        self.button_slideshow.SetFont(self.com.font)
+        self.button_slideshow.Disable()
+        vbox31.Add(self.button_slideshow, 0, wx.EXPAND)
+        
         vbox31.Add((0,3))
         
         self.button_save = wx.Button(panel3, -1, 'Save...')
@@ -2773,7 +2779,7 @@ class PageStack(wx.Panel):
         self.add_colbar_cb.SetFont(self.com.font)
         self.Bind(wx.EVT_CHECKBOX, self.OnShowColBar, self.add_colbar_cb)
 
-        sizer42.Add((0,3))
+        sizer42.Add((0,10))
         sizer42.Add(self.rb_flux)
         sizer42.Add((0,3))
         sizer42.Add(self.rb_od)
@@ -2786,6 +2792,7 @@ class PageStack(wx.Panel):
                 
 
         sizer43 = wx.StaticBoxSizer(wx.StaticBox(panel4, -1, 'Display settings'),  orient=wx.VERTICAL)
+        sizer43.Add((0,10))
         hbox42 = wx.BoxSizer(wx.HORIZONTAL)
         hbox42.Add((15,0))
 
@@ -3268,12 +3275,31 @@ class PageStack(wx.Panel):
                           parent=self, style=wx.OK|wx.ICON_ERROR) 
 
 
+        
 #----------------------------------------------------------------------    
     def OnAlignImgs(self, event):  
         
         ImageRegistration(self.com, self.stk).Show()
 
+#----------------------------------------------------------------------    
+    def OnSlideshow(self, event):  
 
+        if (self.com.stack_loaded == 1) and (self.addroi == 0):      
+                
+            old_iev =  self.iev
+            
+            for i in range(self.stk.n_ev):   
+                self.iev = i                   
+                self.loadImage()
+                self.slider_eng.SetValue(self.iev)
+                self.loadSpectrum(self.ix, self.iy)
+                time.sleep(0.01)
+                
+            self.iev = old_iev 
+            self.loadImage()
+            self.slider_eng.SetValue(self.iev)
+            self.loadSpectrum(self.ix, self.iy)
+            
 #----------------------------------------------------------------------          
     def onrb_fluxod(self, evt):
         state = self.rb_flux.GetValue()
@@ -5579,6 +5605,7 @@ class MainFrame(wx.Frame):
             self.page1.button_i0histogram.Disable() 
             self.page1.button_save.Disable() 
             self.page1.button_align.Disable()
+            self.page1.button_slideshow.Disable()
             self.page1.button_addROI.Disable()
             self.page1.button_spectralROI.Disable()
             self.page1.button_resetdisplay.Disable() 
@@ -5590,6 +5617,7 @@ class MainFrame(wx.Frame):
             self.page1.button_i0histogram.Enable() 
             self.page1.button_save.Enable()   
             self.page1.button_align.Enable()  
+            self.page1.button_slideshow.Enable()
             self.page1.button_addROI.Enable()  
             self.page1.button_spectralROI.Enable()
             self.page1.button_resetdisplay.Enable() 

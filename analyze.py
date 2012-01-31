@@ -95,9 +95,9 @@ class analyze:
                 
             #Find bounds for displaying color-tables
             for i in range(self.stack.n_ev):
-                min_val = np.min(self.pcaimages[:,:,i])
-                max_val = np.max(self.pcaimages[:,:,i])
-                self.pcaimagebounds[i] = np.max((np.abs(min_val), np.abs(max_val)))
+                min_val = np.amin(self.pcaimages[:,:,i])
+                max_val = np.amax(self.pcaimages[:,:,i])
+                self.pcaimagebounds[i] = np.amax((np.abs(min_val), np.abs(max_val)))
 
             
             #calculate variance captured by the pca components
