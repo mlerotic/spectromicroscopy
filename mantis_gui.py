@@ -2963,8 +2963,6 @@ class PageStack(wx.Panel):
         
         if (self.line != None) and (self.addroi == 1):
             axes.add_line(self.line)
-            
-
         
 
         if self.defaultdisplay == 1.0:
@@ -3219,7 +3217,7 @@ class PageStack(wx.Panel):
    
    
 #----------------------------------------------------------------------    
-    def Save(self, spec_png = True, spec_pdf = False, img_png = True, img_pdf = False): 
+    def Save(self, spec_png = True, spec_pdf = False, img_png = True, img_pdf = False, img_all = False): 
 
         
         path, ext = os.path.splitext(self.SaveFileName) 
@@ -3251,6 +3249,32 @@ class PageStack(wx.Panel):
                 fig = self.AbsImagePanel.get_figure()
                 fig.savefig(fileName_img)
                 
+            #Save all images in the stack
+            if img_all:
+                wx.BeginBusyCursor()
+                from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+                mtplot.rcParams['pdf.fonttype'] = 42
+
+                for i in range (self.stk.n_ev):
+                    if self.showflux:
+                        #Show flux image      
+                        image = self.stk.absdata[:,:,i] 
+                    else:
+                        #Show OD image
+                        image = self.stk.od3d[:,:,i]
+
+                    fig = mtplot.figure.Figure(figsize =(PlotH, PlotH))
+                    fig.clf()
+                    canvas = FigureCanvas(fig)
+                    fig.add_axes((0.02,0.02,0.96,0.96))
+                    axes = fig.gca()
+                    im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable)) 
+                    axes.axis("off") 
+                                
+                    fileName_img = self.SaveFileName[:-len(suffix)]+"_imnum_" +str(i+1)+"."+ext
+                    fig.savefig(fileName_img)
+                wx.EndBusyCursor()
+                    
             ext = 'pdf'
             suffix = "." + ext
             
@@ -3637,7 +3661,7 @@ class SaveWinP1(wx.Frame):
     title = "Save"
 
     def __init__(self, filename):
-        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(230, 280))
+        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(230, 310))
                
         ico = logos.getlogo_2l_32Icon()
         self.SetIcon(ico)
@@ -3669,7 +3693,7 @@ class SaveWinP1(wx.Frame):
         
         panel1 = wx.Panel(self, -1)
         
-        gridtop = wx.FlexGridSizer(3, 3, vgap=20, hgap=20)
+        gridtop = wx.FlexGridSizer(4, 3, vgap=20, hgap=20)
     
         fontb = wx.SystemSettings_GetFont(wx.SYS_DEFAULT_GUI_FONT)
         fontb.SetWeight(wx.BOLD)
@@ -3701,6 +3725,15 @@ class SaveWinP1(wx.Frame):
         
         self.cb4 = wx.CheckBox(panel1, -1, '')
         self.cb4.SetFont(self.com.font)
+        
+        st6 = wx.StaticText(panel1, -1, 'all images',  style=wx.ALIGN_LEFT)
+        st6.SetFont(self.com.font)        
+
+        st7 = wx.StaticText(panel1, -1, ' ',  style=wx.ALIGN_LEFT)
+        st7.SetFont(self.com.font) 
+        
+        self.cb5 = wx.CheckBox(panel1, -1, '')
+        self.cb5.SetFont(self.com.font)
 
         
         gridtop.Add(st1, 0)
@@ -3714,6 +3747,10 @@ class SaveWinP1(wx.Frame):
         gridtop.Add(st5, 0)
         gridtop.Add(self.cb3, 0)
         gridtop.Add(self.cb4, 0)  
+        
+        gridtop.Add(st6, 0)
+        gridtop.Add(st7, 0)
+        gridtop.Add(self.cb5, 0)  
         
         panel1.SetSizer(gridtop)
         
@@ -3742,12 +3779,14 @@ class SaveWinP1(wx.Frame):
         sp_png = self.cb2.GetValue()
         im_pdf = self.cb3.GetValue()
         im_png = self.cb4.GetValue()
+        im_all = self.cb5.GetValue()
         
         self.Close(True) 
         wx.GetApp().TopWindow.page1.Save(spec_png = sp_png, 
                                          spec_pdf = sp_pdf, 
                                          img_png = im_png, 
-                                         img_pdf = im_pdf)
+                                         img_pdf = im_pdf,
+                                         img_all = im_all)
 
 #---------------------------------------------------------------------- 
     def OnCancel(self, evt):
