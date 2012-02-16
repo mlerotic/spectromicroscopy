@@ -18,6 +18,7 @@
 
 from __future__ import division
 import wx
+import wx.lib.intctrl
 import matplotlib as mtplot 
 mtplot.interactive( True )
 mtplot.use( 'WXAgg', warn=False )
@@ -827,42 +828,172 @@ class ShowCompositeRBGmap(wx.Frame):
         
         self.rgbimage = npy.zeros((self.n_cols, self.n_rows, 3), dtype=float)
         
+        self.minr = 0
+        self.maxr = 100
+        self.weightr = 100
+        self.ming = 0 
+        self.maxg = 100
+        self.weightg = 100
+        self.minb = 0
+        self.maxb = 100
+        self.weightb = 100       
+        
+        self.r_spec = 0
+        self.g_spec = 1
+        self.b_spec = 2
+        
     
         vboxtop = wx.BoxSizer(wx.HORIZONTAL)
         
         panel = wx.Panel(self, -1)
         vbox = wx.BoxSizer(wx.VERTICAL)
-        hbox1 = wx.BoxSizer(wx.HORIZONTAL)       
+        hbox1 = wx.BoxSizer(wx.HORIZONTAL)   
+        
+        vbox1 = wx.BoxSizer(wx.VERTICAL)    
        
-        sizer1 = wx.StaticBoxSizer(wx.StaticBox(panel, -1, 'RBG spectra'), orient=wx.VERTICAL)
+        sizer1 = wx.StaticBoxSizer(wx.StaticBox(panel, -1, 'Red spectrum'), orient=wx.VERTICAL)
 
         fgs1 = wx.FlexGridSizer(3, 2, 2, 5)
         r = wx.StaticText(panel, label="Red")
         r.SetFont(self.com.font)
-        g = wx.StaticText(panel, label="Green")
-        g.SetFont(self.com.font)
-        b = wx.StaticText(panel, label="Blue")
-        b.SetFont(self.com.font)        
+        rl = wx.StaticText(panel, label="Limits")
+        rl.SetFont(self.com.font)
+        rw = wx.StaticText(panel, label="Weight")
+        rw.SetFont(self.com.font)        
         
         
         self.combor = wx.ComboBox(panel, size=(150, -1), choices=self.anlz.tspec_names, style=wx.CB_READONLY)       
         self.Bind(wx.EVT_COMBOBOX, self.OnSelectR, self.combor)
         self.combor.SetToolTip(wx.ToolTip("select spectrum from dropdown-list"))
+        self.combor.SetValue(self.anlz.tspec_names[self.r_spec])
+        
+        hbox12 = wx.BoxSizer(wx.HORIZONTAL)   
+        
+        bsize = 75
+        
+        self.tcrmin = wx.lib.intctrl.IntCtrl( panel, size=( bsize, -1 ), value = 0 , limited = True )
+        self.tcrmax = wx.lib.intctrl.IntCtrl( panel, size=( bsize, -1 ), value = 100, limited = True )
+        
+        self.tcrmin.SetMin(0)
+        self.tcrmin.SetMax(100)
+        self.tcrmax.SetMin(0)
+        self.tcrmax.SetMax(100)
+        
+                        
+        hbox12.Add(self.tcrmin)
+        hbox12.Add(self.tcrmax)
+        
+        self.Bind(wx.lib.intctrl.EVT_INT, self.OnLimitMinR, self.tcrmin)
+        self.Bind(wx.lib.intctrl.EVT_INT, self.OnLimitMaxR, self.tcrmax)
+        
+        self.tcrweight = wx.lib.intctrl.IntCtrl( panel, value = 100, limited = True )
+        
+        self.tcrweight.SetMin(0)
+        self.tcrweight.SetMax(100)
+        
+        self.Bind(wx.lib.intctrl.EVT_INT, self.OnWeightR, self.tcrweight)
+        
+        fgs1.AddMany([(r, 0, wx.ALIGN_CENTER_VERTICAL), (self.combor, 0, wx.EXPAND), (rl, 0, wx.ALIGN_CENTER_VERTICAL), 
+            (hbox12, 0, wx.EXPAND),(rw, 0, wx.ALIGN_CENTER_VERTICAL), (self.tcrweight, 0, wx.EXPAND)])
+        
+        sizer1.Add(fgs1, 0, wx.EXPAND|wx.ALL, 10)
+        
+        
+        sizer2 = wx.StaticBoxSizer(wx.StaticBox(panel, -1, 'Green spectrum'), orient=wx.VERTICAL)
+        
+        fgs2 = wx.FlexGridSizer(3, 2, 2, 5)
+        g = wx.StaticText(panel, label="Green")
+        g.SetFont(self.com.font)
+        gl = wx.StaticText(panel, label="Limits")
+        gl.SetFont(self.com.font)
+        gw = wx.StaticText(panel, label="Weight")
+        gw.SetFont(self.com.font)        
+        
         
         self.combog = wx.ComboBox(panel, size=(150, -1), choices=self.anlz.tspec_names, style=wx.CB_READONLY)
         self.Bind(wx.EVT_COMBOBOX, self.OnSelectG, self.combog)        
         self.combog.SetToolTip(wx.ToolTip("select spectrum from dropdown-list"))
+        self.combog.SetValue(self.anlz.tspec_names[self.g_spec])
         
+        hbox22 = wx.BoxSizer(wx.HORIZONTAL)   
+        
+        self.tcgmin = wx.lib.intctrl.IntCtrl( panel, size=( bsize, -1 ), value = 0, limited = True   )
+        self.tcgmax = wx.lib.intctrl.IntCtrl( panel, size=( bsize, -1 ), value = 100, limited = True  )
+        
+        self.tcgmin.SetMin(0)
+        self.tcgmin.SetMax(100)
+        self.tcgmax.SetMin(0)
+        self.tcgmax.SetMax(100)
+        
+        hbox22.Add(self.tcgmin)
+        hbox22.Add(self.tcgmax)
+        
+        self.Bind(wx.lib.intctrl.EVT_INT, self.OnLimitMinG, self.tcgmin)
+        self.Bind(wx.lib.intctrl.EVT_INT, self.OnLimitMaxG, self.tcgmax)
+        
+        self.tcgweight = wx.lib.intctrl.IntCtrl( panel, value = 100, limited = True )
+        
+        self.tcgweight.SetMin(0)
+        self.tcgweight.SetMax(100)
+        
+        self.Bind(wx.lib.intctrl.EVT_INT, self.OnWeightG, self.tcgweight)
+        
+        fgs2.AddMany([(g, 0, wx.ALIGN_CENTER_VERTICAL), (self.combog, 0, wx.EXPAND), (gl, 0, wx.ALIGN_CENTER_VERTICAL), 
+            (hbox22, 0, wx.EXPAND),(gw, 0, wx.ALIGN_CENTER_VERTICAL), (self.tcgweight, 0, wx.EXPAND)])
+        
+        sizer2.Add(fgs2, 0, wx.EXPAND|wx.ALL, 10)
+        
+        
+        sizer3 = wx.StaticBoxSizer(wx.StaticBox(panel, -1, 'Blue spectrum'), orient=wx.VERTICAL)
+        
+        fgs3 = wx.FlexGridSizer(3, 2, 2, 5)
+        b = wx.StaticText(panel, label="Blue")
+        b.SetFont(self.com.font)
+        bl = wx.StaticText(panel, label="Limits")
+        bl.SetFont(self.com.font)
+        bw = wx.StaticText(panel, label="Weight")
+        bw.SetFont(self.com.font)        
+        
+               
         self.combob = wx.ComboBox(panel, size=(150, -1), choices=self.anlz.tspec_names, style=wx.CB_READONLY)        
         self.Bind(wx.EVT_COMBOBOX, self.OnSelectB, self.combob)
         self.combob.SetToolTip(wx.ToolTip("select spectrum from dropdown-list"))
+        self.combob.SetValue(self.anlz.tspec_names[self.b_spec])
         
-        fgs1.AddMany([(r), (self.combor, 0, wx.EXPAND), (g), 
-            (self.combog, 0, wx.EXPAND),(b), (self.combob, 0, wx.EXPAND)])
+        hbox32 = wx.BoxSizer(wx.HORIZONTAL)   
         
-        sizer1.Add(fgs1, 0, wx.EXPAND|wx.ALL, 10)
+        self.tcbmin = wx.lib.intctrl.IntCtrl( panel, size=( bsize, -1 ), value = 0, limited = True   )
+        self.tcbmax = wx.lib.intctrl.IntCtrl( panel, size=( bsize, -1 ), value = 100, limited = True  )
+        
+        self.tcbmin.SetMin(0)
+        self.tcbmin.SetMax(100)
+        self.tcbmax.SetMin(0)
+        self.tcbmax.SetMax(100)
+        
+        hbox32.Add(self.tcbmin)
+        hbox32.Add(self.tcbmax)
+        
+        self.Bind(wx.lib.intctrl.EVT_INT, self.OnLimitMinB, self.tcbmin)
+        self.Bind(wx.lib.intctrl.EVT_INT, self.OnLimitMaxB, self.tcbmax)
+        
+        self.tcbweight = wx.lib.intctrl.IntCtrl( panel, value = 100, limited = True  )
+        
+        self.tcbweight.SetMin(0)
+        self.tcbweight.SetMax(100)
+        
+        self.Bind(wx.lib.intctrl.EVT_INT, self.OnWeightB, self.tcbweight)
+        
+        fgs3.AddMany([(b, 0, wx.ALIGN_CENTER_VERTICAL), (self.combob, 0, wx.EXPAND), (bl, 0, wx.ALIGN_CENTER_VERTICAL), 
+            (hbox32, 0, wx.EXPAND),(bw, 0, wx.ALIGN_CENTER_VERTICAL), (self.tcbweight, 0, wx.EXPAND)])
+        
+        sizer3.Add(fgs3, 0, wx.EXPAND|wx.ALL, 10)
+        
                 
-        hbox1.Add(sizer1, 0,  wx.LEFT|wx.RIGHT ,20)
+        vbox1.Add(sizer1, 0, wx.EXPAND)
+        vbox1.Add(sizer2, 0, wx.EXPAND)
+        vbox1.Add(sizer3, 0, wx.EXPAND)
+        
+        hbox1.Add(vbox1, 0,  wx.LEFT|wx.RIGHT ,20)
 
 
         self.RGBImagePanel = wxmpl.PlotPanel(panel, -1, size =(PlotH,PlotH), cursor=False, crosshairs=False, location=False, zoom=False)
@@ -889,62 +1020,189 @@ class ShowCompositeRBGmap(wx.Frame):
         
         self.SetSizer(vboxtop)
         
+        self.CalcR()
+        self.CalcG()
+        self.CalcB()        
+        self.draw_image()        
+        
         
 #----------------------------------------------------------------------           
     def OnSelectR(self, event):
         item = event.GetSelection()
-        tsmap = self.anlz.target_pcafit_maps[:,:,item].copy()
+        self.r_spec = item
+        
+        self.CalcR()
+        self.draw_image()
+        
+#----------------------------------------------------------------------           
+    def CalcR(self):
+        tsmap = self.anlz.target_pcafit_maps[:,:,self.r_spec].copy()
 
-        scale_min = tsmap.min()
-        scale_max = tsmap.max()
+        uscale_min = tsmap.min()
+        uscale_max = tsmap.max()
+        
+        scale_min = uscale_min + (uscale_max-uscale_min)*float(self.minr)/100.
+        scale_max = uscale_min + (uscale_max-uscale_min)*float(self.maxr)/100.
+        
 
-        tsmap = tsmap.clip(min=scale_min, max=scale_max)
-        tsmap = (tsmap -scale_min) / (scale_max - scale_min)
+        if scale_min >= scale_max: 
+            tsmap = npy.zeros((self.n_cols, self.n_rows), dtype=float)
+        else:
+            tsmap = tsmap.clip(min=scale_min, max=scale_max)
+            tsmap = (tsmap -scale_min) / (scale_max - scale_min)
+            
         indices = npy.where(tsmap < 0)
         tsmap[indices] = 0.0
         indices = npy.where(tsmap > 1)
         tsmap[indices] = 1.0
     
-        self.rgbimage[:,:,0] = tsmap
+        self.rgbimage[:,:,0] = tsmap*float(self.weightr)/100.
         
+#----------------------------------------------------------------------           
+    def OnLimitMinR(self, event):
+        ctl = event.GetEventObject()
+        value = ctl.GetValue()
+        self.minr = value
+        #print 'self.minr=', self.minr
+        self.CalcR()
+        self.draw_image()
+    
+#----------------------------------------------------------------------           
+    def OnLimitMaxR(self, event):
+        ctl = event.GetEventObject()
+        value = ctl.GetValue()
+        self.maxr = value
+        #print 'self.maxr=', self.maxr
+        self.CalcR()
+        self.draw_image()
+        
+            
+#----------------------------------------------------------------------           
+    def OnWeightR(self, event):
+        ctl = event.GetEventObject()
+        value = ctl.GetValue()
+        self.weightr = value
+        #print 'self.weightr=', self.weightr
+        self.CalcR()
         self.draw_image()
         
 #----------------------------------------------------------------------           
     def OnSelectG(self, event):
         item = event.GetSelection()
-        tsmap = self.anlz.target_pcafit_maps[:,:,item].copy()
+        self.g_spec = item
 
-        scale_min = tsmap.min()
-        scale_max = tsmap.max()
+        self.CalcG()
+        self.draw_image()
+        
+#----------------------------------------------------------------------           
+    def CalcG(self):
+        
+        tsmap = self.anlz.target_pcafit_maps[:,:,self.g_spec].copy()
 
-        tsmap = tsmap.clip(min=scale_min, max=scale_max)
-        tsmap = (tsmap -scale_min) / (scale_max - scale_min)
+        uscale_min = tsmap.min()
+        uscale_max = tsmap.max()
+        
+        scale_min = uscale_min + (uscale_max-uscale_min)*float(self.ming)/100.
+        scale_max = uscale_min + (uscale_max-uscale_min)*float(self.maxg)/100.
+
+        if scale_min >= scale_max: 
+            tsmap = npy.zeros((self.n_cols, self.n_rows), dtype=float)
+        else:
+            tsmap = tsmap.clip(min=scale_min, max=scale_max)
+            tsmap = (tsmap - scale_min) / (scale_max - scale_min)
+
+
         indices = npy.where(tsmap < 0)
         tsmap[indices] = 0.0
         indices = npy.where(tsmap > 1)
         tsmap[indices] = 1.0
     
-        self.rgbimage[:,:,1] = tsmap
+        self.rgbimage[:,:,1] = tsmap*float(self.weightg)/100.
         
+#----------------------------------------------------------------------           
+    def OnLimitMinG(self, event):
+        ctl = event.GetEventObject()
+        value = ctl.GetValue()
+        self.ming = value
+        #print 'self.ming=', self.ming
+        self.CalcG()
+        self.draw_image()
+        
+#----------------------------------------------------------------------           
+    def OnLimitMaxG(self, event):
+        ctl = event.GetEventObject()
+        value = ctl.GetValue()
+        self.maxg = value
+        #print 'self.maxg=', self.maxg
+        self.CalcG()
+        self.draw_image()
+            
+#----------------------------------------------------------------------           
+    def OnWeightG(self, event):
+        ctl = event.GetEventObject()
+        value = ctl.GetValue()
+        self.weightg = value
+        #print 'self.weightg=', self.weightg
+        self.CalcG()
         self.draw_image()
         
 #----------------------------------------------------------------------           
     def OnSelectB(self, event):
         item = event.GetSelection()
-        tsmap = self.anlz.target_pcafit_maps[:,:,item].copy()
+        self.b_spec = item
+        
+        self.CalcB()
+        self.draw_image()
+        
+#----------------------------------------------------------------------           
+    def CalcB(self):
+        
+        tsmap = self.anlz.target_pcafit_maps[:,:,self.b_spec].copy()
 
-        scale_min = tsmap.min()
-        scale_max = tsmap.max()
+        uscale_min = tsmap.min()
+        uscale_max = tsmap.max()
+        
+        scale_min = uscale_min + (uscale_max-uscale_min)*float(self.minb)/100.
+        scale_max = uscale_min + (uscale_max-uscale_min)*float(self.maxb)/100.
 
-        tsmap = tsmap.clip(min=scale_min, max=scale_max)
-        tsmap = (tsmap -scale_min) / (scale_max - scale_min)
+        if scale_min >= scale_max: 
+            tsmap = npy.zeros((self.n_cols, self.n_rows), dtype=float)
+        else:
+            tsmap = tsmap.clip(min=scale_min, max=scale_max)
+            tsmap = (tsmap - scale_min) / (scale_max - scale_min)
+
         indices = npy.where(tsmap < 0)
         tsmap[indices] = 0.0
         indices = npy.where(tsmap > 1)
         tsmap[indices] = 1.0
     
-        self.rgbimage[:,:,2] = tsmap
+        self.rgbimage[:,:,2] = tsmap*float(self.weightb)/100.
+                
+#----------------------------------------------------------------------           
+    def OnLimitMinB(self, event):
+        ctl = event.GetEventObject()
+        value = ctl.GetValue()
+        self.minb = value
+        #print 'self.minb=', self.minb
+        self.CalcB()
+        self.draw_image()
         
+#----------------------------------------------------------------------           
+    def OnLimitMaxB(self, event):
+        ctl = event.GetEventObject()
+        value = ctl.GetValue()
+        self.maxb = value
+        #print 'self.maxb=', self.maxb
+        self.CalcB()
+        self.draw_image()
+            
+#----------------------------------------------------------------------           
+    def OnWeightB(self, event):
+        ctl = event.GetEventObject()
+        value = ctl.GetValue()
+        self.weightb = value
+        #print 'self.weightb=', self.weightb
+        self.CalcB()
         self.draw_image()
         
 #----------------------------------------------------------------------        
