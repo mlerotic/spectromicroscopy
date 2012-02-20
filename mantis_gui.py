@@ -434,7 +434,7 @@ class PageSpectral(wx.Panel):
         
         
 #----------------------------------------------------------------------
-    def Save(self, spec_png = True, spec_pdf = False, img_png = True, img_pdf = False):
+    def Save(self, spec_png = True, spec_pdf = False, spec_xas = False, img_png = True, img_pdf = False):
 
         path, ext = os.path.splitext(self.SaveFileName) 
         ext = ext[1:].lower() 
@@ -458,6 +458,8 @@ class PageSpectral(wx.Panel):
                 self.SaveSpectra(png_pdf=1)
             if spec_pdf:
                 self.SaveSpectra(png_pdf=2)
+            if spec_xas:
+                self.SaveSpectra(savexas = True)
                 
                 
             
@@ -471,7 +473,7 @@ class PageSpectral(wx.Panel):
                           parent=self, style=wx.OK|wx.ICON_ERROR) 
             
 #----------------------------------------------------------------------
-    def SaveSpectra(self, png_pdf=1):
+    def SaveSpectra(self, png_pdf=1, savexas = False):
         
         
         from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas   
@@ -519,6 +521,9 @@ class PageSpectral(wx.Panel):
             fileName_spec = self.SaveFileName[:-len(suffix)]+"_Tspectrum_" +str(i+1)+"."+ext
             fig.savefig(fileName_spec)    
             
+            if savexas:
+                fileName_spec = self.SaveFileName[:-len(suffix)]+"_Tspectrum_" +str(i+1)+".xas"
+                self.stk.write_xas(fileName_spec, self.stk.ev, tspectrumfit)
 #----------------------------------------------------------------------
     def SaveMaps(self, png_pdf=1):            
             
@@ -1263,7 +1268,7 @@ class SaveWinP4(wx.Frame):
     title = "Save"
 
     def __init__(self, filename):
-        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(230, 280))
+        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(245, 280))
                
         ico = logos.getlogo_2l_32Icon()
         self.SetIcon(ico)
@@ -1295,7 +1300,7 @@ class SaveWinP4(wx.Frame):
         
         panel1 = wx.Panel(self, -1)
         
-        gridtop = wx.FlexGridSizer(3, 3, vgap=20, hgap=20)
+        gridtop = wx.FlexGridSizer(3, 4, vgap=20, hgap=20)
     
         fontb = wx.SystemSettings_GetFont(wx.SYS_DEFAULT_GUI_FONT)
         fontb.SetWeight(wx.BOLD)
@@ -1307,7 +1312,9 @@ class SaveWinP4(wx.Frame):
         st2.SetFont(fontb)
         st3 = wx.StaticText(panel1, -1, '.png',  style=wx.ALIGN_LEFT)
         st3.SetFont(fontb)
-        
+        st3a = wx.StaticText(panel1, -1, '.xas',  style=wx.ALIGN_LEFT)
+        st3a.SetFont(fontb)
+                
         st4 = wx.StaticText(panel1, -1, '_spectrum',  style=wx.ALIGN_LEFT)
         st4.SetFont(self.com.font)
         
@@ -1317,6 +1324,8 @@ class SaveWinP4(wx.Frame):
         
         self.cb2 = wx.CheckBox(panel1, -1, '')
         self.cb2.SetFont(self.com.font)
+        self.cb2a = wx.CheckBox(panel1, -1, '')
+        self.cb2a.SetFont(self.com.font)
         
         st5 = wx.StaticText(panel1, -1, '_image',  style=wx.ALIGN_LEFT)
         st5.SetFont(self.com.font)
@@ -1332,14 +1341,17 @@ class SaveWinP4(wx.Frame):
         gridtop.Add(st1, 0)
         gridtop.Add(st2, 0)
         gridtop.Add(st3, 0)
+        gridtop.Add(st3a, 0)
                 
         gridtop.Add(st4, 0)
         gridtop.Add(self.cb1, 0)
-        gridtop.Add(self.cb2, 0)              
+        gridtop.Add(self.cb2, 0)  
+        gridtop.Add(self.cb2a, 0)            
   
         gridtop.Add(st5, 0)
         gridtop.Add(self.cb3, 0)
         gridtop.Add(self.cb4, 0)  
+        gridtop.Add(wx.StaticText(panel1, -1, ' '))
         
         panel1.SetSizer(gridtop)
         
@@ -1347,7 +1359,7 @@ class SaveWinP4(wx.Frame):
         panel2 = wx.Panel(self, -1)
         button_save = wx.Button(panel2, -1, 'Save')
         self.Bind(wx.EVT_BUTTON, self.OnSave, id=button_save.GetId())
-        hbox.Add(button_save, 0, wx.LEFT,5)
+        hbox.Add(button_save, 0, wx.LEFT,25)
         
         button_cancel = wx.Button(panel2, -1, 'Cancel')
         self.Bind(wx.EVT_BUTTON, self.OnCancel, id=button_cancel.GetId())
@@ -1367,12 +1379,14 @@ class SaveWinP4(wx.Frame):
         
         sp_pdf = self.cb1.GetValue()
         sp_png = self.cb2.GetValue()
+        sp_xas = self.cb2a.GetValue()
         im_pdf = self.cb3.GetValue()
         im_png = self.cb4.GetValue()
         
         self.Close(True) 
         wx.GetApp().TopWindow.page4.Save(spec_png = sp_png, 
                                          spec_pdf = sp_pdf, 
+                                         spec_xas = sp_xas,
                                          img_png = im_png, 
                                          img_pdf = im_pdf)
         
@@ -1740,7 +1754,7 @@ class PageCluster(wx.Panel):
         
         
 #----------------------------------------------------------------------    
-    def Save(self, spec_png = True, spec_pdf = False, 
+    def Save(self, spec_png = True, spec_pdf = False, spec_xas = False,
              img_png = True, img_pdf = False, 
              indimgs_png = True, indimgs_pdf = False,
              scatt_png = True, scatt_pdf = False): 
@@ -1825,7 +1839,14 @@ class PageCluster(wx.Panel):
                     axes.set_ylabel('Optical Density')
 
                     fileName_spec = self.SaveFileName[:-len(suffix)]+"_CAspectrum_" +str(i+1)+"."+ext
-                    fig.savefig(fileName_spec)                
+                    fig.savefig(fileName_spec)   
+                    
+            if spec_xas:
+                for i in range (self.numclusters):
+                    clusterspectrum = self.anlz.clusterspectra[i, ]
+                    fileName_spec = self.SaveFileName[:-len(suffix)]+"_CAspectrum_" +str(i+1)+".xas"
+                    self.stk.write_xas(fileName_spec, self.anlz.stack.ev, clusterspectrum)
+                                                     
                 
             ext = 'pdf'
             suffix = "." + ext
@@ -2132,7 +2153,7 @@ class SaveWinP3(wx.Frame):
     title = "Save"
 
     def __init__(self, filename):
-        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(250, 350))
+        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(280, 350))
                
         ico = logos.getlogo_2l_32Icon()
         self.SetIcon(ico)
@@ -2164,7 +2185,7 @@ class SaveWinP3(wx.Frame):
         
         panel1 = wx.Panel(self, -1)
         
-        gridtop = wx.FlexGridSizer(5, 3, vgap=20, hgap=20)
+        gridtop = wx.FlexGridSizer(5, 4, vgap=20, hgap=20)
     
         fontb = wx.SystemSettings_GetFont(wx.SYS_DEFAULT_GUI_FONT)
         fontb.SetWeight(wx.BOLD)
@@ -2176,7 +2197,9 @@ class SaveWinP3(wx.Frame):
         st2.SetFont(fontb)
         st3 = wx.StaticText(panel1, -1, '.png',  style=wx.ALIGN_LEFT)
         st3.SetFont(fontb)
-        
+        st3a = wx.StaticText(panel1, -1, '.xas',  style=wx.ALIGN_LEFT)
+        st3a.SetFont(fontb)
+                
         st4 = wx.StaticText(panel1, -1, '_spectra',  style=wx.ALIGN_LEFT)
         st4.SetFont(self.com.font)
         
@@ -2186,6 +2209,9 @@ class SaveWinP3(wx.Frame):
         
         self.cb2 = wx.CheckBox(panel1, -1, '')
         self.cb2.SetFont(self.com.font)
+        
+        self.cb2a = wx.CheckBox(panel1, -1, '')
+        self.cb2a.SetFont(self.com.font)
         
         st5 = wx.StaticText(panel1, -1, '_composite_images',  style=wx.ALIGN_LEFT)
         st5.SetFont(self.com.font)
@@ -2222,22 +2248,27 @@ class SaveWinP3(wx.Frame):
         gridtop.Add(st1, 0)
         gridtop.Add(st2, 0)
         gridtop.Add(st3, 0)
+        gridtop.Add(st3a, 0)
                 
         gridtop.Add(st4, 0)
         gridtop.Add(self.cb1, 0)
         gridtop.Add(self.cb2, 0)              
-  
+        gridtop.Add(self.cb2a, 0)    
+          
         gridtop.Add(st5, 0)
         gridtop.Add(self.cb3, 0)
         gridtop.Add(self.cb4, 0)  
+        gridtop.Add(wx.StaticText(panel1, -1, ' '))
         
         gridtop.Add(st6, 0)
         gridtop.Add(self.cb5, 0)
         gridtop.Add(self.cb6, 0)  
+        gridtop.Add(wx.StaticText(panel1, -1, ' '))
         
         gridtop.Add(st7, 0)
         gridtop.Add(self.cb7, 0)
         gridtop.Add(self.cb8, 0) 
+        gridtop.Add(wx.StaticText(panel1, -1, ' '))
         
         panel1.SetSizer(gridtop)
         
@@ -2245,7 +2276,7 @@ class SaveWinP3(wx.Frame):
         panel2 = wx.Panel(self, -1)
         button_save = wx.Button(panel2, -1, 'Save')
         self.Bind(wx.EVT_BUTTON, self.OnSave, id=button_save.GetId())
-        hbox.Add(button_save, 0, wx.LEFT,5)
+        hbox.Add(button_save, 0, wx.LEFT, 45)
         
         button_cancel = wx.Button(panel2, -1, 'Cancel')
         self.Bind(wx.EVT_BUTTON, self.OnCancel, id=button_cancel.GetId())
@@ -2264,6 +2295,7 @@ class SaveWinP3(wx.Frame):
         
         sp_pdf = self.cb1.GetValue()
         sp_png = self.cb2.GetValue()
+        sp_xas = self.cb2a.GetValue()
         im_pdf = self.cb3.GetValue()
         im_png = self.cb4.GetValue()
         indim_pdf = self.cb5.GetValue()
@@ -2274,6 +2306,7 @@ class SaveWinP3(wx.Frame):
         self.Close(True) 
         wx.GetApp().TopWindow.page3.Save(spec_png = sp_png, 
                                          spec_pdf = sp_pdf, 
+                                         spec_xas = sp_xas,
                                          img_png = im_png, 
                                          img_pdf = im_pdf,
                                          indimgs_png = indim_png, 
@@ -2505,8 +2538,8 @@ class PagePCA(wx.Panel):
 
             
 #----------------------------------------------------------------------    
-    def Save(self, spec_png = True, spec_pdf = False, img_png = True, 
-             img_pdf = False, evals_png = True, evals_pdf = False): 
+    def Save(self, spec_png = True, spec_pdf = False, spec_xas = False,
+             img_png = True, img_pdf = False, evals_png = True, evals_pdf = False): 
         
         path, ext = os.path.splitext(self.SaveFileName) 
         ext = ext[1:].lower() 
@@ -2571,19 +2604,25 @@ class PagePCA(wx.Panel):
             if spec_png:
                 for i in range (self.numsigpca):
                 
-                    self.pcaspectrum = self.anlz.eigenvecs[:,i]
+                    pcaspectrum = self.anlz.eigenvecs[:,i]
                     fig = mtplot.figure.Figure(figsize =(PlotW, PlotH))
                     canvas = FigureCanvas(fig)
                     fig.add_axes((0.15,0.15,0.75,0.75))
                     axes = fig.gca()
                     mtplot.rcParams['font.size'] = self.fontsize
-                    specplot = axes.plot(self.stk.ev,self.pcaspectrum)    
+                    specplot = axes.plot(self.stk.ev, pcaspectrum)    
                     axes.set_xlabel('Photon Energy [eV]')
                     axes.set_ylabel('Optical Density')
                 
                     fileName_spec = self.SaveFileName[:-len(suffix)]+"_PCAspectrum_" +str(i+1)+"."+ext
                     fig.savefig(fileName_spec)
-                
+                    
+            if spec_xas:
+                for i in range (self.numsigpca):
+                    pcaspectrum = self.anlz.eigenvecs[:,i]
+                    fileName_spec = self.SaveFileName[:-len(suffix)]+"_PCAspectrum_" +str(i+1)+".xas"
+                    self.stk.write_xas(fileName_spec, self.stk.ev, pcaspectrum)
+                    
                 
             ext = 'pdf'
             suffix = "." + ext        
@@ -2720,7 +2759,7 @@ class SaveWinP2(wx.Frame):
     title = "Save"
 
     def __init__(self, filename):
-        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(230, 310))
+        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(240, 310))
                
         ico = logos.getlogo_2l_32Icon()
         self.SetIcon(ico)
@@ -2752,7 +2791,7 @@ class SaveWinP2(wx.Frame):
         
         panel1 = wx.Panel(self, -1)
         
-        gridtop = wx.FlexGridSizer(4, 3, vgap=20, hgap=20)
+        gridtop = wx.FlexGridSizer(4, 4, vgap=20, hgap=20)
     
         fontb = wx.SystemSettings_GetFont(wx.SYS_DEFAULT_GUI_FONT)
         fontb.SetWeight(wx.BOLD)
@@ -2764,6 +2803,8 @@ class SaveWinP2(wx.Frame):
         st2.SetFont(fontb)
         st3 = wx.StaticText(panel1, -1, '.png',  style=wx.ALIGN_LEFT)
         st3.SetFont(fontb)
+        st3a = wx.StaticText(panel1, -1, '.xas',  style=wx.ALIGN_LEFT)
+        st3a.SetFont(fontb)        
         
         st4 = wx.StaticText(panel1, -1, '_spectra',  style=wx.ALIGN_LEFT)
         st4.SetFont(self.com.font)
@@ -2774,6 +2815,8 @@ class SaveWinP2(wx.Frame):
         
         self.cb2 = wx.CheckBox(panel1, -1, '')
         self.cb2.SetFont(self.com.font)
+        self.cb2a = wx.CheckBox(panel1, -1, '')
+        self.cb2a.SetFont(self.com.font)
         
         st5 = wx.StaticText(panel1, -1, '_images',  style=wx.ALIGN_LEFT)
         st5.SetFont(self.com.font)
@@ -2800,18 +2843,23 @@ class SaveWinP2(wx.Frame):
         gridtop.Add(st1, 0)
         gridtop.Add(st2, 0)
         gridtop.Add(st3, 0)
+        gridtop.Add(st3a, 0)
                 
         gridtop.Add(st4, 0)
         gridtop.Add(self.cb1, 0)
         gridtop.Add(self.cb2, 0)              
-  
+        gridtop.Add(self.cb2a, 0)  
+          
         gridtop.Add(st5, 0)
         gridtop.Add(self.cb3, 0)
         gridtop.Add(self.cb4, 0)  
+        gridtop.Add(wx.StaticText(panel1, -1, ' '))
+        
         
         gridtop.Add(st6, 0)
         gridtop.Add(self.cb5, 0)
         gridtop.Add(self.cb6, 0)  
+        gridtop.Add(wx.StaticText(panel1, -1, ' '))
         
         panel1.SetSizer(gridtop)
         
@@ -2819,7 +2867,7 @@ class SaveWinP2(wx.Frame):
         panel2 = wx.Panel(self, -1)
         button_save = wx.Button(panel2, -1, 'Save')
         self.Bind(wx.EVT_BUTTON, self.OnSave, id=button_save.GetId())
-        hbox.Add(button_save, 0, wx.LEFT,5)
+        hbox.Add(button_save, 0, wx.LEFT,25)
         
         button_cancel = wx.Button(panel2, -1, 'Cancel')
         self.Bind(wx.EVT_BUTTON, self.OnCancel, id=button_cancel.GetId())
@@ -2838,6 +2886,7 @@ class SaveWinP2(wx.Frame):
         
         sp_pdf = self.cb1.GetValue()
         sp_png = self.cb2.GetValue()
+        sp_xas = self.cb2a.GetValue()
         im_pdf = self.cb3.GetValue()
         im_png = self.cb4.GetValue()
         ev_pdf = self.cb5.GetValue()
@@ -2846,6 +2895,7 @@ class SaveWinP2(wx.Frame):
         self.Close(True) 
         wx.GetApp().TopWindow.page2.Save(spec_png = sp_png, 
                                          spec_pdf = sp_pdf, 
+                                         spec_xas = sp_xas,
                                          img_png = im_png, 
                                          img_pdf = im_pdf,
                                          evals_png = ev_png, 
@@ -3475,7 +3525,7 @@ class PageStack(wx.Panel):
    
    
 #----------------------------------------------------------------------    
-    def Save(self, spec_png = True, spec_pdf = False, img_png = True, img_pdf = False, img_all = False): 
+    def Save(self, spec_png = True, spec_pdf = False, sp_xas = False, img_png = True, img_pdf = False, img_all = False): 
 
         
         path, ext = os.path.splitext(self.SaveFileName) 
@@ -3546,6 +3596,10 @@ class PageStack(wx.Panel):
                 fileName_img = self.SaveFileName[:-len(suffix)]+"_" +str(self.stk.ev[self.iev])+"eV."+ext
                 fig = self.AbsImagePanel.get_figure()
                 fig.savefig(fileName_img)
+                
+            if sp_xas:
+                fileName_spec = self.SaveFileName[:-len(suffix)]+"_spectrum.xas"
+                self.stk.write_xas(fileName_spec, self.stk.ev, self.spectrum)
             
         except IOError, e:
             if e.strerror:
@@ -3905,7 +3959,7 @@ class PageStack(wx.Panel):
         image = self.stk.despike(image)
         
         
-        self.stack.data_struct.exchange.data = self.stack.absdata
+        self.stk.data_struct.exchange.data = self.stk.absdata
         
         if self.com.i0_loaded:
             self.stk.calculate_optical_density()
@@ -3919,7 +3973,7 @@ class SaveWinP1(wx.Frame):
     title = "Save"
 
     def __init__(self, filename):
-        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(230, 310))
+        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(240, 310))
                
         ico = logos.getlogo_2l_32Icon()
         self.SetIcon(ico)
@@ -3951,7 +4005,7 @@ class SaveWinP1(wx.Frame):
         
         panel1 = wx.Panel(self, -1)
         
-        gridtop = wx.FlexGridSizer(4, 3, vgap=20, hgap=20)
+        gridtop = wx.FlexGridSizer(4, 4, vgap=20, hgap=20)
     
         fontb = wx.SystemSettings_GetFont(wx.SYS_DEFAULT_GUI_FONT)
         fontb.SetWeight(wx.BOLD)
@@ -3963,6 +4017,8 @@ class SaveWinP1(wx.Frame):
         st2.SetFont(fontb)
         st3 = wx.StaticText(panel1, -1, '.png',  style=wx.ALIGN_LEFT)
         st3.SetFont(fontb)
+        st3a = wx.StaticText(panel1, -1, '.xas',  style=wx.ALIGN_LEFT)
+        st3a.SetFont(fontb)
         
         st4 = wx.StaticText(panel1, -1, '_spectrum',  style=wx.ALIGN_LEFT)
         st4.SetFont(self.com.font)
@@ -3973,6 +4029,9 @@ class SaveWinP1(wx.Frame):
         
         self.cb2 = wx.CheckBox(panel1, -1, '')
         self.cb2.SetFont(self.com.font)
+        
+        self.cb2a = wx.CheckBox(panel1, -1, '')
+        self.cb2a.SetFont(self.com.font)        
         
         st5 = wx.StaticText(panel1, -1, '_image',  style=wx.ALIGN_LEFT)
         st5.SetFont(self.com.font)
@@ -3997,18 +4056,22 @@ class SaveWinP1(wx.Frame):
         gridtop.Add(st1, 0)
         gridtop.Add(st2, 0)
         gridtop.Add(st3, 0)
-                
+        gridtop.Add(st3a, 0)
+                        
         gridtop.Add(st4, 0)
         gridtop.Add(self.cb1, 0)
-        gridtop.Add(self.cb2, 0)              
+        gridtop.Add(self.cb2, 0)  
+        gridtop.Add(self.cb2a, 0)             
   
         gridtop.Add(st5, 0)
         gridtop.Add(self.cb3, 0)
         gridtop.Add(self.cb4, 0)  
+        gridtop.Add(wx.StaticText(panel1, -1, ' '), 0)
         
         gridtop.Add(st6, 0)
         gridtop.Add(st7, 0)
         gridtop.Add(self.cb5, 0)  
+        gridtop.Add(wx.StaticText(panel1, -1, ' '), 0)
         
         panel1.SetSizer(gridtop)
         
@@ -4016,7 +4079,7 @@ class SaveWinP1(wx.Frame):
         panel2 = wx.Panel(self, -1)
         button_save = wx.Button(panel2, -1, 'Save')
         self.Bind(wx.EVT_BUTTON, self.OnSave, id=button_save.GetId())
-        hbox.Add(button_save, 0, wx.LEFT,5)
+        hbox.Add(button_save, 0, wx.LEFT,25)
         
         button_cancel = wx.Button(panel2, -1, 'Cancel')
         self.Bind(wx.EVT_BUTTON, self.OnCancel, id=button_cancel.GetId())
@@ -4035,6 +4098,7 @@ class SaveWinP1(wx.Frame):
         
         sp_pdf = self.cb1.GetValue()
         sp_png = self.cb2.GetValue()
+        sp_xas = self.cb2a.GetValue()
         im_pdf = self.cb3.GetValue()
         im_png = self.cb4.GetValue()
         im_all = self.cb5.GetValue()
@@ -4042,6 +4106,7 @@ class SaveWinP1(wx.Frame):
         self.Close(True) 
         wx.GetApp().TopWindow.page1.Save(spec_png = sp_png, 
                                          spec_pdf = sp_pdf, 
+                                         sp_xas = sp_xas,
                                          img_png = im_png, 
                                          img_pdf = im_pdf,
                                          img_all = im_all)
