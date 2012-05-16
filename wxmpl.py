@@ -19,9 +19,11 @@ import sys
 import os.path
 import weakref
 
+import numpy as np
+
 import matplotlib
 matplotlib.use('WXAgg')
-import matplotlib.numerix as Numerix
+#import matplotlib.numerix as Numerix
 from matplotlib.axes import _process_plot_var_args
 from matplotlib.backend_bases import FigureCanvasBase
 from matplotlib.backends.backend_agg import FigureCanvasAgg, RendererAgg
@@ -1649,7 +1651,7 @@ class VectorBuffer:
     accomodate new entries.
     """
     def __init__(self):
-        self.data = Numerix.zeros((16,), Numerix.Float)
+        self.data = np.zeros((16,), np.float)
         self.nextRow = 0
 
     def clear(self):
@@ -1663,7 +1665,7 @@ class VectorBuffer:
         """
         Zero and reset this buffer, releasing the underlying array.
         """
-        self.data = Numerix.zeros((16,), Numerix.Float)
+        self.data = np.zeros((16,), np.float)
         self.nextRow = 0
 
     def append(self, point):
@@ -1675,11 +1677,11 @@ class VectorBuffer:
 
         resize = False
         if nextRow == data.shape[0]:
-            nR = int(Numerix.ceil(self.data.shape[0]*1.5))
+            nR = int(np.ceil(self.data.shape[0]*1.5))
             resize = True
 
         if resize:
-            self.data = Numerix.zeros((nR,), Numerix.Float)
+            self.data = np.zeros((nR,), np.float)
             self.data[0:data.shape[0]] = data
 
         self.data[nextRow] = point
@@ -1701,7 +1703,7 @@ class MatrixBuffer:
     accomodate new rows of entries.
     """
     def __init__(self):
-        self.data = Numerix.zeros((16, 1), Numerix.Float)
+        self.data = np.zeros((16, 1), np.float)
         self.nextRow = 0
 
     def clear(self):
@@ -1715,14 +1717,14 @@ class MatrixBuffer:
         """
         Zero and reset this buffer, releasing the underlying array.
         """
-        self.data = Numerix.zeros((16, 1), Numerix.Float)
+        self.data = np.zeros((16, 1), np.float)
         self.nextRow = 0
 
     def append(self, row):
         """
         Append a new row of entries to the end of this buffer's matrix.
         """
-        row = Numerix.asarray(row, Numerix.Float)
+        row = np.asarray(row, np.float)
         nextRow = self.nextRow
         data = self.data
         nPts = row.shape[0]
@@ -1733,7 +1735,7 @@ class MatrixBuffer:
         resize = True
         if nextRow == data.shape[0]:
             nC = data.shape[1]
-            nR = int(Numerix.ceil(self.data.shape[0]*1.5))
+            nR = int(np.ceil(self.data.shape[0]*1.5))
             if nC < nPts:
                 nC = nPts
         elif data.shape[1] < nPts:
@@ -1743,7 +1745,7 @@ class MatrixBuffer:
             resize = False
 
         if resize:
-            self.data = Numerix.zeros((nR, nC), Numerix.Float)
+            self.data = np.zeros((nR, nC), np.float)
             rowEnd, colEnd = data.shape
             self.data[0:rowEnd, 0:colEnd] = data
 
@@ -1935,7 +1937,7 @@ class StripCharter:
                 xys = axes._get_verts_in_data_coords(
                     line.get_transform(), zip(x, y))
             else:
-                xys = Numerix.zeros((x.shape[0], 2), Numerix.Float)
+                xys = np.zeros((x.shape[0], 2), np.float)
                 xys[:,0] = x
                 xys[:,1] = y
             axes.update_datalim(xys)
