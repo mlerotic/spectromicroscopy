@@ -470,7 +470,7 @@ class h5:
             ds = idsGrp.create_dataset('proposal', data = data_struct.information.ids.proposal)
             have_ids = 1
         if data_struct.information.ids.activity is not None:
-            ds = idsGrp.create_dataset('acitivity', data = data_struct.information.ids.activity)
+            ds = idsGrp.create_dataset('activity', data = data_struct.information.ids.activity)
             have_ids = 1
         if data_struct.information.ids.esaf is not None:
             ds = idsGrp.create_dataset('esaf', data = data_struct.information.ids.esaf)

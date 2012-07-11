@@ -5776,7 +5776,7 @@ class MainFrame(wx.Frame):
                     self.stk.new_data()
                     #self.stk.data_struct.delete_data()
                     self.anlz.delete_data()                
-            
+
                 self.stk.read_h5(filepath)
                          
                 self.page1.slider_eng.SetRange(0,self.stk.n_ev-1)
