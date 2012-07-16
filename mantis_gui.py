@@ -2964,6 +2964,8 @@ class PageStack(wx.Panel):
    
         self.AbsImagePanel = wxmpl.PlotPanel(panel1, -1, size =(PlotH, PlotH), cursor=False, crosshairs=True, location=False, zoom=False)
         wxmpl.EVT_POINT(panel1, self.AbsImagePanel.GetId(), self.OnPointAbsimage)
+        
+        
                               
         self.slider_eng = wx.Slider(panel1, -1, self.sel, 0, 100, style=wx.SL_LEFT )        
         self.slider_eng.SetFocus()

@@ -1120,7 +1120,8 @@ class PlotPanel(FigureCanvasWxAgg):
             rightClickUnzoom, autoscaleUnzoom)
 
         self.figure.set_edgecolor('black')
-        self.figure.set_facecolor('white')
+        self.figure.set_facecolor((0.95,0.95,0.95))
+        self.SetWindowStyle(wx.SUNKEN_BORDER)
         self.SetBackgroundColour(wx.WHITE)
 
         # find the toplevel parent window and register an activation event
