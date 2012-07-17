@@ -125,12 +125,12 @@ class PageSpectral(wx.Panel):
         self.tc_spmap.SetFont(self.com.font)
         self.tc_spmap.SetValue("Spectrum composition map")
 
-        
-        self.MapPanel = wxmpl.PlotPanel(panel1, -1, size =(PlotH, PlotH), cursor=False, crosshairs=False, location=False, zoom=False)                            
+        i1panel = wx.Panel(panel1, -1, style = wx.SUNKEN_BORDER)
+        self.MapPanel = wxmpl.PlotPanel(i1panel, -1, size =(PlotH, PlotH), cursor=False, crosshairs=False, location=False, zoom=False)                            
   
         vbox1.Add((0,10))
         vbox1.Add(self.tc_spmap,1, wx.LEFT | wx.EXPAND, 20)        
-        vbox1.Add(self.MapPanel, 0,  wx.LEFT, 20)
+        vbox1.Add(i1panel, 0,  wx.LEFT, 20)
 
         panel1.SetSizer(vbox1)
      
@@ -144,13 +144,14 @@ class PageSpectral(wx.Panel):
         self.tc_tspec.SetValue("Target Spectrum: ")
         hbox11 = wx.BoxSizer(wx.HORIZONTAL)         
         
-        self.TSpectrumPanel = wxmpl.PlotPanel(panel2, -1, size=(PlotW, PlotH), cursor=False, crosshairs=False, location=False, zoom=False)
+        i2panel = wx.Panel(panel2, -1, style = wx.SUNKEN_BORDER)
+        self.TSpectrumPanel = wxmpl.PlotPanel(i2panel, -1, size=(PlotW, PlotH), cursor=False, crosshairs=False, location=False, zoom=False)
 
         self.slider_tspec = wx.Slider(panel2, -1, 1, 1, 5, style=wx.SL_LEFT )        
         self.slider_tspec.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnTSScroll, self.slider_tspec)
 
-        hbox11.Add(self.TSpectrumPanel, 0)
+        hbox11.Add(i2panel, 0)
         hbox11.Add(self.slider_tspec, 0,  wx.EXPAND)
           
         vbox2.Add((0,10))
@@ -299,12 +300,23 @@ class PageSpectral(wx.Panel):
         
         hbox51 = wx.BoxSizer(wx.HORIZONTAL)
         hbox51.Add((0,2))
-         
-        self.tc_speclist = wx.TextCtrl(panel5, -1, style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+
+        self.tc_speclist =  wx.ListCtrl(panel5, -1, 
+                                        style=wx.LC_REPORT|wx.LC_NO_HEADER|wx.NO_BORDER|wx.LC_EDIT_LABELS|wx.LC_SINGLE_SEL)
+        self.tc_speclist.InsertColumn(0, 'Spectra')
+        self.Bind(wx.EVT_LIST_ITEM_FOCUSED , self.OnSpectraListClick, self.tc_speclist)
+        self.Bind(wx.EVT_LIST_END_LABEL_EDIT, self.OnEditSpectraListClick, self.tc_speclist)
+        self.tc_speclist.SetBackgroundColour('white')
         self.tc_speclist.SetFont(self.com.font)
         hbox51.Add(self.tc_speclist, 1, wx.EXPAND)
         sizer5.Add(hbox51,1, wx.ALL|wx.EXPAND,2)        
         panel5.SetSizer(sizer5)
+        
+#        self.tc_speclist = wx.TextCtrl(panel5, -1, style=wx.TE_MULTILINE|wx.TE_RICH|wx.BORDER_NONE)
+#        self.tc_speclist.SetFont(self.com.font)
+#        hbox51.Add(self.tc_speclist, 1, wx.EXPAND)
+#        sizer5.Add(hbox51,1, wx.ALL|wx.EXPAND,2)        
+#        panel5.SetSizer(sizer5)
 
         
         hboxB.Add(panel2, 0, wx.BOTTOM | wx.TOP, 9)
@@ -390,7 +402,8 @@ class PageSpectral(wx.Panel):
 #----------------------------------------------------------------------
     def OnAddClusterSpectra(self, event):
 
-        try: 
+        #try:
+        if True: 
             wx.BeginBusyCursor() 
             self.anlz.add_cluster_target_spectra()
             self.com.spec_anl_calculated = 1
@@ -399,15 +412,16 @@ class PageSpectral(wx.Panel):
             self.slider_tspec.SetMax(self.anlz.n_target_spectra)
             self.slider_tspec.SetValue(self.i_tspec)
             
+            self.ShowSpectraList() 
             self.loadTSpectrum()
             self.loadTargetMap()  
-            self.ShowSpectraList()  
+             
         
             wx.EndBusyCursor()
             
-        except:
-            wx.EndBusyCursor()  
-            wx.MessageBox("CLuster spectra not loaded.")
+#        except:
+#            wx.EndBusyCursor()  
+#            wx.MessageBox("Cluster spectra not loaded.")
  
                                                         
         wx.GetApp().TopWindow.refresh_widgets()
@@ -584,14 +598,31 @@ class PageSpectral(wx.Panel):
             fileName_img = self.SaveFileName[:-len(suffix)]+"_TSmap_" +str(i+1)+"."+ext               
             fig.savefig(fileName_img)
             
-    
+#----------------------------------------------------------------------        
+    def OnEditSpectraListClick(self, event):
+        self.anlz.tspec_names[self.i_tspec-1] = event.GetText()
+        self.loadTSpectrum()
+
+#----------------------------------------------------------------------        
+    def OnSpectraListClick(self, event):
+        sel = event.m_itemIndex
+        self.i_tspec = sel+1
+        
+        if self.com.spec_anl_calculated == 1:
+            self.loadTSpectrum()
+            self.loadTargetMap()
+            self.slider_tspec.SetValue(self.i_tspec)
+            
 #----------------------------------------------------------------------        
     def OnTSScroll(self, event):
+        self.tc_speclist.SetItemState(self.i_tspec-1, 0, wx.LIST_STATE_SELECTED) 
+        
         sel = event.GetInt()
         self.i_tspec = sel
         if self.com.spec_anl_calculated == 1:
             self.loadTSpectrum()
             self.loadTargetMap()
+
 
 #----------------------------------------------------------------------          
     def OnRBRawFit(self, evt):
@@ -673,7 +704,7 @@ class PageSpectral(wx.Panel):
         self.TSpectrumPanel.draw()
         
         self.tc_tspec.SetValue("Target Spectrum: ")
-        self.tc_speclist.Clear() 
+        self.tc_speclist.DeleteAllItems()
         self.tc_spfitlist.Clear()
         
         self.com.spec_anl_calculated = 0
@@ -707,14 +738,11 @@ class PageSpectral(wx.Panel):
 #----------------------------------------------------------------------           
     def ShowSpectraList(self):    
         
-        self.tc_speclist.Clear()     
+        self.tc_speclist.DeleteAllItems()   
         
         for i in range(self.anlz.n_target_spectra):
-            self.tc_speclist.AppendText(self.anlz.tspec_names[i])
+            self.tc_speclist.InsertStringItem(i, self.anlz.tspec_names[i])
             
-            if i < self.anlz.n_target_spectra:
-                self.tc_speclist.AppendText('\n')
-        self.tc_speclist.SetInsertionPoint(0)
         
 #----------------------------------------------------------------------      
     def loadTargetMap(self):
@@ -807,6 +835,7 @@ class PageSpectral(wx.Panel):
         self.textctrl_sp.AppendText('RMS Error: '+ str('{0:7.5f}').format(self.anlz.target_rms[self.i_tspec-1]))
         
         self.ShowFitWeights()
+        
         
 #---------------------------------------------------------------------- 
 class ShowCompositeRBGmap(wx.Frame):
@@ -1000,9 +1029,9 @@ class ShowCompositeRBGmap(wx.Frame):
         
         hbox1.Add(vbox1, 0,  wx.LEFT|wx.RIGHT ,20)
 
-
-        self.RGBImagePanel = wxmpl.PlotPanel(panel, -1, size =(PlotH,PlotH), cursor=False, crosshairs=False, location=False, zoom=False)
-        hbox1.Add(self.RGBImagePanel, 0)
+        i1panel = wx.Panel(panel, -1, style = wx.SUNKEN_BORDER)
+        self.RGBImagePanel = wxmpl.PlotPanel(i1panel, -1, size =(PlotH,PlotH), cursor=False, crosshairs=False, location=False, zoom=False)
+        hbox1.Add(i1panel, 0)
         
         vbox.Add(hbox1, 0, wx.EXPAND| wx.TOP, 20) 
         
@@ -1483,10 +1512,12 @@ class PageCluster(wx.Panel):
         self.tc_clustercomp = wx.TextCtrl(panel2, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         self.tc_clustercomp.SetValue("Composite cluster image")        
         self.tc_clustercomp.SetFont(self.com.font)
-        self.ClusterImagePan = wxmpl.PlotPanel(panel2, -1, size =(PlotH, PlotH), cursor=False, crosshairs=True, location=False, zoom=False)                              
-        wxmpl.EVT_POINT(self, self.ClusterImagePan.GetId(), self.OnPointClusterImage)   
+        
+        i2panel = wx.Panel(panel2, -1, style = wx.SUNKEN_BORDER)
+        self.ClusterImagePan = wxmpl.PlotPanel(i2panel, -1, size =(PlotH, PlotH), cursor=False, crosshairs=True, location=False, zoom=False)                              
+        wxmpl.EVT_POINT(i2panel, self.ClusterImagePan.GetId(), self.OnPointClusterImage)   
         vbox2.Add(self.tc_clustercomp, 0, wx.EXPAND) 
-        vbox2.Add(self.ClusterImagePan, 0)   
+        vbox2.Add(i2panel, 0)   
 
         panel2.SetSizer(vbox2)
         
@@ -1501,7 +1532,8 @@ class PageCluster(wx.Panel):
         self.tc_cluster.SetValue("Cluster ")
         self.tc_cluster.SetFont(self.com.font)
         hbox31 = wx.BoxSizer(wx.HORIZONTAL)
-        self.ClusterIndvImagePan = wxmpl.PlotPanel(panel3, -1, size =(PlotH*0.73, PlotH*0.73), cursor=False, crosshairs=False, location=False, zoom=False)
+        i3panel = wx.Panel(panel3, -1, style = wx.SUNKEN_BORDER)
+        self.ClusterIndvImagePan = wxmpl.PlotPanel(i3panel, -1, size =(PlotH*0.73, PlotH*0.73), cursor=False, crosshairs=False, location=False, zoom=False)
     
         self.slidershow = wx.Slider(panel3, -1, self.selcluster, 1, 20, style=wx.SL_LEFT)   
         self.slidershow.Disable()    
@@ -1510,11 +1542,12 @@ class PageCluster(wx.Panel):
         
         text3 = wx.StaticText(panel3, -1, 'Cluster Distance Map',  style=wx.ALIGN_LEFT)
         text3.SetFont(self.com.font)
-        self.ClusterDistMapPan = wxmpl.PlotPanel(panel3, -1, size =(PlotH*0.73, PlotH*0.73), cursor=False, crosshairs=False, location=False, zoom=False)
+        i4panel = wx.Panel(panel3, -1, style = wx.SUNKEN_BORDER)
+        self.ClusterDistMapPan = wxmpl.PlotPanel(i4panel, -1, size =(PlotH*0.73, PlotH*0.73), cursor=False, crosshairs=False, location=False, zoom=False)
         
           
         fgs.AddMany([(self.tc_cluster), (wx.StaticText(panel3, -1, ' ')), (text3, 0, wx.LEFT, 15), 
-                     (self.ClusterIndvImagePan), (self.slidershow, 0,  wx.EXPAND), (self.ClusterDistMapPan, 0, wx.LEFT, 20)])
+                     (i3panel), (self.slidershow, 0,  wx.EXPAND), (i4panel, 0, wx.LEFT, 20)])
 
         vbox3.Add(fgs)
 
@@ -1529,10 +1562,11 @@ class PageCluster(wx.Panel):
         self.tc_clustersp.SetValue("Cluster spectrum")
         self.tc_clustersp.SetFont(self.com.font)        
 
-        self.ClusterSpecPan = wxmpl.PlotPanel(panel4, -1, size =(PlotW, PlotH), cursor=False, crosshairs=False, location=False, zoom=False)
+        i5panel = wx.Panel(panel4, -1, style = wx.SUNKEN_BORDER)
+        self.ClusterSpecPan = wxmpl.PlotPanel(i5panel, -1, size =(PlotW, PlotH), cursor=False, crosshairs=False, location=False, zoom=False)
         
         vbox4.Add(self.tc_clustersp, 0, wx.EXPAND)        
-        vbox4.Add(self.ClusterSpecPan, 0)
+        vbox4.Add(i5panel, 0)
 
         panel4.SetSizer(vbox4)
         
@@ -2067,14 +2101,15 @@ class Scatterplots(wx.Frame):
           
         grid1 = wx.FlexGridSizer(2, 2)
 
-        self.ScatterPPanel = wxmpl.PlotPanel(panel, -1, size=(5.0, 4.0), cursor=False, crosshairs=False, location=False, zoom=False)
+        i1panel = wx.Panel(panel, -1, style = wx.SUNKEN_BORDER)
+        self.ScatterPPanel = wxmpl.PlotPanel(i1panel, -1, size=(5.0, 4.0), cursor=False, crosshairs=False, location=False, zoom=False)
         
         self.slidershow_y = wx.Slider(panel, -1, self.pca_y, 1, self.numsigpca, style=wx.SL_RIGHT|wx.SL_LABELS|wx.SL_INVERSE)
         self.slidershow_y.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnSliderScroll_y, self.slidershow_y)
         
         grid1.Add(self.slidershow_y, 0, wx.EXPAND)
-        grid1.Add(self.ScatterPPanel, 0)
+        grid1.Add(i1panel, 0)
                
         
         self.slidershow_x = wx.Slider(panel, -1, self.pca_x, 1, self.numsigpca, style=wx.SL_TOP|wx.SL_LABELS)
@@ -2352,14 +2387,15 @@ class PagePCA(wx.Panel):
         
         hbox11 = wx.BoxSizer(wx.HORIZONTAL)
    
-        self.PCAImagePan = wxmpl.PlotPanel(panel1, -1, size =(ph*1.10, ph), cursor=False, crosshairs=False, location=False, zoom=False)
+        i1panel = wx.Panel(panel1, -1, style = wx.SUNKEN_BORDER)
+        self.PCAImagePan = wxmpl.PlotPanel(i1panel, -1, size =(ph*1.10, ph), cursor=False, crosshairs=False, location=False, zoom=False)
                               
         self.slidershow = wx.Slider(panel1, -1, self.selpca, 1, 20, style=wx.SL_LEFT)
         self.slidershow.Disable()          
         self.slidershow.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnPCAScroll, self.slidershow)
 
-        hbox11.Add(self.PCAImagePan, 0)
+        hbox11.Add(i1panel, 0)
         hbox11.Add(self.slidershow, 0,  wx.EXPAND)
         
         vbox1.Add(self.tc_PCAcomp, 1, wx.EXPAND )        
@@ -2413,28 +2449,30 @@ class PagePCA(wx.Panel):
         #panel 3
         panel3 = wx.Panel(self, -1)
         
-        self.PCASpecPan = wxmpl.PlotPanel(panel3, -1, size =(pw, ph), cursor=False, crosshairs=False, location=False, zoom=False)
+        i3panel = wx.Panel(panel3, -1, style = wx.SUNKEN_BORDER)
+        self.PCASpecPan = wxmpl.PlotPanel(i3panel, -1, size =(pw, ph), cursor=False, crosshairs=False, location=False, zoom=False)
              
         vbox3 = wx.BoxSizer(wx.VERTICAL)
         self.text_pcaspec = wx.TextCtrl(panel3, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         self.text_pcaspec.SetFont(self.com.font)
         self.text_pcaspec.SetValue("PCA spectrum ")        
         vbox3.Add(self.text_pcaspec, 0)
-        vbox3.Add(self.PCASpecPan, 0)        
+        vbox3.Add(i3panel, 0)        
         panel3.SetSizer(vbox3)
         
         
         #panel 4
         panel4 = wx.Panel(self, -1)
              
-        self.PCAEvalsPan = wxmpl.PlotPanel(panel4, -1, size =(pw, ph*0.75), cursor=False, crosshairs=False, location=False, zoom=False)
+        i4panel = wx.Panel(panel4, -1, style = wx.SUNKEN_BORDER)
+        self.PCAEvalsPan = wxmpl.PlotPanel(i4panel, -1, size =(pw, ph*0.75), cursor=False, crosshairs=False, location=False, zoom=False)
         
         vbox4 = wx.BoxSizer(wx.VERTICAL)
         text4 = wx.TextCtrl(panel4, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         text4.SetFont(self.com.font)
         text4.SetValue("PCA eigenvalues ")        
         vbox4.Add(text4, 0)
-        vbox4.Add(self.PCAEvalsPan, 0)
+        vbox4.Add(i4panel, 0)
         
         panel4.SetSizer(vbox4)      
         
@@ -2962,16 +3000,16 @@ class PageStack(wx.Panel):
        
         hbox11 = wx.BoxSizer(wx.HORIZONTAL)
    
-        self.AbsImagePanel = wxmpl.PlotPanel(panel1, -1, size =(PlotH, PlotH), cursor=False, crosshairs=True, location=False, zoom=False)
-        wxmpl.EVT_POINT(panel1, self.AbsImagePanel.GetId(), self.OnPointAbsimage)
-        
+        i1panel = wx.Panel(panel1, -1, style = wx.SUNKEN_BORDER)
+        self.AbsImagePanel = wxmpl.PlotPanel(i1panel, -1, size =(PlotH, PlotH), cursor=False, crosshairs=True, location=False, zoom=False)
+        wxmpl.EVT_POINT(i1panel, self.AbsImagePanel.GetId(), self.OnPointAbsimage)
         
                               
         self.slider_eng = wx.Slider(panel1, -1, self.sel, 0, 100, style=wx.SL_LEFT )        
         self.slider_eng.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnScrollEng, self.slider_eng)
 
-        hbox11.Add(self.AbsImagePanel, 0)
+        hbox11.Add(i1panel, 0)
         hbox11.Add(self.slider_eng, 0,  wx.EXPAND)
         
         vbox1.Add(self.tc_imageeng,1, wx.LEFT | wx.TOP | wx.EXPAND, 20)        
@@ -2988,12 +3026,12 @@ class PageStack(wx.Panel):
         self.tc_spec.SetValue("Spectrum at point: ")
         self.tc_spec.SetFont(self.com.font)
           
-        
-        self.SpectrumPanel = wxmpl.PlotPanel(panel2, -1, size=(PlotW, PlotH), cursor=False, crosshairs=False, location=False, zoom=False)
-        wxmpl.EVT_POINT(panel2, self.SpectrumPanel.GetId(), self.OnPointSpectrum)
+        i2panel = wx.Panel(panel2, -1, style = wx.SUNKEN_BORDER)
+        self.SpectrumPanel = wxmpl.PlotPanel(i2panel, -1, size=(PlotW, PlotH), cursor=False, crosshairs=False, location=False, zoom=False)
+        wxmpl.EVT_POINT(i2panel, self.SpectrumPanel.GetId(), self.OnPointSpectrum)
         
         vbox2.Add(self.tc_spec, 1, wx.LEFT | wx.TOP | wx.EXPAND, 20)       
-        vbox2.Add(self.SpectrumPanel, 0, wx.LEFT , 20)
+        vbox2.Add(i2panel, 0, wx.LEFT , 20)
         
         panel2.SetSizer(vbox2)
         
@@ -4147,11 +4185,12 @@ class ShowHistogram(wx.Frame):
         panel = wx.Panel(self, -1)
         vbox = wx.BoxSizer(wx.VERTICAL)
                
-        self.HistogramPanel = wxmpl.PlotPanel(panel, -1, size=(6.0, 3.7), cursor=False, crosshairs=False, location=False, zoom=False)
+        i1panel = wx.Panel(panel, -1, style = wx.SUNKEN_BORDER)
+        self.HistogramPanel = wxmpl.PlotPanel(i1panel, -1, size=(6.0, 3.7), cursor=False, crosshairs=False, location=False, zoom=False)
         
-        wxmpl.EVT_SELECTION(panel, self.HistogramPanel.GetId(), self.OnSelection)
+        wxmpl.EVT_SELECTION(i1panel, self.HistogramPanel.GetId(), self.OnSelection)
 
-        vbox.Add(self.HistogramPanel, 0, wx.ALL, 20)
+        vbox.Add(i1panel, 0, wx.ALL, 20)
         
        
         hbox2 = wx.BoxSizer(wx.HORIZONTAL)
@@ -4302,11 +4341,12 @@ class LimitEv(wx.Frame):
         panel = wx.Panel(self, -1)
         vbox = wx.BoxSizer(wx.VERTICAL)
                
-        self.SpectrumPanel = wxmpl.PlotPanel(panel, -1, size=(6.0, 3.7), cursor=False, crosshairs=False, location=False, zoom=False)
+        i1panel = wx.Panel(panel, -1, style = wx.SUNKEN_BORDER)
+        self.SpectrumPanel = wxmpl.PlotPanel(i1panel, -1, size=(6.0, 3.7), cursor=False, crosshairs=False, location=False, zoom=False)
         
-        wxmpl.EVT_SELECTION(panel, self.SpectrumPanel.GetId(), self.OnSelection)
+        wxmpl.EVT_SELECTION(i1panel, self.SpectrumPanel.GetId(), self.OnSelection)
 
-        vbox.Add(self.SpectrumPanel, 0, wx.ALL, 20)
+        vbox.Add(i1panel, 0, wx.ALL, 20)
         
        
         hbox2 = wx.BoxSizer(wx.HORIZONTAL)
@@ -4465,15 +4505,16 @@ class ImageRegistration(wx.Frame):
        
         hbox11 = wx.BoxSizer(wx.HORIZONTAL)
    
-        self.AbsImagePanel = wxmpl.PlotPanel(panel1, -1, size =(3.0,3.0), cursor=True, crosshairs=False, location=False, zoom=False)
-        wxmpl.EVT_POINT(panel1, self.AbsImagePanel.GetId(), self.OnPointCorrimage)
+        i1panel = wx.Panel(panel1, -1, style = wx.SUNKEN_BORDER)
+        self.AbsImagePanel = wxmpl.PlotPanel(i1panel, -1, size =(3.0,3.0), cursor=True, crosshairs=False, location=False, zoom=False)
+        wxmpl.EVT_POINT(i1panel, self.AbsImagePanel.GetId(), self.OnPointCorrimage)
 
                     
         self.slider_eng = wx.Slider(panel1, -1, self.iev, 0, self.stack.n_ev-1, style=wx.SL_LEFT )        
         self.slider_eng.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnScrollEng, self.slider_eng)
 
-        hbox11.Add(self.AbsImagePanel, 0)
+        hbox11.Add(i1panel, 0)
         hbox11.Add(self.slider_eng, 0,  wx.EXPAND)
         
         vbox1.Add(self.tc_imageeng,1, wx.EXPAND)        
@@ -4491,10 +4532,11 @@ class ImageRegistration(wx.Frame):
         tc2.SetFont(self.com.font)
         tc2.SetValue('Cross-correlation')
 
-        self.CscorrPanel = wxmpl.PlotPanel(panel2, -1, size =(2.4,2.4), cursor=False, crosshairs=True, location=False, zoom=False)
+        i2panel = wx.Panel(panel2, -1, style = wx.SUNKEN_BORDER)
+        self.CscorrPanel = wxmpl.PlotPanel(i2panel, -1, size =(2.4,2.4), cursor=False, crosshairs=True, location=False, zoom=False)
                                       
         vbox2.Add(tc2,1, wx.EXPAND)        
-        vbox2.Add(self.CscorrPanel, 0)
+        vbox2.Add(i2panel, 0)
 
         panel2.SetSizer(vbox2)
         
@@ -4507,11 +4549,12 @@ class ImageRegistration(wx.Frame):
         tc3.SetValue('Image shifts')
         tc3.SetFont(self.com.font)
           
-        self.ShiftsPanel = wxmpl.PlotPanel(panel3, -1, size=(4.0, 2.4), cursor=False, crosshairs=False, location=False, zoom=False)
-        wxmpl.EVT_POINT(panel3, self.ShiftsPanel.GetId(), self.OnPlotShifts)
+        i4panel = wx.Panel(panel3, -1, style = wx.SUNKEN_BORDER)
+        self.ShiftsPanel = wxmpl.PlotPanel(i4panel, -1, size=(4.0, 2.4), cursor=False, crosshairs=False, location=False, zoom=False)
+        wxmpl.EVT_POINT(i4panel, self.ShiftsPanel.GetId(), self.OnPlotShifts)
         
         vbox3.Add(tc3, 1, wx.EXPAND)       
-        vbox3.Add(self.ShiftsPanel, 0)
+        vbox3.Add(i4panel, 0)
         
         panel3.SetSizer(vbox3)
         
@@ -4570,11 +4613,12 @@ class ImageRegistration(wx.Frame):
         tc5.SetFont(self.com.font)
         tc5.SetValue('Reference image')
 
-        self.RefImagePanel = wxmpl.PlotPanel(panel5, -1, size =(3.0,3.0), cursor=True, crosshairs=False, location=False, zoom=False)
-        wxmpl.EVT_POINT(panel5, self.RefImagePanel.GetId(), self.OnPointRefimage)
+        i3panel = wx.Panel(panel5, -1, style = wx.SUNKEN_BORDER)
+        self.RefImagePanel = wxmpl.PlotPanel(i3panel, -1, size =(3.0,3.0), cursor=True, crosshairs=False, location=False, zoom=False)
+        wxmpl.EVT_POINT(i3panel, self.RefImagePanel.GetId(), self.OnPointRefimage)
         
         vbox5.Add(tc5,1, wx.EXPAND)        
-        vbox5.Add(self.RefImagePanel, 0)
+        vbox5.Add(i3panel, 0)
 
         panel5.SetSizer(vbox5)
         
@@ -5348,9 +5392,10 @@ class PlotFrame(wx.Frame):
         panel = wx.Panel(self, -1)
         vbox = wx.BoxSizer(wx.VERTICAL)
                
-        self.PlotPanel = wxmpl.PlotPanel(panel, -1, size=(6.0, 3.7), cursor=False, crosshairs=False, location=False, zoom=False)
+        i1panel = wx.Panel(panel, -1, style = wx.SUNKEN_BORDER)
+        self.PlotPanel = wxmpl.PlotPanel(i1panel, -1, size=(6.0, 3.7), cursor=False, crosshairs=False, location=False, zoom=False)
 
-        vbox.Add(self.PlotPanel, 0, wx.ALL, 20)
+        vbox.Add(i1panel, 0, wx.ALL, 20)
         
 
         hbox = wx.BoxSizer(wx.HORIZONTAL)
@@ -6421,7 +6466,7 @@ class AboutFrame(wx.Frame):
 
         
         font3 = wx.Font(12, wx.SWISS, wx.NORMAL, wx.NORMAL)
-        text3 = wx.StaticText(panel, 0, '''Mantis 1.10
+        text3 = wx.StaticText(panel, 0, '''Mantis 1.15
 Developed by Mirna Lerotic''')
         text3.SetFont(font3)
              

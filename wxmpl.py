@@ -1121,6 +1121,7 @@ class PlotPanel(FigureCanvasWxAgg):
         self.figure.set_facecolor('white')
         self.SetBackgroundColour(wx.WHITE)
 
+
         # find the toplevel parent window and register an activation event
         # handler that is keyed to the id of this PlotPanel
         topwin = toplevel_parent_of_window(self)
