@@ -856,6 +856,8 @@ class ShowCompositeRBGmap(wx.Frame):
         self.com = wx.GetApp().TopWindow.common         
         self.fontsize = self.com.fontsize
         
+        self.show_info = 0
+        
         
         self.n_cols = self.anlz.stack.n_cols 
         self.n_rows = self.anlz.stack.n_rows
@@ -1026,6 +1028,12 @@ class ShowCompositeRBGmap(wx.Frame):
         vbox1.Add(sizer1, 0, wx.EXPAND)
         vbox1.Add(sizer2, 0, wx.EXPAND)
         vbox1.Add(sizer3, 0, wx.EXPAND)
+        
+        self.show_info_cb = wx.CheckBox(panel, -1, '  Show Info on the Image')
+        self.show_info_cb.SetFont(self.com.font)
+        self.Bind(wx.EVT_CHECKBOX, self.OnShowInfo, self.show_info_cb)
+        vbox1.Add((0,10))
+        vbox1.Add(self.show_info_cb, 0, wx.EXPAND)
         
         hbox1.Add(vbox1, 0,  wx.LEFT|wx.RIGHT ,20)
 
@@ -1239,6 +1247,15 @@ class ShowCompositeRBGmap(wx.Frame):
         self.CalcB()
         self.draw_image()
         
+#----------------------------------------------------------------------           
+    def OnShowInfo(self, event):
+        if self.show_info_cb.GetValue():
+            self.show_info = 1
+        else: 
+            self.show_info = 0
+        
+        self.draw_image()
+        
 #----------------------------------------------------------------------        
     def draw_image(self):
                
@@ -1252,9 +1269,19 @@ class ShowCompositeRBGmap(wx.Frame):
         fig.patch.set_alpha(1.0) 
       
         im = axes.imshow(self.rgbimage) 
-
-         
+        
         axes.axis("off")  
+        
+        if self.show_info == 1:
+            startx = int(self.n_rows*0.02)
+            starty = self.n_cols-int(self.n_cols*0.15)
+            info = 'R:%s [%d] \nG:%s [%d] \nB:%s [%d]' % (self.anlz.tspec_names[self.r_spec], self.weightr,
+                                                        self.anlz.tspec_names[self.g_spec], self.weightg,
+                                                        self.anlz.tspec_names[self.b_spec], self.weightb)
+            axes.text(+startx+1,starty+1, info, horizontalalignment='left', verticalalignment='center',
+                      color = 'white', fontsize=8)
+
+            
         self.RGBImagePanel.draw()
         
 #----------------------------------------------------------------------              
