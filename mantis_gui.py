@@ -1062,6 +1062,8 @@ class ShowCompositeRBGmap(wx.Frame):
         
         self.SetSizer(vboxtop)
         
+        self.SetPosition((220, 150))
+        
         self.CalcR()
         self.CalcG()
         self.CalcB()        
@@ -1316,7 +1318,7 @@ class ShowCompositeRBGmap(wx.Frame):
 
 #----------------------------------------------------------------------              
     def OnClose(self, evt):
-        self.Close(True)             
+        self.Destroy()             
         
 #---------------------------------------------------------------------- 
 class SaveWinP4(wx.Frame):
@@ -1439,7 +1441,7 @@ class SaveWinP4(wx.Frame):
         im_pdf = self.cb3.GetValue()
         im_png = self.cb4.GetValue()
         
-        self.Close(True) 
+        self.Destroy() 
         wx.GetApp().TopWindow.page4.Save(spec_png = sp_png, 
                                          spec_pdf = sp_pdf, 
                                          spec_xas = sp_xas,
@@ -1449,7 +1451,7 @@ class SaveWinP4(wx.Frame):
 
 #---------------------------------------------------------------------- 
     def OnCancel(self, evt):
-        self.Close(True)  
+        self.Destroy()  
                 
                      
 
@@ -2164,6 +2166,8 @@ class Scatterplots(wx.Frame):
         
         self.SetSizer(vboxtop)
         
+        self.SetPosition((220, 150))
+        
         self.draw_scatterplot()
         
         
@@ -2205,7 +2209,7 @@ class Scatterplots(wx.Frame):
   
 #----------------------------------------------------------------------              
     def OnClose(self, evt):
-        self.Close(True)       
+        self.Destroy()       
         
         
         
@@ -2365,7 +2369,7 @@ class SaveWinP3(wx.Frame):
         scatt_pdf = self.cb7.GetValue()
         scatt_png = self.cb8.GetValue()
         
-        self.Close(True) 
+        self.Destroy() 
         wx.GetApp().TopWindow.page3.Save(spec_png = sp_png, 
                                          spec_pdf = sp_pdf, 
                                          spec_xas = sp_xas,
@@ -2378,7 +2382,7 @@ class SaveWinP3(wx.Frame):
 
 #---------------------------------------------------------------------- 
     def OnCancel(self, evt):
-        self.Close(True)  
+        self.Destroy()  
                 
     
 """ ------------------------------------------------------------------------------------------------"""
@@ -2957,7 +2961,7 @@ class SaveWinP2(wx.Frame):
         ev_pdf = self.cb5.GetValue()
         ev_png = self.cb6.GetValue()
         
-        self.Close(True) 
+        self.Destroy() 
         wx.GetApp().TopWindow.page2.Save(spec_png = sp_png, 
                                          spec_pdf = sp_pdf, 
                                          spec_xas = sp_xas,
@@ -2968,7 +2972,7 @@ class SaveWinP2(wx.Frame):
 
 #---------------------------------------------------------------------- 
     def OnCancel(self, evt):
-        self.Close(True)  
+        self.Destroy()  
                 
                 
                 
@@ -3263,7 +3267,15 @@ class PageStack(wx.Panel):
         self.button_saveROIspectr.Disable()     
         vbox51.Add(self.button_saveROIspectr, 0, wx.EXPAND)
         
-        vbox51.Add((0,8))        
+        vbox51.Add((0,3))
+        
+#        self.button_ROIdosecalc = wx.Button(panel5, -1, 'Dose Calculation...')
+#        self.button_ROIdosecalc.SetFont(self.com.font)
+#        self.Bind(wx.EVT_BUTTON, self.OnROI_DoseCalc, id=self.button_ROIdosecalc.GetId())   
+#        #self.button_ROIdosecalc.Disable()     
+#        vbox51.Add(self.button_ROIdosecalc, 0, wx.EXPAND)       
+        
+        vbox51.Add((0,3))        
         
         self.button_spectralROI = wx.Button(panel5, -1, 'Spectral ROI...')
         self.button_spectralROI.SetFont(self.com.font)
@@ -3553,6 +3565,7 @@ class PageStack(wx.Panel):
         
 #----------------------------------------------------------------------       
     def OnI0histogram(self, event):    
+        wx.GetApp().TopWindow.Hide()
         ShowHistogram(self.stk).Show()
          
 
@@ -3570,7 +3583,7 @@ class PageStack(wx.Panel):
         
 #----------------------------------------------------------------------    
     def OnShowI0(self, event):     
-               
+
         PlotFrame(self.stk.evi0,self.stk.i0data).Show()
         
 #----------------------------------------------------------------------    
@@ -3682,6 +3695,7 @@ class PageStack(wx.Panel):
 #----------------------------------------------------------------------    
     def OnAlignImgs(self, event):  
         
+        wx.GetApp().TopWindow.Hide()
         ImageRegistration(self.com, self.stk).Show()
 
 #----------------------------------------------------------------------    
@@ -3981,7 +3995,10 @@ class PageStack(wx.Panel):
         self.button_setROII0.Disable()
         wx.GetApp().TopWindow.refresh_widgets()
         
-
+#----------------------------------------------------------------------    
+    def OnROI_DoseCalc(self, event):  
+        DoseCalculation(self.com, self.stk).Show()
+        
         
 #----------------------------------------------------------------------    
     def OnSaveROISpectrum(self, event):  
@@ -4170,7 +4187,7 @@ class SaveWinP1(wx.Frame):
         im_png = self.cb4.GetValue()
         im_all = self.cb5.GetValue()
         
-        self.Close(True) 
+        self.Destroy() 
         wx.GetApp().TopWindow.page1.Save(spec_png = sp_png, 
                                          spec_pdf = sp_pdf, 
                                          sp_xas = sp_xas,
@@ -4180,7 +4197,7 @@ class SaveWinP1(wx.Frame):
 
 #---------------------------------------------------------------------- 
     def OnCancel(self, evt):
-        self.Close(True)  
+        self.Destroy()  
                 
                      
 #---------------------------------------------------------------------- 
@@ -4241,6 +4258,7 @@ class ShowHistogram(wx.Frame):
         
         button_cancel = wx.Button(panel, -1, 'Cancel')
         self.Bind(wx.EVT_BUTTON, self.OnCancel, id=button_cancel.GetId())
+        self.Bind(wx.EVT_CLOSE, self.OnCancel)
         hbox.Add(button_cancel, 1, wx.ALL ,20)
         
         vbox.Add(hbox, 0 )
@@ -4253,6 +4271,9 @@ class ShowHistogram(wx.Frame):
         
         self.draw_histogram()
         self.draw_image()
+        
+        self.Centre()
+
         
 #----------------------------------------------------------------------        
     def draw_histogram(self):
@@ -4333,13 +4354,17 @@ class ShowHistogram(wx.Frame):
     def OnAccept(self, evt):
         
         self.stack.i0_from_histogram(self.histmin, self.histmax)
-        self.Close(True) 
+        self.Destroy() 
+        wx.GetApp().TopWindow.Show()
         wx.GetApp().TopWindow.page1.I0histogramCalculated()
+
 
                 
 #---------------------------------------------------------------------- 
     def OnCancel(self, evt):
-        self.Close(True)   
+        wx.GetApp().TopWindow.Show()
+        self.Destroy()   
+
 
 #---------------------------------------------------------------------- 
 class LimitEv(wx.Frame):
@@ -4394,6 +4419,7 @@ class LimitEv(wx.Frame):
         
         button_cancel = wx.Button(panel, -1, 'Cancel')
         self.Bind(wx.EVT_BUTTON, self.OnCancel, id=button_cancel.GetId())
+        self.Bind(wx.EVT_CLOSE, self.OnCancel)
         hbox.Add(button_cancel, 1, wx.ALL ,20)
         
         vbox.Add(hbox, 0 )
@@ -4403,6 +4429,8 @@ class LimitEv(wx.Frame):
         vboxtop.Add(panel,1, wx.EXPAND )
         
         self.SetSizer(vboxtop)
+        
+        self.Centre()
         
         self.draw_limitev_plot()
         
@@ -4475,11 +4503,11 @@ class LimitEv(wx.Frame):
         wx.GetApp().TopWindow.page1.loadSpectrum(wx.GetApp().TopWindow.page1.ix, wx.GetApp().TopWindow.page1.iy)
         wx.GetApp().TopWindow.page1.loadImage()
         
-        self.Close(True)
+        self.Destroy()
         
 #---------------------------------------------------------------------- 
     def OnCancel(self, evt):
-        self.Close(True)
+        self.Destroy()
         
         
 #---------------------------------------------------------------------- 
@@ -4489,6 +4517,7 @@ class ImageRegistration(wx.Frame):
 
     def __init__(self, common, stack):
         wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(920, 700))
+
                
         ico = logos.getlogo_2l_32Icon()
         self.SetIcon(ico)
@@ -4705,6 +4734,8 @@ class ImageRegistration(wx.Frame):
         self.button_close = wx.Button(panel7, -1, 'Dismiss changes')
         self.button_close.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnClose, id=self.button_close.GetId())
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
+
 
         vbox7.Add(self.button_close, 0, wx.EXPAND)
         
@@ -4739,6 +4770,8 @@ class ImageRegistration(wx.Frame):
         hboxtop.Add(vboxR)
         
         self.SetSizer(hboxtop)
+        
+        self.Centre()
         
         self.ShowImage()
 
@@ -5086,12 +5119,17 @@ class ImageRegistration(wx.Frame):
         wx.GetApp().TopWindow.page1.loadSpectrum(wx.GetApp().TopWindow.page1.ix, wx.GetApp().TopWindow.page1.iy)
         wx.GetApp().TopWindow.page1.loadImage()
         
-        
-        self.Close(True)
+        wx.GetApp().TopWindow.Show()
+        self.Destroy()
+
         
 #----------------------------------------------------------------------              
     def OnClose(self, evt):
-        self.Close(True)   
+
+        wx.GetApp().TopWindow.Show()
+        self.Destroy()
+
+        
         
         
 #----------------------------------------------------------------------          
@@ -5205,11 +5243,12 @@ class SpectralROI(wx.Frame):
         panel = wx.Panel(self, -1)
         vbox = wx.BoxSizer(wx.VERTICAL)
                
-        self.SpectrumPanel = wxmpl.PlotPanel(panel, -1, size=(6.0, 3.7), cursor=False, crosshairs=False, location=False, zoom=False)
+        i1panel = wx.Panel(panel, -1, style = wx.SUNKEN_BORDER)
+        self.SpectrumPanel = wxmpl.PlotPanel(i1panel, -1, size=(6.0, 3.7), cursor=False, crosshairs=False, location=False, zoom=False)
         
-        wxmpl.EVT_SELECTION(panel, self.SpectrumPanel.GetId(), self.OnSelection)
+        wxmpl.EVT_SELECTION(i1panel, self.SpectrumPanel.GetId(), self.OnSelection)
 
-        vbox.Add(self.SpectrumPanel, 0, wx.ALL, 20)
+        vbox.Add(i1panel, 0, wx.ALL, 20)
         
        
         hbox2 = wx.BoxSizer(wx.HORIZONTAL)
@@ -5237,20 +5276,22 @@ class SpectralROI(wx.Frame):
         vbox.Add(text, 0, wx.LEFT|wx.RIGHT,20)
         vbox.Add((0,2))
 
-        self.ODMImagePanel = wxmpl.PlotPanel(panel, -1, size =(2.0,2.0), cursor=False, crosshairs=False, location=False, zoom=False)
-        hbox2.Add(self.ODMImagePanel, 0, wx.LEFT|wx.RIGHT,20)
+        i2panel = wx.Panel(panel, -1, style = wx.SUNKEN_BORDER)
+        self.ODMImagePanel = wxmpl.PlotPanel(i2panel, -1, size =(2.0,2.0), cursor=False, crosshairs=False, location=False, zoom=False)
+        hbox2.Add(i2panel, 0, wx.LEFT|wx.RIGHT,20)
         hbox2.Add(sizer2, 1, wx.EXPAND|wx.LEFT|wx.RIGHT,20)
         
         vbox.Add(hbox2, 0, wx.EXPAND)      
         hbox = wx.BoxSizer(wx.HORIZONTAL)
         
         
-        button_ok = wx.Button(panel, -1, 'Save')
-        self.Bind(wx.EVT_BUTTON, self.OnAccept, id=button_ok.GetId())
-        hbox.Add(button_ok, 1, wx.ALL,20)
+        button_save = wx.Button(panel, -1, 'Save')
+        self.Bind(wx.EVT_BUTTON, self.OnSave, id=button_save.GetId())
+        hbox.Add(button_save, 1, wx.ALL,20)
         
         button_cancel = wx.Button(panel, -1, 'Dismiss')
         self.Bind(wx.EVT_BUTTON, self.OnCancel, id=button_cancel.GetId())
+        self.Bind(wx.EVT_CLOSE, self.OnCancel)
         hbox.Add(button_cancel, 1, wx.ALL ,20)
         
         vbox.Add(hbox, 0 )
@@ -5289,6 +5330,8 @@ class SpectralROI(wx.Frame):
         
 
         self.SpectrumPanel.draw()
+        
+        self.SetPosition((220, 150))
     
 #----------------------------------------------------------------------        
     def draw_image(self):
@@ -5347,7 +5390,7 @@ class SpectralROI(wx.Frame):
         self.draw_spectrum()
 
 #----------------------------------------------------------------------        
-    def OnAccept(self, evt):
+    def OnSave(self, evt):
         #Save images
                        
         fileName = wx.FileSelector('Save OD Map', default_extension='png', 
@@ -5391,10 +5434,89 @@ class SpectralROI(wx.Frame):
                 
 #---------------------------------------------------------------------- 
     def OnCancel(self, evt):
-        self.Close(True)   
+        wx.GetApp().TopWindow.Show()
+        self.Destroy()   
 
         
+#---------------------------------------------------------------------- 
+class DoseCalculation(wx.Frame):
+
+    title = "Dose Calculation"
+
+    def __init__(self, common, stack):
+        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(415, 270))
+               
+        ico = logos.getlogo_2l_32Icon()
+        self.SetIcon(ico)
+        
+        self.SetBackgroundColour("White") 
+        
+        self.stack = stack
+        self.com = common
+               
+        self.fontsize = self.com.fontsize
+        
+        vboxtop = wx.BoxSizer(wx.VERTICAL)
+        
+        panel1 = wx.Panel(self, -1)
+        
+        gridtop = wx.FlexGridSizer(4, 2, vgap=20, hgap=20)
     
+        fontb = wx.SystemSettings_GetFont(wx.SYS_DEFAULT_GUI_FONT)
+        fontb.SetWeight(wx.BOLD)
+        
+        
+        st1 = wx.StaticText(panel1, -1, 'Detector efficiency [%]:',  style=wx.ALIGN_LEFT)
+        st1.SetFont(fontb)
+        st2 = wx.StaticText(panel1, -1, 'I region composition:',  style=wx.ALIGN_LEFT)
+        st2.SetFont(fontb)
+        st3 = wx.StaticText(panel1, -1, 'Xray absorption length:',  style=wx.ALIGN_LEFT)
+        st3.SetFont(fontb)
+        st4 = wx.StaticText(panel1, -1, 'Dose [Gray]:',  style=wx.ALIGN_LEFT)
+        st4.SetFont(fontb)
+
+        
+        self.tc_1 = wx.TextCtrl(panel1, -1, size=((200,-1)), style=wx.TE_RICH|wx.VSCROLL, 
+                                         value=' ')
+        
+        self.tc_2 = wx.TextCtrl(panel1, -1, size=((200,-1)), style=wx.TE_RICH|wx.VSCROLL, 
+                                         value=' ')
+        
+        self.tc_3 = wx.TextCtrl(panel1, -1, size=((200,-1)), style=wx.TE_RICH|wx.VSCROLL, 
+                                         value=' ')   
+        
+        self.tc_4 = wx.TextCtrl(panel1, -1, size=((200,-1)), style=wx.TE_RICH|wx.VSCROLL, 
+                                         value=' ')
+              
+        gridtop.Add(st1, 0)
+        gridtop.Add( self.tc_1, 0)
+        gridtop.Add(st2, 0)
+        gridtop.Add( self.tc_2, 0)
+        gridtop.Add(st3, 0)
+        gridtop.Add( self.tc_3, 0)
+        gridtop.Add(st4, 0)        
+        gridtop.Add( self.tc_4, 0)             
+          
+        panel1.SetSizer(gridtop)
+
+        
+        button_cancel = wx.Button(self, -1, 'Dismiss')
+        self.Bind(wx.EVT_BUTTON, self.OnCancel, id=button_cancel.GetId())
+
+
+        vboxtop.Add(panel1, 1, wx.LEFT| wx.RIGHT|wx.TOP|wx.EXPAND, 20)
+        vboxtop.Add(button_cancel, 0, wx.ALL | wx.EXPAND, 20) 
+        
+        self.SetSizer(vboxtop)    
+        
+              
+
+#---------------------------------------------------------------------- 
+    def OnCancel(self, evt):
+
+        self.Destroy()  
+                
+            
 #---------------------------------------------------------------------- 
 class PlotFrame(wx.Frame):
 
@@ -5434,6 +5556,7 @@ class PlotFrame(wx.Frame):
         button_close = wx.Button(panel, -1, 'Close')
         self.Bind(wx.EVT_BUTTON, self.OnClose, id=button_close.GetId())
         hbox.Add(button_close, 0, wx.ALL | wx.ALIGN_RIGHT ,20)
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
         
         vbox.Add(hbox)
         
@@ -5443,6 +5566,10 @@ class PlotFrame(wx.Frame):
         vboxtop.Add(panel,1, wx.EXPAND )
         
         self.SetSizer(vboxtop)
+        
+        #self.Centre()
+        self.SetPosition((220, 150))
+
         
         self.draw_plot(datax,datay)
         
@@ -5533,7 +5660,9 @@ class PlotFrame(wx.Frame):
         
 #----------------------------------------------------------------------              
     def OnClose(self, evt):
-        self.Close(True)
+        
+        self.Destroy()
+
         
         
         
@@ -5648,6 +5777,8 @@ class ColorTableFrame(wx.Frame):
         
         self.ct_dict[ wx.GetApp().TopWindow.page1.colortable].SetValue(True)
         
+        self.SetPosition((250, 150))
+        
 #----------------------------------------------------------------------          
     def OnColorTable(self, event):
         
@@ -5659,7 +5790,7 @@ class ColorTableFrame(wx.Frame):
         
 #----------------------------------------------------------------------              
     def OnClose(self, evt):
-        self.Hide()
+        self.Destroy()
         
         
             
@@ -6290,6 +6421,7 @@ class StackListFrame(wx.Frame):
         vboxtop.Add(panel1, 1, wx.ALL|wx.EXPAND,20)
         
         self.SetSizer(vboxtop)
+        self.Centre()
         
         self.ShowFileList()
         
@@ -6456,11 +6588,11 @@ class StackListFrame(wx.Frame):
         wx.GetApp().TopWindow.page1.loadSpectrum(wx.GetApp().TopWindow.page1.ix, wx.GetApp().TopWindow.page1.iy)
         wx.GetApp().TopWindow.page1.loadImage()
         
-        self.Close(True)
+        self.Destroy()
         
 #---------------------------------------------------------------------- 
     def OnCancel(self, evt):
-        self.Close(True)
+        self.Destroy()
                
         
         
@@ -6520,9 +6652,11 @@ Developed by Mirna Lerotic''')
         
         self.SetSizer(vboxtop)
         
+        self.SetPosition((250, 150))
+        
 #----------------------------------------------------------------------              
     def OnClose(self, evt):
-        self.Close(True)
+        self.Destroy()
         
     
 """ ------------------------------------------------------------------------------------------------"""    
