@@ -6600,7 +6600,7 @@ class StackListFrame(wx.Frame):
 class AboutFrame(wx.Frame):
 
     def __init__(self):
-        wx.Frame.__init__(self, wx.GetApp().TopWindow, title = "About Mantis", size=(410, 510))
+        wx.Frame.__init__(self, wx.GetApp().TopWindow, title = "About Mantis", size=(420, 700))
         
         ico = logos.getlogo_2l_32Icon()
         self.SetIcon(ico)
@@ -6623,27 +6623,51 @@ class AboutFrame(wx.Frame):
  
         vbox.Add(self.imageCtrl, 0, wx.ALL, 2)
 
+        font1 = wx.Font(12, wx.SWISS, wx.NORMAL, wx.NORMAL)
+        text1 = wx.StaticText(panel, 0, "www.2ndlookconsulting.com")
+        text1.SetFont(font1)   
+        text1.SetForegroundColour((53,159,217)) 
         
-        font3 = wx.Font(12, wx.SWISS, wx.NORMAL, wx.NORMAL)
-        text3 = wx.StaticText(panel, 0, '''Mantis 1.15
-Developed by Mirna Lerotic''')
-        text3.SetFont(font3)
-             
-        font4 = wx.Font(12, wx.SWISS, wx.NORMAL, wx.NORMAL)
-        text4 = wx.StaticText(panel, 0, "www.2ndlook.co")
-        text4.SetFont(font4)   
-        text4.SetForegroundColour((53,159,217)) 
+        font2 = wx.Font(12, wx.SWISS, wx.NORMAL, wx.NORMAL)
+        text2 = wx.StaticText(panel, 0, '''Mantis 1.15''')  
+        text2.SetFont(font2)        
+
+        font3 = wx.Font(8, wx.SWISS, wx.NORMAL, wx.NORMAL)
+        text3 = wx.StaticText(panel, 0, '''
+Developed by Mirna Lerotic, based on earlier programs by Mirna 
+Lerotic and Chris Jacobsen. Initial development supported by 
+Argonne National Laboratory LDRD 2010-193-R1 9113. ''')  
+        text3.SetFont(font3)          
+
+        
+        font4 = wx.Font(8, wx.SWISS, wx.NORMAL, wx.NORMAL)
+        text4 = wx.StaticText(panel, 0, '''        
+Mantis is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published 
+by the Free Software Foundation, either version 3 of the License, 
+or any later version.
+
+Mantis is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty 
+of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+See the GNU General Public License for more details 
+http://www.gnu.org/licenses/.''')  
+        text4.SetFont(font4)          
+
 
         vbox .Add((0,30))
-  
-        vbox.Add(text3,0, wx.LEFT, 50)     
+        vbox.Add(text1,0, wx.LEFT, 50)  
+        vbox.Add((0,10))    
+        vbox.Add(text2,0, wx.LEFT, 50)   
+        vbox.Add(text3,0, wx.LEFT, 50)   
+        vbox.Add(text4,0, wx.LEFT, 50)  
         vbox.Add((0,10)) 
-        vbox.Add(text4,0, wx.LEFT, 50) 
+
         
         
         button_close = wx.Button(panel, 0, 'Close')
         self.Bind(wx.EVT_BUTTON, self.OnClose, id=button_close.GetId())
-        vbox.Add(button_close, 0, wx.ALL | wx.ALIGN_RIGHT ,20)
+        vbox.Add(button_close, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_RIGHT ,20)
         
 
         panel.SetSizer(vbox)
