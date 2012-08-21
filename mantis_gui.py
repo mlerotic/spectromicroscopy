@@ -3013,7 +3013,7 @@ class PageStack(wx.Panel):
         self.line = None
         self.ROIpix = None
         
-        self.show_scale_bar = 0
+        self.show_scale_bar = 1
 
         vbox = wx.BoxSizer(wx.VERTICAL)
         hboxT = wx.BoxSizer(wx.HORIZONTAL)
@@ -3107,7 +3107,7 @@ class PageStack(wx.Panel):
         vbox31.Add((0,3))
         
             
-        self.button_savestack = wx.Button(panel3, -1, 'Save aligned stack...')
+        self.button_savestack = wx.Button(panel3, -1, 'Save preprocessed stack...')
         self.button_savestack.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnSaveStack, id=self.button_savestack.GetId())
         self.button_savestack.Disable()          
@@ -3162,9 +3162,10 @@ class PageStack(wx.Panel):
         self.rb_flux.Disable()
         self.rb_od.Disable()
 
-        self.add_scale_cb = wx.CheckBox(panel4, -1, '  Scale')
+        self.add_scale_cb = wx.CheckBox(panel4, -1, '  Scalebar')
         self.add_scale_cb.SetFont(self.com.font)
         self.Bind(wx.EVT_CHECKBOX, self.OnShowScale, self.add_scale_cb)
+        self.add_scale_cb.SetValue(True)
         
         self.add_colbar_cb = wx.CheckBox(panel4, -1, '  Colorbar')
         self.add_colbar_cb.SetFont(self.com.font)
@@ -3187,11 +3188,16 @@ class PageStack(wx.Panel):
         hbox42 = wx.BoxSizer(wx.HORIZONTAL)
         hbox42.Add((15,0))
 
-        fgs41 = wx.FlexGridSizer(3, 2, 2, 5)
-        min = wx.StaticText(panel4, label="Minimum")
-        min.SetFont(self.com.font)
-        max = wx.StaticText(panel4, label="Maximum")
-        max.SetFont(self.com.font)
+        fgs41 = wx.FlexGridSizer(3, 2, 0, 0)
+        
+        self.tc_min = wx.TextCtrl(panel4, -1, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE, size=(80,-1))
+        self.tc_min.SetFont(self.com.font)
+        self.tc_min.AppendText('Minimum: \t{0:5.2f}'.format(self.brightness_min))
+        
+        self.tc_max = wx.TextCtrl(panel4, -1, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE, size=(80,-1))
+        self.tc_max.SetFont(self.com.font)
+        self.tc_max.AppendText('Maximum:{0:5.2f}'.format(self.brightness_max))
+
         self.slider_brightness_min = wx.Slider(panel4, -1, self.dispbrightness_min, 0, 49, size= (50,20), style=wx.SL_HORIZONTAL)        
         self.slider_brightness_min.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnScrollBrightnessMin, self.slider_brightness_min)
@@ -3200,18 +3206,21 @@ class PageStack(wx.Panel):
         self.slider_brightness_max.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnScrollBrightnessMax, self.slider_brightness_max)        
         
-        gamma = wx.StaticText(panel4, label="Gamma")
-        gamma.SetFont(self.com.font)
+        self.tc_gamma = wx.TextCtrl(panel4, -1, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE, size=(80,-1))
+        self.tc_gamma.SetFont(self.com.font)
+        self.tc_gamma.AppendText('Gamma:  \t{0:5.2f}'.format(self.gamma))
+        
         self.slider_gamma = wx.Slider(panel4, -1, self.displaygamma, 1, 20, style=wx.SL_HORIZONTAL)        
         self.slider_gamma.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnScrollGamma, self.slider_gamma)
 
         
-        fgs41.AddMany([(min), (self.slider_brightness_min, 0, wx.EXPAND), (max), 
-            (self.slider_brightness_max, 0, wx.EXPAND),(gamma), (self.slider_gamma, 0, wx.EXPAND)])
+        fgs41.AddMany([(self.tc_min), (self.slider_brightness_min, 0, wx.EXPAND), (self.tc_max), 
+            (self.slider_brightness_max, 0, wx.EXPAND),(self.tc_gamma), (self.slider_gamma, 0, wx.EXPAND)])
+        
       
         hbox42.Add(fgs41, 0, wx.EXPAND)
-        hbox42.Add((20,0))
+        hbox42.Add((30,0))
 
         
         vbox43 = wx.BoxSizer(wx.VERTICAL)
@@ -3781,6 +3790,9 @@ class PageStack(wx.Panel):
         
         self.defaultdisplay = 0.0
         
+        self.tc_min.Clear()
+        self.tc_min.AppendText('Minimum: \t{0:5.2f}'.format(self.brightness_min))
+        
         if self.com.stack_loaded == 1:
             self.loadImage()
         
@@ -3793,6 +3805,9 @@ class PageStack(wx.Panel):
         
         self.defaultdisplay = 0.0
         
+        self.tc_max.Clear()
+        self.tc_max.AppendText('Maximum:{0:5.2f}'.format(self.brightness_max))
+        
         if self.com.stack_loaded == 1:
             self.loadImage()
         
@@ -3804,6 +3819,9 @@ class PageStack(wx.Panel):
         self.gamma = float(self.displaygamma)/10.0  
         
         self.defaultdisplay = 0.0
+        
+        self.tc_gamma.Clear()
+        self.tc_gamma.AppendText('Gamma:  \t{0:5.2f}'.format(self.gamma))
         
         if self.com.stack_loaded == 1:
             self.loadImage()
@@ -3828,7 +3846,14 @@ class PageStack(wx.Panel):
         
         self.slider_brightness_max.SetValue(self.dispbrightness_max)
         self.slider_brightness_min.SetValue(self.dispbrightness_min) 
-        self.slider_gamma.SetValue(self.displaygamma)             
+        self.slider_gamma.SetValue(self.displaygamma)      
+
+        self.tc_min.Clear()
+        self.tc_min.AppendText('Minimum: \t{0:5.2f}'.format(self.brightness_min))
+        self.tc_max.Clear()
+        self.tc_max.AppendText('Maximum:{0:5.2f}'.format(self.brightness_max))        
+        self.tc_gamma.Clear()
+        self.tc_gamma.AppendText('Gamma:  \t{0:5.2f}'.format(self.gamma))       
  
 #----------------------------------------------------------------------        
     def OnLimitEv(self, evt):    
@@ -5914,8 +5939,8 @@ class PlotFrame(wx.Frame):
 
 
         try: 
-            wildcard = "xas files (*.xas)|*.xas"
-            dialog = wx.FileDialog(None, "Save as .xas", wildcard=wildcard,
+            wildcard = "Csv files (*.csv)|*.csv"
+            dialog = wx.FileDialog(None, "Save as .csv", wildcard=wildcard,
                                     style=wx.SAVE|wx.OVERWRITE_PROMPT)
 
             if dialog.ShowModal() == wx.ID_OK:
@@ -5928,7 +5953,7 @@ class PlotFrame(wx.Frame):
         except:
 
             wx.EndBusyCursor()
-            wx.MessageBox("Could not save .xas file.")
+            wx.MessageBox("Could not save .csv file.")
                    
         dialog.Destroy()
 
@@ -5968,7 +5993,7 @@ class PlotFrame(wx.Frame):
         dim = self.datax.shape
         n=dim[0]
         for ie in range(n):
-            print>>file, '\t%.6f\t%.6f' %(self.datax[ie], self.datay[ie])
+            print>>file, '\t%.6f,\t%.6f' %(self.datax[ie], self.datay[ie])
         
         file.close()
     
@@ -6121,6 +6146,8 @@ class PageLoadData(wx.Panel):
         self.filename = " "
        
         self.fontsize = self.com.fontsize
+        
+        self.iev = 0
 
    
         
@@ -6209,15 +6236,24 @@ class PageLoadData(wx.Panel):
         panel5 = wx.Panel(self, -1)
         vbox5 = wx.BoxSizer(wx.VERTICAL)
         
-#        self.tc_imageeng = wx.TextCtrl(panel5, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
-#        self.tc_imageeng.SetFont(self.com.font)
-#        self.tc_imageeng.SetValue("Image at energy: ")
+        self.tc_imageeng = wx.TextCtrl(panel5, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE, size=(160,-1))
+        self.tc_imageeng.SetFont(self.com.font)
+        self.tc_imageeng.SetValue("Image at energy: ")
+        
+        hbox51 = wx.BoxSizer(wx.HORIZONTAL)
    
         i1panel = wx.Panel(panel5, -1, style = wx.SUNKEN_BORDER)
         self.AbsImagePanel = wxmpl.PlotPanel(i1panel, -1, size =(PlotH*.8, PlotH*.8), cursor=False, crosshairs=False, location=False, zoom=False)
         
-        #vbox5.Add(self.tc_imageeng,1, wx.LEFT | wx.EXPAND, 20)        
-        vbox5.Add(i1panel, 0, wx.ALL|wx.EXPAND, 10)
+        self.slider_eng = wx.Slider(panel5, -1, self.iev, 0, 100, style=wx.SL_LEFT )        
+        self.slider_eng.SetFocus()
+        self.Bind(wx.EVT_SCROLL, self.OnScrollEng, self.slider_eng)
+
+        hbox51.Add(i1panel, 0)
+        hbox51.Add(self.slider_eng, 0,  wx.EXPAND)  
+        
+        vbox5.Add(self.tc_imageeng, 0)        
+        vbox5.Add(hbox51, 0)
 
         panel5.SetSizer(vbox5)
         
@@ -6294,11 +6330,18 @@ class PageLoadData(wx.Panel):
     def OnBuildStack(self, event):
 
         wx.GetApp().TopWindow.BuildStack()
+        
+#----------------------------------------------------------------------            
+    def OnScrollEng(self, event):
+        self.iev = event.GetInt()
+
+        if self.com.stack_loaded == 1:
+            self.ShowImage()
             
 #----------------------------------------------------------------------        
-    def ShowInfo(self, filename, filepath):
-                  
-        image = self.stk.absdata[:,:,int(self.stk.n_ev/2)].copy() 
+    def ShowImage(self):
+        
+        image = self.stk.absdata[:,:,int(self.iev)].copy() 
 
         fig = self.AbsImagePanel.get_figure()
         fig.clf()
@@ -6307,9 +6350,31 @@ class PageLoadData(wx.Panel):
         fig.patch.set_alpha(1.0)
         
         im = axes.imshow(image, cmap=mtplot.cm.get_cmap("gray")) 
+        
+        #Show Scale Bar
+        startx = int(self.stk.n_rows*0.05)
+        starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
+        um_string = '$\mu m$'
+        microns = '$'+self.stk.scale_bar_string+' $'+um_string
+        axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center',
+                  color = 'black', fontsize=14)
+        #Matplotlib has flipped scales so I'm using rows instead of cols!
+        p = mtplot.patches.Rectangle((startx,starty), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
+                               color = 'black', fill = True)
+        axes.add_patch(p)
+            
        
         axes.axis("off")      
         self.AbsImagePanel.draw()
+        
+        self.tc_imageeng.SetValue('Image at energy: {0:5.2f} eV'.format(float(self.stk.ev[self.iev])))
+        
+
+        
+#----------------------------------------------------------------------        
+    def ShowInfo(self, filename, filepath):
+        
+        self.ShowImage()
         
         self.tc_file.SetValue(filename)
         self.tc_path.SetValue(filepath)
@@ -6414,7 +6479,7 @@ class MainFrame(wx.Frame):
         Browse for a stack file:
         """
 
-        try: 
+        try:
             if wildcard == '':
                 wildcard =  "HDF5 files (*.hdf5)|*.hdf5|SDF files (*.hdr)|*.hdr|STK files (*.stk)|*.stk|TXRM (*.txrm)|*.txrm|XRM (*.xrm)|*.xrm" 
             dialog = wx.FileDialog(None, "Choose a file", style=wx.OPEN)
@@ -6480,10 +6545,15 @@ class MainFrame(wx.Frame):
 
 
             #Update widgets 
-            self.page1.slider_eng.SetRange(0,self.stk.n_ev-1)
             self.iev = self.stk.n_ev/2
+            self.page0.slider_eng.SetRange(0,self.stk.n_ev-1)
+            self.page0.iev = self.iev
+            self.page0.slider_eng.SetValue(self.iev)
+                     
+            self.page1.slider_eng.SetRange(0,self.stk.n_ev-1)
             self.page1.iev = self.iev
             self.page1.slider_eng.SetValue(self.iev)
+            
         
             x=self.stk.n_cols
             y=self.stk.n_rows
@@ -6520,8 +6590,8 @@ class MainFrame(wx.Frame):
                                
             wx.EndBusyCursor()
             
-#            wx.MessageBox("Image stack not loaded.")
-#            import sys; print sys.exc_info()
+            wx.MessageBox("Image stack not loaded.")
+            import sys; print sys.exc_info()
                    
         dialog.Destroy()
         self.refresh_widgets()

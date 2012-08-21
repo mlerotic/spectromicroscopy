@@ -320,6 +320,42 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
         return  
     
 #----------------------------------------------------------------------   
+    def write_csv(self, filename, evdata, data):
+        file = open(filename, 'w')
+        print>>file, '*********************  X-ray Absorption Data  ********************'
+        print>>file, '*'
+        print>>file, '* Formula: '
+        print>>file, '* Common name: '
+        print>>file, '* Edge: '
+        print>>file, '* Acquisition mode: '
+        print>>file, '* Source and purity: ' 
+        print>>file, '* Comments: Stack list ROI ""'
+        print>>file, '* Delta eV: '
+        print>>file, '* Min eV: '
+        print>>file, '* Max eV: '
+        print>>file, '* Y axis: '
+        print>>file, '* Contact person: '
+        print>>file, '* Write date: '
+        print>>file, '* Journal: '
+        print>>file, '* Authors: '
+        print>>file, '* Title: '
+        print>>file, '* Volume: '
+        print>>file, '* Issue number: '
+        print>>file, '* Year: '
+        print>>file, '* Pages: '
+        print>>file, '* Booktitle: '
+        print>>file, '* Editors: '
+        print>>file, '* Publisher: '
+        print>>file, '* Address: '
+        print>>file, '*--------------------------------------------------------------'
+        for ie in range(self.n_ev):
+            print>>file, '\t%.6f, \t%.6f' %(evdata[ie], data[ie])
+        
+        file.close()
+    
+        return  
+    
+#----------------------------------------------------------------------   
 #Read x-ray absorption spectrum
     def read_xas(self, filename):
         
