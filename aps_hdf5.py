@@ -746,7 +746,11 @@ class h5:
             ds.attrs['units'] = data_struct.spectromicroscopy.positions_units
         if data_struct.spectromicroscopy.positions_names is not None:
             ds.attrs['names'] = data_struct.spectromicroscopy.positions_names
-             
+        if data_struct.spectromicroscopy.xshifts is not None:
+            ds = spectromicroscopyGrp.create_dataset('xshifts', data = data_struct.spectromicroscopy.xshifts)
+        if data_struct.spectromicroscopy.yshifts is not None:
+            ds = spectromicroscopyGrp.create_dataset('yshifts', data = data_struct.spectromicroscopy.yshifts)
+         
    
     
         # /spectromicroscopy/normalization

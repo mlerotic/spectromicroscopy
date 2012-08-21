@@ -59,6 +59,9 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
         self.od = 0
         self.od3d = 0
         
+        self.xshifts = 0
+        self.yshifts = 0
+        
         
            
 #----------------------------------------------------------------------   
@@ -351,7 +354,7 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
     
 #----------------------------------------------------------------------   
 #Register images using Fourier Shift Theorem
-    def register_images(self, ref_image, image2, maxshift = 5, have_ref_img_fft = False):
+    def register_images(self, ref_image, image2, have_ref_img_fft = False):
         
         if have_ref_img_fft == False:
             self.ref_fft = np.fft.fftshift(np.fft.fft2(np.fft.fftshift(ref_image)))

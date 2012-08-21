@@ -2993,7 +2993,6 @@ class PageStack(wx.Panel):
         self.ix = 0
         self.iy = 0
         self.iev = 50  
-        self.sel = 50
         self.showflux = True
         self.fontsize = self.com.fontsize
         self.show_colorbar = 0
@@ -3036,7 +3035,7 @@ class PageStack(wx.Panel):
         wxmpl.EVT_POINT(i1panel, self.AbsImagePanel.GetId(), self.OnPointAbsimage)
         
                               
-        self.slider_eng = wx.Slider(panel1, -1, self.sel, 0, 100, style=wx.SL_LEFT )        
+        self.slider_eng = wx.Slider(panel1, -1, self.iev, 0, 100, style=wx.SL_LEFT )        
         self.slider_eng.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnScrollEng, self.slider_eng)
 
@@ -3438,8 +3437,7 @@ class PageStack(wx.Panel):
         
 #----------------------------------------------------------------------            
     def OnScrollEng(self, event):
-        self.sel = event.GetInt()
-        self.iev = self.sel
+        self.iev = event.GetInt()
         if self.com.stack_loaded == 1:
             self.loadImage()
             self.loadSpectrum(self.ix, self.iy)
@@ -4318,6 +4316,7 @@ class ShowHistogram(wx.Frame):
         
         pass
     
+    
 #----------------------------------------------------------------------        
     def draw_image(self):
         
@@ -4530,7 +4529,7 @@ class LimitEv(wx.Frame):
 #---------------------------------------------------------------------- 
 class ImageRegistration(wx.Frame):
 
-    title = "Image Registration"
+    title = "Image Alignment"
 
     def __init__(self, common, stack):
         wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(920, 700))
@@ -4556,6 +4555,9 @@ class ImageRegistration(wx.Frame):
         self.man_xref = 0
         self.man_yref = 0
         
+        self.maxshift = 0
+        self.auto = True
+        
         self.man_xs = npy.zeros((self.stack.n_ev))
         self.man_ys = npy.zeros((self.stack.n_ev))
         
@@ -4566,6 +4568,12 @@ class ImageRegistration(wx.Frame):
         self.yshifts = npy.zeros((self.stack.n_ev))
         
         self.showccorr = 0
+        
+        self.subregion = 0
+        self.sr_x1 = 0
+        self.sr_x2 = 0
+        self.sr_y1 = 0
+        self.sr_y2 = 0
                                   
         
         #panel 1        
@@ -4631,37 +4639,103 @@ class ImageRegistration(wx.Frame):
         
         panel3.SetSizer(vbox3)
         
+        #panel 9
+        panel9 = wx.Panel(self, -1)     
+        vbox9 = wx.BoxSizer(wx.VERTICAL)   
+        
+        self.rb_auto = wx.RadioButton(panel9, -1, 'Automatic Alignment', style=wx.RB_GROUP)
+        self.rb_man = wx.RadioButton(panel9, -1, 'Manual Alignment')
+        self.rb_auto.SetFont(self.com.font)
+        self.rb_man.SetFont(self.com.font)
+        self.Bind(wx.EVT_RADIOBUTTON, self.Onrb_automanual, id=self.rb_auto.GetId())
+        self.Bind(wx.EVT_RADIOBUTTON, self.Onrb_automanual, id=self.rb_man.GetId())
+        
+        vbox9.Add(self.rb_auto, 1, wx.EXPAND)
+        vbox9.Add((0,3))
+        vbox9.Add(self.rb_man, 1, wx.EXPAND)
+        panel9.SetSizer(vbox9)
+        
+        
+        
+        #panel 8
+        panel8 = wx.Panel(self, -1)
+        sizer8 = wx.StaticBoxSizer(wx.StaticBox(panel8, -1, 'This Image'),orient=wx.VERTICAL)
+        vbox81 = wx.BoxSizer(wx.VERTICAL)
+        vbox81.Add((0,3))        
+
+        self.button_refimg = wx.Button(panel8, -1, 'Set as Reference Image')
+        self.button_refimg.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.SetRefImage, id=self.button_refimg.GetId())
+        vbox81.Add(self.button_refimg, 0, wx.EXPAND)
+        
+        self.button_remove = wx.Button(panel8, -1, 'Remove image')
+        self.button_remove.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.OnRemoveImage, id=self.button_remove.GetId())    
+        vbox81.Add(self.button_remove, 0, wx.EXPAND)
+        
+        
+        
+        sizer8.Add(vbox81,1, wx.LEFT|wx.RIGHT|wx.EXPAND,2)
+        panel8.SetSizer(sizer8)
+        
+        
         
         #panel 4
         panel4 = wx.Panel(self, -1)
-        sizer1 = wx.StaticBoxSizer(wx.StaticBox(panel4, -1, 'Registration'),orient=wx.VERTICAL)
+        sizer1 = wx.StaticBoxSizer(wx.StaticBox(panel4, -1, 'Automatic Alignment'),orient=wx.VERTICAL)
         vbox41 = wx.BoxSizer(wx.VERTICAL)
         vbox41.Add((0,3))        
 
-        self.button_refimg = wx.Button(panel4, -1, 'Set as Reference Image')
-        self.button_refimg.SetFont(self.com.font)
-        self.Bind(wx.EVT_BUTTON, self.SetRefImage, id=self.button_refimg.GetId())
-        vbox41.Add(self.button_refimg, 0, wx.EXPAND)
         
-        self.button_register = wx.Button(panel4, -1, 'Register Images')
+        self.button_register = wx.Button(panel4, -1, 'Calculate image shifts')
         self.button_register.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnCalcRegistration, id=self.button_register.GetId())   
         self.button_register.Disable()     
         vbox41.Add(self.button_register, 0, wx.EXPAND)
         
-        self.button_crop = wx.Button(panel4, -1, 'Crop Aligned Images')
-        self.button_crop.SetFont(self.com.font)
-        self.Bind(wx.EVT_BUTTON, self.OnCropShifts, id=self.button_crop.GetId())   
-        self.button_crop.Disable()
-        vbox41.Add(self.button_crop, 0, wx.EXPAND)
+        vbox41.Add((0,8))
+        
+        self.button_subregion = wx.Button(panel4, -1, 'Select subregion on reference')
+        self.button_subregion.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.OnSelectSubregion, id=self.button_subregion.GetId())   
+        self.button_subregion.Disable()     
+        vbox41.Add(self.button_subregion, 0, wx.EXPAND)
+        
+        self.button_delsubregion = wx.Button(panel4, -1, 'Remove subregion selection')
+        self.button_delsubregion.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.OnDeleteSubregion, id=self.button_delsubregion.GetId())   
+        self.button_delsubregion.Disable()     
+        vbox41.Add(self.button_delsubregion, 0, wx.EXPAND)
+        
+        
+        vbox41.Add((0,10))
+        
+        hbox42 = wx.BoxSizer(wx.HORIZONTAL)
+        text1 = wx.StaticText(panel4, label=' Max shift [pixels]: ')
+        self.tc_maxshift = wx.lib.intctrl.IntCtrl(panel4, size=( 70, -1 ), 
+                                                  style = wx.TE_CENTRE, 
+                                                  value = 0, 
+                                                  limited = True )
+        self.tc_maxshift.SetMin(0)
+        self.Bind(wx.lib.intctrl.EVT_INT, self.OnSetMaxShift, self.tc_maxshift)
+        
+        
+        hbox42.Add((5,0))
+        hbox42.Add(text1, 0)
+        hbox42.Add(self.tc_maxshift,0)
+        vbox41.Add(hbox42,0, wx.EXPAND)
+        
         
         self.tc_shift = wx.TextCtrl(panel4, -1, style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         self.tc_shift.SetFont(self.com.font)
-        vbox41.Add(self.tc_shift, 1, wx.EXPAND|wx.TOP|wx.BOTTOM, 5)
+        vbox41.Add(self.tc_shift, 1, wx.EXPAND|wx.TOP|wx.LEFT, 5)
         
         
-        self.tc_shift.AppendText('X shift: {0:5.2f} \n'.format(self.yshifts[self.iev]))
-        self.tc_shift.AppendText('Y shift: {0:5.2f} '.format(self.xshifts[self.iev]))
+        self.tc_shift.AppendText('X shift: {0:5.2f} pixels\n'.format(self.yshifts[self.iev]))
+        self.tc_shift.AppendText('Y shift: {0:5.2f} pixels'.format(self.xshifts[self.iev]))
+        
+        
+        vbox41.Add((0,3))
         
         hbox41 = wx.BoxSizer(wx.HORIZONTAL)
         hbox41.Add((5,0))
@@ -4671,6 +4745,7 @@ class ImageRegistration(wx.Frame):
         hbox41.Add(self.showcscor_cb, 0)
         hbox41.Add((5,0))
         vbox41.Add(hbox41,0, wx.EXPAND)
+        vbox41.Add((0,3))
 
         
         
@@ -4690,6 +4765,8 @@ class ImageRegistration(wx.Frame):
         self.RefImagePanel = wxmpl.PlotPanel(i3panel, -1, size =(3.0,3.0), cursor=True, crosshairs=False, location=False, zoom=False)
         wxmpl.EVT_POINT(i3panel, self.RefImagePanel.GetId(), self.OnPointRefimage)
         
+        wxmpl.EVT_SELECTION(i3panel, self.RefImagePanel.GetId(), self.OnSelection)
+        
         vbox5.Add(tc5,1, wx.EXPAND)        
         vbox5.Add(i3panel, 0)
 
@@ -4708,7 +4785,7 @@ class ImageRegistration(wx.Frame):
         self.button_manalign.Disable()
         vbox61.Add(self.button_manalign, 0, wx.EXPAND)
         
-        self.button_pick2ndpoint = wx.Button(panel6, -1, 'Pick a corresponding point')
+        self.button_pick2ndpoint = wx.Button(panel6, -1, 'This image: click on same point')
         self.button_pick2ndpoint.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnPickCorrPoint, id=self.button_pick2ndpoint.GetId())
         self.button_pick2ndpoint.Disable()
@@ -4723,7 +4800,9 @@ class ImageRegistration(wx.Frame):
         
         self.textctrl_ms = wx.TextCtrl(panel6, -1, style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         self.textctrl_ms.SetFont(self.com.font)
-        vbox61.Add(self.textctrl_ms, 1, wx.EXPAND|wx.TOP|wx.BOTTOM, 10)
+        vbox61.Add(self.textctrl_ms, 1, wx.EXPAND|wx.TOP, 10)
+        
+        vbox61.Add((0,3))
         
         self.textctrl_ms.AppendText('X manual shift: \n')
         self.textctrl_ms.AppendText('Y manual shift: ')
@@ -4737,10 +4816,11 @@ class ImageRegistration(wx.Frame):
         panel7 = wx.Panel(self, -1)
         vbox7 = wx.BoxSizer(wx.VERTICAL)
         
-        self.button_remove = wx.Button(panel7, -1, 'Remove image')
-        self.button_remove.SetFont(self.com.font)
-        self.Bind(wx.EVT_BUTTON, self.OnRemoveImage, id=self.button_remove.GetId())    
-        vbox7.Add(self.button_remove, 0, wx.EXPAND)
+        self.button_crop = wx.Button(panel7, -1, 'Crop Aligned Images')
+        self.button_crop.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.OnCropShifts, id=self.button_crop.GetId())   
+        self.button_crop.Disable()
+        vbox7.Add(self.button_crop, 0, wx.EXPAND)
         
         self.button_accept = wx.Button(panel7, -1, 'Accept changes')
         self.button_accept.SetFont(self.com.font)
@@ -4757,6 +4837,8 @@ class ImageRegistration(wx.Frame):
         vbox7.Add(self.button_close, 0, wx.EXPAND)
         
         panel7.SetSizer(vbox7)
+        
+        
                
         
         hboxtop = wx.BoxSizer(wx.HORIZONTAL)
@@ -4764,9 +4846,12 @@ class ImageRegistration(wx.Frame):
         vboxL = wx.BoxSizer(wx.VERTICAL)
         vboxR = wx.BoxSizer(wx.VERTICAL)
         
-        vboxL.Add(panel4, 1, wx.EXPAND|wx.ALL, 20)
-        vboxL.Add(panel6, 1, wx.EXPAND|wx.ALL, 20)
-        vboxL.Add(panel7, 1, wx.EXPAND|wx.ALL, 20)
+        vboxL.Add((0,20))
+        vboxL.Add(panel8, 0, wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM, 20)
+        vboxL.Add(panel9, 0, wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM, 20)
+        vboxL.Add(panel4, 1, wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM, 20)
+        vboxL.Add(panel6, 0, wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM, 20)
+        vboxL.Add(panel7, 1, wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM, 20)
         
         hboxRT = wx.BoxSizer(wx.HORIZONTAL)
         hboxRB = wx.BoxSizer(wx.HORIZONTAL)
@@ -4808,6 +4893,16 @@ class ImageRegistration(wx.Frame):
 
         im = axes.imshow(image, cmap=mtplot.cm.get_cmap('gray')) 
        
+        if self.man_align == 2:           
+            lx=mtplot.lines.Line2D([self.man_yref-self.man_ys[self.iev],
+                                    self.man_yref-self.man_ys[self.iev]], 
+                                    [0,self.stack.n_cols],color='red')
+            ly=mtplot.lines.Line2D([0,self.stack.n_rows], 
+                                   [self.man_xref-self.man_xs[self.iev],
+                                    self.man_xref-self.man_xs[self.iev]] ,color='red')
+            axes.add_line(lx)
+            axes.add_line(ly)
+            
         axes.axis("off") 
         self.AbsImagePanel.draw()
         
@@ -4815,13 +4910,21 @@ class ImageRegistration(wx.Frame):
         self.tc_imageeng.SetValue('Image at energy: {0:5.2f} eV'.format(float(self.stack.ev[self.iev])))
         
         self.tc_shift.Clear()
-        self.tc_shift.AppendText('X shift: {0:5.2f} \n'.format(self.yshifts[self.iev]))
-        self.tc_shift.AppendText('Y shift: {0:5.2f} '.format(self.xshifts[self.iev]))
+        self.tc_shift.AppendText('X shift: {0:5.2f} pixels\n'.format(self.yshifts[self.iev]))
+        self.tc_shift.AppendText('Y shift: {0:5.2f} pixels'.format(self.xshifts[self.iev]))
+
+        
+        if (self.man_align == 2):                  
+            self.textctrl_ms.Clear()
+            self.textctrl_ms.AppendText('X manual shift:  {0:5.2f}  pixels\n'.format(self.man_ys[self.iev]))
+            self.textctrl_ms.AppendText('Y manual shift:  {0:5.2f}  pixels'.format(self.man_xs[self.iev]))
+            
+
+        
         
 #----------------------------------------------------------------------            
     def OnScrollEng(self, event):
-        self.sel = event.GetInt()
-        self.iev = self.sel
+        self.iev = event.GetInt()
         
         self.ShowImage()
             
@@ -4846,12 +4949,39 @@ class ImageRegistration(wx.Frame):
         fig.clf()
         fig.add_axes((0.02,0.02,0.96,0.96))
         axes = fig.gca()
+        
     
         im = axes.imshow(self.ref_image, cmap=mtplot.cm.get_cmap('gray')) 
+        
+        if (self.subregion == 1):
+
+            from matplotlib.path import Path
+            import matplotlib.patches as patches
+    
+            verts = [
+                     (self.sr_x1, self.sr_y1), # left, bottom
+                     (self.sr_x1, self.sr_y2), # left, top
+                     (self.sr_x2, self.sr_y2), # right, top
+                     (self.sr_x2, self.sr_y1), # right, bottom
+                     (self.sr_x1, self.sr_y1), # ignored
+                     ]
+    
+            codes = [Path.MOVETO,
+                     Path.LINETO,
+                     Path.LINETO,
+                     Path.LINETO,
+                     Path.CLOSEPOLY,
+                     ]
+    
+            path = Path(verts, codes)
+        
+            patch = patches.PathPatch(path, facecolor='red')
+            patch.set_alpha(0.3)
+            axes.add_patch(patch)
          
         if self.man_align > 0:           
-            lx=mtplot.lines.Line2D([self.man_yref,self.man_yref], [0,self.stack.n_rows],color='green')
-            ly=mtplot.lines.Line2D([0,self.stack.n_cols], [self.man_xref,self.man_xref] ,color='green')
+            lx=mtplot.lines.Line2D([self.man_yref,self.man_yref], [0,self.stack.n_cols],color='green')
+            ly=mtplot.lines.Line2D([0,self.stack.n_rows], [self.man_xref,self.man_xref] ,color='green')
             axes.add_line(lx)
             axes.add_line(ly)
     
@@ -4859,7 +4989,38 @@ class ImageRegistration(wx.Frame):
 
         self.RefImagePanel.draw()
 
-
+#----------------------------------------------------------------------          
+    def Onrb_automanual(self, evt):
+        state = self.rb_auto.GetValue()
+        
+      
+        if state:
+            self.auto = True
+            self.man_align = 0
+        else:        
+            self.auto = False
+            
+        self.man_xs = npy.zeros((self.stack.n_ev))
+        self.man_ys = npy.zeros((self.stack.n_ev))
+        
+        self.aligned_stack = self.stack.absdata.copy()      
+        self.xshifts = npy.zeros((self.stack.n_ev))
+        self.yshifts = npy.zeros((self.stack.n_ev))
+        
+        if self.have_ref_image == 1:
+            fig = self.ShiftsPanel.get_figure()
+            fig.clf()
+            self.ShiftsPanel.draw()
+            
+            fig = self.CscorrPanel.get_figure()
+            fig.clf()
+            self.CscorrPanel.draw()
+            
+            self.ShowImage()
+            self.ShowRefImage()
+            
+        self.UpdateWidgets()
+        
 #----------------------------------------------------------------------        
     def ShowCrossCorrelation(self, ccorr, xshift, yshift):
 
@@ -4905,7 +5066,12 @@ class ImageRegistration(wx.Frame):
             self.showccorr = 1
         else: 
             self.showccorr = 0
-        
+
+
+#----------------------------------------------------------------------           
+    def OnSetMaxShift(self, event):
+        ctl = event.GetEventObject()
+        self.maxshift = ctl.GetValue()      
 
 #----------------------------------------------------------------------        
     def OnRemoveImage(self, event):
@@ -4945,28 +5111,50 @@ class ImageRegistration(wx.Frame):
     def OnCalcRegistration(self, event):
         
         wx.BeginBusyCursor()
+        
+        #Subregion selection on a reference image
+        if self.subregion == 0:
+            self.sr_x1 = 0
+            self.sr_x2 = 0
+            self.sr_y1 = 0
+            self.sr_y2 = 0            
+            referenceimage = self.ref_image            
+        else:    
+            referenceimage = self.ref_image[self.sr_y1:self.sr_y2, self.sr_x1:self.sr_x2]  
+          
 
         for i in range(self.stack.n_ev):
 
-            img2 = self.aligned_stack[:,:,i]  
+            if self.subregion == 0:
+                img2 = self.aligned_stack[:,:,i]  
+            else:
+                img2 = self.aligned_stack[self.sr_y1:self.sr_y2, self.sr_x1:self.sr_x2, i]  
                
             if i==0:     
-                xshift, yshift, ccorr = self.stack.register_images(self.ref_image, img2, 
+                xshift, yshift, ccorr = self.stack.register_images(referenceimage, img2, 
                                                           have_ref_img_fft = False)   
             elif i==self.ref_image_index:
                 xshift = 0
                 yshift = 0       
             else:
-                xshift, yshift, ccorr = self.stack.register_images(self.ref_image, img2, 
+                xshift, yshift, ccorr = self.stack.register_images(referenceimage, img2, 
                                                           have_ref_img_fft = True)
+            
+            #Limit the shifts to MAXSHIFT chosen by the user
+            if (self.maxshift > 0):
+                if (abs(xshift) > self.maxshift):
+                        xshift = npy.sign(xshift)*self.maxshift
+                if (abs(yshift) > self.maxshift):
+                        yshift = npy.sign(yshift)*self.maxshift
             
             self.xshifts[i] = xshift
             self.yshifts[i] = yshift
             self.PlotShifts()
             
             if self.showccorr == 1:
-                self.ShowCrossCorrelation(ccorr, xshift, yshift)
-            
+                self.ShowCrossCorrelation(ccorr, xshift, yshift)    
+                    
+                    
         #Apply shifts
         for i in range(self.stack.n_ev):
             img = self.aligned_stack[:,:,i]
@@ -5007,10 +5195,14 @@ class ImageRegistration(wx.Frame):
 #----------------------------------------------------------------------            
     def OnPickRefPoint(self, event):    
         self.man_align = 1   
+
     
 #----------------------------------------------------------------------  
     def OnPointRefimage(self, evt):
         
+        if self.man_align == 0:
+            pass   
+                
         x = evt.xdata
         y = evt.ydata
         
@@ -5064,9 +5256,17 @@ class ImageRegistration(wx.Frame):
                 
             
             self.textctrl_ms.Clear()
-            self.textctrl_ms.AppendText('X manual shift:  {0:5.2f} \n'.format(self.man_ys[self.iev]))
-            self.textctrl_ms.AppendText('Y manual shift:  {0:5.2f}'.format(self.man_xs[self.iev]))
+            self.textctrl_ms.AppendText('X manual shift:  {0:5.2f}  pixels\n'.format(self.man_ys[self.iev]))
+            self.textctrl_ms.AppendText('Y manual shift:  {0:5.2f}  pixels'.format(self.man_xs[self.iev]))
             
+            self.iev = self.iev + 1
+            if self.iev > (self.stack.n_ev-1):
+                self.iev = 0
+            
+            self.slider_eng.SetValue(self.iev)
+                    
+           
+            self.ShowImage()
             self.UpdateWidgets()
             
 #----------------------------------------------------------------------            
@@ -5116,14 +5316,18 @@ class ImageRegistration(wx.Frame):
         
         self.stack.n_cols = datadim[0].copy()
         self.stack.n_rows =  datadim[1].copy()
-               
-
         
+        self.stack.xshifts = self.xshifts
+        self.stack.yshifts = self.yshifts
+                      
         if self.com.i0_loaded == 1:
             self.stack.calculate_optical_density()
 
         self.stack.data_struct.exchange.data = self.stack.absdata
         self.stack.data_struct.exchange.energy = self.stack.ev
+        
+        self.stack.data_struct.spectromicroscopy.xshifts = self.xshifts
+        self.stack.data_struct.spectromicroscopy.yshifts = self.yshifts
         
         
         wx.GetApp().TopWindow.page1.slider_eng.SetRange(0,self.stack.n_ev-1)
@@ -5154,6 +5358,7 @@ class ImageRegistration(wx.Frame):
         
         fig = self.ShiftsPanel.get_figure()
         fig.clf()
+        
         fig.add_axes((0.15,0.15,0.75,0.75))
         axes = fig.gca()
         
@@ -5162,7 +5367,7 @@ class ImageRegistration(wx.Frame):
         
         #Matplotlib has inverted axes! 
         axes.set_xlabel('Photon Energy [eV]')
-        axes.set_ylabel('Shifts [x-red, y-green]')
+        axes.set_ylabel('Shifts (x-red, y-green) [pixels]')
 
         plot = axes.plot(self.stack.ev,self.xshifts, color='green')
         plot = axes.plot(self.stack.ev,self.yshifts, color='red')
@@ -5189,34 +5394,90 @@ class ImageRegistration(wx.Frame):
             self.ShowImage()
             
             self.slider_eng.SetValue(self.iev)
+
+#----------------------------------------------------------------------            
+    def OnSelectSubregion(self, event):
         
+        self.subregion = 1
+        self.sr_x1 = 0
+        self.sr_x2 = 0
+        self.sr_y1 = 0
+        self.sr_y2 = 0
+        
+        self.button_delsubregion.Enable()
+        
+#----------------------------------------------------------------------            
+    def OnDeleteSubregion(self, event):
+        
+        self.subregion = 0
+        self.sr_x1 = 0
+        self.sr_x2 = 0
+        self.sr_y1 = 0
+        self.sr_y2 = 0
+        
+        self.ShowRefImage()
+        
+                    
+#----------------------------------------------------------------------        
+    def OnSelection(self, evt):
+        
+        if (self.man_align > 0) and (self.subregion == 0):
+            pass
+        
+        x1, y1 = evt.x1data, evt.y1data
+        x2, y2 = evt.x2data, evt.y2data
+        
+        self.sr_x1 = int(x1)
+        self.sr_x2 = int(x2)
+        self.sr_y1 = int(y2)
+        self.sr_y2 = int(y1)
+        
+        self.ShowRefImage()
 
 #----------------------------------------------------------------------  
     def UpdateWidgets(self):
         
-        
-        if self.have_ref_image == 1:
-            self.button_register.Enable()
-            self.button_manalign.Enable()
+        if self.auto:
+            self.button_manalign.Disable()
+            if self.have_ref_image == 1:
+                self.button_register.Enable()
+                self.button_subregion.Enable()
+            else:
+                self.button_register.Disable()
+                self.button_subregion.Disable()
+                self.button_delsubregion.Disable()
+            
+            if self.regist_calculated == 1:
+                self.button_crop.Enable()
+                self.button_accept.Enable()
+            else:
+                self.button_crop.Disable()
+                self.button_accept.Disable() 
+                           
         else:
             self.button_register.Disable()
-            self.button_manalign.Disable()
-        
-        if self.regist_calculated == 1:
-            self.button_crop.Enable()
-            self.button_accept.Enable()
-        else:
-            self.button_crop.Disable()
-            self.button_accept.Disable() 
-                       
-        if self.man_align == 0:
-            self.button_pick2ndpoint.Disable()
-            self.button_applyman.Disable()
-        elif self.man_align == 1:
-            self.button_pick2ndpoint.Enable() 
-        elif self.man_align == 2:
-            self.button_applyman.Enable()
-       
+            self.button_delsubregion.Disable()
+            self.button_subregion.Disable()
+            
+            if self.have_ref_image == 1:
+                self.button_manalign.Enable()
+            else:
+                self.button_manalign.Disable()
+            
+            if self.regist_calculated == 1:
+                self.button_crop.Enable()
+                self.button_accept.Enable()
+            else:
+                self.button_crop.Disable()
+                self.button_accept.Disable() 
+                           
+            if self.man_align == 0:
+                self.button_pick2ndpoint.Disable()
+                self.button_applyman.Disable()
+            elif self.man_align == 1:
+                self.button_pick2ndpoint.Enable() 
+            elif self.man_align == 2:
+                self.button_applyman.Enable()       
                
         
         
@@ -5831,12 +6092,12 @@ class PageLoadData(wx.Panel):
         sizer1 = wx.StaticBoxSizer(wx.StaticBox(panel1, -1, 'Load Data Stack'),orient=wx.VERTICAL)
         vbox1 = wx.BoxSizer(wx.VERTICAL)     
 
-        self.button_hdf5 = wx.Button(panel1, -1, 'Load HDF5 Stack (.hdf5)', size=((200,-1)))
+        self.button_hdf5 = wx.Button(panel1, -1, 'Load HDF5 Stack (*.hdf5)', size=((200,-1)))
         self.button_hdf5.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnLoadHDF5, id=self.button_hdf5.GetId())
         vbox1.Add(self.button_hdf5, 0, wx.EXPAND)
         
-        self.button_sdf = wx.Button(panel1, -1, 'Load SDF Stack (.hrd)')
+        self.button_sdf = wx.Button(panel1, -1, 'Load SDF Stack (*.hrd)')
         self.button_sdf.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnLoadSDF, id=self.button_sdf.GetId())   
         vbox1.Add(self.button_sdf, 0, wx.EXPAND)
@@ -5846,12 +6107,12 @@ class PageLoadData(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self.OnLoadSTK, id=self.button_stk.GetId())   
         vbox1.Add(self.button_stk, 0, wx.EXPAND)
         
-        self.button_xrm = wx.Button(panel1, -1, 'Load XRM Image (.xrm)')
+        self.button_xrm = wx.Button(panel1, -1, 'Load XRM Image (*.xrm)')
         self.Bind(wx.EVT_BUTTON, self.OnLoadXRM, id=self.button_xrm.GetId())
         self.button_xrm.SetFont(self.com.font)
         vbox1.Add(self.button_xrm, 0, wx.EXPAND)
         
-        self.button_txrm = wx.Button(panel1, -1, 'Load TXRM Stack (.txrm)')
+        self.button_txrm = wx.Button(panel1, -1, 'Load TXRM Stack (*.txrm)')
         self.Bind(wx.EVT_BUTTON, self.OnLoadTXRM, id=self.button_txrm.GetId())
         self.button_txrm.SetFont(self.com.font)
         vbox1.Add(self.button_txrm, 0, wx.EXPAND)        
@@ -5866,12 +6127,12 @@ class PageLoadData(wx.Panel):
         vbox2 = wx.BoxSizer(wx.VERTICAL)
 
 
-        self.button_sm = wx.Button(panel2, -1, 'Build a stack from a set of NetCDF (.sm) files')
+        self.button_sm = wx.Button(panel2, -1, 'Build a stack from a set of NetCDF (*.sm) files')
         self.button_sm.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnBuildStack, id=self.button_sm.GetId())
         vbox2.Add(self.button_sm, 0, wx.EXPAND)
         
-        self.button_xrm_list = wx.Button(panel2, -1, 'Build a stack from a set of XRM (.xrm) files')
+        self.button_xrm_list = wx.Button(panel2, -1, 'Build a stack from a set of XRM (*.xrm) files')
         self.button_xrm_list.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnBuildStack, id=self.button_xrm_list.GetId())
         vbox2.Add(self.button_xrm_list, 0, wx.EXPAND)

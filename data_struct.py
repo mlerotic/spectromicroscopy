@@ -243,6 +243,9 @@ class spectromicroscopy(object):
     
     data_dwell = Descr()
     i0_dwell = Descr()
+    
+    xshifts = Descr()
+    yshifts = Descr()
         
 
 # HDF5 Root Group
