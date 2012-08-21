@@ -4816,7 +4816,13 @@ class ImageRegistration(wx.Frame):
         panel7 = wx.Panel(self, -1)
         vbox7 = wx.BoxSizer(wx.VERTICAL)
         
-        self.button_crop = wx.Button(panel7, -1, 'Crop Aligned Images')
+        self.button_saveimg = wx.Button(panel7, -1, 'Save image shifts plot')
+        self.button_saveimg.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.OnSaveShiftsPlot, id=self.button_saveimg.GetId())   
+        self.button_saveimg.Disable()
+        vbox7.Add(self.button_saveimg, 0, wx.EXPAND)
+        
+        self.button_crop = wx.Button(panel7, -1, 'Crop aligned images')
         self.button_crop.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnCropShifts, id=self.button_crop.GetId())   
         self.button_crop.Disable()
@@ -5394,6 +5400,35 @@ class ImageRegistration(wx.Frame):
             self.ShowImage()
             
             self.slider_eng.SetValue(self.iev)
+            
+#----------------------------------------------------------------------  
+    def OnSaveShiftsPlot(self, evt):
+        wildcard = 'Portable Network Graphics (*.png)|*.png|Adobe PDF Files (*.pdf)|*.pdf|All files (*.*)|*.*'               
+        self.SaveFileName = wx.FileSelector('Save Image Shifts Plot', default_extension='png', 
+                                   wildcard=wildcard, parent=self, flags=wx.SAVE|wx.OVERWRITE_PROMPT) 
+   
+        if not self.SaveFileName: 
+            return 
+        
+        path, ext = os.path.splitext(self.SaveFileName) 
+        ext = ext[1:].lower() 
+        
+        try: 
+
+            mtplot.rcParams['pdf.fonttype'] = 42
+            if ext == 'png':
+                            
+                fig = self.ShiftsPanel.get_figure()
+                fig.savefig(self.SaveFileName)
+                
+            if ext =='pdf':
+
+                            
+                fig = self.ShiftsPanel.get_figure()
+                fig.savefig(self.SaveFileName)   
+                      
+        except:
+            pass
 
 #----------------------------------------------------------------------            
     def OnSelectSubregion(self, event):
@@ -5450,9 +5485,11 @@ class ImageRegistration(wx.Frame):
             if self.regist_calculated == 1:
                 self.button_crop.Enable()
                 self.button_accept.Enable()
+                self.button_saveimg.Enable()
             else:
                 self.button_crop.Disable()
                 self.button_accept.Disable() 
+                self.button_saveimg.Disable()
                            
         else:
             self.button_register.Disable()
