@@ -323,13 +323,13 @@ class PageSpectral(wx.Panel):
         hboxB.Add(panel1, 0, wx.BOTTOM | wx.TOP, 9)
         hboxT.Add((10,0)) 
                
-        hboxT.Add(panel3, 1, wx.LEFT | wx.RIGHT | wx.TOP | wx.EXPAND, 10)
-        hboxT.Add(panel4, 3, wx.LEFT | wx.RIGHT |wx.TOP | wx.EXPAND,10)
-        hboxT.Add(panel5, 1, wx.LEFT | wx.RIGHT |wx.TOP | wx.EXPAND,10)
+        hboxT.Add(panel3, 1, wx.LEFT | wx.RIGHT | wx.TOP | wx.EXPAND, 9)
+        hboxT.Add(panel4, 3, wx.LEFT | wx.RIGHT |wx.TOP | wx.EXPAND, 9)
+        hboxT.Add(panel5, 1, wx.LEFT | wx.RIGHT |wx.TOP | wx.EXPAND, 9)
 
         vbox.Add(hboxT, 0, wx.ALL, 5)
         
-        vbox.Add((0, 10))
+        vbox.Add((0, 5))
         
         vbox.Add(hboxB, 0, wx.LEFT | wx.RIGHT, 5)
   
@@ -3107,7 +3107,7 @@ class PageStack(wx.Panel):
         vbox31.Add((0,3))
         
             
-        self.button_savestack = wx.Button(panel3, -1, 'Save preprocessed stack...')
+        self.button_savestack = wx.Button(panel3, -1, 'Save preprocessed stack')
         self.button_savestack.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnSaveStack, id=self.button_savestack.GetId())
         self.button_savestack.Disable()          
@@ -3186,15 +3186,15 @@ class PageStack(wx.Panel):
         sizer43 = wx.StaticBoxSizer(wx.StaticBox(panel4, -1, 'Display settings'),  orient=wx.VERTICAL)
         sizer43.Add((0,10))
         hbox42 = wx.BoxSizer(wx.HORIZONTAL)
-        hbox42.Add((15,0))
+        hbox42.Add((10,0))
 
         fgs41 = wx.FlexGridSizer(3, 2, 0, 0)
         
-        self.tc_min = wx.TextCtrl(panel4, -1, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE, size=(80,-1))
+        self.tc_min = wx.TextCtrl(panel4, -1, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE, size=(90,-1))
         self.tc_min.SetFont(self.com.font)
         self.tc_min.AppendText('Minimum: \t{0:5.2f}'.format(self.brightness_min))
         
-        self.tc_max = wx.TextCtrl(panel4, -1, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE, size=(80,-1))
+        self.tc_max = wx.TextCtrl(panel4, -1, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE, size=(90,-1))
         self.tc_max.SetFont(self.com.font)
         self.tc_max.AppendText('Maximum:{0:5.2f}'.format(self.brightness_max))
 
@@ -3206,7 +3206,7 @@ class PageStack(wx.Panel):
         self.slider_brightness_max.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnScrollBrightnessMax, self.slider_brightness_max)        
         
-        self.tc_gamma = wx.TextCtrl(panel4, -1, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE, size=(80,-1))
+        self.tc_gamma = wx.TextCtrl(panel4, -1, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE, size=(90,-1))
         self.tc_gamma.SetFont(self.com.font)
         self.tc_gamma.AppendText('Gamma:  \t{0:5.2f}'.format(self.gamma))
         
@@ -3220,7 +3220,7 @@ class PageStack(wx.Panel):
         
       
         hbox42.Add(fgs41, 0, wx.EXPAND)
-        hbox42.Add((30,0))
+        hbox42.Add((20,0))
 
         
         vbox43 = wx.BoxSizer(wx.VERTICAL)
@@ -3243,7 +3243,7 @@ class PageStack(wx.Panel):
         hbox42.Add(vbox43, 0, wx.EXPAND|wx.LEFT|wx.RIGHT, 3)                   
         sizer43.Add(hbox42)
     
-        hbox41.Add((10,0))
+        hbox41.Add((2,0))
         hbox41.Add(sizer43, 1, wx.EXPAND)
         vbox4.Add((0,10))
         vbox4.Add(hbox41, 1, wx.EXPAND)
@@ -4557,7 +4557,7 @@ class ImageRegistration(wx.Frame):
     title = "Image Alignment"
 
     def __init__(self, common, stack):
-        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(920, 700))
+        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(920, 750))
 
                
         ico = logos.getlogo_2l_32Icon()
@@ -4877,12 +4877,12 @@ class ImageRegistration(wx.Frame):
         vboxL = wx.BoxSizer(wx.VERTICAL)
         vboxR = wx.BoxSizer(wx.VERTICAL)
         
-        vboxL.Add((0,20))
-        vboxL.Add(panel8, 0, wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM, 20)
-        vboxL.Add(panel9, 0, wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM, 20)
-        vboxL.Add(panel4, 1, wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM, 20)
-        vboxL.Add(panel6, 0, wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM, 20)
-        vboxL.Add(panel7, 1, wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM, 20)
+        vboxL.Add((0,10))
+        vboxL.Add(panel8, 0, wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM, 15)
+        vboxL.Add(panel9, 0, wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM, 15)
+        vboxL.Add(panel4, 1, wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM, 15)
+        vboxL.Add(panel6, 0, wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM, 15)
+        vboxL.Add(panel7, 1, wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM, 15)
         
         hboxRT = wx.BoxSizer(wx.HORIZONTAL)
         hboxRB = wx.BoxSizer(wx.HORIZONTAL)
@@ -6156,7 +6156,8 @@ class PageLoadData(wx.Panel):
         #panel 1
         panel1 = wx.Panel(self, -1)
         sizer1 = wx.StaticBoxSizer(wx.StaticBox(panel1, -1, 'Load Data Stack'),orient=wx.VERTICAL)
-        vbox1 = wx.BoxSizer(wx.VERTICAL)     
+        vbox1 = wx.BoxSizer(wx.VERTICAL)   
+        panel1.SetBackgroundColour("white")  
 
         self.button_hdf5 = wx.Button(panel1, -1, 'Load HDF5 Stack (*.hdf5)', size=((200,-1)))
         self.button_hdf5.SetFont(self.com.font)
