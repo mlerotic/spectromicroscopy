@@ -843,7 +843,7 @@ class ShowCompositeRBGmap(wx.Frame):
     title = "Composite RBG Map"
 
     def __init__(self, common, anlz):
-        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(630, 470))
+        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(630, 500))
                
         ico = logos.getlogo_2l_32Icon()
         self.SetIcon(ico)
@@ -1041,7 +1041,7 @@ class ShowCompositeRBGmap(wx.Frame):
         self.RGBImagePanel = wxmpl.PlotPanel(i1panel, -1, size =(PlotH,PlotH), cursor=False, crosshairs=False, location=False, zoom=False)
         hbox1.Add(i1panel, 0)
         
-        vbox.Add(hbox1, 0, wx.EXPAND| wx.TOP, 20) 
+        vbox.Add(hbox1, 0, wx.EXPAND| wx.TOP, 10) 
         
              
         hbox2 = wx.BoxSizer(wx.HORIZONTAL)
@@ -6157,7 +6157,6 @@ class PageLoadData(wx.Panel):
         panel1 = wx.Panel(self, -1)
         sizer1 = wx.StaticBoxSizer(wx.StaticBox(panel1, -1, 'Load Data Stack'),orient=wx.VERTICAL)
         vbox1 = wx.BoxSizer(wx.VERTICAL)   
-        panel1.SetBackgroundColour("white")  
 
         self.button_hdf5 = wx.Button(panel1, -1, 'Load HDF5 Stack (*.hdf5)', size=((200,-1)))
         self.button_hdf5.SetFont(self.com.font)
