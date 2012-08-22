@@ -349,7 +349,7 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
         print>>file, '* Address: '
         print>>file, '*--------------------------------------------------------------'
         for ie in range(self.n_ev):
-            print>>file, '\t%.6f, \t%.6f' %(evdata[ie], data[ie])
+            print>>file, '%.6f, %.6f' %(evdata[ie], data[ie])
         
         file.close()
     

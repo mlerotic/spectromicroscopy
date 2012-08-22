@@ -3172,13 +3172,13 @@ class PageStack(wx.Panel):
         self.Bind(wx.EVT_CHECKBOX, self.OnShowColBar, self.add_colbar_cb)
 
         sizer42.Add((0,10))
-        sizer42.Add(self.rb_flux)
+        sizer42.Add(self.rb_flux, 0, wx.LEFT|wx.RIGHT, 2)
         sizer42.Add((0,3))
-        sizer42.Add(self.rb_od)
+        sizer42.Add(self.rb_od, 0, wx.LEFT|wx.RIGHT, 2)
         sizer42.Add((0,10))
-        sizer42.Add(self.add_scale_cb)
+        sizer42.Add(self.add_scale_cb, 0, wx.LEFT|wx.RIGHT, 2)
         sizer42.Add((0,3))
-        sizer42.Add(self.add_colbar_cb)
+        sizer42.Add(self.add_colbar_cb, 0, wx.LEFT|wx.RIGHT, 2)
         
         hbox41.Add(sizer42, 0, wx.EXPAND)
                 
@@ -3240,7 +3240,7 @@ class PageStack(wx.Panel):
         self.button_displaycolor.Disable()     
         vbox43.Add(self.button_displaycolor, 0, wx.EXPAND)
         
-        hbox42.Add(vbox43, 0, wx.EXPAND)                   
+        hbox42.Add(vbox43, 0, wx.EXPAND|wx.LEFT|wx.RIGHT, 3)                   
         sizer43.Add(hbox42)
     
         hbox41.Add((10,0))
@@ -3316,7 +3316,7 @@ class PageStack(wx.Panel):
         hboxT.Add((10,0)) 
                
         hboxT.Add(panel3, 1, wx.LEFT | wx.RIGHT | wx.TOP | wx.EXPAND, 10)
-        hboxT.Add(panel4, 3, wx.LEFT | wx.RIGHT |wx.TOP | wx.EXPAND,10)
+        hboxT.Add(panel4, 0, wx.LEFT | wx.RIGHT |wx.TOP | wx.EXPAND,10)
         hboxT.Add(panel5, 1, wx.LEFT | wx.RIGHT |wx.TOP | wx.EXPAND,10)
 
         vbox.Add(hboxT, 0, wx.ALL, 5)
@@ -4782,17 +4782,17 @@ class ImageRegistration(wx.Frame):
         panel5 = wx.Panel(self, -1)
         vbox5 = wx.BoxSizer(wx.VERTICAL)
         
-        tc5 = wx.TextCtrl(panel5, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
-        tc5.SetFont(self.com.font)
-        tc5.SetValue('Reference image')
-
+        self.tc_refimg = wx.TextCtrl(panel5, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.tc_refimg.SetFont(self.com.font)
+        self.tc_refimg.SetValue('Reference image')
+        
         i3panel = wx.Panel(panel5, -1, style = wx.SUNKEN_BORDER)
         self.RefImagePanel = wxmpl.PlotPanel(i3panel, -1, size =(3.0,3.0), cursor=True, crosshairs=False, location=False, zoom=False)
         wxmpl.EVT_POINT(i3panel, self.RefImagePanel.GetId(), self.OnPointRefimage)
         
         wxmpl.EVT_SELECTION(i3panel, self.RefImagePanel.GetId(), self.OnSelection)
         
-        vbox5.Add(tc5,1, wx.EXPAND)        
+        vbox5.Add(self.tc_refimg,1, wx.EXPAND)        
         vbox5.Add(i3panel, 0)
 
         panel5.SetSizer(vbox5)
@@ -5019,6 +5019,8 @@ class ImageRegistration(wx.Frame):
         axes.axis("off") 
 
         self.RefImagePanel.draw()
+        
+        self.tc_refimg.SetValue('Reference image at energy: {0:5.2f} eV'.format(float(self.stack.ev[self.ref_image_index])))
 
 #----------------------------------------------------------------------          
     def Onrb_automanual(self, evt):
@@ -5993,7 +5995,7 @@ class PlotFrame(wx.Frame):
         dim = self.datax.shape
         n=dim[0]
         for ie in range(n):
-            print>>file, '\t%.6f,\t%.6f' %(self.datax[ie], self.datay[ie])
+            print>>file, '%.6f, %.6f' %(self.datax[ie], self.datay[ie])
         
         file.close()
     
