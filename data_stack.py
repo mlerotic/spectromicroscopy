@@ -386,7 +386,40 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
             spectrum_data = spectrum_data[::-1]
         
         return spectrum_evdata, spectrum_data, spectrum_common_name
+
+#----------------------------------------------------------------------   
+#Read x-ray absorption spectrum
+    def read_csv(self, filename):
         
+        spectrum_common_name = ' '
+ 
+        f = open(str(filename),'r')
+        
+        elist = []
+        ilist = []    
+    
+        for line in f:
+            if line.startswith('*'):
+                if 'Common name' in line:
+                    spectrum_common_name = line.split(':')[-1].strip()
+
+            else:
+                e, i = [float (x) for x in line.split(',')] 
+                elist.append(e)
+                ilist.append(i)
+                
+        spectrum_evdata = np.array(elist)
+        spectrum_data = np.array(ilist) 
+                
+        f.close()
+        
+        if spectrum_evdata[-1]<spectrum_evdata[0]:
+            spectrum_evdata = spectrum_evdata[::-1]
+            spectrum_data = spectrum_data[::-1]
+        
+        return spectrum_evdata, spectrum_data, spectrum_common_name
+        
+                
     
 #----------------------------------------------------------------------   
 #Register images using Fourier Shift Theorem

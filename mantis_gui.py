@@ -55,6 +55,9 @@ class common:
         self.pca_calculated = 0
         self.cluster_calculated = 0
         self.spec_anl_calculated = 0
+        
+        self.path = ''
+        self.filename = ''
 
         self.font = wx.SystemSettings_GetFont(wx.SYS_DEFAULT_GUI_FONT)
 
@@ -191,7 +194,7 @@ class PageSpectral(wx.Panel):
         self.button_showrgb.Disable()     
         vbox31.Add(self.button_showrgb, 0, wx.EXPAND)        
 
-        self.button_save = wx.Button(panel3, -1, 'Save', (10,10))
+        self.button_save = wx.Button(panel3, -1, 'Save Images...', (10,10))
         self.button_save.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnSave, id=self.button_save.GetId())
         self.button_save.Disable()          
@@ -342,7 +345,7 @@ class PageSpectral(wx.Panel):
         
 
         try: 
-            wildcard = "Spectrum files (*.xas)|*.xas"
+            wildcard = "Spectrum files (*.csv)|*.csv"
             dialog = wx.FileDialog(None, "Choose Spectrum file",
                                    style=wx.OPEN)
             dialog.SetWildcard(wildcard)
@@ -434,33 +437,13 @@ class PageSpectral(wx.Panel):
 #----------------------------------------------------------------------
     def OnSave(self, event):
         
-        wildcard = 'Portable Network Graphics (*.png)|*.png|Adobe PDF Files (*.pdf)|*.pdf|All files (*.*)|*.*'
-      
-        self.SaveFileName = wx.FileSelector('Save', default_extension='png', wildcard = wildcard,
-                                   parent=self, flags=wx.SAVE|wx.OVERWRITE_PROMPT) 
-        
-        
-   
-        if not self.SaveFileName: 
-            return 
-        
-        SaveWinP4(self.SaveFileName).Show()
+        SaveWinP4().Show()
         
         
 #----------------------------------------------------------------------
-    def Save(self, spec_png = True, spec_pdf = False, spec_xas = False, img_png = True, img_pdf = False):
+    def Save(self, filename, path, spec_png = True, spec_pdf = False, spec_csv = False, img_png = True, img_pdf = False):
 
-        path, ext = os.path.splitext(self.SaveFileName) 
-        ext = ext[1:].lower() 
-        
-       
-#        if ext != 'png' and ext != 'pdf': 
-#            error_message = ( 
-#                  'Only the PNG and PDF image formats are supported.\n' 
-#                 'A file extension of `png\' or `pdf\' must be used.') 
-#            wx.MessageBox(error_message, 'Error - Could not save file.', 
-#                  parent=self, style=wx.OK|wx.ICON_ERROR) 
-#            return 
+        self.SaveFileName = os.path.join(path,filename)
    
         try: 
             if img_png:
@@ -472,8 +455,8 @@ class PageSpectral(wx.Panel):
                 self.SaveSpectra(png_pdf=1)
             if spec_pdf:
                 self.SaveSpectra(png_pdf=2)
-            if spec_xas:
-                self.SaveSpectra(savexas = True)
+            if spec_csv:
+                self.SaveSpectra(savecsv = True)
                 
                 
             
@@ -487,7 +470,7 @@ class PageSpectral(wx.Panel):
                           parent=self, style=wx.OK|wx.ICON_ERROR) 
             
 #----------------------------------------------------------------------
-    def SaveSpectra(self, png_pdf=1, savexas = False):
+    def SaveSpectra(self, png_pdf=1, savecsv = False):
         
         
         from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas   
@@ -532,12 +515,12 @@ class PageSpectral(wx.Panel):
             axes.set_xlabel('Photon Energy [eV]')
             axes.set_ylabel('Optical Density')
 
-            fileName_spec = self.SaveFileName[:-len(suffix)]+"_Tspectrum_" +str(i+1)+"."+ext
+            fileName_spec = self.SaveFileName+"_Tspectrum_" +str(i+1)+"."+ext
             fig.savefig(fileName_spec)    
             
-            if savexas:
-                fileName_spec = self.SaveFileName[:-len(suffix)]+"_Tspectrum_" +str(i+1)+".xas"
-                self.stk.write_xas(fileName_spec, self.stk.ev, tspectrumfit)
+            if savecsv:
+                fileName_spec = self.SaveFileName+"_Tspectrum_" +str(i+1)+".csv"
+                self.stk.write_csv(fileName_spec, self.stk.ev, tspectrumfit)
 #----------------------------------------------------------------------
     def SaveMaps(self, png_pdf=1):            
             
@@ -595,7 +578,7 @@ class PageSpectral(wx.Panel):
             axes.axis("off") 
                 
                    
-            fileName_img = self.SaveFileName[:-len(suffix)]+"_TSmap_" +str(i+1)+"."+ext               
+            fileName_img = self.SaveFileName+"_TSmap_" +str(i+1)+"."+ext               
             fig.savefig(fileName_img)
             
 #----------------------------------------------------------------------        
@@ -1325,8 +1308,8 @@ class SaveWinP4(wx.Frame):
     
     title = "Save"
 
-    def __init__(self, filename):
-        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(245, 280))
+    def __init__(self):
+        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(400, 330))
                
         ico = logos.getlogo_2l_32Icon()
         self.SetIcon(ico)
@@ -1338,23 +1321,19 @@ class SaveWinP4(wx.Frame):
         self.fontsize = self.com.fontsize   
         
         
-        path, ext = os.path.splitext(filename) 
+        path, ext = os.path.splitext(self.com.filename) 
         ext = ext[1:].lower()   
         suffix = "." + ext
-        path, fn = os.path.split(filename)
-        filename = fn[:-len(suffix)]+"_.*"
+        path, fn = os.path.split(self.com.filename)
+        filename = fn[:-len(suffix)]
+        
+        self.path = self.com.path
+        self.filename = filename
             
         
         
         vboxtop = wx.BoxSizer(wx.VERTICAL)
         
-        stf = wx.StaticText(self, -1, 'Filename: ',  style=wx.ALIGN_LEFT, size =(200, 20))
-        stf.SetFont(self.com.font)
-        vboxtop.Add(stf,0,wx.TOP|wx.LEFT, 10)
-        vboxtop.Add((0,3))
-        stf = wx.StaticText(self, -1, filename,  style=wx.ALIGN_LEFT, size =(200, 20))
-        stf.SetFont(self.com.font)
-        vboxtop.Add(stf,0,wx.LEFT, 10)
         
         panel1 = wx.Panel(self, -1)
         
@@ -1370,7 +1349,7 @@ class SaveWinP4(wx.Frame):
         st2.SetFont(fontb)
         st3 = wx.StaticText(panel1, -1, '.png',  style=wx.ALIGN_LEFT)
         st3.SetFont(fontb)
-        st3a = wx.StaticText(panel1, -1, '.xas',  style=wx.ALIGN_LEFT)
+        st3a = wx.StaticText(panel1, -1, '.csv',  style=wx.ALIGN_LEFT)
         st3a.SetFont(fontb)
                 
         st4 = wx.StaticText(panel1, -1, '_spectrum',  style=wx.ALIGN_LEFT)
@@ -1413,17 +1392,50 @@ class SaveWinP4(wx.Frame):
         
         panel1.SetSizer(gridtop)
         
-        hbox = wx.BoxSizer(wx.HORIZONTAL)
         panel2 = wx.Panel(self, -1)
+        vbox1 = wx.BoxSizer(wx.VERTICAL)
+        
+        hbox0 = wx.BoxSizer(wx.HORIZONTAL)
+        
+        st0 = wx.StaticText(panel2, -1, 'Filename: ')
+        st0.SetFont(self.com.font)
+        self.tc_savefn = wx.TextCtrl(panel2, -1,  style=wx.TE_RICH, size =((100, -1)),
+                                         value=self.filename)
+        self.tc_savefn.SetFont(self.com.font)
+        hbox0.Add(st0, 0, flag = wx.ALIGN_CENTER_VERTICAL)
+        hbox0.Add(self.tc_savefn,1, wx.EXPAND|wx.LEFT, 2)         
+        
+        
+        hbox1 = wx.BoxSizer(wx.HORIZONTAL)
+                
+        st1 = wx.StaticText(panel2, label='Path: ')
+        st1.SetFont(self.com.font)
+        self.tc_savepath = wx.TextCtrl(panel2, -1,  style=wx.TE_RICH|wx.TE_READONLY, size =((100, -1)),
+                                         value=self.path)
+        self.tc_savepath.SetFont(self.com.font)
+        hbox1.Add(st1, 0, wx.ALIGN_CENTER_VERTICAL|wx.RIGHT, 20)
+        hbox1.Add(self.tc_savepath, 1, wx.EXPAND|wx.LEFT, 2)  
+        
+        button_path = wx.Button(panel2, -1, 'Browse...')
+        self.Bind(wx.EVT_BUTTON, self.OnBrowseDir, id=button_path.GetId())
+        hbox1.Add(button_path, 0)
+        
+        
+        hbox2 = wx.BoxSizer(wx.HORIZONTAL)
         button_save = wx.Button(panel2, -1, 'Save')
         self.Bind(wx.EVT_BUTTON, self.OnSave, id=button_save.GetId())
-        hbox.Add(button_save, 0, wx.LEFT,25)
+        hbox2.Add(button_save, 0, wx.ALIGN_RIGHT)
         
         button_cancel = wx.Button(panel2, -1, 'Cancel')
         self.Bind(wx.EVT_BUTTON, self.OnCancel, id=button_cancel.GetId())
-        hbox.Add(button_cancel, 0, wx.LEFT,10)
+        hbox2.Add(button_cancel, 0, wx.ALIGN_RIGHT|wx.LEFT,10)
         
-        panel2.SetSizer(hbox)
+        vbox1.Add(hbox0, 1, wx.EXPAND)
+        vbox1.Add((0,5))
+        vbox1.Add(hbox1, 1, wx.EXPAND)
+        vbox1.Add((0,20))
+        vbox1.Add(hbox2, 0, wx.ALIGN_RIGHT)
+        panel2.SetSizer(vbox1)
         
         
         vboxtop.Add(panel1, 1, wx.ALL | wx.EXPAND, 20)
@@ -1433,18 +1445,37 @@ class SaveWinP4(wx.Frame):
         
         
 #----------------------------------------------------------------------        
+    def OnBrowseDir(self, evt):
+        
+        dialog = wx.DirDialog(None, "Choose a directory",
+                               style=wx.DD_DIR_MUST_EXIST,
+                               defaultPath=self.path)
+
+        if dialog.ShowModal() == wx.ID_OK:
+            directory = dialog.GetPath()
+            
+            self.path = directory
+            
+            self.tc_savepath.SetValue(self.path)
+            
+            
+                
+#----------------------------------------------------------------------        
     def OnSave(self, evt):
+        
+        self.filename = self.tc_savefn.GetValue()
         
         sp_pdf = self.cb1.GetValue()
         sp_png = self.cb2.GetValue()
-        sp_xas = self.cb2a.GetValue()
+        sp_csv = self.cb2a.GetValue()
         im_pdf = self.cb3.GetValue()
         im_png = self.cb4.GetValue()
         
         self.Destroy() 
-        wx.GetApp().TopWindow.page4.Save(spec_png = sp_png, 
+        wx.GetApp().TopWindow.page4.Save(self.filename, self.path,
+                                         spec_png = sp_png, 
                                          spec_pdf = sp_pdf, 
-                                         spec_xas = sp_xas,
+                                         spec_csv = sp_csv,
                                          img_png = im_png, 
                                          img_pdf = im_pdf)
         
@@ -1805,34 +1836,17 @@ class PageCluster(wx.Panel):
 #----------------------------------------------------------------------    
     def OnSave(self, event):     
                
-        self.SaveFileName = wx.FileSelector('Save', default_extension='png', 
-                                   wildcard=('Portable Network Graphics (*.png)|*.png|' 
-                                             + 'Adobe PDF Files (*.pdf)|*.pdf|All files (*.*)|*.*'), 
-                                              parent=self, flags=wx.SAVE|wx.OVERWRITE_PROMPT) 
-   
-        if not self.SaveFileName: 
-            return 
-        
-        SaveWinP3(self.SaveFileName).Show()
+
+        SaveWinP3().Show()
         
         
 #----------------------------------------------------------------------    
-    def Save(self, spec_png = True, spec_pdf = False, spec_xas = False,
+    def Save(self, filename, path, spec_png = True, spec_pdf = False, spec_csv = False,
              img_png = True, img_pdf = False, 
              indimgs_png = True, indimgs_pdf = False,
              scatt_png = True, scatt_pdf = False): 
         
-        path, ext = os.path.splitext(self.SaveFileName) 
-        ext = ext[1:].lower() 
-        
-       
-#        if ext != 'png' and ext != 'pdf': 
-#            error_message = ( 
-#                  'Only the PNG and PDF image formats are supported.\n' 
-#                 'A file extension of `png\' or `pdf\' must be used.') 
-#            wx.MessageBox(error_message, 'Error - Could not save file.', 
-#                  parent=self, style=wx.OK|wx.ICON_ERROR) 
-#            return 
+        self.SaveFileName = os.path.join(path,filename)
    
         try: 
             mtplot.rcParams['pdf.fonttype'] = 42
@@ -1841,7 +1855,7 @@ class PageCluster(wx.Panel):
                 ext = 'png'
                 suffix = "." + ext
             
-                fileName_evals = self.SaveFileName[:-len(suffix)]+"_CAcimg."+ext          
+                fileName_evals = self.SaveFileName+"_CAcimg."+ext          
             
                 fig = self.ClusterImagePan.get_figure()
                 fig.savefig(fileName_evals)
@@ -1851,7 +1865,7 @@ class PageCluster(wx.Panel):
                 ext = 'pdf'
                 suffix = "." + ext
             
-                fileName_evals = self.SaveFileName[:-len(suffix)]+"_CAcimg."+ext          
+                fileName_evals = self.SaveFileName+"_CAcimg."+ext          
             
                 fig = self.ClusterImagePan.get_figure()
                 fig.savefig(fileName_evals)
@@ -1879,7 +1893,7 @@ class PageCluster(wx.Panel):
                     im = axes.imshow(indvclusterimage, cmap=self.clusterclrmap2, norm=self.bnorm2)
                     axes.axis("off")
                    
-                    fileName_img = self.SaveFileName[:-len(suffix)]+"_CAimg_" +str(i+1)+"."+ext               
+                    fileName_img = self.SaveFileName+"_CAimg_" +str(i+1)+"."+ext               
                     fig.savefig(fileName_img)
                 
             if spec_png:
@@ -1901,14 +1915,14 @@ class PageCluster(wx.Panel):
                     axes.set_xlabel('Photon Energy [eV]')
                     axes.set_ylabel('Optical Density')
 
-                    fileName_spec = self.SaveFileName[:-len(suffix)]+"_CAspectrum_" +str(i+1)+"."+ext
+                    fileName_spec = self.SaveFileName+"_CAspectrum_" +str(i+1)+"."+ext
                     fig.savefig(fileName_spec)   
                     
-            if spec_xas:
+            if spec_csv:
                 for i in range (self.numclusters):
                     clusterspectrum = self.anlz.clusterspectra[i, ]
-                    fileName_spec = self.SaveFileName[:-len(suffix)]+"_CAspectrum_" +str(i+1)+".xas"
-                    self.stk.write_xas(fileName_spec, self.anlz.stack.ev, clusterspectrum)
+                    fileName_spec = self.SaveFileName+"_CAspectrum_" +str(i+1)+".csv"
+                    self.stk.write_csv(fileName_spec, self.anlz.stack.ev, clusterspectrum)
                                                      
                 
             ext = 'pdf'
@@ -1930,7 +1944,7 @@ class PageCluster(wx.Panel):
                     im = axes.imshow(indvclusterimage, cmap=self.clusterclrmap2, norm=self.bnorm2)
                     axes.axis("off")
                    
-                    fileName_img = self.SaveFileName[:-len(suffix)]+"_CAimg_" +str(i+1)+"."+ext               
+                    fileName_img = self.SaveFileName+"_CAimg_" +str(i+1)+"."+ext               
                     fig.savefig(fileName_img)
                 
             if spec_pdf:
@@ -1952,7 +1966,7 @@ class PageCluster(wx.Panel):
                     axes.set_xlabel('Photon Energy [eV]')
                     axes.set_ylabel('Optical Density')
 
-                    fileName_spec = self.SaveFileName[:-len(suffix)]+"_CAspectrum_" +str(i+1)+"."+ext
+                    fileName_spec = self.SaveFileName+"_CAspectrum_" +str(i+1)+"."+ext
                     fig.savefig(fileName_spec) 
                     
             if scatt_png:
@@ -2039,7 +2053,7 @@ class PageCluster(wx.Panel):
                         axes.set_ylabel('Component '+str(jp+1))
                             
     
-            fileName_sct = self.SaveFileName[:-len(suffix)]+"_CAscatterplot_" +str(i+1)+"."+ext
+            fileName_sct = self.SaveFileName+"_CAscatterplot_" +str(i+1)+"."+ext
             mtplot.rcParams['pdf.fonttype'] = 42
             fig.savefig(fileName_sct)
             
@@ -2218,8 +2232,8 @@ class SaveWinP3(wx.Frame):
     
     title = "Save"
 
-    def __init__(self, filename):
-        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(280, 350))
+    def __init__(self):
+        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(400, 330))
                
         ico = logos.getlogo_2l_32Icon()
         self.SetIcon(ico)
@@ -2231,24 +2245,19 @@ class SaveWinP3(wx.Frame):
         self.fontsize = self.com.fontsize   
         
         
-        path, ext = os.path.splitext(filename) 
+        path, ext = os.path.splitext(self.com.filename) 
         ext = ext[1:].lower()   
         suffix = "." + ext
-        path, fn = os.path.split(filename)
-        filename = fn[:-len(suffix)]+"_.*"
+        path, fn = os.path.split(self.com.filename)
+        filename = fn[:-len(suffix)]
+        
+        self.path = self.com.path
+        self.filename = filename
             
         
         
         vboxtop = wx.BoxSizer(wx.VERTICAL)
-        
-        stf = wx.StaticText(self, -1, 'Filename: ',  style=wx.ALIGN_LEFT, size =(200, 20))
-        stf.SetFont(self.com.font)
-        vboxtop.Add(stf,0,wx.TOP|wx.LEFT, 10)
-        vboxtop.Add((0,3))
-        stf = wx.StaticText(self, -1, filename,  style=wx.ALIGN_LEFT, size =(200, 20))
-        stf.SetFont(self.com.font)
-        vboxtop.Add(stf,0,wx.LEFT, 10)
-        
+                
         panel1 = wx.Panel(self, -1)
         
         gridtop = wx.FlexGridSizer(5, 4, vgap=20, hgap=20)
@@ -2263,7 +2272,7 @@ class SaveWinP3(wx.Frame):
         st2.SetFont(fontb)
         st3 = wx.StaticText(panel1, -1, '.png',  style=wx.ALIGN_LEFT)
         st3.SetFont(fontb)
-        st3a = wx.StaticText(panel1, -1, '.xas',  style=wx.ALIGN_LEFT)
+        st3a = wx.StaticText(panel1, -1, '.csv',  style=wx.ALIGN_LEFT)
         st3a.SetFont(fontb)
                 
         st4 = wx.StaticText(panel1, -1, '_spectra',  style=wx.ALIGN_LEFT)
@@ -2338,17 +2347,50 @@ class SaveWinP3(wx.Frame):
         
         panel1.SetSizer(gridtop)
         
-        hbox = wx.BoxSizer(wx.HORIZONTAL)
         panel2 = wx.Panel(self, -1)
+        vbox1 = wx.BoxSizer(wx.VERTICAL)
+        
+        hbox0 = wx.BoxSizer(wx.HORIZONTAL)
+        
+        st0 = wx.StaticText(panel2, -1, 'Filename: ')
+        st0.SetFont(self.com.font)
+        self.tc_savefn = wx.TextCtrl(panel2, -1,  style=wx.TE_RICH, size =((100, -1)),
+                                         value=self.filename)
+        self.tc_savefn.SetFont(self.com.font)
+        hbox0.Add(st0, 0, flag = wx.ALIGN_CENTER_VERTICAL)
+        hbox0.Add(self.tc_savefn,1, wx.EXPAND|wx.LEFT, 2)         
+        
+        
+        hbox1 = wx.BoxSizer(wx.HORIZONTAL)
+                
+        st1 = wx.StaticText(panel2, label='Path: ')
+        st1.SetFont(self.com.font)
+        self.tc_savepath = wx.TextCtrl(panel2, -1,  style=wx.TE_RICH|wx.TE_READONLY, size =((100, -1)),
+                                         value=self.path)
+        self.tc_savepath.SetFont(self.com.font)
+        hbox1.Add(st1, 0, wx.ALIGN_CENTER_VERTICAL|wx.RIGHT, 20)
+        hbox1.Add(self.tc_savepath, 1, wx.EXPAND|wx.LEFT, 2)  
+        
+        button_path = wx.Button(panel2, -1, 'Browse...')
+        self.Bind(wx.EVT_BUTTON, self.OnBrowseDir, id=button_path.GetId())
+        hbox1.Add(button_path, 0)
+        
+        
+        hbox2 = wx.BoxSizer(wx.HORIZONTAL)
         button_save = wx.Button(panel2, -1, 'Save')
         self.Bind(wx.EVT_BUTTON, self.OnSave, id=button_save.GetId())
-        hbox.Add(button_save, 0, wx.LEFT, 45)
+        hbox2.Add(button_save, 0, wx.ALIGN_RIGHT)
         
         button_cancel = wx.Button(panel2, -1, 'Cancel')
         self.Bind(wx.EVT_BUTTON, self.OnCancel, id=button_cancel.GetId())
-        hbox.Add(button_cancel, 0, wx.LEFT,10)
+        hbox2.Add(button_cancel, 0, wx.ALIGN_RIGHT|wx.LEFT,10)
         
-        panel2.SetSizer(hbox)
+        vbox1.Add(hbox0, 1, wx.EXPAND)
+        vbox1.Add((0,5))
+        vbox1.Add(hbox1, 1, wx.EXPAND)
+        vbox1.Add((0,20))
+        vbox1.Add(hbox2, 0, wx.ALIGN_RIGHT)
+        panel2.SetSizer(vbox1)
         
         
         vboxtop.Add(panel1, 1, wx.ALL | wx.EXPAND, 20)
@@ -2357,11 +2399,29 @@ class SaveWinP3(wx.Frame):
         self.SetSizer(vboxtop)    
         
 #----------------------------------------------------------------------        
+    def OnBrowseDir(self, evt):
+        
+        dialog = wx.DirDialog(None, "Choose a directory",
+                               style=wx.DD_DIR_MUST_EXIST,
+                               defaultPath=self.path)
+
+        if dialog.ShowModal() == wx.ID_OK:
+            directory = dialog.GetPath()
+            
+            self.path = directory
+            
+            self.tc_savepath.SetValue(self.path)
+            
+            
+                
+#----------------------------------------------------------------------        
     def OnSave(self, evt):
+        
+        self.filename = self.tc_savefn.GetValue()
         
         sp_pdf = self.cb1.GetValue()
         sp_png = self.cb2.GetValue()
-        sp_xas = self.cb2a.GetValue()
+        sp_csv = self.cb2a.GetValue()
         im_pdf = self.cb3.GetValue()
         im_png = self.cb4.GetValue()
         indim_pdf = self.cb5.GetValue()
@@ -2370,9 +2430,10 @@ class SaveWinP3(wx.Frame):
         scatt_png = self.cb8.GetValue()
         
         self.Destroy() 
-        wx.GetApp().TopWindow.page3.Save(spec_png = sp_png, 
+        wx.GetApp().TopWindow.page3.Save(self.filename, self.path,
+                                         spec_png = sp_png, 
                                          spec_pdf = sp_pdf, 
-                                         spec_xas = sp_xas,
+                                         spec_csv = sp_csv,
                                          img_png = im_png, 
                                          img_pdf = im_pdf,
                                          indimgs_png = indim_png, 
@@ -2594,33 +2655,18 @@ class PagePCA(wx.Panel):
             
 #----------------------------------------------------------------------    
     def OnSave(self, event):     
+
         
-        wildcard = 'Portable Network Graphics (*.png)|*.png|Adobe PDF Files (*.pdf)|*.pdf|All files (*.*)|*.*'               
-        self.SaveFileName = wx.FileSelector('Save Plot', default_extension='png', 
-                                   wildcard=wildcard, parent=self, flags=wx.SAVE|wx.OVERWRITE_PROMPT) 
-   
-        if not self.SaveFileName: 
-            return 
-        
-        SaveWinP2(self.SaveFileName).Show()
+        SaveWinP2().Show()
 
 
             
 #----------------------------------------------------------------------    
-    def Save(self, spec_png = True, spec_pdf = False, spec_xas = False,
+    def Save(self, filename, path, spec_png = True, spec_pdf = False, spec_csv = False,
              img_png = True, img_pdf = False, evals_png = True, evals_pdf = False): 
         
-        path, ext = os.path.splitext(self.SaveFileName) 
-        ext = ext[1:].lower() 
         
-       
-#        if ext != 'png' and ext != 'pdf': 
-#            error_message = ( 
-#                  'Only the PNG and PDF image formats are supported.\n' 
-#                 'A file extension of `png\' or `pdf\' must be used.') 
-#            wx.MessageBox(error_message, 'Error - Could not save file.'+error_message, 
-#                  parent=self, style=wx.OK|wx.ICON_ERROR) 
-#            return 
+        self.SaveFileName = os.path.join(path,filename)
    
         try: 
 
@@ -2628,7 +2674,7 @@ class PagePCA(wx.Panel):
             if evals_png:
                 ext = 'png'
                 suffix = "." + ext
-                fileName_evals = self.SaveFileName[:-len(suffix)]+"_PCAevals."+ext
+                fileName_evals = self.SaveFileName+"_PCAevals."+ext
                             
                 fig = self.PCAEvalsPan.get_figure()
                 fig.savefig(fileName_evals)
@@ -2636,7 +2682,7 @@ class PagePCA(wx.Panel):
             if evals_pdf:
                 ext = 'pdf'
                 suffix = "." + ext
-                fileName_evals = self.SaveFileName[:-len(suffix)]+"_PCAevals."+ext
+                fileName_evals = self.SaveFileName+"_PCAevals."+ext
                             
                 fig = self.PCAEvalsPan.get_figure()
                 fig.savefig(fileName_evals)                
@@ -2667,7 +2713,7 @@ class PagePCA(wx.Panel):
                     cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
                     axes.axis("off") 
                                 
-                    fileName_img = self.SaveFileName[:-len(suffix)]+"_PCA_" +str(i+1)+"."+ext
+                    fileName_img = self.SaveFileName+"_PCA_" +str(i+1)+"."+ext
                     fig.savefig(fileName_img)
             
             if spec_png:
@@ -2683,14 +2729,14 @@ class PagePCA(wx.Panel):
                     axes.set_xlabel('Photon Energy [eV]')
                     axes.set_ylabel('Optical Density')
                 
-                    fileName_spec = self.SaveFileName[:-len(suffix)]+"_PCAspectrum_" +str(i+1)+"."+ext
+                    fileName_spec = self.SaveFileName+"_PCAspectrum_" +str(i+1)+"."+ext
                     fig.savefig(fileName_spec)
                     
-            if spec_xas:
+            if spec_csv:
                 for i in range (self.numsigpca):
                     pcaspectrum = self.anlz.eigenvecs[:,i]
-                    fileName_spec = self.SaveFileName[:-len(suffix)]+"_PCAspectrum_" +str(i+1)+".xas"
-                    self.stk.write_xas(fileName_spec, self.stk.ev, pcaspectrum)
+                    fileName_spec = self.SaveFileName+"_PCAspectrum_" +str(i+1)+".csv"
+                    self.stk.write_csv(fileName_spec, self.stk.ev, pcaspectrum)
                     
                 
             ext = 'pdf'
@@ -2715,7 +2761,7 @@ class PagePCA(wx.Panel):
                     cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
                     axes.axis("off") 
                                 
-                    fileName_img = self.SaveFileName[:-len(suffix)]+"_PCA_" +str(i+1)+"."+ext
+                    fileName_img = self.SaveFileName+"_PCA_" +str(i+1)+"."+ext
                     fig.savefig(fileName_img)
             
             if spec_pdf:
@@ -2731,7 +2777,7 @@ class PagePCA(wx.Panel):
                     axes.set_xlabel('Photon Energy [eV]')
                     axes.set_ylabel('Optical Density')
                 
-                    fileName_spec = self.SaveFileName[:-len(suffix)]+"_PCAspectrum_" +str(i+1)+"."+ext
+                    fileName_spec = self.SaveFileName+"_PCAspectrum_" +str(i+1)+"."+ext
                     fig.savefig(fileName_spec)                
             
         except IOError, e:
@@ -2827,8 +2873,8 @@ class SaveWinP2(wx.Frame):
     
     title = "Save"
 
-    def __init__(self, filename):
-        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(240, 310))
+    def __init__(self):
+        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(400, 330))
                
         ico = logos.getlogo_2l_32Icon()
         self.SetIcon(ico)
@@ -2840,24 +2886,19 @@ class SaveWinP2(wx.Frame):
         self.fontsize = self.com.fontsize   
         
         
-        path, ext = os.path.splitext(filename) 
+        path, ext = os.path.splitext(self.com.filename) 
         ext = ext[1:].lower()   
         suffix = "." + ext
-        path, fn = os.path.split(filename)
-        filename = fn[:-len(suffix)]+"_.*"
+        path, fn = os.path.split(self.com.filename)
+        filename = fn[:-len(suffix)]
+        
+        self.path = self.com.path
+        self.filename = filename
             
         
         
         vboxtop = wx.BoxSizer(wx.VERTICAL)
-        
-        stf = wx.StaticText(self, -1, 'Filename: ',  style=wx.ALIGN_LEFT, size =(200, 20))
-        stf.SetFont(self.com.font)
-        vboxtop.Add(stf,0,wx.TOP|wx.LEFT, 10)
-        vboxtop.Add((0,3))
-        stf = wx.StaticText(self, -1, filename,  style=wx.ALIGN_LEFT, size =(200, 20))
-        stf.SetFont(self.com.font)
-        vboxtop.Add(stf,0,wx.LEFT, 10)
-        
+                
         panel1 = wx.Panel(self, -1)
         
         gridtop = wx.FlexGridSizer(4, 4, vgap=20, hgap=20)
@@ -2872,7 +2913,7 @@ class SaveWinP2(wx.Frame):
         st2.SetFont(fontb)
         st3 = wx.StaticText(panel1, -1, '.png',  style=wx.ALIGN_LEFT)
         st3.SetFont(fontb)
-        st3a = wx.StaticText(panel1, -1, '.xas',  style=wx.ALIGN_LEFT)
+        st3a = wx.StaticText(panel1, -1, '.csv',  style=wx.ALIGN_LEFT)
         st3a.SetFont(fontb)        
         
         st4 = wx.StaticText(panel1, -1, '_spectra',  style=wx.ALIGN_LEFT)
@@ -2932,17 +2973,50 @@ class SaveWinP2(wx.Frame):
         
         panel1.SetSizer(gridtop)
         
-        hbox = wx.BoxSizer(wx.HORIZONTAL)
         panel2 = wx.Panel(self, -1)
+        vbox1 = wx.BoxSizer(wx.VERTICAL)
+        
+        hbox0 = wx.BoxSizer(wx.HORIZONTAL)
+        
+        st0 = wx.StaticText(panel2, -1, 'Filename: ')
+        st0.SetFont(self.com.font)
+        self.tc_savefn = wx.TextCtrl(panel2, -1,  style=wx.TE_RICH, size =((100, -1)),
+                                         value=self.filename)
+        self.tc_savefn.SetFont(self.com.font)
+        hbox0.Add(st0, 0, flag = wx.ALIGN_CENTER_VERTICAL)
+        hbox0.Add(self.tc_savefn,1, wx.EXPAND|wx.LEFT, 2)         
+        
+        
+        hbox1 = wx.BoxSizer(wx.HORIZONTAL)
+                
+        st1 = wx.StaticText(panel2, label='Path: ')
+        st1.SetFont(self.com.font)
+        self.tc_savepath = wx.TextCtrl(panel2, -1,  style=wx.TE_RICH|wx.TE_READONLY, size =((100, -1)),
+                                         value=self.path)
+        self.tc_savepath.SetFont(self.com.font)
+        hbox1.Add(st1, 0, wx.ALIGN_CENTER_VERTICAL|wx.RIGHT, 20)
+        hbox1.Add(self.tc_savepath, 1, wx.EXPAND|wx.LEFT, 2)  
+        
+        button_path = wx.Button(panel2, -1, 'Browse...')
+        self.Bind(wx.EVT_BUTTON, self.OnBrowseDir, id=button_path.GetId())
+        hbox1.Add(button_path, 0)
+        
+        
+        hbox2 = wx.BoxSizer(wx.HORIZONTAL)
         button_save = wx.Button(panel2, -1, 'Save')
         self.Bind(wx.EVT_BUTTON, self.OnSave, id=button_save.GetId())
-        hbox.Add(button_save, 0, wx.LEFT,25)
+        hbox2.Add(button_save, 0, wx.ALIGN_RIGHT)
         
         button_cancel = wx.Button(panel2, -1, 'Cancel')
         self.Bind(wx.EVT_BUTTON, self.OnCancel, id=button_cancel.GetId())
-        hbox.Add(button_cancel, 0, wx.LEFT,10)
+        hbox2.Add(button_cancel, 0, wx.ALIGN_RIGHT|wx.LEFT,10)
         
-        panel2.SetSizer(hbox)
+        vbox1.Add(hbox0, 1, wx.EXPAND)
+        vbox1.Add((0,5))
+        vbox1.Add(hbox1, 1, wx.EXPAND)
+        vbox1.Add((0,20))
+        vbox1.Add(hbox2, 0, wx.ALIGN_RIGHT)
+        panel2.SetSizer(vbox1)
         
         
         vboxtop.Add(panel1, 1, wx.ALL | wx.EXPAND, 20)
@@ -2951,20 +3025,39 @@ class SaveWinP2(wx.Frame):
         self.SetSizer(vboxtop)    
         
 #----------------------------------------------------------------------        
+    def OnBrowseDir(self, evt):
+        
+        dialog = wx.DirDialog(None, "Choose a directory",
+                               style=wx.DD_DIR_MUST_EXIST,
+                               defaultPath=self.path)
+
+        if dialog.ShowModal() == wx.ID_OK:
+            directory = dialog.GetPath()
+            
+            self.path = directory
+            
+            self.tc_savepath.SetValue(self.path)
+            
+            
+                
+#----------------------------------------------------------------------        
     def OnSave(self, evt):
+        
+        self.filename = self.tc_savefn.GetValue()
         
         sp_pdf = self.cb1.GetValue()
         sp_png = self.cb2.GetValue()
-        sp_xas = self.cb2a.GetValue()
+        sp_csv = self.cb2a.GetValue()
         im_pdf = self.cb3.GetValue()
         im_png = self.cb4.GetValue()
         ev_pdf = self.cb5.GetValue()
         ev_png = self.cb6.GetValue()
         
         self.Destroy() 
-        wx.GetApp().TopWindow.page2.Save(spec_png = sp_png, 
+        wx.GetApp().TopWindow.page2.Save(self.filename, self.path,
+                                         spec_png = sp_png, 
                                          spec_pdf = sp_pdf, 
-                                         spec_xas = sp_xas,
+                                         spec_csv = sp_csv,
                                          img_png = im_png, 
                                          img_pdf = im_pdf,
                                          evals_png = ev_png, 
@@ -3524,7 +3617,7 @@ class PageStack(wx.Panel):
 
 
         try: 
-            wildcard = "I0 files (*.xas)|*.xas|SDF I0 files (*.hdr)|*.hdr"
+            wildcard = "I0 files (*.csv)|*.csv|SDF I0 files (*.hdr)|*.hdr"
             dialog = wx.FileDialog(None, "Choose i0 file",
                                    wildcard=wildcard,
                                    style=wx.OPEN)
@@ -3551,7 +3644,7 @@ class PageStack(wx.Panel):
                 wx.EndBusyCursor()
                 
                 
-            elif extension == '.xas':
+            elif extension == '.csv':
                 wx.BeginBusyCursor()                                    
 
                 x=self.stk.n_cols
@@ -3615,35 +3708,15 @@ class PageStack(wx.Panel):
     def OnSave(self, event):     
         
         
-               
-        self.SaveFileName = wx.FileSelector('Save Plot', default_extension='png', 
-                                   wildcard=('Portable Network Graphics (*.png)|*.png|' 
-                                             + 'Adobe PDF Files (*.pdf)|*.pdf|All files (*.*)|*.*'), 
-                                              parent=self, flags=wx.SAVE|wx.OVERWRITE_PROMPT) 
-   
-        if not self.SaveFileName: 
-            return 
-        
-        SaveWinP1(self.SaveFileName).Show()
+        SaveWinP1().Show()
 
  
    
 #----------------------------------------------------------------------    
-    def Save(self, spec_png = True, spec_pdf = False, sp_xas = False, img_png = True, img_pdf = False, img_all = False): 
+    def Save(self, filename, path, spec_png = True, spec_pdf = False, sp_csv = False, img_png = True, img_pdf = False, img_all = False): 
 
-        
-        path, ext = os.path.splitext(self.SaveFileName) 
-        ext = ext[1:].lower() 
-        
-       
-#        if ext != 'png' and ext != 'pdf': 
-#            error_message = ( 
-#                  'Only the PNG and PDF image formats are supported.\n' 
-#                 'A file extension of `png\' or `pdf\' must be used.') 
-#            wx.MessageBox(error_message, 'Error - Could not save file.', 
-#                  parent=self, style=wx.OK|wx.ICON_ERROR) 
-#            return 
-#        
+        self.SaveFileName = os.path.join(path,filename)
+      
         
         try: 
             ext = 'png'
@@ -3651,13 +3724,14 @@ class PageStack(wx.Panel):
             mtplot.rcParams['pdf.fonttype'] = 42
             
             if spec_png:
-                fileName_spec = self.SaveFileName[:-len(suffix)]+"_spectrum."+ext
+                fileName_spec = self.SaveFileName+"_spectrum."+ext
+                
                             
                 fig = self.SpectrumPanel.get_figure()
                 fig.savefig(fileName_spec)
 
             if img_png:
-                fileName_img = self.SaveFileName[:-len(suffix)]+"_" +str(self.stk.ev[self.iev])+"eV."+ext
+                fileName_img = self.SaveFileName+"_" +str(self.stk.ev[self.iev])+"eV."+ext
                 fig = self.AbsImagePanel.get_figure()
                 fig.savefig(fileName_img)
                 
@@ -3683,7 +3757,7 @@ class PageStack(wx.Panel):
                     im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable)) 
                     axes.axis("off") 
                                 
-                    fileName_img = self.SaveFileName[:-len(suffix)]+"_imnum_" +str(i+1)+"."+ext
+                    fileName_img = self.SaveFileName+"_imnum_" +str(i+1)+"."+ext
                     fig.savefig(fileName_img)
                 wx.EndBusyCursor()
                     
@@ -3691,19 +3765,19 @@ class PageStack(wx.Panel):
             suffix = "." + ext
             
             if spec_pdf:
-                fileName_spec = self.SaveFileName[:-len(suffix)]+"_spectrum."+ext
+                fileName_spec = self.SaveFileName+"_spectrum."+ext
             
                 fig = self.SpectrumPanel.get_figure()
                 fig.savefig(fileName_spec)
 
             if img_pdf:
-                fileName_img = self.SaveFileName[:-len(suffix)]+"_" +str(self.stk.ev[self.iev])+"eV."+ext
+                fileName_img = self.SaveFileName+"_" +str(self.stk.ev[self.iev])+"eV."+ext
                 fig = self.AbsImagePanel.get_figure()
                 fig.savefig(fileName_img)
                 
-            if sp_xas:
-                fileName_spec = self.SaveFileName[:-len(suffix)]+"_spectrum.xas"
-                self.stk.write_xas(fileName_spec, self.stk.ev, self.spectrum)
+            if sp_csv:
+                fileName_spec = self.SaveFileName+"_spectrum.csv"
+                self.stk.write_csv(fileName_spec, self.stk.ev, self.spectrum)
             
         except IOError, e:
             if e.strerror:
@@ -4043,8 +4117,8 @@ class PageStack(wx.Panel):
 #----------------------------------------------------------------------    
     def OnSaveROISpectrum(self, event):  
                
-        fileName = wx.FileSelector('Save ROI Spectrum (.xas)', default_extension='xas', 
-                                   wildcard=('XAS (*.xas)|*.xas'), 
+        fileName = wx.FileSelector('Save ROI Spectrum (.csv)', default_extension='csv', 
+                                   wildcard=('csv (*.csv)|*.csv'), 
                                               parent=self, flags=wx.SAVE|wx.OVERWRITE_PROMPT) 
    
         if not fileName: 
@@ -4055,10 +4129,10 @@ class PageStack(wx.Panel):
    
         try:
             if (self.com.i0_loaded == 1):
-                self.stk.write_xas(fileName, self.stk.ev, self.ROIspectrum)
+                self.stk.write_csv(fileName, self.stk.ev, self.ROIspectrum)
             else:
                 self.CalcROI_I0Spectrum()
-                self.stk.write_xas(fileName, self.stk.ev, self.ROIspectrum)
+                self.stk.write_csv(fileName, self.stk.ev, self.ROIspectrum)
                      
                 
         except IOError, e:
@@ -4096,8 +4170,8 @@ class SaveWinP1(wx.Frame):
     
     title = "Save"
 
-    def __init__(self, filename):
-        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(240, 310))
+    def __init__(self):
+        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(400, 330))
                
         ico = logos.getlogo_2l_32Icon()
         self.SetIcon(ico)
@@ -4108,25 +4182,18 @@ class SaveWinP1(wx.Frame):
         self.com = wx.GetApp().TopWindow.common         
         self.fontsize = self.com.fontsize   
         
-        
-        path, ext = os.path.splitext(filename) 
+        path, ext = os.path.splitext(self.com.filename) 
         ext = ext[1:].lower()   
         suffix = "." + ext
-        path, fn = os.path.split(filename)
-        filename = fn[:-len(suffix)]+"_.*"
-            
+        path, fn = os.path.split(self.com.filename)
+        filename = fn[:-len(suffix)]
         
+        self.path = self.com.path
+        self.filename = filename
+                          
         
         vboxtop = wx.BoxSizer(wx.VERTICAL)
-        
-        stf = wx.StaticText(self, -1, 'Filename: ',  style=wx.ALIGN_LEFT, size =(200, 20))
-        stf.SetFont(self.com.font)
-        vboxtop.Add(stf,0,wx.TOP|wx.LEFT, 10)
-        vboxtop.Add((0,3))
-        stf = wx.StaticText(self, -1, filename,  style=wx.ALIGN_LEFT, size =(200, 20))
-        stf.SetFont(self.com.font)
-        vboxtop.Add(stf,0,wx.LEFT, 10)
-        
+                
         panel1 = wx.Panel(self, -1)
         
         gridtop = wx.FlexGridSizer(4, 4, vgap=20, hgap=20)
@@ -4141,7 +4208,7 @@ class SaveWinP1(wx.Frame):
         st2.SetFont(fontb)
         st3 = wx.StaticText(panel1, -1, '.png',  style=wx.ALIGN_LEFT)
         st3.SetFont(fontb)
-        st3a = wx.StaticText(panel1, -1, '.xas',  style=wx.ALIGN_LEFT)
+        st3a = wx.StaticText(panel1, -1, '.csv',  style=wx.ALIGN_LEFT)
         st3a.SetFont(fontb)
         
         st4 = wx.StaticText(panel1, -1, '_spectrum',  style=wx.ALIGN_LEFT)
@@ -4199,17 +4266,51 @@ class SaveWinP1(wx.Frame):
         
         panel1.SetSizer(gridtop)
         
-        hbox = wx.BoxSizer(wx.HORIZONTAL)
+        
         panel2 = wx.Panel(self, -1)
+        vbox1 = wx.BoxSizer(wx.VERTICAL)
+        
+        hbox0 = wx.BoxSizer(wx.HORIZONTAL)
+        
+        st0 = wx.StaticText(panel2, -1, 'Filename: ')
+        st0.SetFont(self.com.font)
+        self.tc_savefn = wx.TextCtrl(panel2, -1,  style=wx.TE_RICH, size =((100, -1)),
+                                         value=self.filename)
+        self.tc_savefn.SetFont(self.com.font)
+        hbox0.Add(st0, 0, flag = wx.ALIGN_CENTER_VERTICAL)
+        hbox0.Add(self.tc_savefn,1, wx.EXPAND|wx.LEFT, 2)         
+        
+        
+        hbox1 = wx.BoxSizer(wx.HORIZONTAL)
+                
+        st1 = wx.StaticText(panel2, label='Path: ')
+        st1.SetFont(self.com.font)
+        self.tc_savepath = wx.TextCtrl(panel2, -1,  style=wx.TE_RICH|wx.TE_READONLY, size =((100, -1)),
+                                         value=self.path)
+        self.tc_savepath.SetFont(self.com.font)
+        hbox1.Add(st1, 0, wx.ALIGN_CENTER_VERTICAL|wx.RIGHT, 20)
+        hbox1.Add(self.tc_savepath, 1, wx.EXPAND|wx.LEFT, 2)  
+        
+        button_path = wx.Button(panel2, -1, 'Browse...')
+        self.Bind(wx.EVT_BUTTON, self.OnBrowseDir, id=button_path.GetId())
+        hbox1.Add(button_path, 0)
+        
+        
+        hbox2 = wx.BoxSizer(wx.HORIZONTAL)
         button_save = wx.Button(panel2, -1, 'Save')
         self.Bind(wx.EVT_BUTTON, self.OnSave, id=button_save.GetId())
-        hbox.Add(button_save, 0, wx.LEFT,25)
+        hbox2.Add(button_save, 0, wx.ALIGN_RIGHT)
         
         button_cancel = wx.Button(panel2, -1, 'Cancel')
         self.Bind(wx.EVT_BUTTON, self.OnCancel, id=button_cancel.GetId())
-        hbox.Add(button_cancel, 0, wx.LEFT,10)
+        hbox2.Add(button_cancel, 0, wx.ALIGN_RIGHT|wx.LEFT,10)
         
-        panel2.SetSizer(hbox)
+        vbox1.Add(hbox0, 1, wx.EXPAND)
+        vbox1.Add((0,5))
+        vbox1.Add(hbox1, 1, wx.EXPAND)
+        vbox1.Add((0,20))
+        vbox1.Add(hbox2, 0, wx.ALIGN_RIGHT)
+        panel2.SetSizer(vbox1)
         
         
         vboxtop.Add(panel1, 1, wx.ALL | wx.EXPAND, 20)
@@ -4218,19 +4319,38 @@ class SaveWinP1(wx.Frame):
         self.SetSizer(vboxtop)    
         
 #----------------------------------------------------------------------        
+    def OnBrowseDir(self, evt):
+        
+        dialog = wx.DirDialog(None, "Choose a directory",
+                               style=wx.DD_DIR_MUST_EXIST,
+                               defaultPath=self.path)
+
+        if dialog.ShowModal() == wx.ID_OK:
+            directory = dialog.GetPath()
+            
+            self.path = directory
+            
+            self.tc_savepath.SetValue(self.path)
+            
+            
+                
+#----------------------------------------------------------------------        
     def OnSave(self, evt):
+        
+        self.filename = self.tc_savefn.GetValue()
         
         sp_pdf = self.cb1.GetValue()
         sp_png = self.cb2.GetValue()
-        sp_xas = self.cb2a.GetValue()
+        sp_csv = self.cb2a.GetValue()
         im_pdf = self.cb3.GetValue()
         im_png = self.cb4.GetValue()
         im_all = self.cb5.GetValue()
         
         self.Destroy() 
-        wx.GetApp().TopWindow.page1.Save(spec_png = sp_png, 
+        wx.GetApp().TopWindow.page1.Save(self.filename, self.path,
+                                         spec_png = sp_png, 
                                          spec_pdf = sp_pdf, 
-                                         sp_xas = sp_xas,
+                                         sp_csv = sp_csv,
                                          img_png = im_png, 
                                          img_pdf = im_pdf,
                                          img_all = im_all)
@@ -6493,6 +6613,9 @@ class MainFrame(wx.Frame):
                 directory = dialog.GetDirectory()
             wx.BeginBusyCursor() 
             basename, extension = os.path.splitext(self.page1.filename)      
+            
+            self.common.path = directory
+            self.common.filename = self.page1.filename
                        
             
             if extension == '.hdr':            
@@ -6616,6 +6739,8 @@ class MainFrame(wx.Frame):
             #dialog.SetWildcard(wildcard)
             if dialog.ShowModal() == wx.ID_OK:
                 directory = dialog.GetPath()
+                
+            self.common.path = directory
 
             StackListFrame(directory, self.common, self.stk, self.data_struct).Show()
             
@@ -6648,8 +6773,12 @@ class MainFrame(wx.Frame):
                                     style=wx.SAVE|wx.OVERWRITE_PROMPT)
 
             if dialog.ShowModal() == wx.ID_OK:
-                            filepath = dialog.GetPath()
-                            self.page1.filename = dialog.GetFilename()
+                filepath = dialog.GetPath()
+                self.page1.filename = dialog.GetFilename()
+                dir = dialog.GetDirectory()
+                
+                self.common.path = dir
+                self.common.filename = self.page1.filename
 
             wx.BeginBusyCursor()                  
             self.stk.write_h5(filepath, self.data_struct)    

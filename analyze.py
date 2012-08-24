@@ -226,7 +226,7 @@ class analyze:
         spectrum_data = 0
         spectrum_common_name = ' '
         if flat == False:
-            spectrum_evdata, spectrum_data, spectrum_common_name = self.stack.read_xas(filename)
+            spectrum_evdata, spectrum_data, spectrum_common_name = self.stack.read_csv(filename)
                                     
             # Map this spectrum onto our energy range - interpolate to ev
             ftspec = scipy.interpolate.interp1d(spectrum_evdata, spectrum_data, kind='cubic', bounds_error=False)      
