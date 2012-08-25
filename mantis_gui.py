@@ -153,9 +153,18 @@ class PageSpectral(wx.Panel):
         self.slider_tspec = wx.Slider(panel2, -1, 1, 1, 5, style=wx.SL_LEFT )        
         self.slider_tspec.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnTSScroll, self.slider_tspec)
+        
+        vbox21 = wx.BoxSizer(wx.VERTICAL)               
+        self.tspecspin = wx.SpinButton(panel2, -1, size = ((8,-1)), style=wx.SP_ARROW_KEYS)
+        self.Bind(wx.EVT_SPIN_UP, self.OnTspecSpinUp, self.tspecspin)
+        self.Bind(wx.EVT_SPIN_DOWN, self.OnTspecSpinDown, self.tspecspin)
+        
+        vbox21.Add((0,3))
+        vbox21.Add(self.slider_tspec, 1,  wx.EXPAND) 
+        vbox21.Add(self.tspecspin, 0,  wx.EXPAND)      
 
         hbox11.Add(i2panel, 0)
-        hbox11.Add(self.slider_tspec, 0,  wx.EXPAND)
+        hbox11.Add(vbox21, 0,  wx.EXPAND)
           
         vbox2.Add((0,10))
         vbox2.Add(self.tc_tspec, 1, wx.LEFT | wx.EXPAND, 20)       
@@ -603,6 +612,24 @@ class PageSpectral(wx.Panel):
         sel = event.GetInt()
         self.i_tspec = sel
         if self.com.spec_anl_calculated == 1:
+            self.loadTSpectrum()
+            self.loadTargetMap()
+            
+#----------------------------------------------------------------------            
+    def OnTspecSpinUp(self, event):
+        if (self.com.spec_anl_calculated == 1) and (self.i_tspec > 1):
+            self.i_tspec = self.i_tspec - 1
+            self.slider_tspec.SetValue(self.i_tspec)
+
+            self.loadTSpectrum()
+            self.loadTargetMap()
+            
+#----------------------------------------------------------------------            
+    def OnTspecSpinDown(self, event):
+        if (self.com.spec_anl_calculated == 1) and (self.i_tspec < self.anlz.n_target_spectra):
+            self.i_tspec = self.i_tspec + 1
+            self.slider_tspec.SetValue(self.i_tspec) 
+            
             self.loadTSpectrum()
             self.loadTargetMap()
 
@@ -1591,7 +1618,7 @@ class PageCluster(wx.Panel):
         self.tc_cluster = wx.TextCtrl(panel3, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         self.tc_cluster.SetValue("Cluster ")
         self.tc_cluster.SetFont(self.com.font)
-        hbox31 = wx.BoxSizer(wx.HORIZONTAL)
+
         i3panel = wx.Panel(panel3, -1, style = wx.SUNKEN_BORDER)
         self.ClusterIndvImagePan = wxmpl.PlotPanel(i3panel, -1, size =(PlotH*0.73, PlotH*0.73), cursor=False, crosshairs=False, location=False, zoom=False)
     
@@ -1600,6 +1627,16 @@ class PageCluster(wx.Panel):
         self.slidershow.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnClusterScroll, self.slidershow)
         
+        vbox31 = wx.BoxSizer(wx.VERTICAL)               
+        self.clusterspin = wx.SpinButton(panel3, -1, size = ((8,-1)), style=wx.SP_ARROW_KEYS)
+        self.Bind(wx.EVT_SPIN_UP, self.OnClusterSpinUp, self.clusterspin)
+        self.Bind(wx.EVT_SPIN_DOWN, self.OnClusterSpinDown, self.clusterspin)
+        
+        vbox31.Add((0,3))
+        vbox31.Add(self.slidershow, 1,  wx.EXPAND) 
+        vbox31.Add(self.clusterspin, 0,  wx.EXPAND)         
+        
+        
         text3 = wx.StaticText(panel3, -1, 'Cluster Distance Map',  style=wx.ALIGN_LEFT)
         text3.SetFont(self.com.font)
         i4panel = wx.Panel(panel3, -1, style = wx.SUNKEN_BORDER)
@@ -1607,7 +1644,7 @@ class PageCluster(wx.Panel):
         
           
         fgs.AddMany([(self.tc_cluster), (wx.StaticText(panel3, -1, ' ')), (text3, 0, wx.LEFT, 15), 
-                     (i3panel), (self.slidershow, 0,  wx.EXPAND), (i4panel, 0, wx.LEFT, 20)])
+                     (i3panel), (vbox31, 0,  wx.EXPAND), (i4panel, 0, wx.LEFT, 20)])
 
         vbox3.Add(fgs)
 
@@ -1682,8 +1719,7 @@ class PageCluster(wx.Panel):
     def OnNClusterspin(self, event):
         num = event.GetInt()
         self.numclusters = num
-        
-               
+                       
  
 #----------------------------------------------------------------------        
     def OnClusterScroll(self, event):
@@ -1693,7 +1729,24 @@ class PageCluster(wx.Panel):
             self.showClusterSpectrum()
             self.showIndvClusterImage()
             
+#----------------------------------------------------------------------            
+    def OnClusterSpinUp(self, event):
+        if (self.com.cluster_calculated == 1) and (self.selcluster > 1):
+            self.selcluster = self.selcluster - 1
+            self.slidershow.SetValue(self.selcluster)
+
+            self.showClusterSpectrum()
+            self.showIndvClusterImage()
             
+#----------------------------------------------------------------------            
+    def OnClusterSpinDown(self, event):
+        if (self.com.cluster_calculated == 1) and (self.selcluster < self.numclusters):
+            self.selcluster = self.selcluster + 1
+            self.slidershow.SetValue(self.selcluster) 
+            
+            self.showClusterSpectrum()
+            self.showIndvClusterImage()
+                       
 #----------------------------------------------------------------------  
     def OnPointClusterImage(self, evt):
         x = evt.xdata
@@ -2481,14 +2534,24 @@ class PagePCA(wx.Panel):
    
         i1panel = wx.Panel(panel1, -1, style = wx.SUNKEN_BORDER)
         self.PCAImagePan = wxmpl.PlotPanel(i1panel, -1, size =(ph*1.10, ph), cursor=False, crosshairs=False, location=False, zoom=False)
-                              
+               
+        vbox11 = wx.BoxSizer(wx.VERTICAL)               
         self.slidershow = wx.Slider(panel1, -1, self.selpca, 1, 20, style=wx.SL_LEFT)
         self.slidershow.Disable()          
         self.slidershow.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnPCAScroll, self.slidershow)
+        
 
+        self.pcaspin = wx.SpinButton(panel1, -1, size = ((8,-1)), style=wx.SP_ARROW_KEYS)
+        self.Bind(wx.EVT_SPIN_UP, self.OnPCASpinUp, self.pcaspin)
+        self.Bind(wx.EVT_SPIN_DOWN, self.OnPCASpinDown, self.pcaspin)
+        
         hbox11.Add(i1panel, 0)
-        hbox11.Add(self.slidershow, 0,  wx.EXPAND)
+        vbox11.Add((0,3))
+        vbox11.Add(self.slidershow, 1,  wx.EXPAND) 
+        vbox11.Add(self.pcaspin, 0,  wx.EXPAND)         
+        hbox11.Add(vbox11, 0,  wx.EXPAND) 
+
         
         vbox1.Add(self.tc_PCAcomp, 1, wx.EXPAND )        
         vbox1.Add(hbox11, 0)
@@ -2652,7 +2715,27 @@ class PagePCA(wx.Panel):
             self.loadPCAImage()
             self.loadPCASpectrum()
             self.showEvals()
+
+#----------------------------------------------------------------------            
+    def OnPCASpinUp(self, event):
+        if (self.calcpca == True) and (self.selpca > 1):
+            self.selpca = self.selpca - 1
+            self.slidershow.SetValue(self.selpca)
+
+            self.loadPCAImage()
+            self.loadPCASpectrum()
+            self.showEvals()
             
+#----------------------------------------------------------------------            
+    def OnPCASpinDown(self, event):
+        if (self.calcpca == True) and (self.selpca < self.stk.n_ev-1):
+            self.selpca = self.selpca + 1
+            self.slidershow.SetValue(self.selpca) 
+            
+            self.loadPCAImage()
+            self.loadPCASpectrum()
+            self.showEvals()
+                        
 #----------------------------------------------------------------------    
     def OnSave(self, event):     
 
@@ -3127,13 +3210,22 @@ class PageStack(wx.Panel):
         self.AbsImagePanel = wxmpl.PlotPanel(i1panel, -1, size =(PlotH, PlotH), cursor=False, crosshairs=True, location=False, zoom=False)
         wxmpl.EVT_POINT(i1panel, self.AbsImagePanel.GetId(), self.OnPointAbsimage)
         
-                              
+        vbox11 = wx.BoxSizer(wx.VERTICAL)                    
         self.slider_eng = wx.Slider(panel1, -1, self.iev, 0, 100, style=wx.SL_LEFT )        
         self.slider_eng.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnScrollEng, self.slider_eng)
+        
+        
+        self.engspin = wx.SpinButton(panel1, -1, size = ((8,-1)), style=wx.SP_ARROW_KEYS)
+        self.Bind(wx.EVT_SPIN_UP, self.OnEngspinUp, self.engspin)
+        self.Bind(wx.EVT_SPIN_DOWN, self.OnEngspinDown, self.engspin)
+       
 
+        vbox11.Add((0,3))
+        vbox11.Add(self.slider_eng, 1,  wx.EXPAND) 
+        vbox11.Add(self.engspin, 0,  wx.EXPAND)    
         hbox11.Add(i1panel, 0)
-        hbox11.Add(self.slider_eng, 0,  wx.EXPAND)
+        hbox11.Add(vbox11, 0,  wx.EXPAND)              
         
         vbox1.Add(self.tc_imageeng,1, wx.LEFT | wx.TOP | wx.EXPAND, 20)        
         vbox1.Add(hbox11, 0,  wx.LEFT, 20)
@@ -3283,23 +3375,23 @@ class PageStack(wx.Panel):
 
         fgs41 = wx.FlexGridSizer(3, 2, 0, 0)
         
-        self.tc_min = wx.TextCtrl(panel4, -1, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE, size=(90,-1))
+        self.tc_min = wx.TextCtrl(panel4, -1, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE, size=(100,-1))
         self.tc_min.SetFont(self.com.font)
-        self.tc_min.AppendText('Minimum: \t{0:5.2f}'.format(self.brightness_min))
+        self.tc_min.AppendText('Minimum: \t{0:5d}%'.format(int(100*self.brightness_min)))
         
-        self.tc_max = wx.TextCtrl(panel4, -1, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE, size=(90,-1))
+        self.tc_max = wx.TextCtrl(panel4, -1, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE, size=(100,-1))
         self.tc_max.SetFont(self.com.font)
-        self.tc_max.AppendText('Maximum:{0:5.2f}'.format(self.brightness_max))
+        self.tc_max.AppendText('Maximum:{0:5d}%'.format(int(100*self.brightness_max)))
 
         self.slider_brightness_min = wx.Slider(panel4, -1, self.dispbrightness_min, 0, 49, size= (50,20), style=wx.SL_HORIZONTAL)        
         self.slider_brightness_min.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnScrollBrightnessMin, self.slider_brightness_min)
         
-        self.slider_brightness_max = wx.Slider(panel4, -1, self.dispbrightness_max, 50, 100, style=wx.SL_HORIZONTAL)        
+        self.slider_brightness_max = wx.Slider(panel4, -1, self.dispbrightness_max, 50, 120, style=wx.SL_HORIZONTAL)        
         self.slider_brightness_max.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnScrollBrightnessMax, self.slider_brightness_max)        
         
-        self.tc_gamma = wx.TextCtrl(panel4, -1, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE, size=(90,-1))
+        self.tc_gamma = wx.TextCtrl(panel4, -1, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE, size=(100,-1))
         self.tc_gamma.SetFont(self.com.font)
         self.tc_gamma.AppendText('Gamma:  \t{0:5.2f}'.format(self.gamma))
         
@@ -3544,8 +3636,24 @@ class PageStack(wx.Panel):
             self.loadImage()
             self.loadSpectrum(self.ix, self.iy)
 
+#----------------------------------------------------------------------            
+    def OnEngspinUp(self, event):
+        if (self.com.stack_loaded == 1) and (self.iev > 0):
+            self.iev = self.iev - 1
+            self.slider_eng.SetValue(self.iev)
+
+            self.loadImage()
+            self.loadSpectrum(self.ix, self.iy)
             
-                   
+#----------------------------------------------------------------------            
+    def OnEngspinDown(self, event):
+        if (self.com.stack_loaded == 1) and (self.iev < self.stk.n_ev-1):
+            self.iev = self.iev + 1
+            self.slider_eng.SetValue(self.iev) 
+            
+            self.loadImage()            
+            self.loadSpectrum(self.ix, self.iy)   
+                                
 #----------------------------------------------------------------------  
     def OnPointSpectrum(self, evt):
         x = evt.xdata
@@ -3865,7 +3973,7 @@ class PageStack(wx.Panel):
         self.defaultdisplay = 0.0
         
         self.tc_min.Clear()
-        self.tc_min.AppendText('Minimum: \t{0:5.2f}'.format(self.brightness_min))
+        self.tc_min.AppendText('Minimum: \t{0:5d}%'.format(int(100*self.brightness_min)))
         
         if self.com.stack_loaded == 1:
             self.loadImage()
@@ -3880,7 +3988,7 @@ class PageStack(wx.Panel):
         self.defaultdisplay = 0.0
         
         self.tc_max.Clear()
-        self.tc_max.AppendText('Maximum:{0:5.2f}'.format(self.brightness_max))
+        self.tc_max.AppendText('Maximum:{0:5d}%'.format(int(100*self.brightness_max)))
         
         if self.com.stack_loaded == 1:
             self.loadImage()
@@ -3923,9 +4031,9 @@ class PageStack(wx.Panel):
         self.slider_gamma.SetValue(self.displaygamma)      
 
         self.tc_min.Clear()
-        self.tc_min.AppendText('Minimum: \t{0:5.2f}'.format(self.brightness_min))
+        self.tc_min.AppendText('Minimum: \t{0:5d}%'.format(int(100*self.brightness_min)))
         self.tc_max.Clear()
-        self.tc_max.AppendText('Maximum:{0:5.2f}'.format(self.brightness_max))        
+        self.tc_max.AppendText('Maximum:{0:5d}%'.format(int(100*self.brightness_max)))        
         self.tc_gamma.Clear()
         self.tc_gamma.AppendText('Gamma:  \t{0:5.2f}'.format(self.gamma))       
  
@@ -6367,12 +6475,21 @@ class PageLoadData(wx.Panel):
         i1panel = wx.Panel(panel5, -1, style = wx.SUNKEN_BORDER)
         self.AbsImagePanel = wxmpl.PlotPanel(i1panel, -1, size =(PlotH*.8, PlotH*.8), cursor=False, crosshairs=False, location=False, zoom=False)
         
-        self.slider_eng = wx.Slider(panel5, -1, self.iev, 0, 100, style=wx.SL_LEFT )        
+        vbox51 = wx.BoxSizer(wx.VERTICAL)
+        self.slider_eng = wx.Slider(panel5, -1, self.iev, 0, 100, style=wx.SL_LEFT)        
         self.slider_eng.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnScrollEng, self.slider_eng)
 
+        self.engspin = wx.SpinButton(panel5, -1, size = ((8,-1)), style=wx.SP_ARROW_KEYS)
+        self.Bind(wx.EVT_SPIN_UP, self.OnEngspinUp, self.engspin)
+        self.Bind(wx.EVT_SPIN_DOWN, self.OnEngspinDown, self.engspin)
+        
+
         hbox51.Add(i1panel, 0)
-        hbox51.Add(self.slider_eng, 0,  wx.EXPAND)  
+        vbox51.Add((0,3))
+        vbox51.Add(self.slider_eng, 1,  wx.EXPAND) 
+        vbox51.Add(self.engspin, 0,  wx.EXPAND)         
+        hbox51.Add(vbox51, 0,  wx.EXPAND) 
         
         vbox5.Add(self.tc_imageeng, 0)        
         vbox5.Add(hbox51, 0)
@@ -6458,6 +6575,23 @@ class PageLoadData(wx.Panel):
         self.iev = event.GetInt()
 
         if self.com.stack_loaded == 1:
+            self.ShowImage()
+            
+#----------------------------------------------------------------------            
+    def OnEngspinUp(self, event):
+        if (self.com.stack_loaded == 1) and (self.iev > 0):
+            self.iev = self.iev - 1
+            self.slider_eng.SetValue(self.iev)
+
+            self.ShowImage()
+
+            
+#----------------------------------------------------------------------            
+    def OnEngspinDown(self, event):
+        if (self.com.stack_loaded == 1) and (self.iev < self.stk.n_ev-1):
+            self.iev = self.iev + 1
+            self.slider_eng.SetValue(self.iev)
+
             self.ShowImage()
             
 #----------------------------------------------------------------------        
@@ -6685,6 +6819,7 @@ class MainFrame(wx.Frame):
             z=self.iev               
             self.page1.imgrgb = npy.zeros(x*y*3,dtype = "uint8")        
             self.page1.maxval = npy.amax(self.stk.absdata)
+            
         
             self.ix = x/2
             self.iy = y/2
