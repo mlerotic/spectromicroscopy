@@ -3238,7 +3238,7 @@ class PageStack(wx.Panel):
         vbox2 = wx.BoxSizer(wx.VERTICAL)
         
         self.tc_spec = wx.TextCtrl(panel2, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
-        self.tc_spec.SetValue("Spectrum at point: ")
+        self.tc_spec.SetValue("Spectrum")
         self.tc_spec.SetFont(self.com.font)
           
         i2panel = wx.Panel(panel2, -1, style = wx.SUNKEN_BORDER)
@@ -3626,7 +3626,9 @@ class PageStack(wx.Panel):
         
         self.SpectrumPanel.draw()
         
-        self.tc_spec.SetValue("Spectrum at point: [" +str(ypos)+", " + str(xpos)+"] ")
+        self.tc_spec.SetValue("Spectrum at pixel [" +str(ypos)+", " + str(xpos)+"] or position ["+
+                              str(self.stk.x_dist[xpos])+", "+ str(self.stk.y_dist[ypos])+ "]")
+
 
         
 #----------------------------------------------------------------------            
