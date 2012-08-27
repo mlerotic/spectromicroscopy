@@ -2621,6 +2621,7 @@ class PagePCA(wx.Panel):
              
         i4panel = wx.Panel(panel4, -1, style = wx.SUNKEN_BORDER)
         self.PCAEvalsPan = wxmpl.PlotPanel(i4panel, -1, size =(pw, ph*0.75), cursor=False, crosshairs=False, location=False, zoom=False)
+        wxmpl.EVT_POINT(i4panel, self.PCAEvalsPan.GetId(), self.OnPointEvalsImage)   
         
         vbox4 = wx.BoxSizer(wx.VERTICAL)
         text4 = wx.TextCtrl(panel4, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
@@ -2660,7 +2661,8 @@ class PagePCA(wx.Panel):
         scrollmax = npy.min([self.stk.n_ev, 20])
         self.slidershow.SetMax(scrollmax)
 
-        try: 
+        #try: 
+        if True:
             self.CalcPCA()
             self.calcpca = True
             self.loadPCAImage()
@@ -2668,10 +2670,10 @@ class PagePCA(wx.Panel):
             self.showEvals()
             self.com.pca_calculated = 1
             wx.EndBusyCursor() 
-        except:
-            self.com.pca_calculated = 0
-            wx.EndBusyCursor()
-            wx.MessageBox("PCA not calculated.")
+#        except:
+#            self.com.pca_calculated = 0
+#            wx.EndBusyCursor()
+#            wx.MessageBox("PCA not calculated.")
         
         wx.GetApp().TopWindow.refresh_widgets()
 
@@ -2694,7 +2696,7 @@ class PagePCA(wx.Panel):
  
         self.anlz.calculate_pca()
      
-        #Keiser criterion
+        #Scree plot criterion
         self.numsigpca = self.anlz.numsigpca
         
         self.npcaspin.SetValue(self.numsigpca)
@@ -2714,7 +2716,7 @@ class PagePCA(wx.Panel):
         if self.calcpca == True:
             self.loadPCAImage()
             self.loadPCASpectrum()
-            self.showEvals()
+
 
 #----------------------------------------------------------------------            
     def OnPCASpinUp(self, event):
@@ -2724,7 +2726,7 @@ class PagePCA(wx.Panel):
 
             self.loadPCAImage()
             self.loadPCASpectrum()
-            self.showEvals()
+
             
 #----------------------------------------------------------------------            
     def OnPCASpinDown(self, event):
@@ -2734,8 +2736,22 @@ class PagePCA(wx.Panel):
             
             self.loadPCAImage()
             self.loadPCASpectrum()
-            self.showEvals()
-                        
+ 
+            
+#----------------------------------------------------------------------  
+    def OnPointEvalsImage(self, evt):
+        x = evt.xdata
+        y = evt.ydata
+                
+        if self.com.pca_calculated == 1:     
+            #Find the closest point to the point clicked on the plot
+            self.selpca = int(npy.round(x))
+                       
+            self.loadPCAImage()
+            self.loadPCASpectrum()
+            
+
+
 #----------------------------------------------------------------------    
     def OnSave(self, event):     
 
@@ -3190,6 +3206,8 @@ class PageStack(wx.Panel):
         self.ROIpix = None
         
         self.show_scale_bar = 1
+        
+        self.movie_playing = 0
 
         vbox = wx.BoxSizer(wx.VERTICAL)
         hboxT = wx.BoxSizer(wx.HORIZONTAL)
@@ -3476,12 +3494,12 @@ class PageStack(wx.Panel):
         
         vbox51.Add((0,1))
         
-        self.button_ROIdosecalc = wx.Button(panel5, -1, 'ROI Dose Calculation...')
-        self.button_ROIdosecalc.SetFont(self.com.font)
-        self.Bind(wx.EVT_BUTTON, self.OnROI_DoseCalc, id=self.button_ROIdosecalc.GetId())   
-        #self.button_ROIdosecalc.Disable()     
-        vbox51.Add(self.button_ROIdosecalc, 0, wx.EXPAND)       
-        vbox51.Add((0,1))        
+#        self.button_ROIdosecalc = wx.Button(panel5, -1, 'ROI Dose Calculation...')
+#        self.button_ROIdosecalc.SetFont(self.com.font)
+#        self.Bind(wx.EVT_BUTTON, self.OnROI_DoseCalc, id=self.button_ROIdosecalc.GetId())   
+#        #self.button_ROIdosecalc.Disable()     
+#        vbox51.Add(self.button_ROIdosecalc, 0, wx.EXPAND)       
+#        vbox51.Add((0,1))        
         
         self.button_spectralROI = wx.Button(panel5, -1, 'Spectral ROI...')
         self.button_spectralROI.SetFont(self.com.font)
@@ -3909,11 +3927,20 @@ class PageStack(wx.Panel):
 #----------------------------------------------------------------------    
     def OnSlideshow(self, event):  
 
-        if (self.com.stack_loaded == 1) and (self.addroi == 0):      
-                
+        if (self.com.stack_loaded == 1) and (self.addroi == 0):    
+            
+            if (self.movie_playing == 1):
+                self.movie_playing = 0
+                return
+            
+            self.button_slideshow.SetLabel("Stop stack movie")
             old_iev =  self.iev
+            self.movie_playing = 1
             
             for i in range(self.stk.n_ev):   
+                wx.YieldIfNeeded() 
+                if self.movie_playing == 0:
+                    break
                 self.iev = i                   
                 self.loadImage()
                 self.slider_eng.SetValue(self.iev)
@@ -3924,7 +3951,10 @@ class PageStack(wx.Panel):
             self.loadImage()
             self.slider_eng.SetValue(self.iev)
             self.loadSpectrum(self.ix, self.iy)
+            self.button_slideshow.SetLabel("Play stack movie")
             
+
+                        
 #----------------------------------------------------------------------          
     def onrb_fluxod(self, evt):
         state = self.rb_flux.GetValue()

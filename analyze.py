@@ -80,7 +80,8 @@ class analyze:
         self.pcaimagebounds = np.zeros((self.stack.n_ev))
         
 
-        try:
+        #try:
+        if True:
             self.eigenvals, self.eigenvecs = np.linalg.eigh(covmatrix)
 
             #sort the eigenvals and eigenvecs       
@@ -107,16 +108,30 @@ class analyze:
             
             self.variance = self.variance/totalvar
             
-            #Keiser criterion - select number of significant components - evals > 1
-            sigpca = np.extract(self.eigenvals>1,self.eigenvals)
-            self.numsigpca = sigpca.size
+            #Scree plot - find an elbow in the curve - between 1 and 20 components
+            maxpoints = 25
+            #Find a line between first (x1, y1) and last point (x2, y2) and calculate distances:
+            y2 = np.log(self.eigenvals[maxpoints])
+            x2 = maxpoints
+            y1 = np.log(self.eigenvals[0])
+            x1 = 0
             
-            if self.numsigpca > 5:
-                self.numsigpca = 5
- 
+            #Calculate distances between all the points and the line x1 and x2 are points on the line and x0 are eigenvals
+            distance = np.zeros((25))
+            for i in range(25):
+                y0 = np.log(self.eigenvals[i])
+                x0=i
+                distance[i] = np.abs((x2-x1)*(y1-y0)-(x1-x0)*(y2-y1))/np.math.sqrt((x2-x1)**2+(y2-y1)**2)  
+            
+            #Point with the largest distance is the "elbow"
+            sigpca = np.argmax(distance)
+
+            self.numsigpca = sigpca + 1
+            
+
                         
-        except:
-            print "pca not converging"
+#        except:
+#            print "pca not converging"
             
 
         return    
