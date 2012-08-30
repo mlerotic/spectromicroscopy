@@ -9,16 +9,18 @@ import sys, time
 from pylab import *
 import csv
 
+verbose = False
+
 #----------------------------------------------------------------------
 # All NNMA algorithms share the same following template (i.e., initialization, iteration)
 #----------------------------------------------------------------------
 class NNMATemplate():
 
   def initFactors(self, D, kComponents, muInit=None, tInit=None):
-    print("Inside initFactors()")
+    if verbose: print("Inside initFactors()")
     nEnergies, nPixels = D.shape
-    print("nEnergies = ", nEnergies)
-    print("nPixels = ", nPixels)
+    if verbose: print("nEnergies = ", nEnergies)
+    if verbose: print("nPixels = ", nPixels)
     # if no initial matrices are given, generate ones with random numbers
     if muInit is None:
       muInit = np.random.rand(nEnergies, kComponents)
@@ -26,21 +28,21 @@ class NNMATemplate():
     if tInit is None:
       tInit = np.random.rand(kComponents, nPixels)
       #t = np.ones((kComponents, nPixels), np.float)
-    print("initial muInit = ", muInit)
-    print("initial tInit = ", tInit)
-    print("self.stepsizeT = ", self.stepsizeT)
+    if verbose: print("initial muInit = ", muInit)
+    if verbose: print("initial tInit = ", tInit)
+    if verbose: print("self.stepsizeT = ", self.stepsizeT)
     return muInit, tInit
 
   # Method __call__ is where the actual NNMA iteration takes place
   def __call__(self, D, energies, kNNMA, maxIters, mu0=None, verbose=True):
-    print("In NNMATemplate.__call__()")
+    if verbose: print("In NNMATemplate.__call__()")
     mu, t = self.initFactors(D, kNNMA, muInit=mu0)
     #mu, t = self.initFactors(D, kNNMA, muInit=muCluster)		# give option to seed initial spectra with cluster spectra
     normD = np.linalg.norm(D)
-    print("norm(D) = ", normD)
+    if verbose: print("norm(D) = ", normD)
     eps = 1e-3	# tolerance level for iterations
     maxCount = maxIters	# max number of iterations
-    print("maxCount = ", maxCount)
+    if verbose: print("maxCount = ", maxCount)
     count = 0		# counter for number of iterations
     objOld = 1e99	# diff between previous and current iterations (initially set to some large number)
 
@@ -50,7 +52,7 @@ class NNMATemplate():
 
     while True:
 
-      print("count = ", count)
+      if verbose: print("count = ", count)
       for k in range(kNNMA):
 	muAllIterations[k, :, count] = mu[:, k]		# store current reconstruction of mu
 
@@ -60,27 +62,27 @@ class NNMATemplate():
       muUpdated, tUpdated, distUpdated = self.update(mu, t, D)	# <----- where NNMA updates take place
       if np.any(np.isnan(muUpdated)) or np.any(np.isinf(muUpdated)) or \
 	 np.any(np.isnan(tUpdated)) or np.any(np.isinf(tUpdated)):
-	if verbose: print "RESTART"
+	if verbose:  print "RESTART"
 	mu, t = self.initFactors(D, kNNMA, muInit=m0)
 	count = 0
       #count += 1
-      print("dist = ", distUpdated)
+      if verbose: print("dist = ", distUpdated)
       obj = distUpdated / normD 	# normalize cost function by dividing by its norm
-      print("obj = ", obj)
+      if verbose: print("obj = ", obj)
       deltaObj = obj - objOld
-      print("deltaObj = ", deltaObj)
+      if verbose: print("deltaObj = ", deltaObj)
       if deltaObj > 0:		# if cost function increased, try decreasing stepsize
-        print("deltObj > 0")
-        print("self.stepsizeT = ", self.stepsizeT)
+        if verbose: print("deltObj > 0")
+        if verbose: print("self.stepsizeT = ", self.stepsizeT)
         self.stepsizeT = self.stepsizeT / 2
         if self.stepsizeT < 1e-12:
-          print("Algorithm has converged; stepsize = ", self.stepsizeT)
+          if verbose: print("Algorithm has converged; stepsize = ", self.stepsizeT)
           break
       else:
         if deltaObj > -1e-6:	# if cost function decreased too slowly, increase stepsize
-	  print("Increasing self.stepsizeT")
+	  if verbose: print("Increasing self.stepsizeT")
 	  self.stepsizeT = self.stepsizeT * 1.5
-	  print("self.stepsizeT = ", self.stepsizeT)
+	  if verbose: print("self.stepsizeT = ", self.stepsizeT)
         count += 1
         mu = muUpdated
         t = tUpdated
@@ -89,22 +91,22 @@ class NNMATemplate():
         objOld = obj
 
       if (count >= maxCount) and (-eps < deltaObj <= eps):
-	print("count = ", count)
-	print("(eps, deltaObj) = ", eps, deltaObj)
+	if verbose: print("count = ", count)
+	if verbose: print("(eps, deltaObj) = ", eps, deltaObj)
 	break
       elif (count >= maxCount):
-	print("Finished specified number of iterations, but deltaObj < eps not satisfied.")
+	if verbose: print("Finished specified number of iterations, but deltaObj < eps not satisfied.")
 	break
       elif (self.stepsizeT < 1e-12):
-        print("Stepsize is too small, breaking...")
+        if verbose: print("Stepsize is too small, breaking...")
         break
 
       #objFunctionWriter = csv.writer(open(dir + 'objFunction.csv', 'wb'), delimiter=',')
       #objFunctionWriter.writerow([obj, deltaObj])
 
 
-    #print("mu = ", mu)
-    #print("t = ", t)
+    #if verbose: print("mu = ", mu)
+    #if verbose: print("t = ", t)
 
     # Plot convergence of mu spectra
     figure(4)
@@ -137,21 +139,21 @@ class NNMATemplate():
 
     np.savetxt('mu.txt', mu) 
 
-    print("End of NNMATemplate.__call__()")
+    if verbose: print("End of NNMATemplate.__call__()")
     return mu, t, DRecon
 
 #----------------------------------------------------------------------
 class factorizedNNMA(NNMATemplate):
 
   def __init__(self, muUpdate, tUpdate, dist):
-    print("In factorizedNNMA.__init__()")
+    if verbose: print("In factorizedNNMA.__init__()")
     self.muUpdate = muUpdate
     self.tUpdate = tUpdate
     self.dist = dist
     self.stepsizeT = 0.1	# t stepsize for gradient descent
 
   def update(self, mu, t, D):
-    print("Inside update() in factorizedNNMA")
+    if verbose: print("Inside update() in factorizedNNMA")
     muUpdated = self.muUpdate(mu, t, D)
     tUpdated = self.tUpdate(muUpdated, t, D, stepsizeT=self.stepsizeT)
     dist = self.dist(D, muUpdated, tUpdated)
@@ -159,7 +161,7 @@ class factorizedNNMA(NNMATemplate):
 
   # save mu reconstruction at each iteration so we can compile it into a movie
   def saveMuImage(self, energies, muRecon, count):
-    print("In saveMuImage()")
+    if verbose: print("In saveMuImage()")
     kComp = muRecon.shape[1]
 
     for k in range(kComp):
@@ -190,7 +192,7 @@ class nnma(factorizedNNMA):
     self.NNMA = factorizedNNMA(self.muMultUpdate, self.tMultUpdate, self.frobDist)	# Basic NNMA multiplicative update with Frobenius distance measure
     self.NNMASparse = factorizedNNMA(self.muMultUpdate, self.tSparseUpdate, self.frobDist)
     #self.NNMASparse.stepsizeT = 0.1
-    #print("self.NNMASparse.stepsizeT = ", self.NNMASparse.stepsizeT)
+    #if verbose: print("self.NNMASparse.stepsizeT = ", self.NNMASparse.stepsizeT)
 
 #----------------------------------------------------------------------
 # Some functions for use in NNMA algorithms   
@@ -201,12 +203,12 @@ class nnma(factorizedNNMA):
 # Basic multiplicative update for mu
 #----------------------------------------------------------------------
   def muMultUpdate(self, mu, t, D, **param):
-    print("In nnma.muMultUpdate()")
-    #print("mu before update = ", mu)
+    if verbose: print("In nnma.muMultUpdate()")
+    #if verbose: print("mu before update = ", mu)
     updateFactor = np.dot(D, t.T) / ( np.dot(mu, np.dot(t, t.T)) + 1e-9 )
     muUpdated = mu * updateFactor
-    #print("muUpdated = ", muUpdated)
-    #print("t = ", t)
+    #if verbose: print("muUpdated = ", muUpdated)
+    #if verbose: print("t = ", t)
     return muUpdated 
 
 #----------------------------------------------------------------------
@@ -231,48 +233,48 @@ class nnma(factorizedNNMA):
 # L1 and L2 norms are set to achieve desired sparseness (and non-negativity)
 #----------------------------------------------------------------------
   def sparsenessProjector(self, x, L1, L2):
-    print("In sparsenessProjector()")
+    if verbose: print("In sparsenessProjector()")
     N = len(x)
-    print("N = ", N)
-    print("x.shape = ", x.shape)
+    if verbose: print("N = ", N)
+    if verbose: print("x.shape = ", x.shape)
     x = x.reshape(N, 1)
     # Start by projecting point to sum constraint hyperplane
     s = x + (L1 - np.sum(x)) / N
-    print("s = ", s)
+    if verbose: print("s = ", s)
     zeroCoeff = []	# initially, no elements are assumed to be zero
     iters = 0
     while True:
-      print("Inside sparsenessProjector while True loop")
+      if verbose: print("Inside sparsenessProjector while True loop")
       if len(zeroCoeff) == N:
-        print("Reached maximal iterations to find s")
+        if verbose: print("Reached maximal iterations to find s")
         break
       midPoint = np.ones((N, 1), float) * L1 / (N - len(zeroCoeff))
-      print("midPoint = ", midPoint)
+      if verbose: print("midPoint = ", midPoint)
       midPoint[zeroCoeff] = 0
-      print("midPoint = ", midPoint)
+      if verbose: print("midPoint = ", midPoint)
       w = s - midPoint
       a = np.sum(np.power(w, 2)) + 0j
       b = 2 * np.dot(w.T, midPoint)
       c = np.sum(np.power(midPoint, 2)) - L2
-      print("a = ", a)
-      print("b = ", b)
-      print("c = ", c)
+      if verbose: print("a = ", a)
+      if verbose: print("b = ", b)
+      if verbose: print("c = ", c)
       alpha = (-b + (np.sqrt(np.power(b, 2) - 4 * a * c)).real) / (2 * a)	# solve quadratic eqn to find alpha such that s satisfies L2 norm constraint
       s = alpha * w + midPoint		# <--- is it alpha*w + s (as in Hoyer's Matlab code), or alpha*w + midPoint (as in Hoyer's paper)???
-      print("s = ", s)
+      if verbose: print("s = ", s)
 
-      print("alpha = ", alpha)
+      if verbose: print("alpha = ", alpha)
       if (alpha > 0) == False or np.isnan(alpha):	# alpha should be > 0
-        print("breaking...; iters = ", iters)
+        if verbose: print("breaking...; iters = ", iters)
         break
 
       elif np.all(s >= 0):		# if all elements of v are +ve, solution is found
         iters = iters + 1
-        print("All s >= 0; iters = ", iters)
+        if verbose: print("All s >= 0; iters = ", iters)
         break
 
       else:	# if some elements are -ve, then set them to zero and iterate again to find soln
-        print("In else statement")
+        if verbose: print("In else statement")
         iters = iters + 1
         zeroCoeff = np.where(s <= 0)[0]
         s[zeroCoeff] = 0
@@ -281,9 +283,9 @@ class nnma(factorizedNNMA):
         s[zeroCoeff] = 0
 
     if (np.abs(s.imag)).max() > 1e-10:
-      print("Error: imaginary values in v!")
+      if verbose: print("Error: imaginary values in v!")
 
-    print("About to return s")
+    if verbose: print("About to return s")
     return s
 
 
@@ -294,30 +296,30 @@ class nnma(factorizedNNMA):
 #----------------------------------------------------------------------
   def tSparseUpdate(self, mu, t, D, stepsizeT, L1=1., L2=1.):
 
-    print("In tSparseUpdate()")
-    print("stepsizeT = ", stepsizeT)
+    if verbose: print("In tSparseUpdate()")
+    if verbose: print("stepsizeT = ", stepsizeT)
 
     # First take a step in direction of negative gradient
     tUpdated = t - stepsizeT * np.dot(mu.T, (np.dot(mu, t) - D))
-    print("t = ", t)
-    print("mu = ", mu)
-    print("tUpdated = ", tUpdated)
+    if verbose: print("t = ", t)
+    if verbose: print("mu = ", mu)
+    if verbose: print("tUpdated = ", tUpdated)
 
     # Now project onto constraint space that satisfies desired sparseness
     L2 = 1.0	# rows of t normalized to L2
     nPixels = D.shape[1]
     L1 = (np.sqrt(nPixels) - (np.sqrt(nPixels) - 1) * self.sparsenessT) * L2
     #L1 = (np.sqrt(nPixels) - (np.sqrt(nPixels) - 1) * self.sparsenessT)
-    print("L1 = ", L1)
+    if verbose: print("L1 = ", L1)
     for i in range(self.kNNMA):
-      print("i = ", i)
+      if verbose: print("i = ", i)
       tUpdated[i, :] = (self.sparsenessProjector(tUpdated[i, :].T, L1, L2)).T
 
-    print("tUpdated.shape = ", tUpdated.shape)
-    print("t = ", t)
-    print("norms are: ")
+    if verbose: print("tUpdated.shape = ", tUpdated.shape)
+    if verbose: print("t = ", t)
+    if verbose: print("norms are: ")
     for i in range(self.kNNMA):
-      print(np.linalg.norm(t[i,:]))
+      if verbose: print(np.linalg.norm(t[i,:]))
 
     return tUpdated
 
@@ -326,10 +328,10 @@ class nnma(factorizedNNMA):
 #----------------------------------------------------------------------
   def calcNNMA(self, algoName, kComponents=5, verbose=1):
 
-    print("Doing nnma.calcNNMA:")
-    print("kComponents = ", self.kNNMA)
-    print("maxIters = ", self.maxIters)
-    print("sparsenessT = ", self.sparsenessT)
+    if verbose: print("Doing nnma.calcNNMA:")
+    if verbose: print("kComponents = ", self.kNNMA)
+    if verbose: print("maxIters = ", self.maxIters)
+    if verbose: print("sparsenessT = ", self.sparsenessT)
 
     self.nEnergies = self.stack.n_ev
     self.nCols = self.stack.n_cols
@@ -341,13 +343,13 @@ class nnma(factorizedNNMA):
 #
 #    # Here we're going to test using OD with a subset of original data
 #    #self.kPCA = self.PCAAnalz.numsigpca 	# use num significant components calculated from PCA, instead of inputting manually as above
-#    #print("self.PCAAnalz.numsigpca = ", self.PCAAnalz.numsigpca)
+#    #if verbose: print("self.PCAAnalz.numsigpca = ", self.PCAAnalz.numsigpca)
 #    self.PCAEigenvecsSubset = self.PCAAnalz.eigenvecs[:, 0:self.kPCA]
-#    print("self.PCAEigenvecsSubset.shape = ", self.PCAEigenvecsSubset.shape)
+#    if verbose: print("self.PCAEigenvecsSubset.shape = ", self.PCAEigenvecsSubset.shape)
 #    self.PCAImagesSubset = self.PCAAnalz.pcaimages2D[0:self.kPCA, :]
-#    print("self.PCAImagesSubset.shape = ", self.PCAImagesSubset.shape)
+#    if verbose: print("self.PCAImagesSubset.shape = ", self.PCAImagesSubset.shape)
 #    self.ODSubset = np.dot(self.PCAEigenvecsSubset, self.PCAImagesSubset)
-#    print("self.ODSubset.shape = ", self.ODSubset.shape)
+#    if verbose: print("self.ODSubset.shape = ", self.ODSubset.shape)
 #    D = self.ODSubset
 #    self.OD = D.reshape(self.nEnergies, self.nRows, self.nCols)
 #
@@ -356,17 +358,17 @@ class nnma(factorizedNNMA):
     self.OD = self.stack.absdata.copy()	# absdata in HDF5 file actually  holds transmission data (not absorption!)
     self.i0 = self.stack.i0data
     self.ODTemp = np.zeros((self.nEnergies, self.nRows, self.nCols))
-    print("self.ODTemp.shape = ", self.ODTemp.shape)
-    print("self.OD.shape = ", self.OD.shape)
+    if verbose: print("self.ODTemp.shape = ", self.ODTemp.shape)
+    if verbose: print("self.OD.shape = ", self.OD.shape)
     for i in range(self.nEnergies):		# transpose so that OD is in C-order: energy is leftmost (slowest-changing) index
       self.ODTemp[i, :, :] = self.OD[:, :, i].T
       #self.ODTemp[i, :, :] = self.OD[:, :, i]
       self.ODTemp[i, :, :] = -np.log(self.ODTemp[i, :, :] / self.i0[i])	# do this if absdata is actually transmission
     neg = np.where(self.ODTemp < 0.)	# find where OD is negative
     self.ODTemp[neg] = 0.		# and set to zero
-    print("neg = ", neg)
+    if verbose: print("neg = ", neg)
     self.OD = self.ODTemp
-    print("self.OD.shape = ", self.OD.shape)
+    if verbose: print("self.OD.shape = ", self.OD.shape)
     self.ODRecon = np.zeros((self.nEnergies, self.nCols * self.nRows), dtype=float)	# initialize matrix which holds reconstructed OD
     self.ODError = np.zeros((self.nEnergies, self.nCols * self.nRows), dtype=float)	# initialize matrix which holds difference between experimental and reconstructed OD
     self.mu = np.zeros((self.nEnergies, kComponents), dtype=float)
@@ -388,22 +390,22 @@ class nnma(factorizedNNMA):
     elif self.initMatrices == 'Cluster':
       muInit = self.PCAAnalz.clusterspectra.T
  
-    print "run %12s" % algoName
+    if verbose: print "run %12s" % algoName
     sys.stdout.flush()
     startTime = time.time()
-    print("startTime = ", startTime)
+    if verbose: print("startTime = ", startTime)
 
     #self.mu, self.t, DRecon = self.NNMA(D, self.energies, self.kNNMA, self.maxIters)	# calculate NNMA here by invoking the NNMATemplate.__call__ function
     self.mu, self.t, DRecon = self.NNMASparse(D, self.energies, self.kNNMA, self.maxIters, mu0=muInit)	# calculate NNMA here by invoking the NNMATemplate.__call__ function
 
     endTime = time.time()
     timeTaken = endTime - startTime
-    print("Time taken = ", timeTaken)
+    if verbose: print("Time taken = ", timeTaken)
 
     tNorm = np.linalg.norm(self.t[0,:])
-    print("tNorm first row = ", tNorm)
+    if verbose: print("tNorm first row = ", tNorm)
     tNorm = np.linalg.norm(self.t[kComponents-1,:])
-    print("tNorm last row = ", tNorm)
+    if verbose: print("tNorm last row = ", tNorm)
 
     self.ODRecon = DRecon.reshape(self.nEnergies, self.nRows, self.nCols)
     figure(0) 
@@ -437,17 +439,17 @@ class nnma(factorizedNNMA):
 #----------------------------------------------------------------------
   def findRoutine(self, algoName):
     if algoName == "Basic":
-      print("Inside if clause")
-      print("algoName = ", algoName)
+      if verbose: print("Inside if clause")
+      if verbose: print("algoName = ", algoName)
       self.NNMA.update("Updated string; inside findRoutine()")
     elif algoName == "Smooth":
-      print("algoName = ", algoName)
+      if verbose: print("algoName = ", algoName)
     elif algoName == "Sparse":
-      print("algoName = ", algoName)
+      if verbose: print("algoName = ", algoName)
     else:
-      print("No matching NNMA routine found for ", algoName)
+      if verbose: print("No matching NNMA routine found for ", algoName)
 
-    print("End of findRoutine()")
+    if verbose: print("End of findRoutine()")
 
 #----------------------------------------------------------------------
   def printTest(self):

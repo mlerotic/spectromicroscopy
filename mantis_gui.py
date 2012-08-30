@@ -45,7 +45,7 @@ Winsizey = 740
 PlotH = 3.46
 PlotW = PlotH*1.61803
 
-
+verbose = False
 
 #----------------------------------------------------------------------
 class common:
@@ -85,382 +85,382 @@ class PageNNMA(wx.Panel):
 # ------------------------------------------------------------------------------------------------
 class PageNNMAOptDensity(PageNNMA):
 
-        def __init__(self, parent, common, data_struct, stack, nnma):
+    def __init__(self, parent, common, data_struct, stack, nnma):
 
-            PageNNMA.__init__(self, parent, common, data_struct, stack, nnma)
+        PageNNMA.__init__(self, parent, common, data_struct, stack, nnma)
 
-	    self.data_struct = data_struct
-	    self.stk = stack
-	    self.com = common
-	    self.nnma = nnma
-	    self.kNNMA = self.nnma.kNNMA	# number of chemical components to look for in NNMA
-	    self.fontsize = self.com.fontsize        
-	    self.iev = 0
+        self.data_struct = data_struct
+        self.stk = stack
+        self.com = common
+        self.nnma = nnma
+        self.kNNMA = self.nnma.kNNMA	# number of chemical components to look for in NNMA
+        self.fontsize = self.com.fontsize        
+        self.iev = 0
+        
+        # Panel 1: For users to enter NNMA parameters/settings -------------------------------------
+        
+        panel1 = wx.Panel(self, -1)
+        sizer1 = wx.StaticBoxSizer(wx.StaticBox(panel1, -1, 'NNMA parameters'), wx.VERTICAL)
+        
+        # A spinner to allow users to set number of NNMA components
+        hbox11 = wx.BoxSizer(wx.HORIZONTAL)
+        text11 = wx.StaticText(panel1, -1, 'Number of chemical components: ', style=wx.ALIGN_LEFT)
+        text11.SetFont(self.com.font)
+        self.kNNMASpin = wx.SpinCtrl(panel1, -1, '',  size=(60, -1), style=wx.ALIGN_LEFT)
+        self.kNNMASpin.SetRange(1,100)
+        self.kNNMASpin.SetValue(5)
+        self.Bind(wx.EVT_SPINCTRL, self.onkNNMASpin, self.kNNMASpin)
+        if verbose: print("self.kNNMASpin.GetId() = ", self.kNNMASpin.GetId())
+        hbox11.Add(text11, 0, wx.TOP, 20)
+        hbox11.Add((10,0))
+        hbox11.Add(self.kNNMASpin, 0, wx.TOP, 15)            
+        sizer1.Add(hbox11, 0, wx.EXPAND)
 
-	    # Panel 1: For users to enter NNMA parameters/settings -------------------------------------
-	    
-	    panel1 = wx.Panel(self, -1)
-	    sizer1 = wx.StaticBoxSizer(wx.StaticBox(panel1, -1, 'NNMA parameters'), wx.VERTICAL)
-	    
-	    # A spinner to allow users to set number of NNMA components
-	    hbox11 = wx.BoxSizer(wx.HORIZONTAL)
-	    text11 = wx.StaticText(panel1, -1, 'Number of chemical components: ', style=wx.ALIGN_LEFT)
-	    text11.SetFont(self.com.font)
-	    self.kNNMASpin = wx.SpinCtrl(panel1, -1, '',  size=(60, -1), style=wx.ALIGN_LEFT)
-	    self.kNNMASpin.SetRange(1,100)
-	    self.kNNMASpin.SetValue(5)
-	    self.Bind(wx.EVT_SPINCTRL, self.onkNNMASpin, self.kNNMASpin)
-	    print("self.kNNMASpin.GetId() = ", self.kNNMASpin.GetId())
-	    hbox11.Add(text11, 0, wx.TOP, 20)
-	    hbox11.Add((10,0))
-	    hbox11.Add(self.kNNMASpin, 0, wx.TOP, 15)            
-	    sizer1.Add(hbox11, 0, wx.EXPAND)
+        # A text field to allow users to set number of NNMA iterations
+        hbox12 = wx.BoxSizer(wx.HORIZONTAL)
+        text12 = wx.StaticText(panel1, -1, 'Number of iterations: ', style=wx.ALIGN_LEFT)
+        text12.SetFont(self.com.font)
+        self.itersCtrl = wx.TextCtrl(panel1, -1, style=wx.ALIGN_LEFT)
+        self.itersCtrl.SetValue('100')
+        hbox12.Add(text12, 1, wx.TOP, 15)
+        hbox12.Add((10, 0))
+        hbox12.Add(self.itersCtrl, 1, wx.TOP, 15)
+        sizer1.Add((0, 10))
+        sizer1.Add(hbox12, 0, wx.EXPAND)
 
-            # A text field to allow users to set number of NNMA iterations
-            hbox12 = wx.BoxSizer(wx.HORIZONTAL)
-            text12 = wx.StaticText(panel1, -1, 'Number of iterations: ', style=wx.ALIGN_LEFT)
-            text12.SetFont(self.com.font)
-            self.itersCtrl = wx.TextCtrl(panel1, -1, style=wx.ALIGN_LEFT)
-            self.itersCtrl.SetValue('100')
-            hbox12.Add(text12, 1, wx.TOP, 15)
-            hbox12.Add((10, 0))
-            hbox12.Add(self.itersCtrl, 1, wx.TOP, 15)
-            sizer1.Add((0, 10))
-            sizer1.Add(hbox12, 0, wx.EXPAND)
+        # ComboBox to display available NNMA algorithms
+        algoNNMA = ['Basic', 'Smoothness', 'Sparsity']
+        self.comboBoxAlgoNNMA = wx.ComboBox(panel1, -1, choices=algoNNMA, style=wx.CB_READONLY)
+        self.comboBoxAlgoNNMA.SetValue(algoNNMA[0])
+        self.Bind(wx.EVT_COMBOBOX, self.onSelectComboBoxAlgoNNMA, id=self.comboBoxAlgoNNMA.GetId())
+        text12 = wx.StaticText(panel1, -1, 'NNMA algorithm: ', style=wx.ALIGN_LEFT)
+        text12.SetFont(self.com.font)
+        hbox12 = wx.BoxSizer(wx.HORIZONTAL)
+        hbox12.Add(text12, 0, wx.TOP, 20)
+        hbox12.Add((10, 0))
+        sizer1.Add(hbox12, 0, wx.EXPAND)
+        sizer1.Add(self.comboBoxAlgoNNMA, 0, wx.EXPAND)
 
-	    # ComboBox to display available NNMA algorithms
-	    algoNNMA = ['Basic', 'Smoothness', 'Sparsity']
-	    self.comboBoxAlgoNNMA = wx.ComboBox(panel1, -1, choices=algoNNMA, style=wx.CB_READONLY)
-	    self.comboBoxAlgoNNMA.SetValue(algoNNMA[0])
-	    self.Bind(wx.EVT_COMBOBOX, self.onSelectComboBoxAlgoNNMA, id=self.comboBoxAlgoNNMA.GetId())
-	    text12 = wx.StaticText(panel1, -1, 'NNMA algorithm: ', style=wx.ALIGN_LEFT)
-	    text12.SetFont(self.com.font)
-	    hbox12 = wx.BoxSizer(wx.HORIZONTAL)
-	    hbox12.Add(text12, 0, wx.TOP, 20)
-	    hbox12.Add((10, 0))
-	    sizer1.Add(hbox12, 0, wx.EXPAND)
-	    sizer1.Add(self.comboBoxAlgoNNMA, 0, wx.EXPAND)
+        # A text field to allow users to set sparseness of t matrix
+        hbox13 = wx.BoxSizer(wx.HORIZONTAL)
+        text13 = wx.StaticText(panel1, -1, 'Sparseness (0 to 1): ', style=wx.ALIGN_LEFT)
+        text13.SetFont(self.com.font)
+        self.sparsenessCtrl = wx.TextCtrl(panel1, -1, style=wx.ALIGN_LEFT)
+        self.sparsenessCtrl.SetValue('0.5')
+        hbox13.Add(text13, 1, wx.TOP, 15)
+        hbox13.Add((10, 0))
+        hbox13.Add(self.sparsenessCtrl, 1, wx.TOP, 15)
+        sizer1.Add((0, 10))
+        sizer1.Add(hbox13, 0, wx.EXPAND)
 
-            # A text field to allow users to set sparseness of t matrix
-            hbox13 = wx.BoxSizer(wx.HORIZONTAL)
-            text13 = wx.StaticText(panel1, -1, 'Sparseness (0 to 1): ', style=wx.ALIGN_LEFT)
-            text13.SetFont(self.com.font)
-            self.sparsenessCtrl = wx.TextCtrl(panel1, -1, style=wx.ALIGN_LEFT)
-            self.sparsenessCtrl.SetValue('0.5')
-            hbox13.Add(text13, 1, wx.TOP, 15)
-            hbox13.Add((10, 0))
-            hbox13.Add(self.sparsenessCtrl, 1, wx.TOP, 15)
-            sizer1.Add((0, 10))
-            sizer1.Add(hbox13, 0, wx.EXPAND)
+        # ComboBox for choosing initial matrices
+        initMatricesNNMA = ['Random', 'Cluster']
+        self.comboBoxInitMatricesNNMA = wx.ComboBox(panel1, -1, choices=initMatricesNNMA, style=wx.CB_READONLY)
+        self.comboBoxInitMatricesNNMA.SetValue(initMatricesNNMA[0])
+        self.Bind(wx.EVT_COMBOBOX, self.onSelectComboBoxInitMatricesNNMA, id=self.comboBoxInitMatricesNNMA.GetId())
+        text14 = wx.StaticText(panel1, -1, 'Initial matrices: ', style=wx.ALIGN_LEFT)
+        text14.SetFont(self.com.font)
+        hbox14 = wx.BoxSizer(wx.HORIZONTAL)
+        hbox14.Add(text14, 0, wx.TOP, 20)
+        hbox14.Add((10, 0))
+        sizer1.Add(hbox14, 0, wx.EXPAND)
+        sizer1.Add(self.comboBoxInitMatricesNNMA, 0, wx.EXPAND)
+        
+        # Button to calculate NNMA
+        self.button_calcNNMA = wx.Button(panel1, -1, 'Calculate NNMA', (10, 10))
+        self.button_calcNNMA.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.onCalcNNMA, id=self.button_calcNNMA.GetId())
+        #self.button_calcNNMA.Disable()
+        sizer1.Add((0, 10))
+        sizer1.Add(self.button_calcNNMA, 0, wx.EXPAND)
 
-	    # ComboBox for choosing initial matrices
-	    initMatricesNNMA = ['Random', 'Cluster']
-	    self.comboBoxInitMatricesNNMA = wx.ComboBox(panel1, -1, choices=initMatricesNNMA, style=wx.CB_READONLY)
-	    self.comboBoxInitMatricesNNMA.SetValue(initMatricesNNMA[0])
-	    self.Bind(wx.EVT_COMBOBOX, self.onSelectComboBoxInitMatricesNNMA, id=self.comboBoxInitMatricesNNMA.GetId())
-	    text14 = wx.StaticText(panel1, -1, 'Initial matrices: ', style=wx.ALIGN_LEFT)
-	    text14.SetFont(self.com.font)
-	    hbox14 = wx.BoxSizer(wx.HORIZONTAL)
-	    hbox14.Add(text14, 0, wx.TOP, 20)
-	    hbox14.Add((10, 0))
-	    sizer1.Add(hbox14, 0, wx.EXPAND)
-	    sizer1.Add(self.comboBoxInitMatricesNNMA, 0, wx.EXPAND)
+        # Button for testing
+        self.button_test = wx.Button(panel1, -1, 'Print test', (10, 10))
+        self.button_test.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.OnTestButton, id=self.button_test.GetId())
+        sizer1.Add(self.button_test, 0, wx.EXPAND)
+        
+        panel1.SetSizer(sizer1)
+        
+        # Panel 2: Display optical density reconstruction results 
+        panel2 = wx.Panel(self, -1)
+        sizer21 = wx.StaticBoxSizer(wx.StaticBox(panel2, -1, 'Optical density'), wx.VERTICAL)
+        
+        scaleFactorW = 0.6		# factor to scale plot width
+        scaleFactorH = 0.7		# factor to scale plot height
+        
+        # hbox21 contains the original and reconstructed optical density
+        hbox21 = wx.BoxSizer(wx.HORIZONTAL)
+        vbox21 = wx.BoxSizer(wx.VERTICAL)
+        self.ODPanel = wxmpl.PlotPanel(panel2, -1, size=(PlotW*scaleFactorW, PlotH*scaleFactorH), cursor=False, crosshairs=False, location=False, zoom=False)
+        textOD = wx.TextCtrl(panel2, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE, size=(100, 20))
+        textOD.SetFont(self.com.font)
+        textOD.SetValue("Original")
+        vbox21.Add(textOD, 0, wx.EXPAND)
+        vbox21.Add(self.ODPanel, 0, wx.TOP)
+        vbox22 = wx.BoxSizer(wx.VERTICAL)
+        self.ODReconPanel = wxmpl.PlotPanel(panel2, -1, size=(PlotW*scaleFactorW, PlotH*scaleFactorH), cursor=False, crosshairs=False, location=False, zoom=False)
+        textODRecon = wx.TextCtrl(panel2, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        textODRecon.SetFont(self.com.font)
+        textODRecon.SetValue('Reconstructed')
+        vbox22.Add(textODRecon, 0, wx.EXPAND)
+        vbox22.Add(self.ODReconPanel, 0, wx.TOP)
+        hbox21.Add(vbox21)
+        hbox21.Add(vbox22)
+        
+        # vbox23 contains the difference between original and reconstructed optical density
+        vbox23 = wx.BoxSizer(wx.VERTICAL)
+        self.ODErrorPanel = wxmpl.PlotPanel(panel2, -1, size=(PlotW*scaleFactorW, PlotH*scaleFactorH), cursor=False, crosshairs=False, location=False, zoom=False)
+        textODError = wx.TextCtrl(panel2, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        textODError.SetFont(self.com.font)
+        textODError.SetValue("% Difference")
+        vbox23.Add(textODError, 0, wx.EXPAND)
+        vbox23.Add(self.ODErrorPanel, 0, wx.TOP)
+        
+        flexGridSizer = wx.FlexGridSizer(2, 1, vgap=10, hgap=20)
+        flexGridSizer.Add(hbox21)
+        #flexGridSizer.Add((0, 20))
+        flexGridSizer.Add(vbox23)
+        panel2.SetSizer(flexGridSizer)
+        
+        sizer21.Add(panel2)
+        
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
+        hbox.Add(panel1, 0)
+        hbox.Add(panel2, 0)
+        self.SetSizer(hbox)
 
-	    # Button to calculate NNMA
-	    self.button_calcNNMA = wx.Button(panel1, -1, 'Calculate NNMA', (10, 10))
-	    self.button_calcNNMA.SetFont(self.com.font)
-	    self.Bind(wx.EVT_BUTTON, self.onCalcNNMA, id=self.button_calcNNMA.GetId())
-	    #self.button_calcNNMA.Disable()
-            sizer1.Add((0, 10))
-	    sizer1.Add(self.button_calcNNMA, 0, wx.EXPAND)
+#----------------------------------------------------------------------
+    def OnTestButton(self, event):
 
-	    # Button for testing
-	    self.button_test = wx.Button(panel1, -1, 'Print test', (10, 10))
-	    self.button_test.SetFont(self.com.font)
-	    self.Bind(wx.EVT_BUTTON, self.OnTestButton, id=self.button_test.GetId())
-	    sizer1.Add(self.button_test, 0, wx.EXPAND)
+        self.nnma.printTest()
 
-	    panel1.SetSizer(sizer1)
+#----------------------------------------------------------------------
+    def onkNNMASpin(self, event):
+        
+        self.nnma.kNNMA = event.GetInt()
+        if verbose: print("nnma.kNNMA = ", self.nnma.kNNMA)
 
-	    # Panel 2: Display optical density reconstruction results 
-	    panel2 = wx.Panel(self, -1)
-	    sizer21 = wx.StaticBoxSizer(wx.StaticBox(panel2, -1, 'Optical density'), wx.VERTICAL)
+#----------------------------------------------------------------------
+    def onSelectComboBoxAlgoNNMA(self, event):
 
-            scaleFactorW = 0.6		# factor to scale plot width
-            scaleFactorH = 0.7		# factor to scale plot height
+        self.nnma.algoNNMA = event.GetString()
+        if verbose: print("nnma.algoNNMA = ", self.nnma.algoNNMA)
 
-            # hbox21 contains the original and reconstructed optical density
-            hbox21 = wx.BoxSizer(wx.HORIZONTAL)
-            vbox21 = wx.BoxSizer(wx.VERTICAL)
-	    self.ODPanel = wxmpl.PlotPanel(panel2, -1, size=(PlotW*scaleFactorW, PlotH*scaleFactorH), cursor=False, crosshairs=False, location=False, zoom=False)
-            textOD = wx.TextCtrl(panel2, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE, size=(100, 20))
-            textOD.SetFont(self.com.font)
-            textOD.SetValue("Original")
-            vbox21.Add(textOD, 0, wx.EXPAND)
-            vbox21.Add(self.ODPanel, 0, wx.TOP)
-            vbox22 = wx.BoxSizer(wx.VERTICAL)
-	    self.ODReconPanel = wxmpl.PlotPanel(panel2, -1, size=(PlotW*scaleFactorW, PlotH*scaleFactorH), cursor=False, crosshairs=False, location=False, zoom=False)
-            textODRecon = wx.TextCtrl(panel2, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
-            textODRecon.SetFont(self.com.font)
-            textODRecon.SetValue('Reconstructed')
-            vbox22.Add(textODRecon, 0, wx.EXPAND)
-            vbox22.Add(self.ODReconPanel, 0, wx.TOP)
-            hbox21.Add(vbox21)
-            hbox21.Add(vbox22)
+#----------------------------------------------------------------------
+    def onSelectComboBoxInitMatricesNNMA(self, event):
 
-            # vbox23 contains the difference between original and reconstructed optical density
-            vbox23 = wx.BoxSizer(wx.VERTICAL)
-	    self.ODErrorPanel = wxmpl.PlotPanel(panel2, -1, size=(PlotW*scaleFactorW, PlotH*scaleFactorH), cursor=False, crosshairs=False, location=False, zoom=False)
-            textODError = wx.TextCtrl(panel2, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
-            textODError.SetFont(self.com.font)
-            textODError.SetValue("% Difference")
-            vbox23.Add(textODError, 0, wx.EXPAND)
-            vbox23.Add(self.ODErrorPanel, 0, wx.TOP)
-            
-            flexGridSizer = wx.FlexGridSizer(2, 1, vgap=10, hgap=20)
-            flexGridSizer.Add(hbox21)
-            #flexGridSizer.Add((0, 20))
-            flexGridSizer.Add(vbox23)
-            panel2.SetSizer(flexGridSizer)
+        self.nnma.initMatrices = event.GetString()
+        if verbose: print("nnma.initMatrices = ", self.nnma.initMatrices)
 
-            sizer21.Add(panel2)
+#----------------------------------------------------------------------
+    def onScrollEnergy(self, event):
 
-            hbox = wx.BoxSizer(wx.HORIZONTAL)
-            hbox.Add(panel1, 0)
-            hbox.Add(panel2, 0)
-            self.SetSizer(hbox)
+        self.iev = event.GetInt()
+        if self.com.stack_loaded == 1:
+            self.loadODImage()
 
-    #----------------------------------------------------------------------
-	def OnTestButton(self, event):
+#----------------------------------------------------------------------
+    def calcNNMA(self):
 
-	    self.nnma.printTest()
-
-    #----------------------------------------------------------------------
-	def onkNNMASpin(self, event):
-
-	  self.nnma.kNNMA = event.GetInt()
-	  print("nnma.kNNMA = ", self.nnma.kNNMA)
-
-    #----------------------------------------------------------------------
-	def onSelectComboBoxAlgoNNMA(self, event):
-
-	  self.nnma.algoNNMA = event.GetString()
-	  print("nnma.algoNNMA = ", self.nnma.algoNNMA)
-
-    #----------------------------------------------------------------------
-	def onSelectComboBoxInitMatricesNNMA(self, event):
-
-	  self.nnma.initMatrices = event.GetString()
-	  print("nnma.initMatrices = ", self.nnma.initMatrices)
-
-    #----------------------------------------------------------------------
-	def onScrollEnergy(self, event):
-
-	  self.iev = event.GetInt()
-	  if self.com.stack_loaded == 1:
-	    self.loadODImage()
-
-    #----------------------------------------------------------------------
-	def calcNNMA(self):
-	 
-	  self.kNNMA = self.nnma.kNNMA
-	  self.algoNNMA = self.nnma.algoNNMA
-          try:
+        self.kNNMA = self.nnma.kNNMA
+        self.algoNNMA = self.nnma.algoNNMA
+        try:
             self.nnma.maxIters = int(self.itersCtrl.GetValue())
-          except:
+        except:
             wx.MessageBox("Please enter valid number of iterations.")
-          try:
+        try:
             self.nnma.sparsenessT = float(self.sparsenessCtrl.GetValue())
-          except:
+        except:
             wx.MessageBox("Please enter sparseness parameter between 0 and 1.")
-	  self.nnma.calcNNMA(self.algoNNMA, kComponents=self.kNNMA)
+        self.nnma.calcNNMA(self.algoNNMA, kComponents=self.kNNMA)
 
-    #----------------------------------------------------------------------
-	def onCalcNNMA(self, event):
+#----------------------------------------------------------------------
+    def onCalcNNMA(self, event):
 
-	  wx.BeginBusyCursor()
-          PageNNMA.calcnnma = False
-	  #self.calcnnma = False		# boolean for whether NNMA has been calculated
+        wx.BeginBusyCursor()
+        PageNNMA.calcnnma = False
+        #self.calcnnma = False		# boolean for whether NNMA has been calculated
 
-	  try:
-	    self.calcNNMA()
-	    #self.calcnnma = True
+        try:
+            self.calcNNMA()
+            #self.calcnnma = True
             PageNNMA.calcnnma = True
-	    self.loadODImage()
-	    self.loadODReconImage()
-	    self.loadODErrorImage()
-	    wx.EndBusyCursor()
+            self.loadODImage()
+            self.loadODReconImage()
+            self.loadODErrorImage()
+            wx.EndBusyCursor()
 
-	  except:
-	    wx.EndBusyCursor()
-	    wx.MessageBox("NNMA not calculated.")
+        except:
+            wx.EndBusyCursor()
+            wx.MessageBox("NNMA not calculated.")
 
-	  #wx.GetApp().TopWindow.refresh_widgets() 	# <-- Is this necessary??
+        #wx.GetApp().TopWindow.refresh_widgets() 	# <-- Is this necessary??
 
-    #----------------------------------------------------------------------
-	def loadODImage(self):
+#----------------------------------------------------------------------
+    def loadODImage(self):
 
-	  self.show_colorbar = 1
-	  self.show_scale_bar = 0
+        self.show_colorbar = 1
+        self.show_scale_bar = 0
+        
+        image = self.nnma.OD[self.iev, :, :] 
 
-	  image = self.nnma.OD[self.iev, :, :] 
-			
-	  fig = self.ODPanel.get_figure()
-	  fig.clf()
-	  
-	  if self.show_colorbar == 0:
-	      fig.add_axes([0.15, 0.15, 0.8, 0.8])
-	      axes = fig.gca()
-	  else:
-	      axes = fig.gca()
-	      divider = make_axes_locatable(axes)
-	      axcb = divider.new_horizontal(size="3%", pad=0.03)  
-	      fig.add_axes(axcb)
-	      axes.set_position([0.15, 0.15, 0.8, 0.8]) 	# <-- Is this necessary?
+        fig = self.ODPanel.get_figure()
+        fig.clf()
+        
+        if self.show_colorbar == 0:
+            fig.add_axes([0.15, 0.15, 0.8, 0.8])
+            axes = fig.gca()
+        else:
+            axes = fig.gca()
+            divider = make_axes_locatable(axes)
+            axcb = divider.new_horizontal(size="3%", pad=0.03)  
+            fig.add_axes(axcb)
+            axes.set_position([0.15, 0.15, 0.8, 0.8]) 	# <-- Is this necessary?
+        
+        fig.patch.set_alpha(1.0) 	# set figure transparency
+        
+        self.defaultdisplay = 0
+        self.colortable = "gray"
+        if self.defaultdisplay == 1.0:
+            im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable)) 
+        else:
+            imgmax = npy.amax(image)
+            imgmin = npy.amin(image)
+            if (imgmin < 0.0):
+                image = (image-imgmin)/(imgmax-imgmin)
+                imgmax = 1.0
+                imgmin = 0.0
+            self.brightness_min = 0.0
+            self.brightness_max = 1.0
+            im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable), vmin=(imgmin+imgmax*self.brightness_min),vmax=imgmax*self.brightness_max)
+        
+        if self.show_colorbar == 1:
+            cbar = axes.figure.colorbar(im, orientation='vertical', cax=axcb) 
+        
+        if self.show_scale_bar == 1:
+            startx = int(self.stk.n_rows*0.05)
+            starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
+            um_string = '$\mu m$'
+            microns = '$'+self.stk.scale_bar_string+' $'+um_string
+            axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center', color='black', fontsize=14)
+            #Matplotlib has flipped scales so I'm using rows instead of cols!
+            p = mtplot.patches.Rectangle((startx,starty), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y, color = 'black', fill = True)
+            axes.add_patch(p)
+        
+        self.ODPanel.draw()
+        
+        #self.tc_imageeng.SetValue("Image at energy: {0:5.2f} eV".format(float(self.stk.ev[self.iev])))
+ 
+#----------------------------------------------------------------------
+    def loadODReconImage(self):
 
-	  fig.patch.set_alpha(1.0) 	# set figure transparency
-	  
-	  self.defaultdisplay = 0
-	  self.colortable = "gray"
-	  if self.defaultdisplay == 1.0:
-	      im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable)) 
-	  else:
-	      imgmax = npy.amax(image)
-	      imgmin = npy.amin(image)
-	      if (imgmin < 0.0):
-		  image = (image-imgmin)/(imgmax-imgmin)
-		  imgmax = 1.0
-		  imgmin = 0.0
-	      self.brightness_min = 0.0
-	      self.brightness_max = 1.0
-	      im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable), vmin=(imgmin+imgmax*self.brightness_min),vmax=imgmax*self.brightness_max)
+        self.show_colorbar = 1
+        self.show_scale_bar = 0
+        
+        image = self.nnma.ODRecon[self.iev, :, :] 	# <--- C-style row/col major issue: transpose()?
 
-	  if self.show_colorbar == 1:
-	      cbar = axes.figure.colorbar(im, orientation='vertical', cax=axcb) 
-	  
-	  if self.show_scale_bar == 1:
-	      startx = int(self.stk.n_rows*0.05)
-	      starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
-	      um_string = '$\mu m$'
-	      microns = '$'+self.stk.scale_bar_string+' $'+um_string
-	      axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center', color='black', fontsize=14)
-	      #Matplotlib has flipped scales so I'm using rows instead of cols!
-	      p = mtplot.patches.Rectangle((startx,starty), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y, color = 'black', fill = True)
-	      axes.add_patch(p)
-	  
-	  self.ODPanel.draw()
-	  
-	  #self.tc_imageeng.SetValue("Image at energy: {0:5.2f} eV".format(float(self.stk.ev[self.iev])))
-	  
-    #----------------------------------------------------------------------
-	def loadODReconImage(self):
+        fig = self.ODReconPanel.get_figure()
+        fig.clf()
+        
+        if self.show_colorbar == 0:
+            fig.add_axes([0.15, 0.15, 0.8, 0.8])
+            axes = fig.gca()
+        else:
+            axes = fig.gca()
+            divider = make_axes_locatable(axes)
+            axcb = divider.new_horizontal(size="3%", pad=0.03)  
+            fig.add_axes(axcb)
+            axes.set_position([0.15, 0.15, 0.8, 0.8])
+        
+        fig.patch.set_alpha(1.0) 	# set figure transparency
+        
+        self.defaultdisplay = 0
+        self.colortable = "gray"
+        if self.defaultdisplay == 1.0:
+            im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable)) 
+        else:
+            imgmax = npy.amax(image)
+            imgmin = npy.amin(image)
+            if (imgmin < 0.0):
+                image = (image-imgmin)/(imgmax-imgmin)
+                imgmax = 1.0
+                imgmin = 0.0
+            self.brightness_min = 0.0
+            self.brightness_max = 1.0
+            im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable), vmin=(imgmin+imgmax*self.brightness_min),vmax=imgmax*self.brightness_max)
+        
+        if self.show_colorbar == 1:
+            cbar = axes.figure.colorbar(im, orientation='vertical', cax=axcb) 
+        
+        if self.show_scale_bar == 1:
+            startx = int(self.stk.n_rows*0.05)
+            starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
+            um_string = '$\mu m$'
+            microns = '$'+self.stk.scale_bar_string+' $'+um_string
+            axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center', color='black', fontsize=14)
+            #Matplotlib has flipped scales so I'm using rows instead of cols!
+            p = mtplot.patches.Rectangle((startx,starty), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y, color = 'black', fill = True)
+            axes.add_patch(p)
+        
+        self.ODReconPanel.draw()
+        
+        #self.tc_imageeng.SetValue("Image at energy: {0:5.2f} eV".format(float(self.stk.ev[self.iev])))
 
-	  self.show_colorbar = 1
-	  self.show_scale_bar = 0
+#----------------------------------------------------------------------
+    def loadODErrorImage(self):
 
-	  image = self.nnma.ODRecon[self.iev, :, :] 	# <--- C-style row/col major issue: transpose()?
-			
-	  fig = self.ODReconPanel.get_figure()
-	  fig.clf()
-	  
-	  if self.show_colorbar == 0:
-	      fig.add_axes([0.15, 0.15, 0.8, 0.8])
-	      axes = fig.gca()
-	  else:
-	      axes = fig.gca()
-	      divider = make_axes_locatable(axes)
-	      axcb = divider.new_horizontal(size="3%", pad=0.03)  
-	      fig.add_axes(axcb)
-	      axes.set_position([0.15, 0.15, 0.8, 0.8])
+        self.show_colorbar = 1
+        self.show_scale_bar = 0
+        
+        image = self.nnma.ODError[self.iev, :, :] 
 
-	  fig.patch.set_alpha(1.0) 	# set figure transparency
-	  
-	  self.defaultdisplay = 0
-	  self.colortable = "gray"
-	  if self.defaultdisplay == 1.0:
-	      im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable)) 
-	  else:
-	      imgmax = npy.amax(image)
-	      imgmin = npy.amin(image)
-	      if (imgmin < 0.0):
-		  image = (image-imgmin)/(imgmax-imgmin)
-		  imgmax = 1.0
-		  imgmin = 0.0
-	      self.brightness_min = 0.0
-	      self.brightness_max = 1.0
-	      im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable), vmin=(imgmin+imgmax*self.brightness_min),vmax=imgmax*self.brightness_max)
-
-	  if self.show_colorbar == 1:
-	      cbar = axes.figure.colorbar(im, orientation='vertical', cax=axcb) 
-	  
-	  if self.show_scale_bar == 1:
-	      startx = int(self.stk.n_rows*0.05)
-	      starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
-	      um_string = '$\mu m$'
-	      microns = '$'+self.stk.scale_bar_string+' $'+um_string
-	      axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center', color='black', fontsize=14)
-	      #Matplotlib has flipped scales so I'm using rows instead of cols!
-	      p = mtplot.patches.Rectangle((startx,starty), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y, color = 'black', fill = True)
-	      axes.add_patch(p)
-	  
-	  self.ODReconPanel.draw()
-	  
-	  #self.tc_imageeng.SetValue("Image at energy: {0:5.2f} eV".format(float(self.stk.ev[self.iev])))
-	  
-    #----------------------------------------------------------------------
-	def loadODErrorImage(self):
-
-	  self.show_colorbar = 1
-	  self.show_scale_bar = 0
-
-	  image = self.nnma.ODError[self.iev, :, :] 
-			
-	  fig = self.ODErrorPanel.get_figure()
-	  fig.clf()
-	  
-	  if self.show_colorbar == 0:
-	      fig.add_axes([0.15, 0.15, 0.8, 0.8])
-	      axes = fig.gca()
-	  else:
-	      axes = fig.gca()
-	      divider = make_axes_locatable(axes)
-	      axcb = divider.new_horizontal(size="3%", pad=0.03)  
-	      fig.add_axes(axcb)
-	      axes.set_position([0.15, 0.15, 0.8, 0.8])
-
-	  fig.patch.set_alpha(1.0) 	# set figure transparency
-	  
-	  self.defaultdisplay = 0
-	  self.colortable = "gray"
-	  if self.defaultdisplay == 1.0:
-	      im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable)) 
-	  else:
-	      imgmax = npy.amax(image)
-	      imgmin = npy.amin(image)
-	      if (imgmin < 0.0):
-		  image = (image-imgmin)/(imgmax-imgmin)
-		  imgmax = 1.0
-		  imgmin = 0.0
-	      self.brightness_min = 0.0
-	      self.brightness_max = 1.0
-	      im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable), vmin=(imgmin+imgmax*self.brightness_min),vmax=imgmax*self.brightness_max)
-
-	  if self.show_colorbar == 1:
-	      cbar = axes.figure.colorbar(im, orientation='vertical', cax=axcb) 
-	  
-	  if self.show_scale_bar == 1:
-	      startx = int(self.stk.n_rows*0.05)
-	      starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
-	      um_string = '$\mu m$'
-	      microns = '$'+self.stk.scale_bar_string+' $'+um_string
-	      axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center', color='black', fontsize=14)
-	      #Matplotlib has flipped scales so I'm using rows instead of cols!
-	      p = mtplot.patches.Rectangle((startx,starty), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y, color = 'black', fill = True)
-	      axes.add_patch(p)
-	  
-	  self.ODErrorPanel.draw()
-	  
-	  #self.tc_imageeng.SetValue("Image at energy: {0:5.2f} eV".format(float(self.stk.ev[self.iev])))
+        fig = self.ODErrorPanel.get_figure()
+        fig.clf()
+        
+        if self.show_colorbar == 0:
+            fig.add_axes([0.15, 0.15, 0.8, 0.8])
+            axes = fig.gca()
+        else:
+            axes = fig.gca()
+            divider = make_axes_locatable(axes)
+            axcb = divider.new_horizontal(size="3%", pad=0.03)  
+            fig.add_axes(axcb)
+            axes.set_position([0.15, 0.15, 0.8, 0.8])
+        
+        fig.patch.set_alpha(1.0) 	# set figure transparency
+        
+        self.defaultdisplay = 0
+        self.colortable = "gray"
+        if self.defaultdisplay == 1.0:
+            im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable)) 
+        else:
+            imgmax = npy.amax(image)
+            imgmin = npy.amin(image)
+            if (imgmin < 0.0):
+                image = (image-imgmin)/(imgmax-imgmin)
+                imgmax = 1.0
+                imgmin = 0.0
+            self.brightness_min = 0.0
+            self.brightness_max = 1.0
+            im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable), vmin=(imgmin+imgmax*self.brightness_min),vmax=imgmax*self.brightness_max)
+        
+        if self.show_colorbar == 1:
+            cbar = axes.figure.colorbar(im, orientation='vertical', cax=axcb) 
+        
+        if self.show_scale_bar == 1:
+            startx = int(self.stk.n_rows*0.05)
+            starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
+            um_string = '$\mu m$'
+            microns = '$'+self.stk.scale_bar_string+' $'+um_string
+            axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center', color='black', fontsize=14)
+            #Matplotlib has flipped scales so I'm using rows instead of cols!
+            p = mtplot.patches.Rectangle((startx,starty), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y, color = 'black', fill = True)
+            axes.add_patch(p)
+        
+        self.ODErrorPanel.draw()
+        
+        #self.tc_imageeng.SetValue("Image at energy: {0:5.2f} eV".format(float(self.stk.ev[self.iev])))
 
 
 # ------------------------------------------------------------------------------------------------
@@ -468,184 +468,184 @@ class PageNNMAOptDensity(PageNNMA):
 # ------------------------------------------------------------------------------------------------
 class PageNNMASpectra(PageNNMA):
 
-        def __init__(self, parent, common, data_struct, stack, nnma):
+    def __init__(self, parent, common, data_struct, stack, nnma):
 
-            #wx.Panel.__init__(self, parent)
-            PageNNMA.__init__(self, parent, common, data_struct, stack, nnma)
+        #wx.Panel.__init__(self, parent)
+        PageNNMA.__init__(self, parent, common, data_struct, stack, nnma)
             
-	    self.data_struct = data_struct
-	    self.stk = stack
-	    self.com = common
-	    self.nnma = nnma
-	    self.kNNMA = self.nnma.kNNMA	# number of chemical components to look for in NNMA
-	    self.fontsize = self.com.fontsize        
-	    self.iev = 0
+        self.data_struct = data_struct
+        self.stk = stack
+        self.com = common
+        self.nnma = nnma
+        self.kNNMA = self.nnma.kNNMA	# number of chemical components to look for in NNMA
+        self.fontsize = self.com.fontsize        
+        self.iev = 0 
 
-            # Panel 2: Display results for reconstructed absorption spectra
-            panel2 = wx.Panel(self, -1)
-            sizer21 = wx.StaticBoxSizer(wx.StaticBox(panel2, -1, 'Absorption spectra'), wx.VERTICAL)
+        # Panel 2: Display results for reconstructed absorption spectra
+        panel2 = wx.Panel(self, -1)
+        sizer21 = wx.StaticBoxSizer(wx.StaticBox(panel2, -1, 'Absorption spectra'), wx.VERTICAL)
 
-            vbox21 = wx.BoxSizer(wx.VERTICAL)
-            scaleFactorW = 0.9
-            scaleFactorH = 0.8
-            self.NNMASpectraImagePanel = wxmpl.PlotPanel(panel2, -1, size=(PlotW*scaleFactorW, PlotH*scaleFactorH), cursor=False, crosshairs=False, location=False, zoom=False)
-            wxmpl.EVT_POINT(panel2, self.NNMASpectraImagePanel.GetId(), self.onPointNNMASpectraImage)
-            vbox21.Add(self.NNMASpectraImagePanel, 0, wx.TOP)
-            sizer21.Add(vbox21)
+        vbox21 = wx.BoxSizer(wx.VERTICAL)
+        scaleFactorW = 0.9
+        scaleFactorH = 0.8
+        self.NNMASpectraImagePanel = wxmpl.PlotPanel(panel2, -1, size=(PlotW*scaleFactorW, PlotH*scaleFactorH), cursor=False, crosshairs=False, location=False, zoom=False)
+        wxmpl.EVT_POINT(panel2, self.NNMASpectraImagePanel.GetId(), self.onPointNNMASpectraImage)
+        vbox21.Add(self.NNMASpectraImagePanel, 0, wx.TOP)
+        sizer21.Add(vbox21)
 
-            vbox22 = wx.BoxSizer(wx.VERTICAL)
-            scaleFactorW = 0.9
-            scaleFactorH = 0.8
-            self.NNMASpectraPanel = wxmpl.PlotPanel(panel2, -1, size=(PlotW*scaleFactorW, PlotH*scaleFactorH), cursor=False, crosshairs=False, location=False, zoom=False)
-            vbox22.Add(self.NNMASpectraPanel, 0, wx.TOP)
-            vbox22.Add((0, 10))
-            sizer21.Add(vbox22)
+        vbox22 = wx.BoxSizer(wx.VERTICAL)
+        scaleFactorW = 0.9
+        scaleFactorH = 0.8
+        self.NNMASpectraPanel = wxmpl.PlotPanel(panel2, -1, size=(PlotW*scaleFactorW, PlotH*scaleFactorH), cursor=False, crosshairs=False, location=False, zoom=False)
+        vbox22.Add(self.NNMASpectraPanel, 0, wx.TOP)
+        vbox22.Add((0, 10))
+        sizer21.Add(vbox22)
 
-	    # Button to display NNMA spectra
-	    self.button_showNNMASpectra = wx.Button(panel2, -1, 'Show spectra', (10, 10))
-	    self.button_showNNMASpectra.SetFont(self.com.font)
-	    self.Bind(wx.EVT_BUTTON, self.onShowNNMASpectra, id=self.button_showNNMASpectra.GetId())
-	    #self.button_calcNNMA.Disable()
-	    sizer21.Add(self.button_showNNMASpectra, 0, wx.EXPAND)
+        # Button to display NNMA spectra
+        self.button_showNNMASpectra = wx.Button(panel2, -1, 'Show spectra', (10, 10))
+        self.button_showNNMASpectra.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.onShowNNMASpectra, id=self.button_showNNMASpectra.GetId())
+        #self.button_calcNNMA.Disable()
+        sizer21.Add(self.button_showNNMASpectra, 0, wx.EXPAND)
+        
+        # Button to clear displayed NNMA spectra
+        self.button_clearNNMASpectra = wx.Button(panel2, -1, 'Clear spectra', (10, 10))
+        self.button_clearNNMASpectra.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.onClearNNMASpectra, id=self.button_clearNNMASpectra.GetId())
+        #self.button_calcNNMA.Disable()
+        sizer21.Add(self.button_clearNNMASpectra, 0, wx.EXPAND)
+        
+        panel2.SetSizer(sizer21)
+        
+        vboxtop = wx.BoxSizer(wx.VERTICAL)
+        gridtop = wx.FlexGridSizer(1, 0, vgap=10, hgap=20)
+        gridtop.Add(panel2, 0)
+        vboxtop.Add((0, 10))
+        vboxtop.Add(gridtop, 0, wx.LEFT, 20)
+        self.SetSizer(gridtop) 
 
-	    # Button to clear displayed NNMA spectra
-	    self.button_clearNNMASpectra = wx.Button(panel2, -1, 'Clear spectra', (10, 10))
-	    self.button_clearNNMASpectra.SetFont(self.com.font)
-	    self.Bind(wx.EVT_BUTTON, self.onClearNNMASpectra, id=self.button_clearNNMASpectra.GetId())
-	    #self.button_calcNNMA.Disable()
-	    sizer21.Add(self.button_clearNNMASpectra, 0, wx.EXPAND)
 
-            panel2.SetSizer(sizer21)
+#----------------------------------------------------------------------
+    def onShowNNMASpectra(self, event):
 
-	    vboxtop = wx.BoxSizer(wx.VERTICAL)
-	    gridtop = wx.FlexGridSizer(1, 0, vgap=10, hgap=20)
-	    gridtop.Add(panel2, 0)
-	    vboxtop.Add((0, 10))
-	    vboxtop.Add(gridtop, 0, wx.LEFT, 20)
-	    self.SetSizer(gridtop) 
-
-
-    #----------------------------------------------------------------------
-	def onShowNNMASpectra(self, event):
-
-	  wx.BeginBusyCursor()
-         
-          try:
+        wx.BeginBusyCursor()
+        
+        try:
             if PageNNMA.calcnnma == True:	# if NNMA already calculated, then just load the spectra
-              print("PageNNMA.calcnnma == True")
-              self.loadNNMASpectraImage()
-              wx.EndBusyCursor()
-          except:
+                if verbose: print("PageNNMA.calcnnma == True")
+                self.loadNNMASpectraImage()
+                wx.EndBusyCursor()
+        except:
             try:
-	      PageNNMA.calcnnma = False
-	      self.calcNNMA()
-              print("Successfully calculated self.calcNNMA()")
-	      PageNNMA.calcnnma = True
-	      self.loadNNMASpectraImage()
-	      wx.EndBusyCursor()
+                PageNNMA.calcnnma = False
+                self.calcNNMA()
+                if verbose: print("Successfully calculated self.calcNNMA()")
+                PageNNMA.calcnnma = True
+                self.loadNNMASpectraImage()
+                wx.EndBusyCursor()
             except:
-              wx.EndBusyCursor()
-              wx.MessageBox("NNMA not calculated.")
-            
-	  #wx.GetApp().TopWindow.refresh_widgets() 	# <-- Is this necessary??
+                wx.EndBusyCursor()
+                wx.MessageBox("NNMA not calculated.")
+          
+        #wx.GetApp().TopWindow.refresh_widgets() 	# <-- Is this necessary??
 
-    #----------------------------------------------------------------------
-	def calcNNMA(self):
-	 
-	  self.kNNMA = self.nnma.kNNMA
-	  self.algoNNMA = self.nnma.algoNNMA
-          try:
+#----------------------------------------------------------------------
+    def calcNNMA(self):
+
+        self.kNNMA = self.nnma.kNNMA
+        self.algoNNMA = self.nnma.algoNNMA
+        try:
             self.nnma.maxIters = int(self.itersCtrl.GetValue())
-          except:
+        except:
             wx.MessageBox("Please enter valid number of iterations.")
-	  self.nnma.calcNNMA(self.algoNNMA, kComponents=self.kNNMA)
+        self.nnma.calcNNMA(self.algoNNMA, kComponents=self.kNNMA)
 
-    #----------------------------------------------------------------------
-        def onPointNNMASpectraImage(self, evt):
-          print("Inside onPointNNMASpectraImage()")
-          x = evt.xdata
-          y = evt.ydata
-          print("x = ", x)
-          print("y = ", y)
-          energyIndex = npy.floor(x)
-          muIndex = npy.floor(y)
-          print("energyIndex = ", energyIndex)
-          print("muIndex = ", muIndex)
-          if self.calcnnma == True:
+#----------------------------------------------------------------------
+    def onPointNNMASpectraImage(self, evt):
+        if verbose: print("Inside onPointNNMASpectraImage()")
+        x = evt.xdata
+        y = evt.ydata
+        if verbose: print("x = ", x)
+        if verbose: print("y = ", y)
+        energyIndex = npy.floor(x)
+        muIndex = npy.floor(y)
+        if verbose: print("energyIndex = ", energyIndex)
+        if verbose: print("muIndex = ", muIndex)
+        if self.calcnnma == True:
             self.loadNNMASpectra(muIndex)
 
-    #----------------------------------------------------------------------
-	def loadNNMASpectraImage(self):
+#----------------------------------------------------------------------
+    def loadNNMASpectraImage(self):
           
-          self.defaultdisplay = 1.0
-          self.show_colorbar = 1
-          self.show_scale_bar = 0
-          self.colortable = 'gist_rainbow'
+        self.defaultdisplay = 1.0
+        self.show_colorbar = 1
+        self.show_scale_bar = 0
+        self.colortable = 'gist_rainbow'
  
-	  if self.defaultdisplay == 1.0:
+        if self.defaultdisplay == 1.0:
             image = self.nnma.mu.T		# pointer to data (not a copy); transposed so (normalized) energy is along horizontal axis
-	  else:   
-	      # Adjustment to the data display setting has been made so make a copy
-	    image = self.nnma.mu.T.copy()
-		  
-	  fig = self.NNMASpectraImagePanel.get_figure()
-	  fig.clf()
-	
-	  if self.show_colorbar == 0:
-	    fig.add_axes((0.15, 0.15, 0.75, 0.75))
-	    axes = fig.gca()
-	  else:
-	    axes = fig.gca()
-	    divider = make_axes_locatable(axes)
-	    axcb = divider.new_horizontal(size="3%", pad=0.03)  
-	    fig.add_axes(axcb)
-	    axes.set_position([0.15, 0.15, 0.75, 0.75])
-	  
-          axes.set_xlabel("Energy index")
-          axes.set_ylabel("NNMA component number") 
-	  fig.patch.set_alpha(1.0)
-	 
-          maxEnergyIndex = self.stk.n_ev
-          maxMuIndex = self.nnma.kNNMA 
-	  if self.defaultdisplay == 1.0:
-	    im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable), interpolation='nearest', extent=[0, maxEnergyIndex, maxMuIndex, 0], aspect='auto')
-	  else:
-	    imgmax = npy.amax(image)
-	    imgmin = npy.amin(image)
-	    image = (image-imgmin)/(imgmax-imgmin)
-	    imgmax = 1.0
-	    imgmin = 0.0
+        else:   
+            # Adjustment to the data display setting has been made so make a copy
+            image = self.nnma.mu.T.copy()
+
+        fig = self.NNMASpectraImagePanel.get_figure()
+        fig.clf()
+
+        if self.show_colorbar == 0:
+            fig.add_axes((0.15, 0.15, 0.75, 0.75))
+            axes = fig.gca()
+        else:
+            axes = fig.gca()
+            divider = make_axes_locatable(axes)
+            axcb = divider.new_horizontal(size="3%", pad=0.03)  
+            fig.add_axes(axcb)
+            axes.set_position([0.15, 0.15, 0.75, 0.75])
+
+        axes.set_xlabel("Energy index")
+        axes.set_ylabel("NNMA component number") 
+        fig.patch.set_alpha(1.0)
+
+        maxEnergyIndex = self.stk.n_ev
+        maxMuIndex = self.nnma.kNNMA 
+        if self.defaultdisplay == 1.0:
+            im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable), interpolation='nearest', extent=[0, maxEnergyIndex, maxMuIndex, 0], aspect='auto')
+        else:
+            imgmax = npy.amax(image)
+            imgmin = npy.amin(image)
+            image = (image-imgmin)/(imgmax-imgmin)
+            imgmax = 1.0
+            imgmin = 0.0
             self.brightness_min = 0.0
             self.brightness_max = 1.0
-	    im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable), 
-            	 vmin=(imgmin+imgmax*self.brightness_min),vmax=imgmax*self.brightness_max, interpolation='nearest', extent=[0, maxEnergyIndex, maxMuIndex, 0], aspect='auto')
-	      
-          if self.show_colorbar == 1:
-	    cbar = axes.figure.colorbar(im, orientation='vertical', cax=axcb) 
+            im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable), 
+                	 vmin=(imgmin+imgmax*self.brightness_min),vmax=imgmax*self.brightness_max, interpolation='nearest', extent=[0, maxEnergyIndex, maxMuIndex, 0], aspect='auto')
+              
+        if self.show_colorbar == 1:
+            cbar = axes.figure.colorbar(im, orientation='vertical', cax=axcb) 
 
-	  self.NNMASpectraImagePanel.draw()
+        self.NNMASpectraImagePanel.draw()
 
-          print("Done loadNNMASpectraImage()")
+        if verbose: print("Done loadNNMASpectraImage()")
   
-  #----------------------------------------------------------------------         
-        def loadNNMASpectra(self, muIndex):
+#----------------------------------------------------------------------         
+    def loadNNMASpectra(self, muIndex):
 
-          fig = self.NNMASpectraPanel.get_figure()
-          axes = fig.add_axes([0.15, 0.15, 0.75, 0.75])
-          axes.plot(self.stk.ev, self.nnma.mu[:, muIndex])
-          axes.set_xlabel("Energy (eV)")
-          axes.set_ylabel("Absorption")
-	  self.NNMASpectraPanel.draw()
+        fig = self.NNMASpectraPanel.get_figure()
+        axes = fig.add_axes([0.15, 0.15, 0.75, 0.75])
+        axes.plot(self.stk.ev, self.nnma.mu[:, muIndex])
+        axes.set_xlabel("Energy (eV)")
+        axes.set_ylabel("Absorption")
+        self.NNMASpectraPanel.draw()
 
-  #----------------------------------------------------------------------         
-        def onClearNNMASpectra(self, evt):
+#----------------------------------------------------------------------         
+    def onClearNNMASpectra(self, evt):
 
-          fig = self.NNMASpectraPanel.get_figure()
-          axes = fig.gca()
-          axes.cla()
-          self.NNMASpectraPanel.draw()
+        fig = self.NNMASpectraPanel.get_figure()
+        axes = fig.gca()
+        axes.cla()
+        self.NNMASpectraPanel.draw()
 
-  #----------------------------------------------------------------------         
+       
  
 
 # ------------------------------------------------------------------------------------------------
@@ -653,11 +653,12 @@ class PageNNMASpectra(PageNNMA):
 # ------------------------------------------------------------------------------------------------
 class PageNNMAThickness(PageNNMA):
 
-        def __init__(self, parent, common, data_struct, stack, nnma):
+    def __init__(self, parent, common, data_struct, stack, nnma):
 
-            #wx.Panel.__init__(self, parent)
-            PageNNMA.__init__(self, parent, common, data_struct, stack, nnma)
+        #wx.Panel.__init__(self, parent)
+        PageNNMA.__init__(self, parent, common, data_struct, stack, nnma)
         
+
 
 """ ------------------------------------------------------------------------------------------------"""
 class PageSpectral(wx.Panel):
@@ -4506,6 +4507,7 @@ class PageStack(wx.Panel):
                 self.loadImage()
                 self.slider_eng.SetValue(self.iev)
                 self.loadSpectrum(self.ix, self.iy)
+                
                 time.sleep(0.01)
                 
             self.iev = old_iev 
@@ -7261,11 +7263,6 @@ class MainFrame(wx.Frame):
         self.page2 = PagePCA(nb, self.common, self.data_struct, self.stk, self.anlz)
         self.page3 = PageCluster(nb, self.common, self.data_struct, self.stk, self.anlz)
         self.page4 = PageSpectral(nb, self.common, self.data_struct, self.stk, self.anlz)
-        self.page5Notebook = wx.Notebook(nb)    # page 5 is a wx.Notebook, with different pages for different NNMA analysis results
-	#self.page5 = PageNNMA(nb, self.common, self.data_struct, self.stk, self.nnma)
-        self.page5a = PageNNMAOptDensity(self.page5Notebook, self.common, self.data_struct, self.stk, self.nnma)
-        self.page5b = PageNNMASpectra(self.page5Notebook, self.common, self.data_struct, self.stk, self.nnma)
-        self.page5c = PageNNMAThickness(self.page5Notebook, self.common, self.data_struct, self.stk, self.nnma)
 
         # add the pages to the notebook with the label to show on the tab
         nb.AddPage(self.page0, "Load Data")
@@ -7276,12 +7273,18 @@ class MainFrame(wx.Frame):
         # Only add NNMA pages if option "--nnma" is given in command line
         options, extraParams = getopt.getopt(sys.argv[1:], '', 'nnma')
         for opt, arg in options:
-          if opt in '--nnma':
-            print "Running with NNMA."
-	    nb.AddPage(self.page5Notebook, "NNMA Analysis")
-      	    self.page5Notebook.AddPage(self.page5a, 'NNMA optical density')
-	    self.page5Notebook.AddPage(self.page5b, 'NNMA spectra')
-	    self.page5Notebook.AddPage(self.page5c, 'NNMA thickness maps')
+            if opt in '--nnma':
+                if verbose: print "Running with NNMA."
+                self.page5Notebook = wx.Notebook(nb)    # page 5 is a wx.Notebook, with different pages for different NNMA analysis results
+                #self.page5 = PageNNMA(nb, self.common, self.data_struct, self.stk, self.nnma)
+                self.page5a = PageNNMAOptDensity(self.page5Notebook, self.common, self.data_struct, self.stk, self.nnma)
+                self.page5b = PageNNMASpectra(self.page5Notebook, self.common, self.data_struct, self.stk, self.nnma)
+                self.page5c = PageNNMAThickness(self.page5Notebook, self.common, self.data_struct, self.stk, self.nnma)
+                nb.AddPage(self.page5Notebook, "NNMA Analysis")
+                self.page5Notebook.AddPage(self.page5a, 'NNMA optical density')
+                self.page5Notebook.AddPage(self.page5b, 'NNMA spectra')
+                self.page5Notebook.AddPage(self.page5c, 'NNMA thickness maps')
+
         
 
         # finally, put the notebook in a sizer for the panel to manage
