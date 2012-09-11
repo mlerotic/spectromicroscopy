@@ -79,8 +79,9 @@ class henke:
 
         z_array = []
         
+        
         if compound_string in self.compound_name:
-            compound_string = self.compound_forumula[self.compound_name.index[compound_string]]
+            compound_string = self.compound_forumula[self.compound_name.index(compound_string)] 
 
         if compound_string in self.compound_forumula: 
             z_array = self.zcompound(compound_string, z_array)
@@ -544,7 +545,7 @@ class henke:
         first_time = 1
         for i in range(maxz):
             if (z_array[i] != 0.):
-                energies, this_f1, this_f2, n_extra, extra_energies, extra_f1, extra_f2 = self.read(i_element=i)
+                energies, this_f1, this_f2, n_extra, extra_energies, extra_f1, extra_f2 = self.read(ielement=i)
             if (first_time == 1) :
                 f1 = z_array[i]*this_f1
                 f2 = z_array[i]*this_f2
@@ -573,11 +574,8 @@ class henke:
         beta = constant * f2
         # Alpha is in inverse meters squared
         alpha = 1.e4 * density * AVOGADRO * RE / (2.*np.math.pi*atwt)
-        alpha = alpha[0]
+        #alpha = alpha[0]
 
-        if (len(graze_mrad) == 0) :
-            graze_mrad=0.
-  
   
         if (graze_mrad == 0.):
             reflect=np.ones((num_energies))
@@ -603,11 +601,14 @@ class henke:
 
 
         denom = energies*4.*np.math.pi*beta
-        
+
         zeroes = np.where(denom == 0.)
-        nonzeroes = np.where(denom != 0.)           
+        nonzeroes = np.where(denom != 0.)  
+        denom[zeroes] = 1e-8     
+        
         inverse_mu = np.array((len(energies)))
-        inverse_mu[nonzeroes] = 1.239852/denom[nonzeroes]
+
+        inverse_mu = 1.239852/denom
         if (len(zeroes) > 0) :
             inverse_mu[zeroes] = np.inf
 
@@ -617,36 +618,26 @@ class henke:
 
 
 #-----------------------------------------------------------------------------    
-    def dose_calc(self, stack, i_composition, i_signal, i0_signal, dosecalc_detector_eff):    
+    def dose_calc(self, stack, i_composition, od_spectrum, i0_signal, dosecalc_detector_eff):    
     
         pix_nm_squared = 1.e6*(stack.x_dist[1]-stack.x_dist[0])*(stack.y_dist[1]-stack.y_dist[0])
 
         dose = 0.
-        
-        od_spectrum = - np.log(i_signal/i0_signal)
-        
-        #clean up the result
-        nan_indices = np.where(np.isfinite(od_spectrum) == False)
-        if nan_indices:
-            od_spectrum[nan_indices] = 0.
-            
-        neg_indices = np.where(od_spectrum < 0.)
-        if neg_indices:
-            od_spectrum[neg_indices] = 0.        
-
+             
 
         #rho doesn't matter here
         rho = 1.
         henke_energies, f1, f2, delta, beta, graze_mrad, reflect, inverse_mu, atwt, alpha = self.array(i_composition,rho) 
-        func_f2_array = scipy.interpolate.interp1d(f2,henke_energies, kind='cubic', bounds_error=False, fill_value=0.0) 
+
+        func_f2_array = scipy.interpolate.interp1d(henke_energies, f2, kind='cubic', bounds_error=False, fill_value=0.0) 
         f2_array = func_f2_array(stack.ev)
         
         # This is the scaling of f2_array as described in pca_gui_man.tex
         i_max_ev = np.argmax(stack.ev)
-        if stack.self.data_dwell == None: 
+        if stack.data_dwell == None: 
             stack.data_dwell = 1.
         if (od_spectrum[i_max_ev] != 0.) :
-            f2_array = f2_array[i_max_ev]*(stack.ev/stack.ev[i_max_ev])*(od_spectrum/od_spectrum[i_max_ev])
+            f2_array = f2_array[0,i_max_ev]*(stack.ev/stack.ev[i_max_ev])*(od_spectrum/od_spectrum[i_max_ev])
             # See the documentation file pca_gui_man.tex. Is i0_signal
             # normalized to 1 sec? Does not seem to be the case! Might
             # have to change it at some point.

@@ -36,7 +36,7 @@ import data_stack
 import analyze
 import logos
 import nnma
-
+import henke
 
 
 Winsizex = 1000
@@ -4056,12 +4056,12 @@ class PageStack(wx.Panel):
         
         vbox51.Add((0,1))
         
-#        self.button_ROIdosecalc = wx.Button(panel5, -1, 'ROI Dose Calculation...')
-#        self.button_ROIdosecalc.SetFont(self.com.font)
-#        self.Bind(wx.EVT_BUTTON, self.OnROI_DoseCalc, id=self.button_ROIdosecalc.GetId())   
-#        #self.button_ROIdosecalc.Disable()     
-#        vbox51.Add(self.button_ROIdosecalc, 0, wx.EXPAND)       
-#        vbox51.Add((0,1))        
+        self.button_ROIdosecalc = wx.Button(panel5, -1, 'ROI Dose Calculation...')
+        self.button_ROIdosecalc.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.OnROI_DoseCalc, id=self.button_ROIdosecalc.GetId())   
+        self.button_ROIdosecalc.Disable()     
+        vbox51.Add(self.button_ROIdosecalc, 0, wx.EXPAND)       
+        vbox51.Add((0,1))        
         
         self.button_spectralROI = wx.Button(panel5, -1, 'Spectral ROI...')
         self.button_spectralROI.SetFont(self.com.font)
@@ -4208,7 +4208,6 @@ class PageStack(wx.Panel):
         
         self.tc_spec.SetValue("Spectrum at pixel [" +str(ypos)+", " + str(xpos)+"] or position ["+
                               str(self.stk.x_dist[xpos])+", "+ str(self.stk.y_dist[ypos])+ "]")
-
 
         
 #----------------------------------------------------------------------            
@@ -4677,6 +4676,7 @@ class PageStack(wx.Panel):
         
         self.button_acceptROI.Disable()
         self.button_resetROI.Enable()
+        self.button_ROIdosecalc.Disable() 
         wx.GetApp().TopWindow.refresh_widgets()
 
         return
@@ -4747,6 +4747,7 @@ class PageStack(wx.Panel):
 
         self.button_saveROIspectr.Enable()
         self.button_setROII0.Enable()
+        self.button_ROIdosecalc.Enable() 
         wx.GetApp().TopWindow.refresh_widgets()
                 
         self.loadImage()
@@ -4766,6 +4767,7 @@ class PageStack(wx.Panel):
         self.button_setROII0.Disable()
         self.button_resetROI.Disable()
         self.button_saveROIspectr.Disable()
+        self.button_ROIdosecalc.Disable() 
         wx.GetApp().TopWindow.refresh_widgets()
         
         self.loadImage()
@@ -4814,7 +4816,10 @@ class PageStack(wx.Panel):
         
 #----------------------------------------------------------------------    
     def OnROI_DoseCalc(self, event):  
-        DoseCalculation(self.com, self.stk).Show()
+        
+        self.CalcROISpectrum()
+        
+        DoseCalculation(self.com, self.stk, self.ROIspectrum).Show()
         
         
 #----------------------------------------------------------------------    
@@ -6608,7 +6613,7 @@ class DoseCalculation(wx.Frame):
 
     title = "Dose Calculation"
 
-    def __init__(self, common, stack):
+    def __init__(self, common, stack, ROIspectrum):
         wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(415, 270))
                
         ico = logos.getlogo_2l_32Icon()
@@ -6618,6 +6623,7 @@ class DoseCalculation(wx.Frame):
         
         self.stack = stack
         self.com = common
+        self.ROIspectrum = ROIspectrum
                
         self.fontsize = self.com.fontsize
         
@@ -6625,8 +6631,9 @@ class DoseCalculation(wx.Frame):
         
         panel1 = wx.Panel(self, -1)
         
-        gridtop = wx.FlexGridSizer(4, 2, vgap=20, hgap=20)
-    
+        gridtop = wx.FlexGridSizer(3, 2, vgap=20, hgap=20)
+        #gridtop = wx.FlexGridSizer(4, 2, vgap=20, hgap=20)
+        
         fontb = wx.SystemSettings_GetFont(wx.SYS_DEFAULT_GUI_FONT)
         fontb.SetWeight(wx.BOLD)
         
@@ -6635,47 +6642,88 @@ class DoseCalculation(wx.Frame):
         st1.SetFont(fontb)
         st2 = wx.StaticText(panel1, -1, 'I region composition:',  style=wx.ALIGN_LEFT)
         st2.SetFont(fontb)
-        st3 = wx.StaticText(panel1, -1, 'Xray absorption length:',  style=wx.ALIGN_LEFT)
-        st3.SetFont(fontb)
+#        st3 = wx.StaticText(panel1, -1, 'Xray absorption length:',  style=wx.ALIGN_LEFT)
+#        st3.SetFont(fontb)
         st4 = wx.StaticText(panel1, -1, 'Dose [Gray]:',  style=wx.ALIGN_LEFT)
         st4.SetFont(fontb)
 
         
         self.tc_1 = wx.TextCtrl(panel1, -1, size=((200,-1)), style=wx.TE_RICH|wx.VSCROLL, 
-                                         value=' ')
+                                         value='30')
         
         self.tc_2 = wx.TextCtrl(panel1, -1, size=((200,-1)), style=wx.TE_RICH|wx.VSCROLL, 
-                                         value=' ')
+                                         value='')
         
-        self.tc_3 = wx.TextCtrl(panel1, -1, size=((200,-1)), style=wx.TE_RICH|wx.VSCROLL, 
-                                         value=' ')   
+#        self.tc_3 = wx.TextCtrl(panel1, -1, size=((200,-1)), style=wx.TE_RICH|wx.VSCROLL|wx.TE_READONLY, 
+#                                         value=' ')   
         
-        self.tc_4 = wx.TextCtrl(panel1, -1, size=((200,-1)), style=wx.TE_RICH|wx.VSCROLL, 
+        self.tc_4 = wx.TextCtrl(panel1, -1, size=((200,-1)), style=wx.TE_RICH|wx.VSCROLL|wx.TE_READONLY, 
                                          value=' ')
               
         gridtop.Add(st1, 0)
         gridtop.Add( self.tc_1, 0)
         gridtop.Add(st2, 0)
         gridtop.Add( self.tc_2, 0)
-        gridtop.Add(st3, 0)
-        gridtop.Add( self.tc_3, 0)
+#        gridtop.Add(st3, 0)
+#        gridtop.Add( self.tc_3, 0)
         gridtop.Add(st4, 0)        
         gridtop.Add( self.tc_4, 0)             
           
         panel1.SetSizer(gridtop)
 
-        
+        button_calcdose = wx.Button(self, -1, 'Calculate Dose')
+        self.Bind(wx.EVT_BUTTON, self.OnCalcDose, id=button_calcdose.GetId())
+                
         button_cancel = wx.Button(self, -1, 'Dismiss')
         self.Bind(wx.EVT_BUTTON, self.OnCancel, id=button_cancel.GetId())
 
 
         vboxtop.Add(panel1, 1, wx.LEFT| wx.RIGHT|wx.TOP|wx.EXPAND, 20)
-        vboxtop.Add(button_cancel, 0, wx.ALL | wx.EXPAND, 20) 
+        vboxtop.Add(button_calcdose, 0, wx.LEFT| wx.RIGHT | wx.EXPAND, 20) 
+        vboxtop.Add(button_cancel, 0, wx.LEFT| wx.RIGHT | wx.BOTTOM | wx.EXPAND, 20) 
         
         self.SetSizer(vboxtop)    
         
               
+#---------------------------------------------------------------------- 
+    def CalcDose(self):
+                      
+        
+        try:
+            detector_eff = 0.01*float(self.tc_1.GetValue())
+        except:
+            print 'Please enter numeric number for detector efficiency.'
+            return
+            
+        
+        i_composition = str(self.tc_2.GetValue())
+        
+        dose = 0.
+        
+        Chenke = henke.henke()
+        
+        #Check if composition array is recognizable
+        try:
+            z_array, atwt = Chenke.compound(i_composition,1.0)
+        except:
+            print 'Composition string error: Please re-enter composition string.'
+            return
+        
+        
+        dose = Chenke.dose_calc(self.stack, i_composition, self.ROIspectrum, self.stack.i0data, detector_eff)
+        
+        self.tc_4.SetValue(str(dose))
+        
+        return
+        
+        
+#---------------------------------------------------------------------- 
+    def OnCalcDose(self, evt):
 
+        wx.BeginBusyCursor()
+        self.CalcDose()
+        wx.EndBusyCursor()
+        
 #---------------------------------------------------------------------- 
     def OnCancel(self, evt):
 
