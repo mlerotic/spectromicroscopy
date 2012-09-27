@@ -175,10 +175,10 @@ class PageNNMAOptDensity(PageNNMA):
 	    sizer1.Add(self.button_calcNNMA, 0, wx.EXPAND)
 
 	    # Button for testing
-	    self.button_test = wx.Button(panel1, -1, 'Print test', (10, 10))
-	    self.button_test.SetFont(self.com.font)
-	    self.Bind(wx.EVT_BUTTON, self.OnTestButton, id=self.button_test.GetId())
-	    sizer1.Add(self.button_test, 0, wx.EXPAND)
+	    #self.button_test = wx.Button(panel1, -1, 'Print test', (10, 10))
+	    #self.button_test.SetFont(self.com.font)
+	    #self.Bind(wx.EVT_BUTTON, self.OnTestButton, id=self.button_test.GetId())
+	    #sizer1.Add(self.button_test, 0, wx.EXPAND)
 
 	    panel1.SetSizer(sizer1)
 
@@ -198,6 +198,11 @@ class PageNNMAOptDensity(PageNNMA):
             textOD.SetValue("Original")
             vbox21.Add(textOD, 0, wx.EXPAND)
             vbox21.Add(self.ODPanel, 0, wx.TOP)
+            # add slider for scrolling through the stack
+            self.sliderODEnergy = wx.Slider(panel2, -1, self.iev, 0, 100, style=wx.SL_LEFT)
+            self.sliderODEnergy.SetFocus()
+            self.Bind(wx.EVT_SCROLL, self.onScrollODEnergy, self.sliderODEnergy)
+
             vbox22 = wx.BoxSizer(wx.VERTICAL)
 	    self.ODReconPanel = wxmpl.PlotPanel(panel2, -1, size=(PlotW*scaleFactorW, PlotH*scaleFactorH), cursor=False, crosshairs=False, location=False, zoom=False)
             textODRecon = wx.TextCtrl(panel2, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
@@ -254,7 +259,7 @@ class PageNNMAOptDensity(PageNNMA):
 	  print("nnma.initMatrices = ", self.nnma.initMatrices)
 
     #----------------------------------------------------------------------
-	def onScrollEnergy(self, event):
+	def onScrollODEnergy(self, event):
 
 	  self.iev = event.GetInt()
 	  if self.com.stack_loaded == 1:
@@ -279,12 +284,10 @@ class PageNNMAOptDensity(PageNNMA):
 	def onCalcNNMA(self, event):
 
 	  wx.BeginBusyCursor()
-          PageNNMA.calcnnma = False
-	  #self.calcnnma = False		# boolean for whether NNMA has been calculated
+          PageNNMA.calcnnma = False		# boolean for whether NNMA has been calculated
 
 	  try:
 	    self.calcNNMA()
-	    #self.calcnnma = True
             PageNNMA.calcnnma = True
 	    self.loadODImage()
 	    self.loadODReconImage()
@@ -303,7 +306,8 @@ class PageNNMAOptDensity(PageNNMA):
 	  self.show_colorbar = 1
 	  self.show_scale_bar = 0
 
-	  image = self.nnma.OD[self.iev, :, :] 
+	  #image = self.nnma.OD[self.iev, :, :] 
+          image = self.stk.absdata[:,:,int(self.iev)].copy() 
 			
 	  fig = self.ODPanel.get_figure()
 	  fig.clf()
@@ -7245,11 +7249,10 @@ class MainFrame(wx.Frame):
         self.data_struct = data_struct.h5()
         self.stk = data_stack.data(self.data_struct)
         self.anlz = analyze.analyze(self.stk)
-        self.nnma = nnma.nnma(self.stk, self.data_struct, self.anlz)
         self.common = common()
+	self.nnma = nnma.nnma(self.stk, self.data_struct, self.anlz)
         
         self.SetFont(self.common.font)
-              
 
         # Here we create a panel and a notebook on the panel
         p = wx.Panel(self)
@@ -7276,10 +7279,9 @@ class MainFrame(wx.Frame):
         # Only add NNMA pages if option "--nnma" is given in command line
         options, extraParams = getopt.getopt(sys.argv[1:], '', 'nnma')
         for opt, arg in options:
-          if opt in '--nnma':
-            print "Running with NNMA."
+          if opt in "--nnma":
 	    nb.AddPage(self.page5Notebook, "NNMA Analysis")
-      	    self.page5Notebook.AddPage(self.page5a, 'NNMA optical density')
+	    self.page5Notebook.AddPage(self.page5a, 'NNMA optical density')
 	    self.page5Notebook.AddPage(self.page5b, 'NNMA spectra')
 	    self.page5Notebook.AddPage(self.page5c, 'NNMA thickness maps')
         
@@ -7441,6 +7443,8 @@ class MainFrame(wx.Frame):
             self.page1.loadImage()
             self.page1.loadSpectrum(self.ix, self.iy)
             self.page1.textctrl.SetValue(self.page1.filename)
+
+            self.page5a.loadODImage()	# load optical density image on NNMA page
             
             self.page0.ShowInfo(self.page1.filename, directory)
             
@@ -7630,8 +7634,7 @@ class MainFrame(wx.Frame):
             
 #----------------------------------------------------------------------        
     def new_stack_refresh(self):
-        
-        
+       
         self.common.i0_loaded = 0
         self.common.pca_calculated = 0
         self.common.cluster_calculated = 0
@@ -7709,8 +7712,16 @@ class MainFrame(wx.Frame):
         
         #page 4
         self.page4.ClearWidgets()
-        
-        
+       
+
+        # page 5a, 5b, 5c
+        figOD = self.page5a.ODPanel.getfigure()
+        figOD.clf()
+        figODRecon = self.page5a.ODRecon.getfigure()
+        figODRecon.clf()
+        self.page5a.ODPanel.draw()        
+        self.page5a.ODReconPanel.draw()
+
 #---------------------------------------------------------------------- 
 class StackListFrame(wx.Frame):
 

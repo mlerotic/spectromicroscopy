@@ -5,7 +5,7 @@ Created on Oct 14, 2011
 
 import numpy as np
 import scipy as sp
-import sys, time
+import os, sys, time
 from pylab import *
 import csv
 
@@ -107,7 +107,7 @@ class NNMATemplate():
     #print("t = ", t)
 
     # Plot convergence of mu spectra
-    figure(4)
+    figure()
     for k in range(kNNMA):
       subplot(kNNMA+1, 1, k+1)
       imshow(muAllIterations[k, :, :], cmap=cm.gist_rainbow)
@@ -115,15 +115,16 @@ class NNMATemplate():
     plot(arange(0, maxCount, 1), costFunction[:, 0], 'b')
     xlabel('Iteration number')
     ylabel('Cost function |D - D\'|')
-    np.savetxt("costFunction.txt", costFunction)
+    costFnOutputFile = outputDir + "costFunction.txt"
+    np.savetxt(costFnOutputFile, costFunction)
 
-    # Calculate and plot power spectra for mu (to quantify how smooth the mu's are)
-    figure(5)
-    muPower = np.zeros([nEnergies, kNNMA])
-    for k in range(kNNMA):
-      muPower[:,k] = np.power(np.abs(sp.fft(mu[:,k])), 2)	# need normalization?  Divide by nEnergies?
-      subplot(kNNMA, 1, k)
-      plot(muPower[:,k], 'r')
+    ## Calculate and plot power spectra for mu (to quantify how smooth the mu's are)
+    #figure(5)
+    #muPower = np.zeros([nEnergies, kNNMA])
+    #for k in range(kNNMA):
+    #  muPower[:,k] = np.power(np.abs(sp.fft(mu[:,k])), 2)	# need normalization?  Divide by nEnergies?
+    #  subplot(kNNMA, 1, k)
+    #  plot(muPower[:,k], 'r')
     
     DRecon = np.dot(mu, t)
 
@@ -135,7 +136,8 @@ class NNMATemplate():
     #tWriter = csv.writer(open(dir + 't.csv', 'wb'), delimiter=',')
     #  tWriter.writerow(t[row,:])
 
-    np.savetxt('mu.txt', mu) 
+    muOutputFile = outputDir + "mu.txt"
+    np.savetxt(muOutputFile, mu) 
 
     print("End of NNMATemplate.__call__()")
     return mu, t, DRecon
@@ -159,7 +161,7 @@ class factorizedNNMA(NNMATemplate):
 
   # save mu reconstruction at each iteration so we can compile it into a movie
   def saveMuImage(self, energies, muRecon, count):
-    print("In saveMuImage()")
+    #print("In saveMuImage()")
     kComp = muRecon.shape[1]
 
     for k in range(kComp):
@@ -167,7 +169,7 @@ class factorizedNNMA(NNMATemplate):
       xlabel('Energy (eV)')
       ylabel(r'$\mu$' + str(k + 1))
       fileName = "mu" + str(k + 1) + "_" + ("%04d.png" % count)
-      savefig("/home/rmak/scratch/movieImages/" + fileName)
+      savefig("./" + fileName)
       clf()
 
 
@@ -191,6 +193,13 @@ class nnma(factorizedNNMA):
     self.NNMASparse = factorizedNNMA(self.muMultUpdate, self.tSparseUpdate, self.frobDist)
     #self.NNMASparse.stepsizeT = 0.1
     #print("self.NNMASparse.stepsizeT = ", self.NNMASparse.stepsizeT)
+
+    #outputDirPath = raw_input("Enter full path for output directory (without final forward slash): ")
+    outputDirPath = "/Users/rachel/Documents/xRays/programming/python/pythonTest/testNNMA/scratch"
+    self.outputDir = outputDirPath + "/output/"
+    if not os.path.exists(self.outputDir):
+      print("Making output directory")
+      os.mkdir(self.outputDir)
 
 #----------------------------------------------------------------------
 # Some functions for use in NNMA algorithms   
@@ -406,24 +415,20 @@ class nnma(factorizedNNMA):
     print("tNorm last row = ", tNorm)
 
     self.ODRecon = DRecon.reshape(self.nEnergies, self.nRows, self.nCols)
-    figure(0) 
-    image = self.ODRecon[0, :, :]
-    imshow(image)
 
     DError = np.abs(DRecon - D) / (D + 1e-9) * 100
-    np.savetxt("D.txt", D)
-    np.savetxt("DRecon.txt", DRecon)
+    DOutputFile = self.outputDir + "D.txt"
+    np.savetxt(DOutputFile, D)
+    DReconOutputFile = self.outputDir + "DRecon.txt"
+    np.savetxt(DReconOutputFile, DRecon)
     #np.savetxt("DError.txt", DError)
-    np.savetxt("energies.txt", self.energies)
     self.ODError = DError.reshape(self.nEnergies, self.nRows, self.nCols)
     image = self.ODError[0, :, :]
-    figure(1)
-    imshow(image)
 
-    mu0 = self.mu[:, 0]
-    figure(2)
-    plot(self.energies, self.mu, 'b')
-    show()
+    ## Plot all mu spectra at once
+    #figure(2)
+    #plot(self.energies, self.mu, 'b')
+    #show()
 
     muImage = self.mu.T		# transpose mu matrix so that energy is displayed on x axis
     figure(3)
