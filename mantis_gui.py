@@ -45,7 +45,7 @@ Winsizey = 740
 PlotH = 3.46
 PlotW = PlotH*1.61803
 
-verbose = False
+verbose = True
 
 #----------------------------------------------------------------------
 class common:
@@ -63,6 +63,221 @@ class common:
 
         self.font = wx.SystemSettings_GetFont(wx.SYS_DEFAULT_GUI_FONT)
 
+
+
+""" ------------------------------------------------------------------------------------------------"""
+class PageICA(wx.Panel):
+    def __init__(self, parent, common, data_struct, stack, anlz):
+        wx.Panel.__init__(self, parent)
+        
+        self.SetBackgroundColour("White")
+        
+        self.com = common 
+        self.data_struct = data_struct
+        self.stk = stack       
+        self.anlz = anlz
+        
+        self.selica = 1       
+        self.numica = 2
+        
+        
+        pw = PlotW*0.97
+        ph = PlotH*0.97
+        
+          
+        self.fontsize = self.com.fontsize
+        
+  
+        #panel 1        
+        panel1 = wx.Panel(self, -1)
+        vbox1 = wx.BoxSizer(wx.VERTICAL)
+        
+        self.tc_ICAcomp = wx.TextCtrl(panel1, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.tc_ICAcomp.SetFont(self.com.font)
+        self.tc_ICAcomp.SetValue("ICA component ")
+        
+        hbox11 = wx.BoxSizer(wx.HORIZONTAL)
+   
+        i1panel = wx.Panel(panel1, -1, style = wx.SUNKEN_BORDER)
+        self.ICAImagePan = wxmpl.PlotPanel(i1panel, -1, size =(ph*1.10, ph), cursor=False, crosshairs=False, location=False, zoom=False)
+               
+        vbox11 = wx.BoxSizer(wx.VERTICAL)               
+        self.slidershow = wx.Slider(panel1, -1, self.selica, 1, 20, style=wx.SL_LEFT)
+        self.slidershow.Disable()          
+        self.slidershow.SetFocus()
+        #self.Bind(wx.EVT_SCROLL, self.OnPCAScroll, self.slidershow)
+        
+
+        self.icaspin = wx.SpinButton(panel1, -1, size = ((8,-1)), style=wx.SP_ARROW_KEYS)
+        #self.Bind(wx.EVT_SPIN_UP, self.OnICASpinUp, self.icaspin)
+        #self.Bind(wx.EVT_SPIN_DOWN, self.OnICASpinDown, self.icaspin)
+        
+        hbox11.Add(i1panel, 0)
+        vbox11.Add((0,3))
+        vbox11.Add(self.slidershow, 1,  wx.EXPAND) 
+        vbox11.Add(self.icaspin, 0,  wx.EXPAND)         
+        hbox11.Add(vbox11, 0,  wx.EXPAND) 
+
+        
+        vbox1.Add(self.tc_ICAcomp, 1, wx.EXPAND )        
+        vbox1.Add(hbox11, 0)
+
+        panel1.SetSizer(vbox1)
+        
+        
+                
+        #panel 2
+        panel2 = wx.Panel(self, -1)
+        vbox2 = wx.BoxSizer(wx.VERTICAL)
+                
+        sizer1 = wx.StaticBoxSizer(wx.StaticBox(panel2, -1, 'Independent Component Analysis'), wx.VERTICAL)
+        self.button_calcica = wx.Button(panel2, -1, 'Calculate ICA', (10, 10))
+        self.button_calcica.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.OnCalcICA, id=self.button_calcica.GetId())     
+        #self.button_calcica.Disable()   
+        sizer1.Add(self.button_calcica, 0, wx.EXPAND)
+        self.button_saveica = wx.Button(panel2, -1, 'Save ICA Results...', (10, 10))
+        self.button_saveica.SetFont(self.com.font)
+        #self.Bind(wx.EVT_BUTTON, self.OnSave, id=self.button_saveica.GetId())
+        self.button_saveica.Disable()
+        sizer1.Add(self.button_saveica, 0, wx.EXPAND)
+        
+        hbox21 = wx.BoxSizer(wx.HORIZONTAL)
+        text1 = wx.StaticText(panel2, -1, 'Number of independent components',  style=wx.ALIGN_LEFT)
+        text1.SetFont(self.com.font)
+        self.nicaspin = wx.SpinCtrl(panel2, -1, '',  size= (60, -1), style=wx.ALIGN_LEFT)
+        self.nicaspin.SetRange(1,20)
+        #self.Bind(wx.EVT_SPINCTRL, self.OnNPCAspin, self.nicaspin)
+        hbox21.Add(text1, 0, wx.TOP, 20)
+        hbox21.Add((10,0))
+        hbox21.Add(self.nicaspin, 0, wx.TOP, 15)            
+        sizer1.Add(hbox21, 0, wx.EXPAND)    
+              
+        hbox22 = wx.BoxSizer(wx.HORIZONTAL)
+        text2 = wx.StaticText(panel2, -1, 'Cumulative variance', style=wx.ALIGN_LEFT)
+        text2.SetFont(self.com.font)
+        self.vartc = wx.StaticText(panel2, -1, '0%',  style=wx.ALIGN_LEFT)
+        hbox22.Add(text2, 0)
+        hbox22.Add(self.vartc, 0, wx.LEFT , 10)
+
+        sizer1.Add(hbox22, 0)      
+        
+        vbox2.Add(sizer1)
+
+        panel2.SetSizer(vbox2)
+
+        
+        #panel 3
+        panel3 = wx.Panel(self, -1)
+        
+        i3panel = wx.Panel(panel3, -1, style = wx.SUNKEN_BORDER)
+        self.ICASpecPan = wxmpl.PlotPanel(i3panel, -1, size =(pw, ph), cursor=False, crosshairs=False, location=False, zoom=False)
+             
+        vbox3 = wx.BoxSizer(wx.VERTICAL)
+        self.text_icaspec = wx.TextCtrl(panel3, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.text_icaspec.SetFont(self.com.font)
+        self.text_icaspec.SetValue("ICA spectrum ")        
+        vbox3.Add(self.text_icaspec, 0)
+        vbox3.Add(i3panel, 0)        
+        panel3.SetSizer(vbox3)
+        
+        
+        #panel 4
+        panel4 = wx.Panel(self, -1)
+             
+        i4panel = wx.Panel(panel4, -1, style = wx.SUNKEN_BORDER)
+        self.ICAEvalsPan = wxmpl.PlotPanel(i4panel, -1, size =(pw, ph*0.75), cursor=False, crosshairs=False, location=False, zoom=False)
+        #wxmpl.EVT_POINT(i4panel, self.ICAEvalsPan.GetId(), self.OnPointEvalsImage)   
+        
+        vbox4 = wx.BoxSizer(wx.VERTICAL)
+        text4 = wx.TextCtrl(panel4, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        text4.SetFont(self.com.font)
+        text4.SetValue("ICA eigenvalues ??")        
+        vbox4.Add(text4, 0)
+        vbox4.Add(i4panel, 0)
+        
+        panel4.SetSizer(vbox4)      
+        
+
+        vboxtop = wx.BoxSizer(wx.VERTICAL)
+        
+        gridtop = wx.FlexGridSizer(2, 2, vgap=10, hgap=20)
+        gridtop.Add(panel2, 0, wx.LEFT|wx.TOP, 20)
+        gridtop.Add(panel4, 0, wx.ALIGN_LEFT)
+        
+        gridtop.Add(panel1, 0)
+        gridtop.Add(panel3, 0, wx.ALIGN_RIGHT)
+              
+        vboxtop.Add((0,10))
+        vboxtop.Add(gridtop, 0, wx.LEFT, 20)
+         
+        
+        self.SetSizer(vboxtop) 
+        
+        
+#----------------------------------------------------------------------
+    def OnCalcICA(self, event):
+        
+        self.anlz.calculate_fastica(self.stk.od, 4)
+       
+#        wx.BeginBusyCursor()
+#        self.calcpca = False  
+#        self.selpca = 1       
+#        self.numsigpca = 2
+#        self.slidershow.SetValue(self.selpca)
+#        
+#        scrollmax = npy.min([self.stk.n_ev, 20])
+#        self.slidershow.SetMax(scrollmax)
+#
+#        #try: 
+#        if True:
+#            self.CalcPCA()
+#            self.calcpca = True
+#            self.loadPCAImage()
+#            self.loadPCASpectrum()
+#            self.showEvals()
+#            self.com.pca_calculated = 1
+#            wx.EndBusyCursor() 
+##        except:
+##            self.com.pca_calculated = 0
+##            wx.EndBusyCursor()
+##            wx.MessageBox("PCA not calculated.")
+#        
+#        wx.GetApp().TopWindow.refresh_widgets()
+
+#----------------------------------------------------------------------        
+    def OnNICAspin(self, event):
+        pass
+#        num = event.GetInt()
+#        self.numsigpca = num
+#        
+#        if self.com.pca_calculated == 1:      
+#            self.anlz.numsigpca = self.numsigpca 
+#        
+#            # cumulative variance
+#            var = self.anlz.variance[:self.numsigpca].sum()
+#            self.vartc.SetLabel(str(var.round(decimals=2)*100)+'%')
+                 
+       
+        
+#----------------------------------------------------------------------
+    def CalcICA(self):
+        pass
+ 
+#        self.anlz.calculate_pca()
+#     
+#        #Scree plot criterion
+#        self.numsigpca = self.anlz.numsigpca
+#        
+#        self.npcaspin.SetValue(self.numsigpca)
+#      
+#        # cumulative variance
+#        var = self.anlz.variance[:self.numsigpca].sum()
+#        self.vartc.SetLabel(str(var.round(decimals=2)*100)+'%')
+        
+
+ 
+ 
 
 """ ------------------------------------------------------------------------------------------------"""
 class PageNNMA(wx.Panel):
@@ -3223,8 +3438,7 @@ class PagePCA(wx.Panel):
         scrollmax = npy.min([self.stk.n_ev, 20])
         self.slidershow.SetMax(scrollmax)
 
-        #try: 
-        if True:
+        try: 
             self.CalcPCA()
             self.calcpca = True
             self.loadPCAImage()
@@ -3232,10 +3446,10 @@ class PagePCA(wx.Panel):
             self.showEvals()
             self.com.pca_calculated = 1
             wx.EndBusyCursor() 
-#        except:
-#            self.com.pca_calculated = 0
-#            wx.EndBusyCursor()
-#            wx.MessageBox("PCA not calculated.")
+        except:
+            self.com.pca_calculated = 0
+            wx.EndBusyCursor()
+            wx.MessageBox("PCA not calculated.")
         
         wx.GetApp().TopWindow.refresh_widgets()
 
@@ -7312,6 +7526,7 @@ class MainFrame(wx.Frame):
         self.page3 = PageCluster(nb, self.common, self.data_struct, self.stk, self.anlz)
         self.page4 = PageSpectral(nb, self.common, self.data_struct, self.stk, self.anlz)
 
+
         # add the pages to the notebook with the label to show on the tab
         nb.AddPage(self.page0, "Load Data")
         nb.AddPage(self.page1, "Preprocess Data")
@@ -7319,7 +7534,7 @@ class MainFrame(wx.Frame):
         nb.AddPage(self.page3, "Cluster Analysis")
         nb.AddPage(self.page4, "Spectral Analysis")
         # Only add NNMA pages if option "--nnma" is given in command line
-        options, extraParams = getopt.getopt(sys.argv[1:], '', 'nnma')
+        options, extraParams = getopt.getopt(sys.argv[1:], '', ['nnma', 'ica'])
         for opt, arg in options:
             if opt in '--nnma':
                 if verbose: print "Running with NNMA."
@@ -7333,8 +7548,12 @@ class MainFrame(wx.Frame):
                 self.page5Notebook.AddPage(self.page5b, 'NNMA spectra')
                 self.page5Notebook.AddPage(self.page5c, 'NNMA thickness maps')
 
-        
-
+            if opt in '--ica':
+                if verbose: print "Running with ICA."
+                self.page6 = PageICA(nb, self.common, self.data_struct, self.stk, self.anlz)
+                nb.AddPage(self.page6, "ICA")
+                
+                
         # finally, put the notebook in a sizer for the panel to manage
         # the layout
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -7524,7 +7743,6 @@ class MainFrame(wx.Frame):
         """
 
         try:
-
             dialog = wx.DirDialog(None, "Choose a directory",
                                    style=wx.DD_DIR_MUST_EXIST)
             #dialog.SetWildcard(wildcard)
@@ -7536,14 +7754,14 @@ class MainFrame(wx.Frame):
             StackListFrame(directory, self.common, self.stk, self.data_struct).Show()
             
         except:
-
+            print 'Error could not build stack list.'
             self.common.stack_loaded = 0 
             self.common.i0_loaded = 0
             self.new_stack_refresh()
             self.refresh_widgets()
                                
-#            wx.MessageBox(".sm files not loaded.")
-#            import sys; print sys.exc_info()
+            wx.MessageBox(".sm files not loaded.")
+            import sys; print sys.exc_info()
         
 
 #----------------------------------------------------------------------
@@ -7892,15 +8110,13 @@ class StackListFrame(wx.Frame):
                 else:
                     continue
                 
-
             return
          
             
         self.xrm_files = [x for x in os.listdir(self.filepath) if x.endswith('.xrm')] 
         
 
-
-        if self.xrm_files:
+        if self.xrm_files:        
             
             self.filetype = 'xrm'
             
@@ -7910,21 +8126,20 @@ class StackListFrame(wx.Frame):
             count = 0
         
             for i in range(len(self.xrm_files)):
-                #print sm_files
+
                 filename = self.xrm_files[i]
                 file = os.path.join(self.filepath, filename)
-            
+
                 ncols, nrows, iev = self.xrm.read_xrm_fileinfo(file)
-            
+  
                 if ncols > 0:           
                     self.filelist.InsertStringItem(count,filename)
                     self.filelist.SetStringItem(count,1,str(ncols))
                     self.filelist.SetStringItem(count,2,str(nrows))
                     self.filelist.SetStringItem(count,3,'{0:5.2f}'.format(iev))
                     count += 1
-                else:
-                    continue
-                
+
+            
         self.sm_files = self.xrm_files
         return
         
@@ -7960,6 +8175,7 @@ class StackListFrame(wx.Frame):
 #----------------------------------------------------------------------        
     def OnAccept(self, evt):
         
+        wx.BeginBusyCursor()
         
         ind1st = self.sm_files.index(self.file1st) 
         indlast = self.sm_files.index(self.filelast)
@@ -7994,6 +8210,8 @@ class StackListFrame(wx.Frame):
         
         
         self.stk.fill_h5_struct_from_stk()
+        
+        self.stk.scale_bar()
                    
 
         wx.GetApp().TopWindow.page1.iev = int(self.stk.n_ev/3)
@@ -8007,7 +8225,10 @@ class StackListFrame(wx.Frame):
         wx.GetApp().TopWindow.page1.ResetDisplaySettings()
         wx.GetApp().TopWindow.page1.filename = filelist[0]
         wx.GetApp().TopWindow.page1.textctrl.SetValue(filelist[0])
-        
+ 
+        wx.GetApp().TopWindow.page0.slider_eng.SetRange(0,self.stk.n_ev-1)
+        wx.GetApp().TopWindow.page0.iev = self.stk.n_ev/2
+        wx.GetApp().TopWindow.page0.slider_eng.SetValue(wx.GetApp().TopWindow.page1.iev)       
         
         wx.GetApp().TopWindow.page1.slider_eng.SetRange(0,self.stk.n_ev-1)
         wx.GetApp().TopWindow.page1.iev = self.stk.n_ev/2
@@ -8018,6 +8239,7 @@ class StackListFrame(wx.Frame):
         
         wx.GetApp().TopWindow.page0.ShowInfo(filelist[0], self.filepath)
         
+        wx.EndBusyCursor()
         self.Destroy()
         
 #---------------------------------------------------------------------- 

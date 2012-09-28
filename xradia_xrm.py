@@ -81,11 +81,18 @@ class xrm:
         #Energy saved in the file is too coarse - read it from the filename
         str_list = filename[:-4].split('_')
         try: #look for 'eV' filed in the filename
-            ev_ind = str_list.index('eV')
-            if verbose:print 'Energy value from filename = ', str_list[ev_ind-1]
-            eV = float(str_list[ev_ind-1])
+            for i in range(len(str_list)):
+                if 'eV' in str_list[i]:
+                    ind = str_list[i].find('eV')
+                    this_ev = (str_list[i])[:ind]
+                    if this_ev.isdigit():
+                        this_ev = float(this_ev)
+                    if verbose: print "Successfully read energy value from file name.", this_ev
+                    eV = this_ev
+                    break
         except:
-            print 'Using energy stored in the file.'
+            eV = eV[0]
+            print 'Using energy stored in the file.', eV
             
         ole.close()
             
@@ -226,8 +233,15 @@ class xrm:
             #Energy saved in the file is too coarse - read it from the filename
             str_list = filename[:-4].split('_')
             try: #look for 'eV' filed in the filename
-                ev_ind = str_list.index('eV')
-                this_ev = float(str_list[ev_ind-1])
+                for i in range(len(str_list)):
+                    if 'eV' in str_list[i]:
+                        ind = str_list[i].find('eV')
+                        this_ev = (str_list[i])[:ind]
+                        if this_ev.isdigit():
+                            this_ev = float(this_ev)
+                        if verbose: print "Successfully read energy value from file name.", this_ev
+                        eV = this_ev
+                        break
             except:
                 print 'Using energy stored in the file.'   
                     

@@ -395,3 +395,486 @@ class analyze:
         self.target_svd_maps = np.reshape(self.target_svd_maps, 
                                              (self.stack.n_cols, self.stack.n_rows, self.n_target_spectra), order='F') 
         
+        
+
+#----------------------------------------------------------------------   
+# Calculate Fast Independent Component Analysis; FASTICA uses Hyvarinen's 
+# fixed-point algorithm 
+# A. Hyvarinen. Fast and Robust Fixed-Point Algorithms for Independent 
+#   Component Analysis. IEEE Transactions on Neural Networks 10(3):626-634, 1999.
+
+    def calculate_fastica(self, mixedsig, numOfIC):
+
+        mixedsig = mixedsig.transpose()
+
+        # Remove the mean and check the data
+        mixedmean = np.mean(mixedsig, axis=0)
+        mixedsig = mixedsig - mixedmean*np.ones((1,mixedsig.shape[1]))
+
+        Dim = mixedsig.shape[0]
+        NumOfSampl = mixedsig.shape[1]
+
+
+        # Default values for optional parameters
+        verbose  = True
+
+        # Default values for 'pcamat' parameters
+        firstEig          = 1
+        lastEig           = Dim
+        interactivePCA    = 'off'
+
+        # Default values for 'fpica' parameters
+        approach          = 'defl'
+        g                 = 'pow3'
+        finetune          = 'off'
+        a1                = 1
+        a2                = 1
+        myy               = 1
+        stabilization     = 'off'
+        epsilon           = 0.0001
+        maxNumIterations  = 1000
+        maxFinetune       = 5
+        initState         = 'rand'
+        guess             = 0
+        sampleSize        = 1
+        displayMode       = 'off'
+        displayInterval   = 1
+
+
+        # Parameters for fastICA 
+        b_verbose = True
+        
+
+        # print information about data
+        if b_verbose:
+            print 'Number of signals:', Dim
+            print 'Number of samples: ', NumOfSampl
+
+
+        # Check if the data has been entered the wrong way,
+        # but warn only... it may be on purpose
+
+        if (Dim > NumOfSampl):
+            if b_verbose:
+                print 'Warning: '
+                print 'The signal matrix may be oriented in the wrong way.'
+                print 'In that case transpose the matrix.'
+
+    
+        # Calculating PCA
+        # We already have the PCA data
+
+        if b_verbose:
+            print 'Values for PCA calculations supplied.\n'
+            print 'PCA calculations not needed.\n' 
+    
+        # PCA was already calculated:
+        D = np.identity(self.numsigpca)*self.eigenvals[0:self.numsigpca] 
+        E = self.eigenvecs[:,0:self.numsigpca]
+
+
+        # Calculate the whitening
+           
+        # Calculate the whitening and dewhitening matrices (these handle
+        # dimensionality simultaneously).
+        whiteningMatrix = np.dot(np.linalg.inv (np.sqrt(D)), E.transpose())
+        dewhiteningMatrix = np.dot(E, np.sqrt(D))
+        
+        # Project to the eigenvectors of the covariance matrix.
+        # Whiten the samples and reduce dimension simultaneously.
+        if b_verbose:
+            print 'Whitening...'
+            whitesig =  np.dot(whiteningMatrix,mixedsig)
+            
+        # Just some security...
+        if np.sum(np.imag(whitesig)) != 0:
+            print 'Whitened vectors have imaginary values.'
+            
+
+        # Calculating the ICA
+  
+        # Check some parameters
+        # The dimension of the data may have been reduced during PCA calculations.
+        # The original dimension is calculated from the data by default, and the
+        # number of IC is by default set to equal that dimension.
+  
+        Dim = whitesig.shape[1]
+  
+        # The number of IC's must be less or equal to the dimension of data
+        if numOfIC > Dim:
+            numOfIC = Dim
+            # Show warning only if verbose = 'on' and user supplied a value for 'numOfIC'
+            if b_verbose:
+                print 'Warning: estimating only ,', numOfIC, '  independent components' 
+                print '(Cannot estimate more independent components than dimension of data)'
+
+  
+        # Calculate the ICA with fixed point algorithm.
+        A, W = self.calc_fpica (whitesig,  whiteningMatrix, dewhiteningMatrix, approach, 
+          numOfIC, g, finetune, a1, a2, myy, stabilization, epsilon, 
+          maxNumIterations, maxFinetune, initState, guess, sampleSize, 
+          displayMode, displayInterval, verbose)
+
+
+#----------------------------------------------------------------------   
+# Fixed point ICA
+# This function is adapted from Hyvarinen's fixed point algorithm Matlab version
+# [A, W] = fpica(whitesig, whiteningMatrix, dewhiteningMatrix, approach,
+#        numOfIC, g, finetune, a1, a2, mu, stabilization, epsilon, 
+#        maxNumIterations, maxFinetune, initState, guess, sampleSize,
+#        displayMode, displayInterval, verbose);
+# 
+# Perform independent component analysis using Hyvarinen's fixed point
+# algorithm. Outputs an estimate of the mixing matrix A and its inverse W.
+#
+# whitesig                              :the whitened data as row vectors
+# whiteningMatrix                       :whitening matrix
+# dewhiteningMatrix                     :dewhitening matrix
+# approach      [ 'symm' | 'defl' ]     :the approach used (deflation or symmetric)
+# numOfIC       [ 0 - Dim of whitesig ] :number of independent components estimated
+# g             [ 'pow3' | 'tanh' |     :the nonlinearity used
+#                 'gaus' | 'skew' ]     
+# finetune      [same as g + 'off']     :the nonlinearity used in finetuning.
+# a1                                    :parameter for tuning 'tanh'
+# a2                                    :parameter for tuning 'gaus'
+# mu                                    :step size in stabilized algorithm
+# stabilization [ 'on' | 'off' ]        :if mu < 1 then automatically on
+# epsilon                               :stopping criterion
+# maxNumIterations                      :maximum number of iterations 
+# maxFinetune                           :maximum number of iterations for finetuning
+# initState     [ 'rand' | 'guess' ]    :initial guess or random initial state. See below
+# guess                                 :initial guess for A. Ignored if initState = 'rand'
+# sampleSize    [ 0 - 1 ]               :percentage of the samples used in one iteration
+# displayMode   [ 'signals' | 'basis' | :plot running estimate
+#                 'filters' | 'off' ]
+# displayInterval                       :number of iterations we take between plots
+# verbose       [ 'on' | 'off' ]        :report progress in text format
+
+    def calc_fpica(self, X, whiteningMatrix, dewhiteningMatrix, approach, 
+            numOfIC, g, finetune, a1, a2, myy, stabilization, 
+            epsilon, maxNumIterations, maxFinetune, initState, 
+            guess, sampleSize, displayMode, displayInterval, 
+            b_verbose):
+        
+
+        vectorSize = X.shape[0]
+        numSamples = X.shape[1]
+        
+        # Checking the value for approach
+        if approach == 'symm':
+            approachMode = 1
+        elif approach == 'defl':
+            approachMode = 2    
+        else:
+            print 'Illegal value for parameter approach:', approach
+            return
+        if b_verbose:
+            print 'Used approach:', approach     
+            
+        #Checking the value for numOfIC
+        if vectorSize < numOfIC:
+            print 'Must have numOfIC <= Dimension!'     
+            return
+        
+        # Checking the sampleSize
+        if sampleSize > 1:
+            sampleSize = 1
+            if b_verbose:
+                print 'Warning: Setting sampleSize to 1.\n'
+   
+        elif sampleSize < 1:
+            if (sampleSize * numSamples) < 1000:
+                sampleSize = np.min(1000/numSamples, 1)
+                if b_verbose:
+                    print 'Warning: Setting ampleSize to ',sampleSize,' samples=', np.floor(sampleSize * numSamples)
+
+
+        if  b_verbose and (sampleSize < 1):
+            print 'Using about  ',sampleSize*100,' of the samples in random order in every step.'
+       
+        
+        # Checking the value for nonlinearity.
+
+        if g == 'pow3':
+            gOrig = 10
+        elif g =='tanh':
+            gOrig = 20
+        elif g == 'gauss':
+            gOrig = 30
+        elif g == 'skew':
+            gOrig = 40
+        else:
+            print 'Illegal value for parameter g: ', g
+
+        if sampleSize != 1:
+            gOrig = gOrig + 2
+
+        if myy != 1:
+            gOrig = gOrig + 1
+
+
+        if b_verbose:
+            print 'Used nonlinearity: ', g
+
+
+        finetuningEnabled = 1
+        if finetune == 'pow3':
+            gFine = 10 + 1
+        elif finetune == 'tanh':
+            gFine = 20 + 1
+        elif finetune == 'gauss':
+            gFine = 30 + 1
+        elif finetune == 'skew':
+            gFine = 40 + 1
+        elif finetune == 'off':
+            if myy != 1:
+                gFine = gOrig
+            else :
+                gFine = gOrig + 1
+  
+            finetuningEnabled = 0
+        else:
+            print 'Illegal value for parameter finetune :', finetune
+            return
+
+        if b_verbose and finetuningEnabled:
+            print 'Finetuning enabled, nonlinearity: ', finetune
+
+
+        if stabilization == 'on':
+            stabilizationEnabled = 1
+        elif stabilization == 'off':
+            if myy != 1:
+                stabilizationEnabled = 1
+            else:
+                stabilizationEnabled = 0
+
+        else:
+            print 'Illegal value for parameter stabilization: ', stabilization 
+
+
+        if b_verbose and stabilizationEnabled:
+            print 'Using stabilized algorithm.'
+       
+        # Some other parameters
+        myyOrig = myy
+        # When we start fine-tuning we'll set myy = myyK * myy
+        myyK = 0.01
+        # How many times do we try for convergence until we give up.
+        failureLimit = 5
+
+
+        usedNlinearity = gOrig
+        stroke = 0
+        notFine = 1
+        long = 0
+        
+        
+        # Checking the value for initial state.
+
+        if initState == 'rand':
+            initialStateMode = 0;
+        elif initState == 'guess':
+            if guess.shape[0] != whiteningMatrix.shape[1]:
+                initialStateMode = 0
+                if b_verbose:
+                    print 'Warning: size of initial guess is incorrect. Using random initial guess.'
+    
+            else:
+                initialStateMode = 1
+                if guess.shape[0] < numOfIC:
+                    if b_verbose:
+                        print 'Warning: initial guess only for first ',guess.shape[0],' components. Using random initial guess for others.' 
+    
+                    guess[:, guess.shape[0] + 1:numOfIC] = np.random.uniform(-0.5,0.5,(vectorSize,numOfIC-guess.shape[0]))
+                elif guess.shape[0]>numOfIC:
+                    guess=guess[:,1:numOfIC]
+                    print 'Warning: Initial guess too large. The excess column are dropped.'
+  
+                if b_verbose:
+                    print 'Using initial guess.'
+
+        else:
+            print 'Illegal value for parameter initState:', initState
+            return        
+        
+        
+        # Checking the value for display mode.
+
+        if (displayMode =='off') or (displayMode == 'none'):
+            usedDisplay = 0
+        elif (displayMode =='on') or (displayMode == 'signals'):
+            usedDisplay = 1
+            if (b_verbose and (numSamples > 10000)):
+                print 'Warning: Data vectors are very long. Plotting may take long time.'
+ 
+            if (b_verbose and (numOfIC > 25)):
+                print 'Warning: There are too many signals to plot. Plot may not look good.'
+ 
+        elif (displayMode =='basis'):
+            usedDisplay = 2
+            if (b_verbose and (numOfIC > 25)):
+                print 'Warning: There are too many signals to plot. Plot may not look good.'
+ 
+        elif (displayMode =='filters'):
+            usedDisplay = 3
+            if (b_verbose and (vectorSize > 25)):
+                print 'Warning: There are too many signals to plot. Plot may not look good.'
+
+        else:
+            print 'Illegal value for parameter displayMode:', displayMode
+            return
+
+
+        # The displayInterval can't be less than 1...
+        if displayInterval < 1:
+            displayInterval = 1
+
+        # Start ICA calculation
+        if b_verbose:
+            print 'Starting ICA calculation...'
+            
+            
+        # SYMMETRIC APPROACH
+        if approachMode == 1:
+            print 'Symmetric approach under construction'
+            return
+        
+        
+        # DEFLATION APPROACH
+        elif approachMode == 2:      
+            B = np.zeros((vectorSize))
+  
+            # The search for a basis vector is repeated numOfIC times.
+            round = 1
+  
+            numFailures = 0 
+                      
+        while (round <= numOfIC):   
+            myy = myyOrig
+            usedNlinearity = gOrig
+            stroke = 0
+            notFine = 1
+            long = 0
+            endFinetuning = 0
+            
+            
+            # Show the progress...
+            if b_verbose:
+                print 'IC :', round
+    
+            # Take a random initial vector of lenght 1 and orthogonalize it
+            # with respect to the other vectors.
+            if initialStateMode == 0:
+                w = np.random.standard_normal((vectorSize,))
+                
+            elif initialStateMode == 1:
+                w=np.dot(whiteningMatrix,guess[:,round])
+   
+            w = w - np.dot(B , np.dot( B.transpose(), w))     
+            w = w / np.linalg.norm(w)
+    
+            wOld = np.zeros(w.shape)
+            wOld2 = np.zeros(w.shape)
+                
+                
+            # This is the actual fixed-point iteration loop.
+            #    for i = 1 : maxNumIterations + 1
+            i = 1
+            gabba = 1
+            while (i <= (maxNumIterations + gabba)):
+                if (usedDisplay > 0):
+                    print 'display'
+      
+                #Project the vector into the space orthogonal to the space
+                # spanned by the earlier found basis vectors. Note that we can do
+                # the projection with matrix B, since the zero entries do not
+                # contribute to the projection.
+                w = w - np.dot(B , np.dot( B.transpose(), w))     
+                w = w / np.linalg.norm(w)
+
+                if notFine:
+                    if i == (maxNumIterations + 1):   
+                        if b_verbose:
+                            print 'Component number',round,'  did not converge in ',maxNumIterations, 'iterations.'
+      
+                        round = round - 1
+                        numFailures = numFailures + 1
+                        if numFailures > failureLimit:
+                            if b_verbose:
+                                print 'Too many failures to converge ', numFailures,' Giving up.'
+        
+                            if round == 0:
+                                A=[]
+                                W=[]
+                                return
+                        break                    
+                else:
+                    if i >= endFinetuning:
+                        #So the algorithm will stop on the next test...
+                        wOld = w.copy()
+                        
+                # Show the progress...
+                if b_verbose:
+                    print '.'
+                    
+                # Test for termination condition. Note that the algorithm has
+                # converged if the direction of w and wOld is the same, this
+                # is why we test the two cases.
+                if (np.linalg.norm(w - wOld) < epsilon) or (np.linalg.norm(w + wOld) < epsilon):
+                    if finetuningEnabled and notFine:
+                        if b_verbose:
+                            print 'Initial convergence, fine-tuning: '
+                        notFine = 0
+                        gabba = maxFinetune
+                        wOld = np.zeros(w.shape)
+                        wOld2 = np.zeros(w.shape)
+                        usedNlinearity = gFine
+                        myy = myyK * myyOrig
+      
+                        endFinetuning = maxFinetune + i
+                   
+                    else:
+                        numFailures = 0
+                        # Save the vector
+                        B[:, round] = w
+      
+                        # Calculate the de-whitened vector.
+                        A[:,round] = np.dot(dewhiteningMatrix, w)
+                        # Calculate ICA filter.
+                        W[round,:] = np.dot(w.transpose() * whiteningMatrix)
+                        
+                        # Show the progress...
+                        if b_verbose:
+                            print 'computed ( ',i,' steps ) '
+                            
+                        break
+                elif stabilizationEnabled:
+                            
+                    if (not stroke) and (np.linalg.norm(w - wOld2) < epsilon or np.linalg.norm(w + wOld2) < epsilon):
+                        stroke = myy
+                        if b_verbose:
+                            print 'Stroke!'
+                        myy = .5*myy
+                        if np.mod(usedNlinearity,2) == 0:
+                            usedNlinearity = usedNlinearity + 1
+    
+                    elif stroke:
+                        myy = stroke
+                        stroke = 0
+                        if (myy == 1) and (np.mod(usedNlinearity,2) != 0):
+                            usedNlinearity = usedNlinearity - 1
+     
+                    elif (notFine) and (not long) and (i > maxNumIterations / 2):
+                        if b_verbose:
+                            print 'Taking long (reducing step size) '
+                            long = 1
+                            myy = .5*myy
+                            if np.mod(usedNlinearity,2) == 0:
+                                usedNlinearity = usedNlinearity + 1
+
+      
+                wOld2 = wOld.copy()
+                wOld = w.copy()         
+                            
+                            
