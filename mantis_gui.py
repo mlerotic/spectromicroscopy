@@ -8177,6 +8177,9 @@ class StackListFrame(wx.Frame):
         
         wx.BeginBusyCursor()
         
+        wx.GetApp().TopWindow.new_stack_refresh()
+        self.stk.new_data()
+        
         ind1st = self.sm_files.index(self.file1st) 
         indlast = self.sm_files.index(self.filelast)
         
