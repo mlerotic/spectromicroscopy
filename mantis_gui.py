@@ -57,6 +57,7 @@ class common:
         self.pca_calculated = 0
         self.cluster_calculated = 0
         self.spec_anl_calculated = 0
+        self.ica_calculated = 0
         
         self.path = ''
         self.filename = ''
@@ -87,30 +88,31 @@ class PageICA(wx.Panel):
           
         self.fontsize = self.com.fontsize
         
-  
+
+          
         #panel 1        
         panel1 = wx.Panel(self, -1)
         vbox1 = wx.BoxSizer(wx.VERTICAL)
         
-        self.tc_ICAcomp = wx.TextCtrl(panel1, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
-        self.tc_ICAcomp.SetFont(self.com.font)
-        self.tc_ICAcomp.SetValue("ICA component ")
+        self.tc_ICAsp = wx.TextCtrl(panel1, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.tc_ICAsp.SetFont(self.com.font)
+        self.tc_ICAsp.SetValue("ICA spectrum ")
         
         hbox11 = wx.BoxSizer(wx.HORIZONTAL)
    
         i1panel = wx.Panel(panel1, -1, style = wx.SUNKEN_BORDER)
-        self.ICAImagePan = wxmpl.PlotPanel(i1panel, -1, size =(ph*1.10, ph), cursor=False, crosshairs=False, location=False, zoom=False)
+        self.ICASpecPan = wxmpl.PlotPanel(i1panel, -1, size =(pw, ph), cursor=False, crosshairs=False, location=False, zoom=False)
                
         vbox11 = wx.BoxSizer(wx.VERTICAL)               
         self.slidershow = wx.Slider(panel1, -1, self.selica, 1, 20, style=wx.SL_LEFT)
-        self.slidershow.Disable()          
+        #self.slidershow.Disable()          
         self.slidershow.SetFocus()
-        #self.Bind(wx.EVT_SCROLL, self.OnPCAScroll, self.slidershow)
+        self.Bind(wx.EVT_SCROLL, self.OnICAScroll, self.slidershow)
         
 
         self.icaspin = wx.SpinButton(panel1, -1, size = ((8,-1)), style=wx.SP_ARROW_KEYS)
-        #self.Bind(wx.EVT_SPIN_UP, self.OnICASpinUp, self.icaspin)
-        #self.Bind(wx.EVT_SPIN_DOWN, self.OnICASpinDown, self.icaspin)
+        self.Bind(wx.EVT_SPIN_UP, self.OnICASpinUp, self.icaspin)
+        self.Bind(wx.EVT_SPIN_DOWN, self.OnICASpinDown, self.icaspin)
         
         hbox11.Add(i1panel, 0)
         vbox11.Add((0,3))
@@ -119,7 +121,7 @@ class PageICA(wx.Panel):
         hbox11.Add(vbox11, 0,  wx.EXPAND) 
 
         
-        vbox1.Add(self.tc_ICAcomp, 1, wx.EXPAND )        
+        vbox1.Add(self.tc_ICAsp, 1, wx.EXPAND )        
         vbox1.Add(hbox11, 0)
 
         panel1.SetSizer(vbox1)
@@ -131,85 +133,62 @@ class PageICA(wx.Panel):
         vbox2 = wx.BoxSizer(wx.VERTICAL)
                 
         sizer1 = wx.StaticBoxSizer(wx.StaticBox(panel2, -1, 'Independent Component Analysis'), wx.VERTICAL)
-        self.button_calcica = wx.Button(panel2, -1, 'Calculate ICA', (10, 10))
+        self.button_calcica = wx.Button(panel2, -1, 'Calculate ICA', (80, 10))
         self.button_calcica.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnCalcICA, id=self.button_calcica.GetId())     
         #self.button_calcica.Disable()   
-        sizer1.Add(self.button_calcica, 0, wx.EXPAND)
-        self.button_saveica = wx.Button(panel2, -1, 'Save ICA Results...', (10, 10))
+        sizer1.Add(self.button_calcica, 0, wx.EXPAND|wx.LEFT|wx.RIGHT, 20)
+        self.button_saveica = wx.Button(panel2, -1, 'Save ICA Results...', (80, 10))
         self.button_saveica.SetFont(self.com.font)
-        #self.Bind(wx.EVT_BUTTON, self.OnSave, id=self.button_saveica.GetId())
+        self.Bind(wx.EVT_BUTTON, self.OnSave, id=self.button_saveica.GetId())
         self.button_saveica.Disable()
-        sizer1.Add(self.button_saveica, 0, wx.EXPAND)
+        sizer1.Add(self.button_saveica, 0, wx.EXPAND|wx.LEFT|wx.RIGHT, 20)
         
-        hbox21 = wx.BoxSizer(wx.HORIZONTAL)
-        text1 = wx.StaticText(panel2, -1, 'Number of independent components',  style=wx.ALIGN_LEFT)
-        text1.SetFont(self.com.font)
-        self.nicaspin = wx.SpinCtrl(panel2, -1, '',  size= (60, -1), style=wx.ALIGN_LEFT)
-        self.nicaspin.SetRange(1,20)
-        #self.Bind(wx.EVT_SPINCTRL, self.OnNPCAspin, self.nicaspin)
-        hbox21.Add(text1, 0, wx.TOP, 20)
-        hbox21.Add((10,0))
-        hbox21.Add(self.nicaspin, 0, wx.TOP, 15)            
-        sizer1.Add(hbox21, 0, wx.EXPAND)    
+#        hbox21 = wx.BoxSizer(wx.HORIZONTAL)
+#        text1 = wx.StaticText(panel2, -1, 'Number of independent components',  style=wx.ALIGN_LEFT)
+#        text1.SetFont(self.com.font)
+#        self.nicaspin = wx.SpinCtrl(panel2, -1, '',  size= (60, -1), style=wx.ALIGN_LEFT)
+#        self.nicaspin.SetRange(1,20)
+#        #self.Bind(wx.EVT_SPINCTRL, self.OnNPCAspin, self.nicaspin)
+#        hbox21.Add(text1, 0, wx.TOP, 20)
+#        hbox21.Add((10,0))
+#        hbox21.Add(self.nicaspin, 0, wx.TOP, 15)            
+#        sizer1.Add(hbox21, 0, wx.EXPAND)    
               
-        hbox22 = wx.BoxSizer(wx.HORIZONTAL)
-        text2 = wx.StaticText(panel2, -1, 'Cumulative variance', style=wx.ALIGN_LEFT)
-        text2.SetFont(self.com.font)
-        self.vartc = wx.StaticText(panel2, -1, '0%',  style=wx.ALIGN_LEFT)
-        hbox22.Add(text2, 0)
-        hbox22.Add(self.vartc, 0, wx.LEFT , 10)
-
-        sizer1.Add(hbox22, 0)      
         
-        vbox2.Add(sizer1)
+        vbox2.Add(sizer1,0)
 
         panel2.SetSizer(vbox2)
 
+      
         
-        #panel 3
-        panel3 = wx.Panel(self, -1)
-        
-        i3panel = wx.Panel(panel3, -1, style = wx.SUNKEN_BORDER)
-        self.ICASpecPan = wxmpl.PlotPanel(i3panel, -1, size =(pw, ph), cursor=False, crosshairs=False, location=False, zoom=False)
-             
-        vbox3 = wx.BoxSizer(wx.VERTICAL)
-        self.text_icaspec = wx.TextCtrl(panel3, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
-        self.text_icaspec.SetFont(self.com.font)
-        self.text_icaspec.SetValue("ICA spectrum ")        
-        vbox3.Add(self.text_icaspec, 0)
-        vbox3.Add(i3panel, 0)        
-        panel3.SetSizer(vbox3)
-        
-        
-        #panel 4
-        panel4 = wx.Panel(self, -1)
-             
-        i4panel = wx.Panel(panel4, -1, style = wx.SUNKEN_BORDER)
-        self.ICAEvalsPan = wxmpl.PlotPanel(i4panel, -1, size =(pw, ph*0.75), cursor=False, crosshairs=False, location=False, zoom=False)
-        #wxmpl.EVT_POINT(i4panel, self.ICAEvalsPan.GetId(), self.OnPointEvalsImage)   
-        
-        vbox4 = wx.BoxSizer(wx.VERTICAL)
-        text4 = wx.TextCtrl(panel4, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
-        text4.SetFont(self.com.font)
-        text4.SetValue("ICA eigenvalues ??")        
-        vbox4.Add(text4, 0)
-        vbox4.Add(i4panel, 0)
-        
-        panel4.SetSizer(vbox4)      
+#        #panel 4
+#        panel4 = wx.Panel(self, -1)
+#             
+#        i4panel = wx.Panel(panel4, -1, style = wx.SUNKEN_BORDER)
+#        self.ICAEvalsPan = wxmpl.PlotPanel(i4panel, -1, size =(pw, ph*0.75), cursor=False, crosshairs=False, location=False, zoom=False)
+#        #wxmpl.EVT_POINT(i4panel, self.ICAEvalsPan.GetId(), self.OnPointEvalsImage)   
+#        
+#        vbox4 = wx.BoxSizer(wx.VERTICAL)
+#        text4 = wx.TextCtrl(panel4, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+#        text4.SetFont(self.com.font)
+#        text4.SetValue("ICA eigenvalues ??")        
+#        vbox4.Add(text4, 0)
+#        vbox4.Add(i4panel, 0)
+#        
+#        panel4.SetSizer(vbox4)      
         
 
         vboxtop = wx.BoxSizer(wx.VERTICAL)
         
-        gridtop = wx.FlexGridSizer(2, 2, vgap=10, hgap=20)
-        gridtop.Add(panel2, 0, wx.LEFT|wx.TOP, 20)
-        gridtop.Add(panel4, 0, wx.ALIGN_LEFT)
-        
-        gridtop.Add(panel1, 0)
-        gridtop.Add(panel3, 0, wx.ALIGN_RIGHT)
+#        gridtop = wx.FlexGridSizer(1, 2, vgap=10, hgap=20)
+#        gridtop.Add(panel2, 0, wx.LEFT|wx.TOP, 20)
+#        gridtop.Add(panel4, 0, wx.ALIGN_LEFT)
               
-        vboxtop.Add((0,10))
-        vboxtop.Add(gridtop, 0, wx.LEFT, 20)
+        vboxtop.Add((0,40))
+        vboxtop.Add(panel2, 0, wx.LEFT, 40)
+        vboxtop.Add((0,40))
+        vboxtop.Add(panel1, 0, wx.LEFT, 40)
          
         
         self.SetSizer(vboxtop) 
@@ -218,64 +197,153 @@ class PageICA(wx.Panel):
 #----------------------------------------------------------------------
     def OnCalcICA(self, event):
         
-        self.anlz.calculate_fastica(self.stk.od, 4)
-       
-#        wx.BeginBusyCursor()
-#        self.calcpca = False  
-#        self.selpca = 1       
-#        self.numsigpca = 2
-#        self.slidershow.SetValue(self.selpca)
-#        
-#        scrollmax = npy.min([self.stk.n_ev, 20])
-#        self.slidershow.SetMax(scrollmax)
-#
-#        #try: 
-#        if True:
-#            self.CalcPCA()
-#            self.calcpca = True
-#            self.loadPCAImage()
-#            self.loadPCASpectrum()
-#            self.showEvals()
-#            self.com.pca_calculated = 1
-#            wx.EndBusyCursor() 
-##        except:
-##            self.com.pca_calculated = 0
-##            wx.EndBusyCursor()
-##            wx.MessageBox("PCA not calculated.")
-#        
-#        wx.GetApp().TopWindow.refresh_widgets()
-
-#----------------------------------------------------------------------        
-    def OnNICAspin(self, event):
-        pass
-#        num = event.GetInt()
-#        self.numsigpca = num
-#        
-#        if self.com.pca_calculated == 1:      
-#            self.anlz.numsigpca = self.numsigpca 
-#        
-#            # cumulative variance
-#            var = self.anlz.variance[:self.numsigpca].sum()
-#            self.vartc.SetLabel(str(var.round(decimals=2)*100)+'%')
-                 
-       
+        #self.anlz.calculate_fastica(self.stk.od, 4)
         
+        try:
+            import mdp
+        except:
+            print 'ERROR: Could not find MDP library.'
+            return
+            
+        if self.com.cluster_calculated == 0:
+            print 'ERROR: Calculate cluster spectra before ICA.'
+            return
+
+        wx.BeginBusyCursor()
+        self.calcica = 0   
+        self.selpca = 1   
+        self.slidershow.SetValue(self.selpca)
+ 
+        #Use cluster spectra
+        X = self.anlz.clusterspectra.T
+        
+        scrollmax = npy.min([self.anlz.clusterspectra.shape[0], 20])
+        self.slidershow.SetMax(scrollmax)        
+        
+        try:
+
+            #ica = mdp.nodes.FastICANode( verbose=True)
+            ica = mdp.nodes.CuBICANode(limit=0.0001, verbose=True)
+            ica.train(X)
+            comp = ica.execute(X)
+        
+            self.icasig = comp        
+            self.recica = npy.dot(comp,ica.get_recmatrix())        
+              
+            self.com.ica_calculated = 1
+            self.showICASpectrum()
+            wx.EndBusyCursor() 
+            self.button_saveica.Enable()
+        except:
+            self.com.ica_calculated = 0
+            wx.EndBusyCursor()
+            wx.MessageBox("ICA not calculated.")
+        
+        wx.GetApp().TopWindow.refresh_widgets()
+
+                 
+#----------------------------------------------------------------------        
+    def OnICAScroll(self, event):
+        self.sel = event.GetInt()
+        self.selica = self.sel
+        if self.com.ica_calculated == 1:
+            self.showICASpectrum()       
+ 
+#----------------------------------------------------------------------            
+    def OnICASpinUp(self, event):
+        if (self.com.ica_calculated == 1) and (self.selica > 1):
+            self.selica = self.selica - 1
+            self.slidershow.SetValue(self.selica)
+
+            self.showICASpectrum() 
+
+            
+#----------------------------------------------------------------------            
+    def OnICASpinDown(self, event):
+        if (self.com.ica_calculated == 1) and (self.selica < self.icasig.shape[1]-1):
+            self.selica = self.selica + 1
+            self.slidershow.SetValue(self.selica) 
+            
+            self.showICASpectrum() 
+            
+#----------------------------------------------------------------------
+    def OnSave(self, event):
+
+
+        if True:
+        #try: 
+            wildcard = "PNG files (*.png)|*.png"
+            dialog = wx.FileDialog(None, "Save as .png", wildcard=wildcard,
+                                    style=wx.SAVE|wx.OVERWRITE_PROMPT)
+
+            if dialog.ShowModal() == wx.ID_OK:
+                filepath = dialog.GetPath()
+                
+                dialog.Destroy()
+                            
+            wx.BeginBusyCursor()   
+                           
+            from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+            mtplot.rcParams['pdf.fonttype'] = 42
+            
+            ext = 'png'
+            suffix = "." + ext    
+            
+            for i in range(self.icasig.shape[1]):
+            
+                icaspectrum = self.icasig[:, i]
+                fig = mtplot.figure.Figure(figsize =(PlotW, PlotH))
+                canvas = FigureCanvas(fig)
+                fig.add_axes((0.15,0.15,0.75,0.75))
+                axes = fig.gca()
+                mtplot.rcParams['font.size'] = self.fontsize
+                specplot = axes.plot(self.stk.ev, icaspectrum)    
+                axes.set_xlabel('Photon Energy [eV]')
+                axes.set_ylabel('Optical Density')
+            
+                fileName_spec = filepath+"_ICAspectrum_" +str(i+1)+"."+ext
+                fig.savefig(fileName_spec)  
+             
+            wx.EndBusyCursor()      
+#
+#        except:
+#
+#            wx.EndBusyCursor()
+#            wx.MessageBox("Could not save .png file.")
+                   
+        
+        return
+                   
 #----------------------------------------------------------------------
     def CalcICA(self):
         pass
- 
-#        self.anlz.calculate_pca()
-#     
-#        #Scree plot criterion
-#        self.numsigpca = self.anlz.numsigpca
-#        
-#        self.npcaspin.SetValue(self.numsigpca)
-#      
-#        # cumulative variance
-#        var = self.anlz.variance[:self.numsigpca].sum()
-#        self.vartc.SetLabel(str(var.round(decimals=2)*100)+'%')
+
         
 
+#----------------------------------------------------------------------     
+    def showICASpectrum(self):
+
+        if self.com.ica_calculated == 0:
+            return
+        
+        self.icaspectrum = self.icasig[:, self.selica-1]
+        #self.icaspectrum = self.recica[:, self.selica-1]
+        
+            
+        
+        fig = self.ICASpecPan.get_figure()
+        fig.clf()
+        fig.add_axes((0.15,0.15,0.75,0.75))
+        axes = fig.gca()
+        
+        mtplot.rcParams['font.size'] = self.fontsize
+
+        specplot = axes.plot(self.stk.ev,self.icaspectrum)
+                        
+        axes.set_xlabel('Photon Energy [eV]')
+        axes.set_ylabel('Optical Density')
+        
+        self.ICASpecPan.draw()
  
  
 
@@ -294,6 +362,7 @@ class PageNNMA(wx.Panel):
         self.fontsize = self.com.fontsize        
         self.iev = 0
         #self.calcnnma = False
+        
 
 # ------------------------------------------------------------------------------------------------
 # Subclass of PageNNMA to display optical density results
@@ -7031,7 +7100,7 @@ class PlotFrame(wx.Frame):
                                     style=wx.SAVE|wx.OVERWRITE_PROMPT)
 
             if dialog.ShowModal() == wx.ID_OK:
-                            filepath = dialog.GetPath()
+                filepath = dialog.GetPath()
                             
             wx.BeginBusyCursor()                  
             self.Save(filepath)    

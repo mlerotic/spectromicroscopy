@@ -24,6 +24,9 @@ import scipy.spatial
 import scipy.ndimage
 from scipy.cluster.vq import  kmeans2
 
+import scipy as sp
+mmult = sp.dot
+
 import warnings
 warnings.simplefilter('ignore', DeprecationWarning)
 
@@ -34,6 +37,7 @@ class analyze:
     def __init__(self, stkdata):
 
         self.stack = stkdata
+        
        
         self.target_spectra = 0
         self.tspectrum_loaded = 0
@@ -395,7 +399,11 @@ class analyze:
         self.target_svd_maps = np.reshape(self.target_svd_maps, 
                                              (self.stack.n_cols, self.stack.n_rows, self.n_target_spectra), order='F') 
         
-        
+
+
+
+
+
 
 #----------------------------------------------------------------------   
 # Calculate Fast Independent Component Analysis; FASTICA uses Hyvarinen's 
@@ -406,13 +414,17 @@ class analyze:
     def calculate_fastica(self, mixedsig, numOfIC):
 
         mixedsig = mixedsig.transpose()
+        
+        print 'msig', mixedsig.shape
 
         # Remove the mean and check the data
-        mixedmean = np.mean(mixedsig, axis=0)
-        mixedsig = mixedsig - mixedmean*np.ones((1,mixedsig.shape[1]))
+        mixedmean = np.mean(mixedsig, axis=1)
+        mixedsig = mixedsig - mixedmean[:,np.newaxis]
 
         Dim = mixedsig.shape[0]
         NumOfSampl = mixedsig.shape[1]
+        
+        print 'Dim, NumOfSampl',Dim,NumOfSampl
 
 
         # Default values for optional parameters
@@ -477,14 +489,17 @@ class analyze:
            
         # Calculate the whitening and dewhitening matrices (these handle
         # dimensionality simultaneously).
-        whiteningMatrix = np.dot(np.linalg.inv (np.sqrt(D)), E.transpose())
-        dewhiteningMatrix = np.dot(E, np.sqrt(D))
+        whiteningMatrix = mmult(np.linalg.inv (np.sqrt(D)), E.transpose())
+        dewhiteningMatrix = mmult(E, np.sqrt(D))
+        
+        print 'wd=', whiteningMatrix.shape, dewhiteningMatrix.shape
         
         # Project to the eigenvectors of the covariance matrix.
         # Whiten the samples and reduce dimension simultaneously.
         if b_verbose:
             print 'Whitening...'
             whitesig =  np.dot(whiteningMatrix,mixedsig)
+            print 'whitesig', whitesig.shape
             
         # Just some security...
         if np.sum(np.imag(whitesig)) != 0:
@@ -498,7 +513,7 @@ class analyze:
         # The original dimension is calculated from the data by default, and the
         # number of IC is by default set to equal that dimension.
   
-        Dim = whitesig.shape[1]
+        Dim = whitesig.shape[0]
   
         # The number of IC's must be less or equal to the dimension of data
         if numOfIC > Dim:
@@ -514,8 +529,29 @@ class analyze:
           numOfIC, g, finetune, a1, a2, myy, stabilization, epsilon, 
           maxNumIterations, maxFinetune, initState, guess, sampleSize, 
           displayMode, displayInterval, verbose)
+        
+        print 'A,W', A.shape, W.shape
+        # Check for valid return
+        if W.any():
+            # Add the mean back in.
+            if b_verbose:
+                print 'Adding the mean back to the data.'
+    
+            icasig = mmult(W, mixedsig) + mmult(mmult(W, mixedmean), np.ones((1, NumOfSampl)))
 
+   
+        else:
+            icasig = []
+            
+        print icasig.shape
+ 
+        return icasig
 
+#----------------------------------------------------------------------   
+    def getSamples(self, max, percentage):
+        Samples = (np.random.random((max,)) < percentage).nonzero()
+        return Samples
+        
 #----------------------------------------------------------------------   
 # Fixed point ICA
 # This function is adapted from Hyvarinen's fixed point algorithm Matlab version
@@ -588,7 +624,7 @@ class analyze:
                 if b_verbose:
                     print 'Warning: Setting ampleSize to ',sampleSize,' samples=', np.floor(sampleSize * numSamples)
 
-
+        print 'sample size', sampleSize
         if  b_verbose and (sampleSize < 1):
             print 'Using about  ',sampleSize*100,' of the samples in random order in every step.'
        
@@ -743,138 +779,288 @@ class analyze:
         
         # DEFLATION APPROACH
         elif approachMode == 2:      
-            B = np.zeros((vectorSize))
+            
+            
+            B = np.zeros((numOfIC, numOfIC))
   
             # The search for a basis vector is repeated numOfIC times.
-            round = 1
-  
+            round = 0  
             numFailures = 0 
                       
-        while (round <= numOfIC):   
-            myy = myyOrig
-            usedNlinearity = gOrig
-            stroke = 0
-            notFine = 1
-            long = 0
-            endFinetuning = 0
-            
-            
-            # Show the progress...
-            if b_verbose:
-                print 'IC :', round
-    
-            # Take a random initial vector of lenght 1 and orthogonalize it
-            # with respect to the other vectors.
-            if initialStateMode == 0:
-                w = np.random.standard_normal((vectorSize,))
-                
-            elif initialStateMode == 1:
-                w=np.dot(whiteningMatrix,guess[:,round])
-   
-            w = w - np.dot(B , np.dot( B.transpose(), w))     
-            w = w / np.linalg.norm(w)
-    
-            wOld = np.zeros(w.shape)
-            wOld2 = np.zeros(w.shape)
+            while (round < numOfIC):   
+                myy = myyOrig
+                usedNlinearity = gOrig
+                stroke = 0
+                notFine = 1
+                long = 0
+                endFinetuning = 0
                 
                 
-            # This is the actual fixed-point iteration loop.
-            #    for i = 1 : maxNumIterations + 1
-            i = 1
-            gabba = 1
-            while (i <= (maxNumIterations + gabba)):
-                if (usedDisplay > 0):
-                    print 'display'
-      
-                #Project the vector into the space orthogonal to the space
-                # spanned by the earlier found basis vectors. Note that we can do
-                # the projection with matrix B, since the zero entries do not
-                # contribute to the projection.
-                w = w - np.dot(B , np.dot( B.transpose(), w))     
-                w = w / np.linalg.norm(w)
-
-                if notFine:
-                    if i == (maxNumIterations + 1):   
-                        if b_verbose:
-                            print 'Component number',round,'  did not converge in ',maxNumIterations, 'iterations.'
-      
-                        round = round - 1
-                        numFailures = numFailures + 1
-                        if numFailures > failureLimit:
-                            if b_verbose:
-                                print 'Too many failures to converge ', numFailures,' Giving up.'
-        
-                            if round == 0:
-                                A=[]
-                                W=[]
-                                return
-                        break                    
-                else:
-                    if i >= endFinetuning:
-                        #So the algorithm will stop on the next test...
-                        wOld = w.copy()
-                        
                 # Show the progress...
                 if b_verbose:
-                    print '.'
+                    print 'IC :', round
+        
+                # Take a random initial vector of length 1 and orthogonalize it
+                # with respect to the other vectors.
+                if initialStateMode == 0:
+                    w = np.random.standard_normal((vectorSize,))
                     
-                # Test for termination condition. Note that the algorithm has
-                # converged if the direction of w and wOld is the same, this
-                # is why we test the two cases.
-                if (np.linalg.norm(w - wOld) < epsilon) or (np.linalg.norm(w + wOld) < epsilon):
-                    if finetuningEnabled and notFine:
-                        if b_verbose:
-                            print 'Initial convergence, fine-tuning: '
-                        notFine = 0
-                        gabba = maxFinetune
-                        wOld = np.zeros(w.shape)
-                        wOld2 = np.zeros(w.shape)
-                        usedNlinearity = gFine
-                        myy = myyK * myyOrig
-      
-                        endFinetuning = maxFinetune + i
-                   
-                    else:
-                        numFailures = 0
-                        # Save the vector
-                        B[:, round] = w
-      
-                        # Calculate the de-whitened vector.
-                        A[:,round] = np.dot(dewhiteningMatrix, w)
-                        # Calculate ICA filter.
-                        W[round,:] = np.dot(w.transpose() * whiteningMatrix)
-                        
-                        # Show the progress...
-                        if b_verbose:
-                            print 'computed ( ',i,' steps ) '
-                            
-                        break
-                elif stabilizationEnabled:
-                            
-                    if (not stroke) and (np.linalg.norm(w - wOld2) < epsilon or np.linalg.norm(w + wOld2) < epsilon):
-                        stroke = myy
-                        if b_verbose:
-                            print 'Stroke!'
-                        myy = .5*myy
-                        if np.mod(usedNlinearity,2) == 0:
-                            usedNlinearity = usedNlinearity + 1
+                elif initialStateMode == 1:
+                    w=mmult(whiteningMatrix,guess[:,round])
+                    
+       
+                w = w - mmult(mmult(B, B.T), w) 
+                norm =  sp.sqrt((w*w).sum())
+                w = w / norm
+                
+        
+                wOld = np.zeros(w.shape)
+                wOld2 = np.zeros(w.shape)
+                    
+                    
+                # This is the actual fixed-point iteration loop.
+                #    for i = 1 : maxNumIterations + 1
+                i = 1
+                gabba = 1
+                while (i <= (maxNumIterations + gabba)):
+                    if (usedDisplay > 0):
+                        print 'display'
+          
+                    #Project the vector into the space orthogonal to the space
+                    # spanned by the earlier found basis vectors. Note that we can do
+                    # the projection with matrix B, since the zero entries do not
+                    # contribute to the projection.
+                    w =  w - mmult(mmult(B, B.T), w)
+                    norm =  sp.sqrt((w*w).sum())
+                    w = w / norm
     
-                    elif stroke:
-                        myy = stroke
-                        stroke = 0
-                        if (myy == 1) and (np.mod(usedNlinearity,2) != 0):
-                            usedNlinearity = usedNlinearity - 1
-     
-                    elif (notFine) and (not long) and (i > maxNumIterations / 2):
-                        if b_verbose:
-                            print 'Taking long (reducing step size) '
-                            long = 1
+                    if notFine:
+                        if i == (maxNumIterations + 1):   
+                            if b_verbose:
+                                print 'Component number',round,'  did not converge in ',maxNumIterations, 'iterations.'
+          
+                            round = round - 1
+                            numFailures = numFailures + 1
+                            if numFailures > failureLimit:
+                                if b_verbose:
+                                    print 'Too many failures to converge ', numFailures,' Giving up.'
+            
+                                if round == 0:
+                                    A=[]
+                                    W=[]
+                                    return
+                            break                    
+                    else:
+                        if i >= endFinetuning:
+                            #So the algorithm will stop on the next test...
+                            wOld = w.copy()
+                            
+                    # Show the progress...
+                    if b_verbose:
+                        print '.'
+                        
+                    # Test for termination condition. Note that the algorithm has
+                    # converged if the direction of w and wOld is the same, this
+                    # is why we test the two cases.
+                    normm = sp.sqrt(((w - wOld)*(w - wOld)).sum())
+                    normp = sp.sqrt(((w + wOld)*(w + wOld)).sum())
+                    conv = min((normm), normp)
+                    if  (conv < epsilon):
+                        if finetuningEnabled and notFine:
+                            if b_verbose:
+                                print 'Initial convergence, fine-tuning: '
+                            notFine = 0
+                            gabba = maxFinetune
+                            wOld = np.zeros(w.shape)
+                            wOld2 = np.zeros(w.shape)
+                            usedNlinearity = gFine
+                            myy = myyK * myyOrig
+          
+                            endFinetuning = maxFinetune + i
+                       
+                        else:
+                            numFailures = 0
+                            # Save the vector
+                            B[:, round] = w.copy()
+
+          
+                            # Calculate the de-whitened vector.
+                            A = np.dot(dewhiteningMatrix, w)
+                            # Calculate ICA filter.
+                            W = np.dot(w.transpose(), whiteningMatrix)
+                            
+                            # Show the progress...
+                            if b_verbose:
+                                print 'computed ( ',i,' steps ) '
+                                
+                            break
+                    elif stabilizationEnabled:
+                                
+                        if (not stroke) and (np.linalg.norm(w - wOld2) < epsilon or np.linalg.norm(w + wOld2) < epsilon):
+                            stroke = myy
+                            if b_verbose:
+                                print 'Stroke!'
                             myy = .5*myy
                             if np.mod(usedNlinearity,2) == 0:
                                 usedNlinearity = usedNlinearity + 1
+        
+                        elif stroke:
+                            myy = stroke
+                            stroke = 0
+                            if (myy == 1) and (np.mod(usedNlinearity,2) != 0):
+                                usedNlinearity = usedNlinearity - 1
+         
+                        elif (notFine) and (not long) and (i > maxNumIterations / 2):
+                            if b_verbose:
+                                print 'Taking long (reducing step size) '
+                                long = 1
+                                myy = .5*myy
+                                if np.mod(usedNlinearity,2) == 0:
+                                    usedNlinearity = usedNlinearity + 1
+    
+          
+                    wOld2 = wOld
+                    wOld = w      
+                                
+                    # pow3
+                    if usedNlinearity == 10:
+                        u = mmult(X.T, w)
+                        w = mmult(X, u*u*u)/numSamples - 3.*w          
 
-      
-                wOld2 = wOld.copy()
-                wOld = w.copy()         
-                            
-                            
+                    elif usedNlinearity == 11:
+                        u = mmult(X.T, w)
+                        EXGpow3 = mmult(X, u*u*u)/numSamples
+                        Beta = mmult(w.T, EXGpow3)
+                        w = w - myy * (EXGpow3 - Beta*w)/(3-Beta)         
+                                       
+                    elif usedNlinearity == 12:
+                        Xsub = self._get_rsamples(X)
+                        u = mmult(Xsub.T, w)
+                        w = mmult(Xsub, u*u*u)/Xsub.shape[1] - 3.*w                        
+
+                    elif usedNlinearity == 13:
+                        Xsub=X[:,self.getSamples(numSamples, sampleSize)]                        
+                        u = mmult(Xsub.T, w)
+                        EXGpow3 = mmult(Xsub, u*u*u)/Xsub.shape[1]
+                        Beta = mmult(w.T, EXGpow3)
+                        w = w - myy * (EXGpow3 - Beta*w)/(3-Beta)
+                        
+                    # tanh
+                    elif usedNlinearity == 20:
+                        u = mmult(X.T, w)
+                        tang = sp.tanh(a1 * u)
+                        temp = mmult((1. - tang*tang).sum(axis=0), w)
+                        w = (mmult(X, tang) - a1*temp)/numSamples
+                        
+                    elif usedNlinearity == 21:
+                        u = mmult(X.T, w)
+                        tang = sp.tanh(a1 * u)
+                        Beta = mmult(u.T, tang)
+                        temp = (1. - tang*tang).sum(axis=0)
+                        w = w-myy*((mmult(X, tang)-Beta*w)/(a1*temp-Beta))
+                                                
+                    elif usedNlinearity == 22:
+                        Xsub=X[:,self.getSamples(numSamples, sampleSize)]
+                        u = mmult(Xsub.T, w)
+                        tang = sp.tanh(a1 * u)
+                        temp = mmult((1. - tang*tang).sum(axis=0), w)
+                        w = (mmult(Xsub, tang) - a1*temp)/Xsub.shape[1]
+                                                
+                    elif usedNlinearity == 23:
+                        Xsub=X[:,self.getSamples(numSamples, sampleSize)]
+                        u = mmult(Xsub.T, w)
+                        tang = sp.tanh(a1 * u)
+                        Beta = mmult(u.T, tang)
+                        w = w - myy * ((mmult(Xsub, tang)-Beta*w) /
+                                      (a1*(1. - tang*tang).sum(axis=0) -
+                                       Beta))                        
+
+                    # gauss
+                    elif usedNlinearity == 30:
+                        # This has been split for performance reasons.
+                        u = mmult(X.T, w)
+                        u2 = u*u
+                        ex = sp.exp(-a2*u2*0.5)
+                        gauss =  u*ex
+                        dgauss = (1. - a2 *u2)*ex
+                        w = (mmult(X, gauss)-mmult(dgauss.sum(axis=0), w))/numSamples                        
+                        
+
+                    elif usedNlinearity == 31:
+                        u = mmult(X.T, w)
+                        u2 = u*u
+                        ex = sp.exp(-a2*u2*0.5)
+                        gauss =  u*ex
+                        dgauss = (1. - a2 *u2)*ex
+                        Beta = mmult(u.T, gauss)
+                        w = w - myy*((mmult(X, gauss)-Beta*w)/
+                                    (dgauss.sum(axis=0)-Beta))                        
+                        
+                    elif usedNlinearity == 32:
+                        Xsub=X[:,self.getSamples(numSamples, sampleSize)]
+                        u = mmult(Xsub.T, w)
+                        u2 = u*u
+                        ex = sp.exp(-a2*u2*0.5)
+                        gauss =  u*ex
+                        dgauss = (1. - a2 *u2)*ex
+                        w = (mmult(Xsub, gauss)-
+                             mmult(dgauss.sum(axis=0), w))/Xsub.shape[1]                        
+                        
+                    elif usedNlinearity == 33:
+                        Xsub=X[:,self.getSamples(numSamples, sampleSize)]
+                        u = mmult(Xsub.T, w)
+                        u2 = u*u
+                        ex = sp.exp(-a2*u2*0.5)
+                        gauss =  u*ex
+                        dgauss = (1. - a2 *u2)*ex
+                        Beta = mmult(u.T, gauss)
+                        w = w - myy*((mmult(Xsub, gauss)-Beta*w)/
+                                    (dgauss.sum(axis=0)-Beta))                        
+                        
+                    # skew
+                    elif usedNlinearity == 40:
+                        u = mmult(X.T, w)
+                        w = mmult(X, u*u)/numSamples                       
+                        
+                    elif usedNlinearity == 41:
+                        u = mmult(X.T, w)
+                        EXGskew = mmult(X, u*u) / numSamples
+                        Beta = mmult(w.T, EXGskew)
+                        w = w - myy * (EXGskew - mmult(Beta, w))/(-Beta)                        
+                        
+                    elif usedNlinearity == 42:                 
+                        Xsub=X[:,self.getSamples(numSamples, sampleSize)]
+                        u = mmult(Xsub.T, w)
+                        w = mmult(Xsub, u*u)/Xsub.shape[1]
+
+                    elif usedNlinearity == 43:
+                        Xsub=X[:,self.getSamples(numSamples, sampleSize)]
+                        u = mmult(Xsub.T, w)
+                        EXGskew = mmult(Xsub, u*u) / Xsub.shape[1]
+                        Beta = mmult(w.T, EXGskew)
+                        w = w - myy * (EXGskew - Beta*w)/(-Beta)
+                        
+                    else:
+                        print 'Code for desired nonlinearity not found!'
+                        return
+                                 
+                    # Normalize the new w.
+                    norm = sp.sqrt((w*w).sum())
+                    w = w / norm
+                    i = i + 1  
+                round = round + 1
+            
+            if b_verbose:
+                print 'Done.'
+            
+
+        # In the end let's check the data for some security
+        if A.imag.any():
+            if b_verbose:
+                print 'Warning: removing the imaginary part from the result.'
+            A = A.real
+            W = W.imag
+
+        return A, W
+                
+                      
