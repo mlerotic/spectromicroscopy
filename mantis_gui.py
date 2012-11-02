@@ -332,9 +332,9 @@ class PageKeyEng(wx.Panel):
         mtplot.rcParams['font.size'] = self.fontsize
         
         specplot = axes.plot(self.stk.ev,odtotal)
-        for i in range(self.anlz.numsigpca):
-            pcaspectrum = self.anlz.eigenvecs[:,i]
-            specplot = axes.plot(self.stk.ev,pcaspectrum)
+#        for i in range(self.anlz.numsigpca):
+#            pcaspectrum = self.anlz.eigenvecs[:,i]
+#            specplot = axes.plot(self.stk.ev,pcaspectrum)
 
 
         for i in range(len(self.keyenergies)):
