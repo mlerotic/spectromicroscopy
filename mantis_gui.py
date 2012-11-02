@@ -19,6 +19,7 @@
 from __future__ import division
 import wx
 import wx.lib.intctrl
+import wx.lib.masked.numctrl
 import matplotlib as mtplot 
 mtplot.interactive( True )
 mtplot.use( 'WXAgg', warn=False )
@@ -47,6 +48,8 @@ PlotW = PlotH*1.61803
 
 verbose = True
 
+
+
 #----------------------------------------------------------------------
 class common:
     def __init__(self):
@@ -65,7 +68,391 @@ class common:
         self.font = wx.SystemSettings_GetFont(wx.SYS_DEFAULT_GUI_FONT)
 
 
+""" ------------------------------------------------------------------------------------------------"""
+class PageKeyEng(wx.Panel):
+    def __init__(self, parent, common, data_struct, stack, anlz):
+        wx.Panel.__init__(self, parent)
+        
+        self.SetBackgroundColour("White")
+        
+        self.com = common 
+        self.data_struct = data_struct
+        self.stk = stack       
+        self.anlz = anlz
+        
+        self.selica = 1       
+        self.numica = 2
+        
+        
+        pw = PlotW*0.8
+        ph = PlotH*0.8
+        
+          
+        self.fontsize = self.com.fontsize
+        
+        self.i_eng = 0
+        self.keyengs_calculated = 0
+       
 
+          
+        #panel 1        
+        panel1 = wx.Panel(self, -1)
+        vbox1 = wx.BoxSizer(wx.VERTICAL)
+        
+        self.tc_1 = wx.TextCtrl(panel1, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.tc_1.SetFont(self.com.font)
+        self.tc_1.SetValue("Average Optical Density")        
+   
+        i1panel = wx.Panel(panel1, -1, style = wx.SUNKEN_BORDER)
+        self.KESpecPan = wxmpl.PlotPanel(i1panel, -1, size =(pw, ph), cursor=False, crosshairs=False, location=False, zoom=False)
+        wxmpl.EVT_POINT(i1panel, self.KESpecPan.GetId(), self.OnPointSpectrum)
+        
+        vbox1.Add(self.tc_1, 1, wx.EXPAND )        
+        vbox1.Add(i1panel, 0)
+
+        panel1.SetSizer(vbox1)
+        
+        
+                
+        #panel 2
+        panel2 = wx.Panel(self, -1)
+        vbox2 = wx.BoxSizer(wx.VERTICAL)
+                
+        sizer1 = wx.StaticBoxSizer(wx.StaticBox(panel2, -1, 'Key Energies Analysis'), wx.VERTICAL)
+        self.button_calckeng = wx.Button(panel2, -1, 'Find Key Energies', (90, 10))
+        self.button_calckeng.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.OnCalcKeyEng, id=self.button_calckeng.GetId())     
+        self.button_calckeng.Disable()   
+        sizer1.Add(self.button_calckeng, 0, wx.EXPAND|wx.LEFT|wx.RIGHT, 5)
+        self.button_save = wx.Button(panel2, -1, 'Save Results...', (90, 10))
+        self.button_save.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.OnSave, id=self.button_save.GetId())
+        self.button_save.Disable()
+        
+        
+        hbox21 = wx.BoxSizer(wx.HORIZONTAL)
+        text1 = wx.StaticText(panel2, label="Threshold")
+        self.tc_keyengthresh = wx.lib.masked.numctrl.NumCtrl(panel2, -1, 
+                                              value = float(0.1),  
+                                              integerWidth = 5,
+                                              fractionWidth = 2, min = 0, max = 5,
+                                              limited = False)
+
+        hbox21.Add(text1, 0, wx.TOP, 20)
+        hbox21.Add((10,0))
+        hbox21.Add(self.tc_keyengthresh, 0, wx.TOP, 15)            
+        sizer1.Add(hbox21, 0, wx.EXPAND|wx.LEFT|wx.RIGHT, 5)    
+              
+        sizer1.Add((0,10))        
+        sizer1.Add(wx.StaticLine(panel2), 0, wx.ALL|wx.EXPAND, 5)        
+        sizer1.Add((0,10))  
+        
+        sizer1.Add(self.button_save, 0, wx.EXPAND|wx.LEFT|wx.RIGHT, 5)        
+        
+        vbox2.Add(sizer1,0)
+
+        panel2.SetSizer(vbox2)
+
+
+        #panel 3
+        panel3 = wx.Panel(self, -1)
+        vbox3 = wx.BoxSizer(wx.VERTICAL)
+   
+        t1 = wx.StaticText(panel3, label="Key Energies")
+
+        
+        
+        self.lc_1 = wx.ListCtrl(panel3, -1, size = (200, 390), style = wx.LC_REPORT|wx.LC_NO_HEADER)
+        self.lc_1.InsertColumn(0, 'KEng')
+        self.lc_1.SetColumnWidth(0, 160)  
+        
+        vbox3.Add(t1, 0)
+        vbox3.Add(self.lc_1, 0,  wx.EXPAND)
+        panel3.SetSizer(vbox3)
+            
+        self.Bind(wx.EVT_LIST_ITEM_SELECTED , self.OnEngListClick, self.lc_1)   
+        
+        #panel 4     
+        panel4 = wx.Panel(self, -1)
+        vbox4 = wx.BoxSizer(wx.VERTICAL)
+        
+        self.tc_imageeng = wx.TextCtrl(panel4, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE, size=(160,-1))
+        self.tc_imageeng.SetFont(self.com.font)
+        self.tc_imageeng.SetValue("Image at key energy: ")
+        
+        hbox41 = wx.BoxSizer(wx.HORIZONTAL)
+   
+        i1panel = wx.Panel(panel4, -1, style = wx.SUNKEN_BORDER)
+        self.AbsImagePanel = wxmpl.PlotPanel(i1panel, -1, size =(PlotH*.8, PlotH*.8), cursor=False, crosshairs=False, location=False, zoom=False)
+        
+        vbox41 = wx.BoxSizer(wx.VERTICAL)
+        self.slider_eng = wx.Slider(panel4, -1, self.i_eng, 0, 100, style=wx.SL_LEFT)        
+        self.slider_eng.SetFocus()
+        self.Bind(wx.EVT_SCROLL, self.OnScrollEng, self.slider_eng)
+
+        self.engspin = wx.SpinButton(panel4, -1, size = ((8,-1)), style=wx.SP_ARROW_KEYS)
+        self.Bind(wx.EVT_SPIN_UP, self.OnEngspinUp, self.engspin)
+        self.Bind(wx.EVT_SPIN_DOWN, self.OnEngspinDown, self.engspin)
+        
+
+        hbox41.Add(i1panel, 0)
+        vbox41.Add((0,3))
+        vbox41.Add(self.slider_eng, 1,  wx.EXPAND) 
+        vbox41.Add(self.engspin, 0,  wx.EXPAND)         
+        hbox41.Add(vbox41, 0,  wx.EXPAND) 
+        
+        vbox4.Add(self.tc_imageeng, 0)        
+        vbox4.Add(hbox41, 0)
+
+        panel4.SetSizer(vbox4)
+        
+
+        vboxtop1 = wx.BoxSizer(wx.VERTICAL)
+                     
+        vboxtop1.Add((0,40))
+        vboxtop1.Add(panel2, 0, wx.LEFT, 40)
+        vboxtop1.Add((0,40))
+        vboxtop1.Add(panel3, 0, wx.LEFT, 40)
+         
+        vboxtop2 = wx.BoxSizer(wx.VERTICAL)          
+        vboxtop2.Add((0,20))
+        vboxtop2.Add(panel1, 0, wx.LEFT, 40)
+        vboxtop2.Add((0,20))
+        vboxtop2.Add(panel4, 0, wx.LEFT, 40)
+                
+        hboxtop = wx.BoxSizer(wx.HORIZONTAL)        
+        hboxtop.Add(vboxtop1)
+        hboxtop.Add((20,0))
+        hboxtop.Add(vboxtop2)
+        
+        
+        self.SetSizer(hboxtop) 
+        
+        
+#----------------------------------------------------------------------
+    def OnCalcKeyEng(self, event):
+        
+
+        wx.BeginBusyCursor()
+        
+        threshold = self.tc_keyengthresh.GetValue()
+  
+        self.keyenergies = []
+        
+        self.keyenergies = self.anlz.calc_key_engs(threshold)
+        
+        if len(self.keyenergies) > 0:        
+            self.keyengs_calculated = 1
+        
+            self.i_eng = 0
+            self.slider_eng.SetRange(0,len(self.keyenergies)-1)
+            self.slider_eng.SetValue(self.i_eng)
+
+            self.ShowPlots()
+            self.ShowImage()
+            self.ShowKEngs()
+            
+            self.button_save.Enable()
+            
+        else:
+            self.ShowPlots()
+            fig = self.AbsImagePanel.get_figure()
+            fig.clf()
+            self.AbsImagePanel.draw()               
+            self.lc_1.DeleteAllItems()
+            
+            self.button_save.Disable()
+            
+        wx.EndBusyCursor() 
+
+        
+#----------------------------------------------------------------------            
+    def OnScrollEng(self, event):
+        self.i_eng = event.GetInt()
+
+        if self.keyengs_calculated == 1:
+            self.ShowImage()
+            self.ShowKEngs()
+            
+#----------------------------------------------------------------------            
+    def OnEngspinUp(self, event):
+        if (self.keyengs_calculated == 1) and (self.i_eng > 0):
+            self.i_eng = self.i_eng - 1
+            self.slider_eng.SetValue(self.i_eng)
+
+            self.ShowImage()
+            self.ShowKEngs()
+
+            
+#----------------------------------------------------------------------            
+    def OnEngspinDown(self, event):
+        if (self.keyengs_calculated == 1) and (self.i_eng < len(self.keyenergies)-1):
+            self.i_eng = self.i_eng + 1
+            self.slider_eng.SetValue(self.i_eng)
+
+            self.ShowImage()
+            self.ShowKEngs()
+
+#----------------------------------------------------------------------  
+    def OnPointSpectrum(self, evt):
+        x = evt.xdata
+        y = evt.ydata
+        
+        if (self.keyengs_calculated == 1):      
+            if x < self.stk.ev[0]:
+                sel_ev = 0
+            elif x > self.stk.ev[self.stk.n_ev-1]:
+                sel_ev = self.stk.n_ev-1
+            else:
+                indx = npy.abs(self.stk.ev - x).argmin()
+                sel_ev = indx
+                
+            
+            self.i_eng=(npy.abs(self.keyenergies-self.stk.ev[sel_ev])).argmin()                 
+
+            self.ShowImage()
+            self.ShowKEngs()
+            
+            self.slider_eng.SetValue(self.i_eng)
+                              
+#----------------------------------------------------------------------     
+    def ShowPlots(self):
+
+
+        odtotal = self.stk.od3d.sum(axis=0)   
+        odtotal = odtotal.sum(axis=0)/(self.stk.n_rows*self.stk.n_cols)      
+        odtotal /= odtotal.max()/0.7
+
+        
+        fig = self.KESpecPan.get_figure()
+        fig.clf()
+        fig.add_axes((0.15,0.15,0.75,0.75))
+        axes = fig.gca()
+        
+        mtplot.rcParams['font.size'] = self.fontsize
+        
+        specplot = axes.plot(self.stk.ev,odtotal)
+        for i in range(self.anlz.numsigpca):
+            pcaspectrum = self.anlz.eigenvecs[:,i]
+            specplot = axes.plot(self.stk.ev,pcaspectrum)
+
+
+        for i in range(len(self.keyenergies)):
+            axes.axvline(x=self.keyenergies[i], color = 'g', alpha=0.5)
+                        
+        axes.set_xlabel('Photon Energy [eV]')
+        axes.set_ylabel('Optical Density')
+        
+        self.KESpecPan.draw()
+
+#----------------------------------------------------------------------        
+    def OnEngListClick(self, event):
+        
+                
+        self.i_eng = event.m_itemIndex
+        
+        event.Skip()
+        
+        self.ShowKEngs()     
+        self.ShowImage()
+         
+#----------------------------------------------------------------------           
+    def ShowKEngs(self):    
+        
+        self.lc_1.DeleteAllItems()
+        
+        for i in range(len(self.keyenergies)):
+            self.lc_1.InsertStringItem(i,'{0:08.2f}'.format(self.keyenergies[i]))
+            
+        self.lc_1.SetItemBackgroundColour(self.i_eng, 'light blue')
+
+#----------------------------------------------------------------------        
+    def ShowImage(self):
+        
+        iev=(npy.abs(self.stk.ev-self.keyenergies[self.i_eng])).argmin() 
+        image = self.stk.absdata[:,:,int(iev)].copy() 
+
+        fig = self.AbsImagePanel.get_figure()
+        fig.clf()
+        fig.add_axes((0.02,0.02,0.96,0.96))
+        axes = fig.gca()
+        fig.patch.set_alpha(1.0)
+        
+        im = axes.imshow(image, cmap=mtplot.cm.get_cmap("gray")) 
+        
+        #Show Scale Bar
+        startx = int(self.stk.n_rows*0.05)
+        starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
+        um_string = '$\mu m$'
+        microns = '$'+self.stk.scale_bar_string+' $'+um_string
+        axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center',
+                  color = 'black', fontsize=14)
+        #Matplotlib has flipped scales so I'm using rows instead of cols!
+        p = mtplot.patches.Rectangle((startx,starty), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
+                               color = 'black', fill = True)
+        axes.add_patch(p)
+            
+       
+        axes.axis("off")      
+        self.AbsImagePanel.draw()
+        
+        self.tc_imageeng.SetValue('Image at key energy: {0:5.2f} eV'.format(float(self.stk.ev[iev])))
+ 
+#----------------------------------------------------------------------
+    def OnSave(self, event):
+
+
+        #Save images
+                       
+        fileName = wx.FileSelector('Save OD Plot with Key Energies', default_extension='png', 
+                                   wildcard=('Portable Network Graphics (*.png)|*.png|' 
+                                             + 'Adobe PDF Files (*.pdf)|*.pdf|All files (*.*)|*.*'), 
+                                              parent=self, flags=wx.SAVE|wx.OVERWRITE_PROMPT) 
+   
+        if not fileName: 
+            return 
+
+        path, ext = os.path.splitext(fileName) 
+        ext = ext[1:].lower() 
+       
+        if ext != 'png' and ext != 'pdf': 
+            error_message = ( 
+                  'Only the PNG and PDF image formats are supported.\n' 
+                 'A file extension of `png\' or `pdf\' must be used.') 
+            wx.MessageBox(error_message, 'Error - Could not save file.', 
+                  parent=self, style=wx.OK|wx.ICON_ERROR) 
+            return 
+   
+        try: 
+
+            mtplot.rcParams['pdf.fonttype'] = 42
+            
+            fig = self.KESpecPan.get_figure()
+            fig.savefig(fileName)
+
+            
+        except IOError, e:
+            if e.strerror:
+                err = e.strerror 
+            else: 
+                err = e 
+   
+            wx.MessageBox('Could not save file: %s' % err, 'Error', 
+                          parent=self, style=wx.OK|wx.ICON_ERROR) 
+            
+            
+        #Save text file with list of energies
+        textfilepath = path+'_keyenergies.csv'
+        file = open(textfilepath, 'w')
+        print>>file, '*********************  Key Energies  ********************'
+        for i in range(len(self.keyenergies)):
+            print>>file, '%.6f' %(self.keyenergies[i])
+        
+        file.close()        
+            
+        return
+          
+ 
 """ ------------------------------------------------------------------------------------------------"""
 class PageICA(wx.Panel):
     def __init__(self, parent, common, data_struct, stack, anlz):
@@ -270,8 +657,7 @@ class PageICA(wx.Panel):
     def OnSave(self, event):
 
 
-        if True:
-        #try: 
+        try: 
             wildcard = "PNG files (*.png)|*.png"
             dialog = wx.FileDialog(None, "Save as .png", wildcard=wildcard,
                                     style=wx.SAVE|wx.OVERWRITE_PROMPT)
@@ -305,11 +691,11 @@ class PageICA(wx.Panel):
                 fig.savefig(fileName_spec)  
              
             wx.EndBusyCursor()      
-#
-#        except:
-#
-#            wx.EndBusyCursor()
-#            wx.MessageBox("Could not save .png file.")
+
+        except:
+
+            wx.EndBusyCursor()
+            wx.MessageBox("Could not save .png file.")
                    
         
         return
@@ -7603,7 +7989,7 @@ class MainFrame(wx.Frame):
         nb.AddPage(self.page3, "Cluster Analysis")
         nb.AddPage(self.page4, "Spectral Analysis")
         # Only add NNMA pages if option "--nnma" is given in command line
-        options, extraParams = getopt.getopt(sys.argv[1:], '', ['nnma', 'ica'])
+        options, extraParams = getopt.getopt(sys.argv[1:], '', ['nnma', 'ica', 'keyeng'])
         for opt, arg in options:
             if opt in '--nnma':
                 if verbose: print "Running with NNMA."
@@ -7621,6 +8007,13 @@ class MainFrame(wx.Frame):
                 if verbose: print "Running with ICA."
                 self.page6 = PageICA(nb, self.common, self.data_struct, self.stk, self.anlz)
                 nb.AddPage(self.page6, "ICA")
+                
+            if opt in '--keyeng':
+                if verbose: print "Running with KeyEng."
+                self.page7 = PageKeyEng(nb, self.common, self.data_struct, self.stk, self.anlz)
+                nb.AddPage(self.page7, "Key Energies")
+
+            
                 
                 
         # finally, put the notebook in a sizer for the panel to manage
@@ -7930,12 +8323,14 @@ class MainFrame(wx.Frame):
             self.page3.button_calcca.Disable()
             self.page4.button_loadtspec.Disable()
             self.page4.button_addflat.Disable()
+            self.page7.button_calckeng.Disable()
         else:
             self.page2.button_savepca.Enable()
             self.page2.slidershow.Enable()
             self.page3.button_calcca.Enable()
             self.page4.button_loadtspec.Enable()
-            self.page4.button_addflat.Enable()            
+            self.page4.button_addflat.Enable()     
+            self.page7.button_calckeng.Enable()       
             
         if self.common.cluster_calculated == 0:   
             self.page3.button_scatterplots.Disable()
@@ -8048,6 +8443,17 @@ class MainFrame(wx.Frame):
         #page 4
         self.page4.ClearWidgets()
         
+        #page 7
+        self.page7.button_calckeng.Disable()
+        fig = self.page7.KESpecPan.get_figure()
+        fig.clf()
+        self.page7.KESpecPan.draw()         
+        fig = self.page7.AbsImagePanel.get_figure()
+        fig.clf()
+        self.page7.AbsImagePanel.draw()   
+        self.page7.lc_1.DeleteAllItems()   
+        self.page7.keyenergies = []
+        self.page7.keyengs_calculated = 0     
         
 #---------------------------------------------------------------------- 
 class StackListFrame(wx.Frame):
