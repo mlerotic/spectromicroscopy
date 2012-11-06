@@ -27,7 +27,8 @@ import h5py
 
 import data_struct
 
-
+verbose = 0
+        
 #----------------------------------------------------------------------
 class h5:
     def __init__(self):
@@ -401,10 +402,14 @@ class h5:
                 consec = 1
                 break
         if consec == 1:
-            print "sort the data"
+            if verbose == 1: print "sort the energy data"
             sortind = np.argsort(self.ev)
             self.ev = self.ev[sortind]
             self.absdata = self.absdata[:,:,sortind]
+            #Save sorted energies:
+            self.data_struct.exchange.data = self.absdata
+            self.data_struct.exchange.energy = self.ev
+            
         
         if self.have_dimscale == 1:
             self.x_dist = data_struct.exchange.x
@@ -420,7 +425,7 @@ class h5:
         self.data_dwell = None
         self.i0_dwell = None
         
-        verbose = 0
+
         
         if verbose == 1: 
             print  'filename ', filename

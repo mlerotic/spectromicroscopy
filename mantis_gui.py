@@ -46,7 +46,7 @@ Winsizey = 740
 PlotH = 3.46
 PlotW = PlotH*1.61803
 
-verbose = True
+verbose = False
 
 
 
@@ -4512,7 +4512,7 @@ class PageStack(wx.Panel):
         self.button_align.Disable()
         vbox31.Add(self.button_align, 0, wx.EXPAND) 
         
-        vbox31.Add((0,3))       
+        vbox31.Add((0,2))       
 
         self.button_i0ffile = wx.Button(panel3, -1, 'I0 from file...')
         self.button_i0ffile.SetFont(self.com.font)
@@ -4530,7 +4530,7 @@ class PageStack(wx.Panel):
         self.button_showi0.Disable()
         vbox31.Add(self.button_showi0, 0, wx.EXPAND)
         
-        vbox31.Add((0,3))
+        vbox31.Add((0,2))
         
         self.button_limitev = wx.Button(panel3, -1, 'Limit energy range...')
         self.Bind(wx.EVT_BUTTON, self.OnLimitEv, id=self.button_limitev.GetId())
@@ -4538,7 +4538,13 @@ class PageStack(wx.Panel):
         self.button_limitev.Disable()
         vbox31.Add(self.button_limitev, 0, wx.EXPAND)
         
-        vbox31.Add((0,3))
+        self.button_subregion = wx.Button(panel3, -1, 'Clip to subregion...')
+        self.Bind(wx.EVT_BUTTON, self.OnCliptoSubregion, id=self.button_subregion.GetId())
+        self.button_subregion.SetFont(self.com.font)
+        self.button_subregion.Disable()
+        vbox31.Add(self.button_subregion, 0, wx.EXPAND)
+        
+        vbox31.Add((0,2))
         
             
         self.button_savestack = wx.Button(panel3, -1, 'Save preprocessed stack')
@@ -5303,7 +5309,12 @@ class PageStack(wx.Panel):
 #----------------------------------------------------------------------        
     def OnLimitEv(self, evt):    
         LimitEv(self.com, self.stk).Show()
+
+#----------------------------------------------------------------------        
+    def OnCliptoSubregion(self, evt):    
+        CliptoSubregion(self.com, self.stk).Show()
         
+                
 #----------------------------------------------------------------------         
 # Determine if a point is inside a given polygon or not. The algorithm is called
 # "Ray Casting Method".
@@ -6027,11 +6038,14 @@ class LimitEv(wx.Frame):
         
         self.stack.absdata = self.stack.absdata[:,:,self.limitevmin:self.limitevmax+1]
         
-        self.stack.od3d = self.stack.od3d[:,:,self.limitevmin:self.limitevmax+1]
+        if self.com.i0_loaded == 1:   
+            self.stack.od3d = self.stack.od3d[:,:,self.limitevmin:self.limitevmax+1]
         
-        self.stack.od = self.stack.od3d.copy()
+            self.stack.od = self.stack.od3d.copy()
         
-        self.stack.od = npy.reshape(self.stack.od, (self.stack.n_rows*self.stack.n_cols, self.stack.n_ev), order='F')
+            self.stack.od = npy.reshape(self.stack.od, (self.stack.n_rows*self.stack.n_cols, self.stack.n_ev), order='F')
+        
+        self.stack.fill_h5_struct_from_stk()
         
         #Fix the slider on Page 1! 
         wx.GetApp().TopWindow.page1.slider_eng.SetRange(0,self.stack.n_ev-1)
@@ -6047,6 +6061,194 @@ class LimitEv(wx.Frame):
     def OnCancel(self, evt):
         self.Destroy()
         
+
+#---------------------------------------------------------------------- 
+class CliptoSubregion(wx.Frame):
+
+    title = "Clip to Subregion"
+
+    def __init__(self, common, stack):
+        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(500, 600))
+               
+        ico = logos.getlogo_2l_32Icon()
+        self.SetIcon(ico)
+        
+        self.SetBackgroundColour("White") 
+        
+        self.stack = stack
+        
+        self.com = common         
+        self.fontsize = self.com.fontsize
+        
+        self.new_y1 = int(self.stack.n_cols*0.10)
+        self.new_y2 = int(self.stack.n_cols*0.90)
+        self.new_x1 = int(self.stack.n_rows*0.10)
+        self.new_x2 = int(self.stack.n_rows*0.90)
+        
+        self.new_ncols = self.new_y2 - self.new_y1
+        self.new_nrows = self.new_x2 - self.new_x1
+    
+        vboxtop = wx.BoxSizer(wx.VERTICAL)
+        
+        panel = wx.Panel(self, -1)
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        
+        vbox.Add((0,40))
+               
+       
+       
+        hbox2 = wx.BoxSizer(wx.HORIZONTAL)
+        sizer2 = wx.StaticBoxSizer(wx.StaticBox(panel, -1, 'Select new stack size'), orient=wx.VERTICAL)
+        self.textctrl1 = wx.TextCtrl(panel, -1, size = (200, 20), style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.textctrl1.SetValue('Original stack size:\t{0:5d}   x{1:5d} '.format(self.stack.n_cols, self.stack.n_rows))
+        self.textctrl1.SetBackgroundColour("White")
+        sizer2.Add(self.textctrl1, 0)
+ 
+        self.textctrl2 = wx.TextCtrl(panel, -1, size = (200, 20), style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.textctrl2.SetValue('New stack size:\t{0:5d}   x{1:5d} '.format(self.new_ncols, self.new_nrows))
+        self.textctrl2.SetBackgroundColour("White")
+        sizer2.Add(self.textctrl2, 0)       
+        
+        self.textctrl3 = wx.TextCtrl(panel, -1, size = (400, 20), style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.textctrl3.SetValue('Clip coordinates [[x1, x2], [y1, y2]] : [[{0:5d},{1:5d}], [{2:5d},{3:5d}]]'.format(
+                                    self.new_x1, self.new_x2, self.new_y1, self.new_y2))
+        self.textctrl3.SetBackgroundColour("White")
+        sizer2.Add(self.textctrl3, 0)    
+
+        self.AbsImagePanel = wxmpl.PlotPanel(panel, -1, size =(PlotH,PlotH), cursor=False, crosshairs=False, location=False, zoom=False)
+        wxmpl.EVT_SELECTION(panel, self.AbsImagePanel.GetId(), self.OnSelection)
+        sizer2.Add(self.AbsImagePanel, 0)
+        hbox2.Add(sizer2, 0, wx.LEFT|wx.RIGHT ,20)
+        vbox.Add(hbox2, 0, wx.EXPAND)              
+        vbox.Add((0,10))
+         
+         
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
+              
+        button_ok = wx.Button(panel, -1, 'Accept')
+        self.Bind(wx.EVT_BUTTON, self.OnAccept, id=button_ok.GetId())
+        hbox.Add(button_ok, 1, wx.ALL,20)
+        
+        button_cancel = wx.Button(panel, -1, 'Cancel')
+        self.Bind(wx.EVT_BUTTON, self.OnCancel, id=button_cancel.GetId())
+        self.Bind(wx.EVT_CLOSE, self.OnCancel)
+        hbox.Add(button_cancel, 1, wx.ALL ,20)
+        
+        vbox.Add(hbox, 0 )
+        
+        panel.SetSizer(vbox)
+        
+        vboxtop.Add(panel,1, wx.EXPAND | wx.LEFT, 20 )
+        
+        self.SetSizer(vboxtop)
+        
+
+        self.draw_image()
+        
+        self.Centre()
+
+    
+    
+#----------------------------------------------------------------------        
+    def draw_image(self):
+        
+   
+        image = self.stack.absdata[:,:,self.stack.n_ev/2].copy() 
+       
+       
+               
+        fig = self.AbsImagePanel.get_figure()
+        fig.clf()
+        fig.add_axes((0.02,0.02,0.96,0.96))
+        
+        
+        axes = fig.gca()
+        fig.patch.set_alpha(1.0) 
+      
+        im = axes.imshow(image, cmap=mtplot.cm.get_cmap("gray")) 
+        
+        # Draw the rectangle
+        line1=mtplot.lines.Line2D([self.new_x1,self.new_x2], [self.new_y1,self.new_y1] ,color="red")
+        line1.set_clip_on(False)
+        axes.add_line(line1)   
+
+        line2=mtplot.lines.Line2D([self.new_x1,self.new_x2], [self.new_y2,self.new_y2] ,color="red")
+        line2.set_clip_on(False)
+        axes.add_line(line2)   
+        
+        line3=mtplot.lines.Line2D([self.new_x1,self.new_x1], [self.new_y1,self.new_y2] ,color="red")
+        line3.set_clip_on(False)
+        axes.add_line(line3)   
+        
+        line4=mtplot.lines.Line2D([self.new_x2,self.new_x2], [self.new_y1,self.new_y2] ,color="red")
+        line4.set_clip_on(False)
+        axes.add_line(line4)   
+         
+        axes.axis("off")  
+        self.AbsImagePanel.draw()
+
+
+#----------------------------------------------------------------------        
+    def OnSelection(self, evt):
+        
+        x1, y1 = evt.x1data, evt.y1data
+        x2, y2 = evt.x2data, evt.y2data
+        
+        self.new_y1 = int(y1)
+        self.new_y2 = int(y2)
+        self.new_x1 = int(x1)
+        self.new_x2 = int(x2)
+        
+        self.new_ncols = self.new_y1 - self.new_y2 + 1
+        self.new_nrows = self.new_x2 - self.new_x1 + 1
+
+        self.textctrl2.SetValue('New stack size:\t{0:5d}   x{1:5d} '.format(self.new_ncols, self.new_nrows))
+        self.textctrl3.SetValue('Clip coordinates [[x1, x2], [y1, y2]]:[[{0:5d},{1:5d}], [{2:5d},{3:5d}]]'.format(
+                                    self.new_x1, self.new_x2, self.new_y1, self.new_y2))
+    
+        self.draw_image()
+
+#----------------------------------------------------------------------        
+    def OnAccept(self, evt):
+        
+        #change the stack size to [x1,x2], [y1,y2] 
+        #Matlab axis are inverted
+        self.stack.absdata = self.stack.absdata[self.new_y2:self.new_y1+1, self.new_x1:self.new_x2+1, :]
+              
+        self.stack.n_cols = self.stack.absdata.shape[0]
+        self.stack.n_rows = self.stack.absdata.shape[1]
+
+        
+        if self.com.i0_loaded == 1:        
+            self.stack.od3d = self.stack.od3d[self.new_y2:self.new_y1+1, self.new_x1:self.new_x2+1, :]
+        
+            self.stack.od = self.stack.od3d.copy()
+        
+            self.stack.od = npy.reshape(self.stack.od, (self.stack.n_rows*self.stack.n_cols, self.stack.n_ev), order='F')
+        
+        #Fix the slider on Page 1! 
+        wx.GetApp().TopWindow.page1.ix = self.stack.n_cols/2
+        wx.GetApp().TopWindow.page1.iy = self.stack.n_rows/2
+        
+        self.stack.fill_h5_struct_from_stk()
+        
+        wx.GetApp().TopWindow.page1.loadSpectrum(wx.GetApp().TopWindow.page1.ix, wx.GetApp().TopWindow.page1.iy)
+        wx.GetApp().TopWindow.page1.loadImage()
+        wx.GetApp().TopWindow.page0.ShowImage()
+
+
+        self.Destroy() 
+        wx.GetApp().TopWindow.Show()
+
+
+
+                
+#---------------------------------------------------------------------- 
+    def OnCancel(self, evt):
+        wx.GetApp().TopWindow.Show()
+        self.Destroy()   
+
+
         
 #---------------------------------------------------------------------- 
 class ImageRegistration(wx.Frame):
@@ -8304,12 +8506,14 @@ class MainFrame(wx.Frame):
             
         if self.common.i0_loaded == 0:
             self.page1.button_limitev.Disable()
+            self.page1.button_subregion.Disable()
             self.page1.button_showi0.Disable() 
             self.page1.rb_flux.Disable()
             self.page1.rb_od.Disable()
             self.page2.button_calcpca.Disable()
         else:
             self.page1.button_limitev.Enable()
+            self.page1.button_subregion.Enable()
             self.page1.button_showi0.Enable()
             self.page1.rb_flux.Enable()
             self.page1.rb_od.Enable()   
