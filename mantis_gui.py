@@ -4880,7 +4880,6 @@ class PageStack(wx.Panel):
 
         
         self.SpectrumPanel.draw()
-        print ypos, xpos
         
         self.tc_spec.SetValue("Spectrum at pixel [" +str(ypos)+", " + str(xpos)+"] or position ["+
                               str(self.stk.x_dist[xpos])+", "+ str(self.stk.y_dist[ypos])+ "]")
