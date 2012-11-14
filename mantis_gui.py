@@ -4880,6 +4880,7 @@ class PageStack(wx.Panel):
 
         
         self.SpectrumPanel.draw()
+        print ypos, xpos
         
         self.tc_spec.SetValue("Spectrum at pixel [" +str(ypos)+", " + str(xpos)+"] or position ["+
                               str(self.stk.x_dist[xpos])+", "+ str(self.stk.y_dist[ypos])+ "]")
@@ -8182,6 +8183,7 @@ class MainFrame(wx.Frame):
         self.page2 = PagePCA(nb, self.common, self.data_struct, self.stk, self.anlz)
         self.page3 = PageCluster(nb, self.common, self.data_struct, self.stk, self.anlz)
         self.page4 = PageSpectral(nb, self.common, self.data_struct, self.stk, self.anlz)
+        self.page7 = None
 
 
         # add the pages to the notebook with the label to show on the tab
@@ -8343,7 +8345,7 @@ class MainFrame(wx.Frame):
 
 
             #Update widgets 
-            self.iev = self.stk.n_ev/2
+            self.iev = int(self.stk.n_ev/2)
             self.page0.slider_eng.SetRange(0,self.stk.n_ev-1)
             self.page0.iev = self.iev
             self.page0.slider_eng.SetValue(self.iev)
@@ -8360,8 +8362,8 @@ class MainFrame(wx.Frame):
             self.page1.maxval = npy.amax(self.stk.absdata)
             
         
-            self.ix = x/2
-            self.iy = y/2
+            self.ix = int(x/2)
+            self.iy = int(y/2)
                     
             self.common.stack_loaded = 1
             
@@ -8527,14 +8529,14 @@ class MainFrame(wx.Frame):
             self.page3.button_calcca.Disable()
             self.page4.button_loadtspec.Disable()
             self.page4.button_addflat.Disable()
-            self.page7.button_calckeng.Disable()
+            if self.page7: self.page7.button_calckeng.Disable()
         else:
             self.page2.button_savepca.Enable()
             self.page2.slidershow.Enable()
             self.page3.button_calcca.Enable()
             self.page4.button_loadtspec.Enable()
             self.page4.button_addflat.Enable()     
-            self.page7.button_calckeng.Enable()       
+            if self.page7: self.page7.button_calckeng.Enable()       
             
         if self.common.cluster_calculated == 0:   
             self.page3.button_scatterplots.Disable()
@@ -8648,16 +8650,17 @@ class MainFrame(wx.Frame):
         self.page4.ClearWidgets()
         
         #page 7
-        self.page7.button_calckeng.Disable()
-        fig = self.page7.KESpecPan.get_figure()
-        fig.clf()
-        self.page7.KESpecPan.draw()         
-        fig = self.page7.AbsImagePanel.get_figure()
-        fig.clf()
-        self.page7.AbsImagePanel.draw()   
-        self.page7.lc_1.DeleteAllItems()   
-        self.page7.keyenergies = []
-        self.page7.keyengs_calculated = 0     
+        if self.page7:
+            self.page7.button_calckeng.Disable()
+            fig = self.page7.KESpecPan.get_figure()
+            fig.clf()
+            self.page7.KESpecPan.draw()         
+            fig = self.page7.AbsImagePanel.get_figure()
+            fig.clf()
+            self.page7.AbsImagePanel.draw()   
+            self.page7.lc_1.DeleteAllItems()   
+            self.page7.keyenergies = []
+            self.page7.keyengs_calculated = 0     
         
 #---------------------------------------------------------------------- 
 class StackListFrame(wx.Frame):
