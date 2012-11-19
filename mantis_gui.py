@@ -7923,7 +7923,12 @@ class PageLoadData(wx.Panel):
         self.button_txrm = wx.Button(panel1, -1, 'Load TXRM Stack (*.txrm)')
         self.Bind(wx.EVT_BUTTON, self.OnLoadTXRM, id=self.button_txrm.GetId())
         self.button_txrm.SetFont(self.com.font)
-        vbox1.Add(self.button_txrm, 0, wx.EXPAND)        
+        vbox1.Add(self.button_txrm, 0, wx.EXPAND)    
+        
+        self.button_tif = wx.Button(panel1, -1, 'Load TIF Stack (*.tif)')
+        self.Bind(wx.EVT_BUTTON, self.OnLoadTIF, id=self.button_tif.GetId())
+        self.button_tif.SetFont(self.com.font)
+        vbox1.Add(self.button_tif, 0, wx.EXPAND)      
 
         sizer1.Add(vbox1,1, wx.ALL|wx.EXPAND,10)
         panel1.SetSizer(sizer1)
@@ -8052,33 +8057,39 @@ class PageLoadData(wx.Panel):
 #----------------------------------------------------------------------          
     def OnLoadHDF5(self, event):
 
-        wildcard =  "HDF5 files (*.hdf5)|*.hdf5|SDF files (*.hdr)|*.hdr|STK files (*.stk)|*.stk|TXRM (*.txrm)|*.txrm|XRM (*.xrm)|*.xrm" 
+        wildcard =  "HDF5 files (*.hdf5)|*.hdf5|SDF files (*.hdr)|*.hdr|STK files (*.stk)|*.stk|TXRM (*.txrm)|*.txrm|XRM (*.xrm)|*.xrm|TIF (*.tif)|*.tif" 
         wx.GetApp().TopWindow.LoadStack(wildcard)
         
 #----------------------------------------------------------------------          
     def OnLoadSDF(self, event):
 
-        wildcard =  "SDF files (*.hdr)|*.hdr|HDF5 files (*.hdf5)|*.hdf5|STK files (*.stk)|*.stk|TXRM (*.txrm)|*.txrm|XRM (*.xrm)|*.xrm" 
+        wildcard =  "SDF files (*.hdr)|*.hdr|HDF5 files (*.hdf5)|*.hdf5|STK files (*.stk)|*.stk|TXRM (*.txrm)|*.txrm|XRM (*.xrm)|*.xrm|TIF (*.tif)|*.tif" 
         wx.GetApp().TopWindow.LoadStack(wildcard)
                 
 #----------------------------------------------------------------------          
     def OnLoadSTK(self, event):
 
-        wildcard =  "STK files (*.stk)|*.stk|HDF5 files (*.hdf5)|*.hdf5|SDF files (*.hdr)|*.hdr|TXRM (*.txrm)|*.txrm|XRM (*.xrm)|*.xrm" 
+        wildcard =  "STK files (*.stk)|*.stk|HDF5 files (*.hdf5)|*.hdf5|SDF files (*.hdr)|*.hdr|TXRM (*.txrm)|*.txrm|XRM (*.xrm)|*.xrm|TIF (*.tif)|*.tif" 
         wx.GetApp().TopWindow.LoadStack(wildcard)
         
 #----------------------------------------------------------------------          
     def OnLoadTXRM(self, event):
 
-        wildcard =  "TXRM (*.txrm)|*.txrm|HDF5 files (*.hdf5)|*.hdf5|SDF files (*.hdr)|*.hdr|STK files (*.stk)|*.stk|XRM (*.xrm)|*.xrm" 
+        wildcard =  "TXRM (*.txrm)|*.txrm|HDF5 files (*.hdf5)|*.hdf5|SDF files (*.hdr)|*.hdr|STK files (*.stk)|*.stk|XRM (*.xrm)|*.xrm|TIF (*.tif)|*.tif" 
         wx.GetApp().TopWindow.LoadStack(wildcard)
 
 #----------------------------------------------------------------------          
     def OnLoadXRM(self, event):
 
-        wildcard =  "XRM (*.xrm)|*.xrm|HDF5 files (*.hdf5)|*.hdf5|SDF files (*.hdr)|*.hdr|STK files (*.stk)|*.stk|TXRM (*.txrm)|*.txrm" 
+        wildcard =  "XRM (*.xrm)|*.xrm|HDF5 files (*.hdf5)|*.hdf5|SDF files (*.hdr)|*.hdr|STK files (*.stk)|*.stk|TXRM (*.txrm)|*.txrm|TIF (*.tif)|*.tif" 
         wx.GetApp().TopWindow.LoadStack(wildcard)
-        
+
+#----------------------------------------------------------------------          
+    def OnLoadTIF(self, event):
+
+        wildcard =  "TIF (*.tif)|*.tif|XRM (*.xrm)|*.xrm|HDF5 files (*.hdf5)|*.hdf5|SDF files (*.hdr)|*.hdr|STK files (*.stk)|*.stk|TXRM (*.txrm)|*.txrm" 
+        wx.GetApp().TopWindow.LoadStack(wildcard)
+                
 #----------------------------------------------------------------------          
     def OnBuildStack(self, event):
 
