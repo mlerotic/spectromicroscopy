@@ -18,6 +18,8 @@
 
 from __future__ import division
 
+
+
 import numpy as np
 import scipy.interpolate
 import scipy.ndimage
@@ -123,6 +125,87 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
         
                 
         self.scale_bar()
+        
+        
+#---------------------------------------------------------------------- 
+    def read_tiff(self, filename):    
+        self.new_data()  
+        
+        import tiff_stack
+        tiffstack = tiff_stack.TiffStackWrapper(filename)
+        mode = tiffstack.get_mode()
+        if mode == 'I;16B':
+            imgmode = 16
+        else:
+            imgmode = 8
+        
+        frame0 = tiffstack.get_frame(0)
+        imgstack = np.array((frame0))
+          
+        haveimg = True
+        it = 1
+        while haveimg:
+            frame = tiffstack.get_frame(it)
+            if frame == None:
+                haveimg = False
+            else:
+                it+=1
+                imgstack = np.dstack((imgstack,frame))
+                
+        if imgmode == 16:
+            imgstack = imgstack.astype(np.uint16)
+        else:
+            imgstack = imgstack.astype(np.uint8)
+            
+        self.n_cols = imgstack.shape[0]
+        self.n_rows = imgstack.shape[1]
+        self.n_ev = imgstack.shape[2]
+        
+        
+        pixelsize = 1
+        #Since we do not have a scanning microscope we fill the x_dist and y_dist from pixel_size
+        self.x_dist = np.arange(np.float(self.n_cols))*pixelsize
+        self.y_dist = np.arange(np.float(self.n_rows))*pixelsize
+
+        #Read energies from file
+        import os
+        basename, extension = os.path.splitext(filename) 
+        engfilename = basename+'.txt'
+        f = open(str(engfilename),'r')
+        
+        elist = []   
+    
+        for line in f:
+            if line.startswith("*"):
+                pass
+            else:
+                e = float(line)
+                elist.append(e)
+                
+        self.ev = np.array(elist)
+                
+        f.close()
+        
+        
+        msec = np.ones((self.n_ev))
+         
+        self.data_dwell = msec
+                       
+        self.absdata = imgstack
+                
+
+        
+        self.original_n_cols = imgstack.shape[0]
+        self.original_n_rows = imgstack.shape[1]
+        self.original_n_ev = imgstack.shape[2]
+        self.original_ev = self.ev.copy()
+        self.original_absdata = self.absdata.copy()
+
+       
+        self.fill_h5_struct_from_stk()
+         
+        self.scale_bar()
+        
         
 #---------------------------------------------------------------------- 
     def fill_h5_struct_from_stk(self):   
@@ -654,8 +737,4 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
         lf_image = Imean + (image-Imean)*(z/(Imean2*sig**2+z))
         
         return lf_image
-        
-        
-        
-        
         

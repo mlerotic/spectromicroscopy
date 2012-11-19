@@ -8121,17 +8121,18 @@ class PageLoadData(wx.Panel):
         
         im = axes.imshow(image, cmap=mtplot.cm.get_cmap("gray")) 
         
-        #Show Scale Bar
-        startx = int(self.stk.n_rows*0.05)
-        starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
-        um_string = '$\mu m$'
-        microns = '$'+self.stk.scale_bar_string+' $'+um_string
-        axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center',
-                  color = 'black', fontsize=14)
-        #Matplotlib has flipped scales so I'm using rows instead of cols!
-        p = mtplot.patches.Rectangle((startx,starty), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
-                               color = 'black', fill = True)
-        axes.add_patch(p)
+        if wx.GetApp().TopWindow.page1.show_scale_bar == 1:
+            #Show Scale Bar
+            startx = int(self.stk.n_rows*0.05)
+            starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
+            um_string = '$\mu m$'
+            microns = '$'+self.stk.scale_bar_string+' $'+um_string
+            axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center',
+                      color = 'black', fontsize=14)
+            #Matplotlib has flipped scales so I'm using rows instead of cols!
+            p = mtplot.patches.Rectangle((startx,starty), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
+                                   color = 'black', fill = True)
+            axes.add_patch(p)
             
        
         axes.axis("off")      
@@ -8277,7 +8278,7 @@ class MainFrame(wx.Frame):
 
         try:
             if wildcard == '':
-                wildcard =  "HDF5 files (*.hdf5)|*.hdf5|SDF files (*.hdr)|*.hdr|STK files (*.stk)|*.stk|TXRM (*.txrm)|*.txrm|XRM (*.xrm)|*.xrm" 
+                wildcard =  "HDF5 files (*.hdf5)|*.hdf5|SDF files (*.hdr)|*.hdr|STK files (*.stk)|*.stk|TXRM (*.txrm)|*.txrm|XRM (*.xrm)|*.xrm|TIF (*.tif)|*.tif" 
             dialog = wx.FileDialog(None, "Choose a file", style=wx.OPEN)
             
             dialog.SetWildcard(wildcard)
@@ -8341,6 +8342,17 @@ class MainFrame(wx.Frame):
                     self.anlz.delete_data()  
                          
                 self.stk.read_xrm(filepath)        
+                
+            if extension == '.tif':              
+                if self.common.stack_loaded == 1:
+                    self.new_stack_refresh()  
+                    self.stk.new_data()
+                    #self.stk.data_struct.delete_data()
+                    self.anlz.delete_data()  
+                         
+                self.stk.read_tiff(filepath)    
+                self.page1.show_scale_bar = 0
+                self.page1.add_scale_cb.SetValue(False)
 
 
             #Update widgets 
@@ -8360,7 +8372,7 @@ class MainFrame(wx.Frame):
             self.page1.imgrgb = npy.zeros(x*y*3,dtype = "uint8")        
             self.page1.maxval = npy.amax(self.stk.absdata)
             
-        
+
             self.ix = int(x/2)
             self.iy = int(y/2)
                     
