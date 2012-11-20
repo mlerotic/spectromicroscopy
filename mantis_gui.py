@@ -2760,7 +2760,8 @@ class PageCluster(wx.Panel):
         
         
         self.selcluster = 1
-        self.numclusters = 5
+        self.numclusters = 0
+        self.init_nclusters = 5
         self.wo_1st_pca = 0
         
         self.MakeColorTable()             
@@ -2787,15 +2788,26 @@ class PageCluster(wx.Panel):
         hbox11 = wx.BoxSizer(wx.HORIZONTAL)
         text1 = wx.StaticText(panel1, -1, 'Number of clusters',  style=wx.ALIGN_LEFT)
         text1.SetFont(self.com.font)
-        self.nclusterspin = wx.SpinCtrl(panel1, -1, '',  size= (60, -1), style=wx.ALIGN_LEFT)
+        self.nclusterspin = wx.SpinCtrl(panel1, -1, '',  size= (70, -1), style=wx.ALIGN_LEFT)
         self.nclusterspin.SetRange(2,20)
-        self.nclusterspin.SetValue(self.numclusters)
+        self.nclusterspin.SetValue(self.init_nclusters)
         self.Bind(wx.EVT_SPINCTRL, self.OnNClusterspin, self.nclusterspin)
         hbox11.Add((20,0))
         hbox11.Add(text1, 0, wx.TOP, 20)
         hbox11.Add((10,0))
         hbox11.Add(self.nclusterspin, 0, wx.TOP, 15)  
-        hbox11.Add((20,0))       
+        hbox11.Add((20,0))    
+        
+        hbox11a = wx.BoxSizer(wx.HORIZONTAL)
+        hbox11a.Add((20,0))
+        text1a = wx.StaticText(panel1, label="Number of clusters found")
+        self.ntc_clusters_found = wx.lib.intctrl.IntCtrl( panel1, size=( 45, -1 ), 
+                                                     style = wx.TE_CENTRE|wx.TE_READONLY, 
+                                                     value = self.numclusters)
+
+        hbox11a.Add(text1a, 0, wx.TOP, 10)
+        hbox11a.Add((5,0))
+        hbox11a.Add(self.ntc_clusters_found, 0, wx.TOP, 5)   
             
         
         hbox12 = wx.BoxSizer(wx.HORIZONTAL)
@@ -2810,15 +2822,16 @@ class PageCluster(wx.Panel):
         sizer1.Add((0,10)) 
         sizer1.Add(self.button_calcca, 0, wx.EXPAND|wx.LEFT|wx.RIGHT, 20)
         sizer1.Add(hbox11, 0, wx.EXPAND)
+        sizer1.Add(hbox11a, 0, wx.EXPAND)
         sizer1.Add(hbox12, 0, wx.EXPAND)
         
-        sizer1.Add((0,10))        
+        sizer1.Add((0,5))        
         sizer1.Add(wx.StaticLine(panel1), 0, wx.ALL|wx.EXPAND, 5)        
-        sizer1.Add((0,10)) 
+        sizer1.Add((0,5)) 
       
         sizer1.Add(self.button_scatterplots, 0, wx.EXPAND|wx.LEFT|wx.RIGHT, 20)
         sizer1.Add(self.button_savecluster, 0, wx.EXPAND|wx.LEFT|wx.RIGHT, 20)       
-        sizer1.Add((0,10))
+        sizer1.Add((0,5))
          
         panel1.SetSizer(sizer1)
         
@@ -2925,9 +2938,10 @@ class PageCluster(wx.Panel):
         wx.BeginBusyCursor()
         self.calcclusters = False  
         
-
-        try: 
+        if True:
+        #try: 
             self.CalcClusters()
+            
             self.calcclusters = True
             
             self.selcluster = 1
@@ -2941,16 +2955,16 @@ class PageCluster(wx.Panel):
             self.com.cluster_calculated = 1       
             wx.EndBusyCursor() 
             
-        except:
-            self.com.cluster_calculated = 0
-            wx.EndBusyCursor()      
+#        except:
+#            self.com.cluster_calculated = 0
+#            wx.EndBusyCursor()      
             
         wx.GetApp().TopWindow.refresh_widgets()
             
 #----------------------------------------------------------------------        
     def OnNClusterspin(self, event):
         num = event.GetInt()
-        self.numclusters = num
+        self.init_nclusters = num
                        
  
 #----------------------------------------------------------------------        
@@ -3008,7 +3022,10 @@ class PageCluster(wx.Panel):
                        
 #----------------------------------------------------------------------
     def CalcClusters(self):
-        self.anlz.calculate_clusters_kmeans(self.numclusters, self.wo_1st_pca)
+        nclusters = self.anlz.calculate_clusters(self.init_nclusters, self.wo_1st_pca)
+        self.numclusters = nclusters
+        self.ntc_clusters_found.SetValue(self.numclusters)
+    
         
         
         

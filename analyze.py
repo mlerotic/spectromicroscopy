@@ -141,57 +141,54 @@ class analyze:
         return    
     
 #----------------------------------------------------------------------   
-# Find clusters using kmeans
-    def calculate_clusters_kmeans(self, nclusters, remove1stpca = 0):
+# Find clusters 
+    def calculate_clusters(self, nclusters, remove1stpca = 0):
         #Reduced data matrix od_reduced(n_pixels,n_significant_components)
         #od_reduced = np.zeros((self.stack.n_cols, self.stack.n_rows, self.numsigpca))
-        
+       
         self.nclusters = nclusters
-                
+               
         npixels = self.stack.n_cols * self.stack.n_rows
-        
+       
         inverse_n_pixels = 1./float(npixels)
-        
-        if remove1stpca == 0 : 
+       
+        if remove1stpca == 0 :
             od_reduced = self.pcaimages[:,:,0:self.numsigpca]
             od_reduced = np.reshape(od_reduced, (npixels,self.numsigpca), order='F')
-        else: 
+        else:
             od_reduced = self.pcaimages[:,:,1:self.numsigpca]
             od_reduced = np.reshape(od_reduced, (npixels,self.numsigpca-1), order='F')
-        
-        
+       
 
-        #kmeans(obs,k_or_guess,iter=20,thresh=1e-5)
-        
+       
         indx = np.zeros(npixels)
 
-        clustercentroids, indx = kmeans2(od_reduced, nclusters, iter=100, minit = 'points' )
+        clustercentroids, indx = kmeans2(od_reduced, nclusters, iter=200, minit = 'points' )
         
-        
+              
+       
         #calculate cluster distances
         self.cluster_distances = np.zeros((self.stack.n_cols*self.stack.n_rows))
         for i in range(npixels):
             clind = indx[i]
-            self.cluster_distances[i] = scipy.spatial.distance.euclidean(od_reduced[i,:],clustercentroids[clind,:])
-            
+            self.cluster_distances[i] = scipy.spatial.distance.euclidean(od_reduced[i,:],clustercentroids[clind,:])          
+           
         self.cluster_distances = np.reshape(self.cluster_distances, (self.stack.n_cols, self.stack.n_rows), order='F')
                     
      
         indx = np.reshape(indx, (self.stack.n_cols, self.stack.n_rows), order='F')
-        
         self.clustersizes = np.zeros((nclusters,), dtype=np.int)
-
-        
+       
         for i in range(nclusters):
             clind = np.where(indx == i)
             self.clustersizes[i] = indx[clind].shape[0]
-                    
+                   
         #sort the data with the cluster with the most members first  
         count_indices = np.argsort(self.clustersizes)
         count_indices = count_indices[::-1]
-                
+               
         self.cluster_indices = np.zeros((self.stack.n_cols, self.stack.n_rows), dtype=np.int)
-              
+             
         self.clusterspectra = np.zeros((nclusters, self.stack.n_ev))
                
         for i in range(nclusters):
@@ -203,9 +200,187 @@ class analyze:
                 thiseng_od = self.stack.od3d[:,:,ie]
                 self.clusterspectra[i,ie] = np.sum(thiseng_od[clind])/self.clustersizes[i]
      
+        #Calculate SSE Sum of Squared errors
+        indx = np.reshape(self.cluster_indices, (npixels), order='F')
+        self.sse = np.zeros((npixels))
+        for i in range(npixels):
+            clind = indx[i]
+            self.sse[i] = np.sum(np.square(self.stack.od[i,:]-self.clusterspectra[clind,:]))         
+           
+        self.sse = np.reshape(self.sse, (self.stack.n_cols, self.stack.n_rows), order='F')
+        
+
+
+        #Check the validity of cluster analysis and if needed add another cluster
+        new_cluster_indices = self.cluster_indices.copy()
+        new_nclusters = nclusters
+        recalc_clusters = False
+        
+        for i in range(nclusters):
+            clind = np.where(self.cluster_indices == i)
+            cl_sse_mean = np.mean(self.sse[clind])
+            cl_see_std = np.std(self.sse[clind])
+            #print i, cl_sse_mean, cl_see_std 
+            
+            sigma9 = cl_sse_mean+9*cl_see_std
+            maxsse = np.max(self.sse[clind])
+            if (maxsse > sigma9): 
+                #print 'have new cluster', max, sigma6
+                recalc_clusters = True
+                sse_helper = np.zeros((self.stack.n_cols, self.stack.n_rows), dtype=np.int)
+                sse_helper[clind] = self.sse[clind]
+                newcluster_ind = np.where(sse_helper > sigma9)
+                new_cluster_indices[newcluster_ind] = new_nclusters
+                new_nclusters += 1
+                        
+        
+        if recalc_clusters == True:
+            nclusters = new_nclusters
+            self.cluster_indices = new_cluster_indices
+            self.clusterspectra = np.zeros((nclusters, self.stack.n_ev))
+            self.clustersizes = np.zeros((nclusters,), dtype=np.int)
+            for i in range(nclusters):
+                clind = np.where(self.cluster_indices == i)
+                self.clustersizes[i] = self.cluster_indices[clind].shape[0]
+
+                for ie in range(self.stack.n_ev):  
+                    thiseng_od = self.stack.od3d[:,:,ie]
+                    self.clusterspectra[i,ie] = np.sum(thiseng_od[clind])/self.clustersizes[i]
+         
+            #Calculate SSE Sum of Squared errors
+            indx = np.reshape(self.cluster_indices, (npixels), order='F')
+            self.sse = np.zeros((npixels))
+            for i in range(npixels):
+                clind = indx[i]
+                self.sse[i] = np.sum(np.square(self.stack.od[i,:]-self.clusterspectra[clind,:]))         
+               
+            self.sse = np.reshape(self.sse, (self.stack.n_cols, self.stack.n_rows), order='F')
+        
+        
+        self.cluster_distances = self.sse
+        
+        return int(nclusters)
+        
     
+        
+#----------------------------------------------------------------------   
+# Find clusters using K-means clustering
+    def calculate_clusters_kmeans(self, N_clusters, data):
+
+        N_Variables = data.shape[1] # same as n_significant_components
+        N_Samples = data.shape[0] # same as n_pixels
+        N_Iterations = 10
+        
+ 
+        #Initial 'learning rate'.
+        LearningRates = 0.3-0.2*np.arange(N_Iterations)/(N_Iterations-1)
+        
+        # Normal random cluster weights.
+        cluster_weights = (-1.+ 2*np.random.random((N_Variables, N_clusters)))
+
+        
+        cluster_distances = np.zeros((N_Samples))
+        cluster_histogram = np.zeros((N_clusters), dtype=np.int32)
+        Tempcluster_indices = np.zeros((N_Samples), dtype=np.int32)        
+        cluster_indices = np.zeros((N_Samples), dtype=np.int32)                          
+                        
+                        
+        WorkCol = np.ones((1,N_clusters))
+
+
+        Metric = np.zeros((N_clusters))
+        # Start by picking a percentage of the pixels at random,
+        # and using them to start finding our cluster centers
+        n_random_pixels = int(0.20*float(N_Samples))
+        random_sample_indices = np.arange((N_Samples))
+        np.random.shuffle(random_sample_indices)
+
+        this_learning_rate = LearningRates[0]
+
+        for i_sample in range(n_random_pixels):
+            Sample = random_sample_indices[i_sample]
+            Vector =  np.outer(data[Sample, :], WorkCol) - cluster_weights
+            
+            #Calculate distances
+            for i_cluster in range(N_clusters):
+                Metric[i_cluster] = np.sqrt(np.dot(Vector[:, i_cluster],Vector[:, i_cluster]).conj())
+                
+            MinIndex = np.argmin(Metric)
+            cluster_weights[:,MinIndex] = this_learning_rate* Vector[:,MinIndex] + cluster_weights[:,MinIndex]
+
+            #cluster_indices[random_sample_indices[i_sample]] = MinIndex
+
+
+    
+        # Random ordering of sample indices.
+        random_ordered = np.arange((N_Samples))
+        np.random.shuffle(random_ordered)
+
+
+        New_RMSDistanceIterations = np.zeros((N_Iterations))
+        for i_iteration in range(N_Iterations):
+      
+            this_max_distance = float(0)
+            this_learning_rate = LearningRates[i_iteration]
+            for Sample in range (N_Samples):
+                RSample = random_ordered[Sample]
+                # In our case the data array is
+                # d_reduced(n_significant_components,n_pixels), and we have
+                # WorkCol(1,n_clusters).  Calculate
+                # Vector(n_significant_components,n_clusters) by multiplying
+                # all the components for this pixel by n_clusters values of
+                # 1 to pick them off, and then subtracting from the result
+                # the current guess of the weights (the cluster centers).
+                temp = np.outer(data[RSample, :], WorkCol)
+                Vector =  temp - cluster_weights
+
+                #Calculate distances
+                for i_cluster in range(N_clusters):
+                    Metric[i_cluster] = np.sqrt(np.dot(Vector[:, i_cluster],Vector[:, i_cluster]))
+                
+                MinIndex = np.argmin(Metric)
+                MinMetric = Metric[MinIndex]
+                cluster_weights[:,MinIndex] = this_learning_rate* Vector[:,MinIndex] + cluster_weights[:,MinIndex]
+
+                cluster_distances[RSample] = MinMetric
+                
+                if (i_iteration == (N_Iterations-1)) :
+                    Tempcluster_indices[RSample] = MinIndex
+                    cluster_histogram[MinIndex] = cluster_histogram[MinIndex]+1
+
+            # Since we're talking about distances from the cluster
+            # center, which is in some ways an average of pixel positions,
+            # we use (N_Samples-1) in the denominator.
+            #New_RMSDistanceIterations[i_iteration] = np.sqrt(np.sum(cluster_distances**2)/float(N_Samples-1))
+
+        # Next we sort the data with the cluster with the most members
+        # first
+        count_indices = np.flipud(np.argsort(cluster_histogram))
+        cluster_histogram = cluster_histogram[count_indices]
+        cluster_indices = np.zeros((N_Samples), dtype=np.int32)     
+        ClustersFound = 0L
+        for i_cluster in range(N_clusters):
+            i_temp_cluster = count_indices[i_cluster]
+            these_pixels = np.where(Tempcluster_indices == i_temp_cluster)
+            if Tempcluster_indices[these_pixels].any():
+                cluster_indices[these_pixels] = i_cluster
+                ClustersFound = ClustersFound + 1
+    
+#        cluster_histogram = cluster_histogram[0:(ClustersFound-1)]
+#        cluster_weights = cluster_weights[:, 0:(ClustersFound-1)]   
+#
+#        # Recalculate the cluster centers to be equal to the average of the
+#        # pixel weights. 
+#        for i_cen in range(N_clusters):
+#            cluster_members = np.where(cluster_indices == i_cen)
+#            n_mem = cluster_indices[cluster_members].size
+##            if n_mem>0:
+##                WorkRow2=np.ones((n_mem))
+##                cluster_weights[:,i_cen]=np.outer(data[cluster_members,:],WorkRow2)/n_mem
 
       
+        return cluster_weights.T, cluster_indices
+       
         
 #----------------------------------------------------------------------   
 # Find clusters using EM clustering

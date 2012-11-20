@@ -41,6 +41,8 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
         accel_sdf.sdfstk.__init__(self)
         
         self.data_struct = data_struct
+        
+        self.i0_dwell = None 
 
 #----------------------------------------------------------------------   
     def new_data(self):
@@ -285,10 +287,12 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
 
         self.evi0 = evdata
         self.i0data = i0data 
+        
+        self.i0_dwell = self.data_dwell
 
         self.calculate_optical_density()
         
-        self.self.fill_h5_struct_normalization()
+        self.fill_h5_struct_normalization()
     
         return  
     
