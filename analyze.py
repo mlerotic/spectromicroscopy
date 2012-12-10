@@ -151,16 +151,40 @@ class analyze:
         npixels = self.stack.n_cols * self.stack.n_rows
        
         inverse_n_pixels = 1./float(npixels)
+        inverse_n_pixels_less_one =  1./float(npixels-1)
+        
+        dc_offsets = np.zeros((self.numsigpca))
+        #rms_deviations = np.zeros((self.numsigpca))
+        od_reduced = np.zeros((self.stack.n_cols, self.stack.n_rows,self.numsigpca))
        
+        for i in range(self.numsigpca):
+
+            eimage = self.pcaimages[:,:,i]
+
+            dc_offsets[i] = np.sum(eimage)*inverse_n_pixels
+            # Since we're looking at deviations from an average,
+            # we divide by (N-1).
+            #rms_deviations[i] = np.sqrt(np.sum((eimage-dc_offsets[i])**2)*inverse_n_pixels_less_one)
+
+            # The straightforward thing is to do
+            #   d_reduced[i,0:(n_pixels-1)] = eimage
+            # However, things work much better if we subtract the
+            # DC offsets from each eigenimage.  One could also divide
+            # by rms_deviations, but that seems to overweight
+            # the sensitivity to weaker components too much.    
+            rms_gamma = 0
+            od_reduced[:,:,i] = (eimage-dc_offsets[i]) *(self.eigenvals[0]/self.eigenvals[i])**rms_gamma
+
+       
+    
         if remove1stpca == 0 :
-            od_reduced = self.pcaimages[:,:,0:self.numsigpca]
+            #od_reduced = od_reduced[:,:,0:self.numsigpca]
             od_reduced = np.reshape(od_reduced, (npixels,self.numsigpca), order='F')
         else:
-            od_reduced = self.pcaimages[:,:,1:self.numsigpca]
+            od_reduced = od_reduced[:,:,1:self.numsigpca]
             od_reduced = np.reshape(od_reduced, (npixels,self.numsigpca-1), order='F')
        
 
-       
         indx = np.zeros(npixels)
 
         clustercentroids, indx = kmeans2(od_reduced, nclusters, iter=200, minit = 'points' )
@@ -242,10 +266,10 @@ class analyze:
             for i in range(nclusters):
                 clind = np.where(self.cluster_indices == i)
                 self.clustersizes[i] = self.cluster_indices[clind].shape[0]
-
-                for ie in range(self.stack.n_ev):  
-                    thiseng_od = self.stack.od3d[:,:,ie]
-                    self.clusterspectra[i,ie] = np.sum(thiseng_od[clind])/self.clustersizes[i]
+                if self.clustersizes[i]>0:
+                    for ie in range(self.stack.n_ev):  
+                        thiseng_od = self.stack.od3d[:,:,ie]
+                        self.clusterspectra[i,ie] = np.sum(thiseng_od[clind])/self.clustersizes[i]
          
             #Calculate SSE Sum of Squared errors
             indx = np.reshape(self.cluster_indices, (npixels), order='F')
