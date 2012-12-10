@@ -189,12 +189,23 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
         f.close()
         
         
+        
         msec = np.ones((self.n_ev))
          
         self.data_dwell = msec
                        
         self.absdata = imgstack
                 
+        #Check if the energies are consecutive, if they are not sort the data
+        sort = 0
+        for i in range(self.n_ev - 1):
+            if self.ev[i] > self.ev[i+1]:
+                sort = 1
+                break
+        if sort == 1:
+            sortind = np.argsort(self.ev)
+            self.ev = self.ev[sortind]
+            self.absdata = self.absdata[:,:,sortind]
 
         
         self.original_n_cols = imgstack.shape[0]
