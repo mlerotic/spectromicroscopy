@@ -142,7 +142,7 @@ class analyze:
     
 #----------------------------------------------------------------------   
 # Find clusters 
-    def calculate_clusters(self, nclusters, remove1stpca = 0):
+    def calculate_clusters(self, nclusters, remove1stpca = 0, sigmasplit = 0):
         #Reduced data matrix od_reduced(n_pixels,n_significant_components)
         #od_reduced = np.zeros((self.stack.n_cols, self.stack.n_rows, self.numsigpca))
        
@@ -235,50 +235,51 @@ class analyze:
         
 
 
-        #Check the validity of cluster analysis and if needed add another cluster
-        new_cluster_indices = self.cluster_indices.copy()
-        new_nclusters = nclusters
-        recalc_clusters = False
-        
-        for i in range(nclusters):
-            clind = np.where(self.cluster_indices == i)
-            cl_sse_mean = np.mean(self.sse[clind])
-            cl_see_std = np.std(self.sse[clind])
-            #print i, cl_sse_mean, cl_see_std 
+        if (sigmasplit ==1):
+            #Check the validity of cluster analysis and if needed add another cluster
+            new_cluster_indices = self.cluster_indices.copy()
+            new_nclusters = nclusters
+            recalc_clusters = False
             
-            sigma9 = cl_sse_mean+9*cl_see_std
-            maxsse = np.max(self.sse[clind])
-            if (maxsse > sigma9): 
-                #print 'have new cluster', max, sigma6
-                recalc_clusters = True
-                sse_helper = np.zeros((self.stack.n_cols, self.stack.n_rows), dtype=np.int)
-                sse_helper[clind] = self.sse[clind]
-                newcluster_ind = np.where(sse_helper > sigma9)
-                new_cluster_indices[newcluster_ind] = new_nclusters
-                new_nclusters += 1
-                        
-        
-        if recalc_clusters == True:
-            nclusters = new_nclusters
-            self.cluster_indices = new_cluster_indices
-            self.clusterspectra = np.zeros((nclusters, self.stack.n_ev))
-            self.clustersizes = np.zeros((nclusters,), dtype=np.int)
             for i in range(nclusters):
                 clind = np.where(self.cluster_indices == i)
-                self.clustersizes[i] = self.cluster_indices[clind].shape[0]
-                if self.clustersizes[i]>0:
-                    for ie in range(self.stack.n_ev):  
-                        thiseng_od = self.stack.od3d[:,:,ie]
-                        self.clusterspectra[i,ie] = np.sum(thiseng_od[clind])/self.clustersizes[i]
-         
-            #Calculate SSE Sum of Squared errors
-            indx = np.reshape(self.cluster_indices, (npixels), order='F')
-            self.sse = np.zeros((npixels))
-            for i in range(npixels):
-                clind = indx[i]
-                self.sse[i] = np.sum(np.square(self.stack.od[i,:]-self.clusterspectra[clind,:]))         
-               
-            self.sse = np.reshape(self.sse, (self.stack.n_cols, self.stack.n_rows), order='F')
+                cl_sse_mean = np.mean(self.sse[clind])
+                cl_see_std = np.std(self.sse[clind])
+                #print i, cl_sse_mean, cl_see_std 
+                
+                sigma9 = cl_sse_mean+9*cl_see_std
+                maxsse = np.max(self.sse[clind])
+                if (maxsse > sigma9): 
+                    #print 'have new cluster', max, sigma6
+                    recalc_clusters = True
+                    sse_helper = np.zeros((self.stack.n_cols, self.stack.n_rows), dtype=np.int)
+                    sse_helper[clind] = self.sse[clind]
+                    newcluster_ind = np.where(sse_helper > sigma9)
+                    new_cluster_indices[newcluster_ind] = new_nclusters
+                    new_nclusters += 1
+                            
+            
+            if recalc_clusters == True:
+                nclusters = new_nclusters
+                self.cluster_indices = new_cluster_indices
+                self.clusterspectra = np.zeros((nclusters, self.stack.n_ev))
+                self.clustersizes = np.zeros((nclusters,), dtype=np.int)
+                for i in range(nclusters):
+                    clind = np.where(self.cluster_indices == i)
+                    self.clustersizes[i] = self.cluster_indices[clind].shape[0]
+                    if self.clustersizes[i]>0:
+                        for ie in range(self.stack.n_ev):  
+                            thiseng_od = self.stack.od3d[:,:,ie]
+                            self.clusterspectra[i,ie] = np.sum(thiseng_od[clind])/self.clustersizes[i]
+             
+                #Calculate SSE Sum of Squared errors
+                indx = np.reshape(self.cluster_indices, (npixels), order='F')
+                self.sse = np.zeros((npixels))
+                for i in range(npixels):
+                    clind = indx[i]
+                    self.sse[i] = np.sum(np.square(self.stack.od[i,:]-self.clusterspectra[clind,:]))         
+                   
+                self.sse = np.reshape(self.sse, (self.stack.n_cols, self.stack.n_rows), order='F')
         
         
         self.cluster_distances = self.sse
@@ -481,6 +482,7 @@ class analyze:
     def add_cluster_target_spectra(self):
         # Load spectrum from a file or cluster spectra 
 
+        self.tspec_names = []
         for i in range(self.nclusters):
    
             target_spectrum = self.clusterspectra[i,:]
@@ -493,7 +495,7 @@ class analyze:
                 self.target_spectra = np.vstack((self.target_spectra,target_spectrum))
                 self.n_target_spectra += 1
             self.tspec_names.append('Cluster '+str(i+1))
-        
+            print self.tspec_names
         self.fit_target_spectra()
         self.calc_svd_maps()  
         

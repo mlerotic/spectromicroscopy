@@ -81,8 +81,14 @@ class sm:
         absdata = np.zeros((ncols, nrows, nev))
         ev = np.zeros((nev))
         
-        fdevicen = netCDF4.chartostring(getattr(fcdf,'fast_device_name'))
-        sdevicen = netCDF4.chartostring(getattr(fcdf,'slow_device_name'))
+        #fdevicen = netCDF4.chartostring(getattr(fcdf,'fast_device_name'))
+        #sdevicen = netCDF4.chartostring(getattr(fcdf,'slow_device_name'))
+        
+        fdevicenl = getattr(fcdf,'fast_device_name')
+        sdevicenl = getattr(fcdf,'slow_device_name')
+        
+        fdevicen = chr(fdevicenl[0]) + chr(fdevicenl[1]) + chr(fdevicenl[2]) + chr(fdevicenl[3])
+        sdevicen = chr(sdevicenl[0]) + chr(sdevicenl[1]) + chr(sdevicenl[2]) + chr(sdevicenl[3])
         
         x_center_um = -1
         y_center_um = -1
@@ -109,12 +115,12 @@ class sm:
         
         self.ds.implements = 'information:exchange:spectromicroscopy'
         self.ds.version = '1.0'
-        self.ds.information.file_creation_datetime = netCDF4.chartostring(getattr(fcdf,'systime'))
-        self.ds.information.comment = netCDF4.chartostring(getattr(fcdf,'comments1'))
+        self.ds.information.file_creation_datetime = ' '#netCDF4.chartostring(getattr(fcdf,'systime'))
+        self.ds.information.comment = ' '#netCDF4.chartostring(getattr(fcdf,'comments1'))
         
-        self.ds.information.experimenter.name = netCDF4.chartostring(getattr(fcdf,'scientist'))
+        self.ds.information.experimenter.name = ' '#netCDF4.chartostring(getattr(fcdf,'scientist'))
 
-        self.ds.information.sample.name = netCDF4.chartostring(getattr(fcdf,'sample'))
+        self.ds.information.sample.name = ' '#netCDF4.chartostring(getattr(fcdf,'sample'))
         
         
         fcdf.close()
@@ -138,7 +144,6 @@ class sm:
             ev = ev[::-1]
             absdata = absdata[:,:, ::-1]
             
-        
         
         self.ds.exchange.data = absdata
         self.ds.exchange.data_signal = 1

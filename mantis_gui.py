@@ -1938,6 +1938,7 @@ class PageSpectral(wx.Panel):
         
 #----------------------------------------------------------------------           
     def ClearWidgets(self):
+        
         fig = self.MapPanel.get_figure()
         fig.clf()
         self.MapPanel.draw()
@@ -2763,6 +2764,7 @@ class PageCluster(wx.Panel):
         self.numclusters = 0
         self.init_nclusters = 5
         self.wo_1st_pca = 0
+        self.sigma_split = 0
         
         self.MakeColorTable()             
         self.fontsize = self.com.fontsize
@@ -2815,16 +2817,24 @@ class PageCluster(wx.Panel):
         self.remove1stpcacb = wx.CheckBox(panel1, -1, 'Reduce thickness effects')
         self.remove1stpcacb.SetFont(self.com.font)
         self.Bind(wx.EVT_CHECKBOX, self.OnRemove1stpca, self.remove1stpcacb)
-        hbox12.Add(self.remove1stpcacb, 0, wx.EXPAND|wx.TOP, 15)
+        hbox12.Add(self.remove1stpcacb, 0, wx.EXPAND|wx.TOP, 10)
         hbox12.Add((20,0))
-        
+
+        hbox13 = wx.BoxSizer(wx.HORIZONTAL)
+        hbox13.Add((20,0))
+        self.cb_splitclusters = wx.CheckBox(panel1, -1, 'Divide clusters with large Sigma')
+        self.cb_splitclusters.SetFont(self.com.font)
+        self.Bind(wx.EVT_CHECKBOX, self.OnSplitClusters, self.cb_splitclusters)
+        hbox13.Add(self.cb_splitclusters, 0, wx.EXPAND, 15)
+        hbox13.Add((20,0))        
         
         sizer1.Add((0,10)) 
         sizer1.Add(self.button_calcca, 0, wx.EXPAND|wx.LEFT|wx.RIGHT, 20)
         sizer1.Add(hbox11, 0, wx.EXPAND)
         sizer1.Add(hbox11a, 0, wx.EXPAND)
         sizer1.Add(hbox12, 0, wx.EXPAND)
-        
+        sizer1.Add(hbox13, 0, wx.EXPAND|wx.TOP, 3)
+                
         sizer1.Add((0,5))        
         sizer1.Add(wx.StaticLine(panel1), 0, wx.ALL|wx.EXPAND, 5)        
         sizer1.Add((0,5)) 
@@ -3022,7 +3032,7 @@ class PageCluster(wx.Panel):
                        
 #----------------------------------------------------------------------
     def CalcClusters(self):
-        nclusters = self.anlz.calculate_clusters(self.init_nclusters, self.wo_1st_pca)
+        nclusters = self.anlz.calculate_clusters(self.init_nclusters, self.wo_1st_pca, self.sigma_split)
         self.numclusters = nclusters
         self.ntc_clusters_found.SetValue(self.numclusters)
     
@@ -3133,7 +3143,11 @@ class PageCluster(wx.Panel):
             self.wo_1st_pca = 1
         else: self.wo_1st_pca = 0
 
-        
+#----------------------------------------------------------------------           
+    def OnSplitClusters(self, event):
+        if self.cb_splitclusters.GetValue():
+            self.sigma_split = 1
+        else: self.sigma_split = 0        
         
 #----------------------------------------------------------------------    
     def OnSave(self, event):     
@@ -5206,6 +5220,7 @@ class PageStack(wx.Panel):
             self.slider_eng.SetValue(self.iev)
             self.loadSpectrum(self.ix, self.iy)
             self.button_slideshow.SetLabel("Play stack movie")
+            self.movie_playing = 0
             
 
                         
@@ -6568,7 +6583,18 @@ class ImageRegistration(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnCropShifts, id=self.button_crop.GetId())   
         self.button_crop.Disable()
         vbox7.Add(self.button_crop, 0, wx.EXPAND)
+
+        self.button_saveshifts = wx.Button(panel7, -1, 'Save image shifts')
+        self.button_saveshifts.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.OnSaveShifts, id=self.button_saveshifts.GetId())
+        self.button_saveshifts.Disable()
+        vbox7.Add(self.button_saveshifts, 0, wx.EXPAND)
         
+        self.button_loadshifts = wx.Button(panel7, -1, 'Load image shifts')
+        self.button_loadshifts.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.OnLoadShifts, id=self.button_loadshifts.GetId())
+        vbox7.Add(self.button_loadshifts, 0, wx.EXPAND)
+                
         self.button_accept = wx.Button(panel7, -1, 'Accept changes')
         self.button_accept.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnAccept, id=self.button_accept.GetId())
@@ -6611,7 +6637,7 @@ class ImageRegistration(wx.Frame):
         
         vboxR.Add((0,20))
         vboxR.Add(hboxRT)
-        vboxR.Add((0,20))
+        vboxR.Add((0,30))
         vboxR.Add(hboxRB)
         
         hboxtop.Add(vboxL)
@@ -7213,6 +7239,84 @@ class ImageRegistration(wx.Frame):
         self.ShowRefImage()
 
 #----------------------------------------------------------------------  
+    def OnSaveShifts(self, evt):
+        
+        wildcard = "CSV files (*.csv)|*.csv"
+        dialog = wx.FileDialog(None, "Please select an alignment file (.csv)",
+                               wildcard=wildcard,
+                               style=wx.SAVE)
+        if dialog.ShowModal() == wx.ID_OK:
+            filepath = dialog.GetPath()
+            
+            file = open(filepath, 'w')
+            print>>file, '*********************  Alignment file  ********************'
+            print>>file, '***  for ', self.com.filename
+            print>>file, '***  ev, xshift, yshift'           
+            for ie in range(self.stack.n_ev):
+                print>>file, '%.6f, %.6f, %.6f' %(self.stack.ev[ie], self.xshifts[ie], self.yshifts[ie])
+        
+            file.close()            
+        
+#----------------------------------------------------------------------  
+    def OnLoadShifts(self, evt):
+        wildcard = "CSV files (*.csv)|*.csv"
+        dialog = wx.FileDialog(None, "Please select an alignment file (.csv)",
+                               wildcard=wildcard,
+                               style=wx.OPEN)
+        if dialog.ShowModal() == wx.ID_OK:
+            filepath = dialog.GetPath()
+
+
+            f = open(str(filepath),'r')
+            
+            elist = []
+            xshiftlist = []    
+            yshiftlist = []  
+            
+            for line in f:
+                if line.startswith('*'):
+                    continue
+                else:
+                    e, xs, ys = [float (x) for x in line.split(',')] 
+                    elist.append(e)
+                    xshiftlist.append(xs)
+                    yshiftlist.append(ys)                   
+                   
+            f.close()
+            
+ 
+            self.xshifts = npy.zeros((self.stack.n_ev))
+            self.yshifts = npy.zeros((self.stack.n_ev)) 
+           
+            for ie in range(self.stack.n_ev):
+                engfl = '%.6f' % ( self.stack.ev[ie])
+                eng = float(engfl)
+                if eng in elist:
+                    ind = elist.index(eng)
+                    self.xshifts[ie] = xshiftlist[ind]
+                    self.yshifts[ie] = yshiftlist[ind]
+                 
+
+            #Apply shifts
+            self.PlotShifts()
+            for i in range(self.stack.n_ev):
+                img = self.aligned_stack[:,:,i]
+                if (abs(self.xshifts[i])>0.02) or (abs(self.yshifts[i])>0.02):
+                    shifted_img = self.stack.apply_image_registration(img, 
+                                                                      self.xshifts[i], 
+                                                                      self.yshifts[i])
+                    self.aligned_stack[:,:,i] = shifted_img
+    
+                    
+            self.regist_calculated = 1
+            self.iev = 0
+            self.ShowImage()
+            self.slider_eng.SetValue(self.iev)
+            
+            self.UpdateWidgets()                    
+           
+            
+#----------------------------------------------------------------------  
     def UpdateWidgets(self):
         
         if self.auto:
@@ -7228,10 +7332,12 @@ class ImageRegistration(wx.Frame):
             if self.regist_calculated == 1:
                 self.button_crop.Enable()
                 self.button_accept.Enable()
+                self.button_saveshifts.Enable()
                 self.button_saveimg.Enable()
             else:
                 self.button_crop.Disable()
                 self.button_accept.Disable() 
+                self.button_saveshifts.Disable()
                 self.button_saveimg.Disable()
                            
         else:
@@ -7247,9 +7353,11 @@ class ImageRegistration(wx.Frame):
             if self.regist_calculated == 1:
                 self.button_crop.Enable()
                 self.button_accept.Enable()
+                self.button_saveshifts.Enable()
             else:
                 self.button_crop.Disable()
                 self.button_accept.Disable() 
+                self.button_saveshifts.Disable()
                            
             if self.man_align == 0:
                 self.button_pick2ndpoint.Disable()
@@ -8314,6 +8422,9 @@ class MainFrame(wx.Frame):
                 filepath = dialog.GetPath()
                 self.page1.filename = dialog.GetFilename()
                 directory = dialog.GetDirectory()
+            else:
+                return
+            
             wx.BeginBusyCursor() 
             basename, extension = os.path.splitext(self.page1.filename)      
             
