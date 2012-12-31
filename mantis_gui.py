@@ -1355,7 +1355,8 @@ class PageSpectral(wx.Panel):
         #panel 1        
         panel1 = wx.Panel(self, -1)
         vbox1 = wx.BoxSizer(wx.VERTICAL)
-        
+	panel1.SetBackgroundColour("White")      
+  
         self.tc_spmap = wx.TextCtrl(panel1, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         self.tc_spmap.SetFont(self.com.font)
         self.tc_spmap.SetValue("Spectrum composition map")
@@ -1373,6 +1374,7 @@ class PageSpectral(wx.Panel):
         #panel 2
         panel2 = wx.Panel(self, -1)
         vbox2 = wx.BoxSizer(wx.VERTICAL)
+	panel2.SetBackgroundColour("White")
         
         self.tc_tspec = wx.TextCtrl(panel2, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         self.tc_tspec.SetFont(self.com.font)
@@ -1567,8 +1569,8 @@ class PageSpectral(wx.Panel):
         hboxB.Add(panel1, 0, wx.BOTTOM | wx.TOP, 9)
         hboxT.Add((10,0)) 
                
-        hboxT.Add(panel3, 1, wx.LEFT | wx.RIGHT | wx.TOP | wx.EXPAND, 9)
-        hboxT.Add(panel4, 3, wx.LEFT | wx.RIGHT |wx.TOP | wx.EXPAND, 9)
+        hboxT.Add(panel3, 0, wx.LEFT | wx.RIGHT | wx.TOP | wx.EXPAND, 9)
+        hboxT.Add(panel4, 2.5, wx.LEFT | wx.RIGHT |wx.TOP | wx.EXPAND, 9)
         hboxT.Add(panel5, 1, wx.LEFT | wx.RIGHT |wx.TOP | wx.EXPAND, 9)
 
         vbox.Add(hboxT, 0, wx.ALL, 5)
@@ -2867,10 +2869,10 @@ class PageCluster(wx.Panel):
         #panel 3 
         panel3 = wx.Panel(self, -1)
         vbox3 = wx.BoxSizer(wx.VERTICAL)
-        
+      	panel3.SetBackgroundColour("White")  
         fgs = wx.FlexGridSizer(2, 3, 0, 0)
         
-        self.tc_cluster = wx.TextCtrl(panel3, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.tc_cluster = wx.TextCtrl(panel3, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE, size=(250,-1))
         self.tc_cluster.SetValue("Cluster ")
         self.tc_cluster.SetFont(self.com.font)
 
@@ -3866,12 +3868,13 @@ class PagePCA(wx.Panel):
         
         #panel 3
         panel3 = wx.Panel(self, -1)
-        
+      	panel3.SetBackgroundColour("White")
+  
         i3panel = wx.Panel(panel3, -1, style = wx.SUNKEN_BORDER)
         self.PCASpecPan = wxmpl.PlotPanel(i3panel, -1, size =(pw, ph), cursor=False, crosshairs=False, location=False, zoom=False)
              
         vbox3 = wx.BoxSizer(wx.VERTICAL)
-        self.text_pcaspec = wx.TextCtrl(panel3, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.text_pcaspec = wx.TextCtrl(panel3, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE, size=(600,-1))
         self.text_pcaspec.SetFont(self.com.font)
         self.text_pcaspec.SetValue("PCA spectrum ")        
         vbox3.Add(self.text_pcaspec, 0)
@@ -3881,13 +3884,14 @@ class PagePCA(wx.Panel):
         
         #panel 4
         panel4 = wx.Panel(self, -1)
-             
+	panel4.SetBackgroundColour("White")        
+
         i4panel = wx.Panel(panel4, -1, style = wx.SUNKEN_BORDER)
         self.PCAEvalsPan = wxmpl.PlotPanel(i4panel, -1, size =(pw, ph*0.75), cursor=False, crosshairs=False, location=False, zoom=False)
         wxmpl.EVT_POINT(i4panel, self.PCAEvalsPan.GetId(), self.OnPointEvalsImage)   
         
         vbox4 = wx.BoxSizer(wx.VERTICAL)
-        text4 = wx.TextCtrl(panel4, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        text4 = wx.TextCtrl(panel4, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE, size=(600,-1))
         text4.SetFont(self.com.font)
         text4.SetValue("PCA eigenvalues ")        
         vbox4.Add(text4, 0)
@@ -4478,7 +4482,7 @@ class PageStack(wx.Panel):
         #panel 1        
         panel1 = wx.Panel(self, -1)
         vbox1 = wx.BoxSizer(wx.VERTICAL)
-        
+        panel1.SetBackgroundColour("White")
         self.tc_imageeng = wx.TextCtrl(panel1, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         self.tc_imageeng.SetFont(self.com.font)
         self.tc_imageeng.SetValue("Image at energy: ")
@@ -4516,7 +4520,7 @@ class PageStack(wx.Panel):
         #panel 2
         panel2 = wx.Panel(self, -1)
         vbox2 = wx.BoxSizer(wx.VERTICAL)
-        
+        panel2.SetBackgroundColour("White")
         self.tc_spec = wx.TextCtrl(panel2, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         self.tc_spec.SetValue("Spectrum")
         self.tc_spec.SetFont(self.com.font)
@@ -7655,7 +7659,8 @@ class DoseCalculation(wx.Frame):
         
         self.tc_4 = wx.TextCtrl(panel1, -1, size=((200,-1)), style=wx.TE_RICH|wx.VSCROLL|wx.TE_READONLY, 
                                          value=' ')
-              
+        
+      
         gridtop.Add(st1, 0)
         gridtop.Add( self.tc_1, 0)
         gridtop.Add(st2, 0)
@@ -8110,7 +8115,7 @@ class PageLoadData(wx.Panel):
         panel5 = wx.Panel(self, -1)
         vbox5 = wx.BoxSizer(wx.VERTICAL)
         
-        self.tc_imageeng = wx.TextCtrl(panel5, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE, size=(160,-1))
+        self.tc_imageeng = wx.TextCtrl(panel5, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE, size=(300,-1))
         self.tc_imageeng.SetFont(self.com.font)
         self.tc_imageeng.SetValue("Image at energy: ")
         
@@ -8120,7 +8125,7 @@ class PageLoadData(wx.Panel):
         self.AbsImagePanel = wxmpl.PlotPanel(i1panel, -1, size =(PlotH*.8, PlotH*.8), cursor=False, crosshairs=False, location=False, zoom=False)
         
         vbox51 = wx.BoxSizer(wx.VERTICAL)
-        self.slider_eng = wx.Slider(panel5, -1, self.iev, 0, 100, style=wx.SL_LEFT)        
+        self.slider_eng = wx.Slider(panel5, 0, self.iev, 0, 100, style=wx.SL_LEFT|wx.SL_VERTICAL)        
         self.slider_eng.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnScrollEng, self.slider_eng)
 
