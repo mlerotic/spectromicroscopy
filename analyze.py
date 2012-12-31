@@ -495,7 +495,7 @@ class analyze:
                 self.target_spectra = np.vstack((self.target_spectra,target_spectrum))
                 self.n_target_spectra += 1
             self.tspec_names.append('Cluster '+str(i+1))
-            print self.tspec_names
+
         self.fit_target_spectra()
         self.calc_svd_maps()  
         

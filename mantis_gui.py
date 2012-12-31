@@ -186,7 +186,7 @@ class PageKeyEng(wx.Panel):
         self.AbsImagePanel = wxmpl.PlotPanel(i1panel, -1, size =(PlotH*.8, PlotH*.8), cursor=False, crosshairs=False, location=False, zoom=False)
         
         vbox41 = wx.BoxSizer(wx.VERTICAL)
-        self.slider_eng = wx.Slider(panel4, -1, self.i_eng, 0, 100, style=wx.SL_LEFT)        
+        self.slider_eng = wx.Slider(panel4, -1, self.i_eng, 0, 100, style=wx.SL_LEFT|wx.SL_VERTICAL)        
         self.slider_eng.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnScrollEng, self.slider_eng)
 
@@ -491,7 +491,7 @@ class PageICA(wx.Panel):
         self.ICASpecPan = wxmpl.PlotPanel(i1panel, -1, size =(pw, ph), cursor=False, crosshairs=False, location=False, zoom=False)
                
         vbox11 = wx.BoxSizer(wx.VERTICAL)               
-        self.slidershow = wx.Slider(panel1, -1, self.selica, 1, 20, style=wx.SL_LEFT)
+        self.slidershow = wx.Slider(panel1, -1, self.selica, 1, 20, style=wx.SL_LEFT|wx.SL_VERTICAL)
         #self.slidershow.Disable()          
         self.slidershow.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnICAScroll, self.slidershow)
@@ -1355,7 +1355,7 @@ class PageSpectral(wx.Panel):
         #panel 1        
         panel1 = wx.Panel(self, -1)
         vbox1 = wx.BoxSizer(wx.VERTICAL)
-	panel1.SetBackgroundColour("White")      
+        panel1.SetBackgroundColour("White")      
   
         self.tc_spmap = wx.TextCtrl(panel1, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         self.tc_spmap.SetFont(self.com.font)
@@ -1374,7 +1374,7 @@ class PageSpectral(wx.Panel):
         #panel 2
         panel2 = wx.Panel(self, -1)
         vbox2 = wx.BoxSizer(wx.VERTICAL)
-	panel2.SetBackgroundColour("White")
+        panel2.SetBackgroundColour("White")
         
         self.tc_tspec = wx.TextCtrl(panel2, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         self.tc_tspec.SetFont(self.com.font)
@@ -1384,7 +1384,7 @@ class PageSpectral(wx.Panel):
         i2panel = wx.Panel(panel2, -1, style = wx.SUNKEN_BORDER)
         self.TSpectrumPanel = wxmpl.PlotPanel(i2panel, -1, size=(PlotW, PlotH), cursor=False, crosshairs=False, location=False, zoom=False)
 
-        self.slider_tspec = wx.Slider(panel2, -1, 1, 1, 5, style=wx.SL_LEFT )        
+        self.slider_tspec = wx.Slider(panel2, -1, 1, 1, 5, style=wx.SL_LEFT|wx.SL_VERTICAL )        
         self.slider_tspec.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnTSScroll, self.slider_tspec)
         
@@ -2869,7 +2869,7 @@ class PageCluster(wx.Panel):
         #panel 3 
         panel3 = wx.Panel(self, -1)
         vbox3 = wx.BoxSizer(wx.VERTICAL)
-      	panel3.SetBackgroundColour("White")  
+        panel3.SetBackgroundColour("White")  
         fgs = wx.FlexGridSizer(2, 3, 0, 0)
         
         self.tc_cluster = wx.TextCtrl(panel3, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE, size=(250,-1))
@@ -2879,7 +2879,7 @@ class PageCluster(wx.Panel):
         i3panel = wx.Panel(panel3, -1, style = wx.SUNKEN_BORDER)
         self.ClusterIndvImagePan = wxmpl.PlotPanel(i3panel, -1, size =(PlotH*0.73, PlotH*0.73), cursor=False, crosshairs=False, location=False, zoom=False)
     
-        self.slidershow = wx.Slider(panel3, -1, self.selcluster, 1, 20, style=wx.SL_LEFT)   
+        self.slidershow = wx.Slider(panel3, -1, self.selcluster, 1, 20, style=wx.SL_LEFT|wx.SL_VERTICAL)   
         self.slidershow.Disable()    
         self.slidershow.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnClusterScroll, self.slidershow)
@@ -3465,7 +3465,7 @@ class Scatterplots(wx.Frame):
         i1panel = wx.Panel(panel, -1, style = wx.SUNKEN_BORDER)
         self.ScatterPPanel = wxmpl.PlotPanel(i1panel, -1, size=(5.0, 4.0), cursor=False, crosshairs=False, location=False, zoom=False)
         
-        self.slidershow_y = wx.Slider(panel, -1, self.pca_y, 1, self.numsigpca, style=wx.SL_RIGHT|wx.SL_LABELS|wx.SL_INVERSE)
+        self.slidershow_y = wx.Slider(panel, -1, self.pca_y, 1, self.numsigpca, style=wx.SL_RIGHT|wx.SL_VERTICAL|wx.SL_LABELS|wx.SL_INVERSE)
         self.slidershow_y.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnSliderScroll_y, self.slidershow_y)
         
@@ -3473,7 +3473,7 @@ class Scatterplots(wx.Frame):
         grid1.Add(i1panel, 0)
                
         
-        self.slidershow_x = wx.Slider(panel, -1, self.pca_x, 1, self.numsigpca, style=wx.SL_TOP|wx.SL_LABELS)
+        self.slidershow_x = wx.Slider(panel, -1, self.pca_x, 1, self.numsigpca, style=wx.SL_TOP|wx.SL_LABELS|wx.SL_HORIZONTAL)
         self.slidershow_x.SetFocus()        
         self.Bind(wx.EVT_SCROLL, self.OnSliderScroll_x, self.slidershow_x)
         
@@ -3801,7 +3801,7 @@ class PagePCA(wx.Panel):
         self.PCAImagePan = wxmpl.PlotPanel(i1panel, -1, size =(ph*1.10, ph), cursor=False, crosshairs=False, location=False, zoom=False)
                
         vbox11 = wx.BoxSizer(wx.VERTICAL)               
-        self.slidershow = wx.Slider(panel1, -1, self.selpca, 1, 20, style=wx.SL_LEFT)
+        self.slidershow = wx.Slider(panel1, -1, self.selpca, 1, 20, style=wx.SL_LEFT|wx.SL_VERTICAL)
         self.slidershow.Disable()          
         self.slidershow.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnPCAScroll, self.slidershow)
@@ -3868,7 +3868,7 @@ class PagePCA(wx.Panel):
         
         #panel 3
         panel3 = wx.Panel(self, -1)
-      	panel3.SetBackgroundColour("White")
+        panel3.SetBackgroundColour("White")
   
         i3panel = wx.Panel(panel3, -1, style = wx.SUNKEN_BORDER)
         self.PCASpecPan = wxmpl.PlotPanel(i3panel, -1, size =(pw, ph), cursor=False, crosshairs=False, location=False, zoom=False)
@@ -3884,7 +3884,7 @@ class PagePCA(wx.Panel):
         
         #panel 4
         panel4 = wx.Panel(self, -1)
-	panel4.SetBackgroundColour("White")        
+        panel4.SetBackgroundColour("White")        
 
         i4panel = wx.Panel(panel4, -1, style = wx.SUNKEN_BORDER)
         self.PCAEvalsPan = wxmpl.PlotPanel(i4panel, -1, size =(pw, ph*0.75), cursor=False, crosshairs=False, location=False, zoom=False)
@@ -4495,7 +4495,7 @@ class PageStack(wx.Panel):
         wxmpl.EVT_POINT(i1panel, self.AbsImagePanel.GetId(), self.OnPointAbsimage)
         
         vbox11 = wx.BoxSizer(wx.VERTICAL)                    
-        self.slider_eng = wx.Slider(panel1, -1, self.iev, 0, 100, style=wx.SL_LEFT )        
+        self.slider_eng = wx.Slider(panel1, -1, self.iev, 0, 100, style=wx.SL_LEFT|wx.SL_VERTICAL)        
         self.slider_eng.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnScrollEng, self.slider_eng)
         
@@ -6351,7 +6351,7 @@ class ImageRegistration(wx.Frame):
         wxmpl.EVT_POINT(i1panel, self.AbsImagePanel.GetId(), self.OnPointCorrimage)
 
                     
-        self.slider_eng = wx.Slider(panel1, -1, self.iev, 0, self.stack.n_ev-1, style=wx.SL_LEFT )        
+        self.slider_eng = wx.Slider(panel1, -1, self.iev, 0, self.stack.n_ev-1, style=wx.SL_LEFT|wx.SL_VERTICAL)        
         self.slider_eng.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnScrollEng, self.slider_eng)
 
