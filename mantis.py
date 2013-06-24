@@ -59,8 +59,142 @@ class PagePCA(QtGui.QWidget):
         
 #----------------------------------------------------------------------          
     def initUI(self): 
-        pass
 
+
+        
+        #panel 1        
+        vbox1 = QtGui.QVBoxLayout()
+        
+        self.tc_PCAcomp = QtGui.QLabel(self)
+        #self.tc_PCAcomp.SetFont(self.com.font)
+        self.tc_PCAcomp.setText("PCA component ")
+        vbox1.addWidget(self.tc_PCAcomp)
+        
+        hbox11 = QtGui.QHBoxLayout()
+   
+        #i1panel = wx.Panel(panel1, -1, style = wx.SUNKEN_BORDER)
+        #self.PCAImagePan = wxmpl.PlotPanel(i1panel, -1, size =(ph*1.10, ph), cursor=False, crosshairs=False, location=False, zoom=False)
+        self.image = QtGui.QImage(os.path.join('images','Mantis_img.jpg'))
+        
+        self.imageLabel = QtGui.QLabel()
+        self.imageLabel.setBackgroundRole(QtGui.QPalette.Base)
+        #self.imageLabel.setSizePolicy()
+        #self.imageLabel.setScaledContents(True)
+        
+        self.imageLabel.setPixmap(QtGui.QPixmap.fromImage(self.image))
+        hbox11.addWidget(self.imageLabel)
+                       
+            
+        self.slidershow = QtGui.QScrollBar(QtCore.Qt.Vertical)
+        self.slidershow.setFocusPolicy(QtCore.Qt.StrongFocus)
+        #self.slidershow.Disable()          
+        #self.slidershow.SetFocus()
+        #self.Bind(wx.EVT_SCROLL, self.OnPCAScroll, self.slidershow)
+        
+        hbox11.addWidget(self.slidershow)
+
+        vbox1.addLayout(hbox11)
+        
+       
+                
+        #panel 2
+        vbox2 = QtGui.QVBoxLayout()
+        sizer2 = QtGui.QGroupBox('PCA')
+        vbox21 = QtGui.QVBoxLayout()        
+        
+        self.button_calcpca = QtGui.QPushButton('Calculate PCA')
+        #self.button_calcpca.SetFont(self.com.font)
+        #self.Bind(wx.EVT_BUTTON, self.OnCalcPCA, id=self.button_calcpca.GetId())     
+        #self.button_calcpca.Disable()   
+        vbox21.addWidget(self.button_calcpca)
+        self.button_savepca = QtGui.QPushButton('Save PCA Results...')
+        #self.button_savepca.SetFont(self.com.font)
+        #self.Bind(wx.EVT_BUTTON, self.OnSave, id=self.button_savepca.GetId())
+        #self.button_savepca.Disable()
+        vbox21.addWidget(self.button_savepca)
+        
+        hbox21 = QtGui.QHBoxLayout()
+        text1 = QtGui.QLabel(self)
+        text1.setText('Number of significant components')
+        #text1.SetFont(self.com.font)
+        #self.npcaspin = wx.SpinCtrl(panel2, -1, '',  size= (60, -1), style=wx.ALIGN_LEFT)
+        #self.npcaspin.SetRange(1,20)
+        #self.Bind(wx.EVT_SPINCTRL, self.OnNPCAspin, self.npcaspin)
+        vbox21.addWidget(text1)
+              
+        hbox22 = QtGui.QHBoxLayout()
+        text2 = QtGui.QLabel(self)
+        text2.setText( 'Cumulative variance')
+        #text2.SetFont(self.com.font)
+        self.vartc = QtGui.QLabel(self)
+        self.vartc.setText('0%')
+        hbox22.addWidget(text2)
+        hbox22.addWidget(self.vartc)
+
+        vbox21.addLayout(hbox22)      
+        sizer2.setLayout(vbox21)
+        vbox2.addStretch(1)
+        vbox2.addWidget(sizer2)
+        vbox2.addStretch(3)
+
+        
+        #panel 3
+        vbox3 = QtGui.QVBoxLayout()
+   
+        #i3panel = wx.Panel(panel3, -1, style = wx.SUNKEN_BORDER)
+        #self.PCASpecPan = wxmpl.PlotPanel(i3panel, -1, size =(pw, ph), cursor=False, crosshairs=False, location=False, zoom=False)
+ 
+        self.text_pcaspec = QtGui.QLabel(self)
+        #self.text_pcaspec.SetFont(self.com.font)
+        self.text_pcaspec.setText("PCA spectrum ") 
+        vbox3.addWidget(self.text_pcaspec)
+                        
+        image = QtGui.QImage(os.path.join('images','spectrum.jpg'))       
+        self.imageLabel = QtGui.QLabel()
+        self.imageLabel.setBackgroundRole(QtGui.QPalette.Base)
+        #self.imageLabel.setSizePolicy()
+        #self.imageLabel.setScaledContents(True)
+        self.imageLabel.setPixmap(QtGui.QPixmap.fromImage(image))
+        vbox3.addWidget(self.imageLabel)   
+
+ 
+    
+        
+        #panel 4
+        vbox4 = QtGui.QVBoxLayout()
+ 
+        #i4panel = wx.Panel(panel4, -1, style = wx.SUNKEN_BORDER)
+        #self.PCAEvalsPan = wxmpl.PlotPanel(i4panel, -1, size =(pw, ph*0.75), cursor=False, crosshairs=False, location=False, zoom=False)
+        #wxmpl.EVT_POINT(i4panel, self.PCAEvalsPan.GetId(), self.OnPointEvalsImage)   
+         
+        text4 = QtGui.QLabel(self)
+        #text4.SetFont(self.com.font)
+        text4.setText("PCA eigenvalues ")        
+        vbox4.addWidget(text4)
+        
+        image2 = QtGui.QImage(os.path.join('images','spectrum.jpg'))       
+        self.imageLabel2 = QtGui.QLabel()
+        self.imageLabel2.setBackgroundRole(QtGui.QPalette.Base)
+        #self.imageLabel.setSizePolicy()
+        #self.imageLabel.setScaledContents(True)
+        self.imageLabel2.setPixmap(QtGui.QPixmap.fromImage(image2))
+        vbox4.addWidget(self.imageLabel2)           
+
+
+    
+        
+        vboxtop = QtGui.QVBoxLayout()
+        gridsizertop = QtGui.QGridLayout()
+        
+        gridsizertop.addLayout(vbox2, 0, 0, QtCore .Qt. AlignLeft)
+        gridsizertop.addLayout(vbox4, 0, 1)
+        gridsizertop.addLayout(vbox1, 1, 0, QtCore .Qt. AlignLeft)
+        gridsizertop.addLayout(vbox3, 1, 1)
+        
+        vboxtop.addStretch(1)
+        vboxtop.addLayout(gridsizertop)
+        vboxtop.addStretch(1)
+        self.setLayout(vboxtop)
 
 """ ------------------------------------------------------------------------------------------------"""
 class PageStack(QtGui.QWidget):
@@ -242,25 +376,25 @@ class PageStack(QtGui.QWidget):
         hbox23.addLayout(fgs21)
                 
     
-        vbox44 = QtGui.QVBoxLayout()
+        vbox24 = QtGui.QVBoxLayout()
         self.button_despike = QtGui.QPushButton('Despike')
         #self.button_despike.SetFont(self.com.font)
         #self.Bind(wx.EVT_BUTTON, self.OnDespike, id=self.button_despike.GetId())   
         #self.button_despike.Disable()     
-        vbox44.addWidget(self.button_despike)
+        vbox24.addWidget(self.button_despike)
         self.button_resetdisplay = QtGui.QPushButton( 'Reset')
         #self.button_resetdisplay.SetFont(self.com.font)
         #self.Bind(wx.EVT_BUTTON, self.onResetDisplaySettings, id=self.button_resetdisplay.GetId())   
         #self.button_resetdisplay.Disable()     
-        vbox44.addWidget(self.button_resetdisplay)
+        vbox24.addWidget(self.button_resetdisplay)
         self.button_displaycolor = QtGui.QPushButton('Color Table...   ')
         #self.button_displaycolor.SetFont(self.com.font)
         #self.Bind(wx.EVT_BUTTON, self.onSetColorTable, id=self.button_displaycolor.GetId())   
         #self.button_displaycolor.Disable()     
-        vbox44.addWidget(self.button_displaycolor)
+        vbox24.addWidget(self.button_displaycolor)
         
         hbox23.addSpacing(20)
-        hbox23.addLayout(vbox44)
+        hbox23.addLayout(vbox24)
         
         sizer23.setLayout(hbox23)
         hbox21.addWidget(sizer23)       
@@ -317,13 +451,83 @@ class PageStack(QtGui.QWidget):
         vbox3.addWidget(self.button_spectralROI)
         sizer3.setLayout(vbox3)
         
+
+
+        #panel 4     
+        vbox4 = QtGui.QVBoxLayout()
         
+        self.tc_imageeng = QtGui.QLabel(self)
+        #self.tc_imageeng.SetFont(self.com.font)
+        self.tc_imageeng.setText("Image at energy: ")
+        vbox4.addWidget(self.tc_imageeng)
+        
+        
+        hbox41 = QtGui.QHBoxLayout()
+   
+        #i1panel = wx.Panel(panel5, -1, style = wx.SUNKEN_BORDER)
+        #self.AbsImagePanel = wxmpl.PlotPanel(i1panel, -1, size =(PlotH*.8, PlotH*.8), cursor=False, crosshairs=False, location=False, zoom=False)
+        self.image = QtGui.QImage(os.path.join('images','Mantis_img.jpg'))
+        
+        self.imageLabel = QtGui.QLabel()
+        self.imageLabel.setBackgroundRole(QtGui.QPalette.Base)
+        #self.imageLabel.setSizePolicy()
+        #self.imageLabel.setScaledContents(True)
+        
+        self.imageLabel.setPixmap(QtGui.QPixmap.fromImage(self.image))
+        hbox41.addWidget(self.imageLabel)
+        
+
+        self.slider_eng = QtGui.QScrollBar(QtCore.Qt.Vertical)
+        self.slider_eng.setFocusPolicy(QtCore.Qt.StrongFocus)
+#         vbox51 = wx.BoxSizer(wx.VERTICAL)
+#         self.slider_eng = wx.Slider(panel5, 0, self.iev, 0, 100, style=wx.SL_LEFT|wx.SL_VERTICAL)        
+#         self.slider_eng.SetFocus()
+#         self.Bind(wx.EVT_SCROLL, self.OnScrollEng, self.slider_eng)
+        hbox41.addWidget(self.slider_eng)
+# 
+#         self.engspin = wx.SpinButton(panel5, -1, size = ((8,-1)), style=wx.SP_ARROW_KEYS)
+#         self.Bind(wx.EVT_SPIN_UP, self.OnEngspinUp, self.engspin)
+#         self.Bind(wx.EVT_SPIN_DOWN, self.OnEngspinDown, self.engspin)
+        
+        vbox4.addLayout(hbox41)
+        
+
+
+        #panel 5     
+        vbox5 = QtGui.QVBoxLayout()
+        
+        self.tc_spec = QtGui.QLabel(self)
+        #self.tc_spec.SetFont(self.com.font)
+        self.tc_spec.setText("Spectrum ")
+        vbox5.addWidget(self.tc_spec)
+        
+
+        self.image = QtGui.QImage(os.path.join('images','spectrum.jpg'))
+        
+        self.imageLabel = QtGui.QLabel()
+        self.imageLabel.setBackgroundRole(QtGui.QPalette.Base)
+        #self.imageLabel.setSizePolicy()
+        #self.imageLabel.setScaledContents(True)
+        
+        self.imageLabel.setPixmap(QtGui.QPixmap.fromImage(self.image))
+        vbox5.addWidget(self.imageLabel)
+               
+
+
+       
         vboxtop = QtGui.QVBoxLayout()
         
         hboxtop = QtGui.QHBoxLayout()
         hboxtop.addWidget(sizer1)
         hboxtop.addWidget(sizer2)
         hboxtop.addWidget(sizer3)
+        
+        hboxbott = QtGui.QHBoxLayout()
+        hboxbott2 = QtGui.QHBoxLayout()
+        hboxbott2.addLayout(vbox4)
+        hboxbott2.addStretch(1)
+        hboxbott2.addLayout(vbox5)
+        hboxbott.addLayout(hboxbott2)
         
 #         hboxtop.addStretch (0.5)
 #         hboxtop.addLayout(vboxt1)
@@ -333,6 +537,8 @@ class PageStack(QtGui.QWidget):
 #         
         vboxtop.addStretch (1)
         vboxtop.addLayout(hboxtop)
+        vboxtop.addStretch (1)
+        vboxtop.addLayout(hboxbott)
         vboxtop.addStretch (1)
 #         vboxtop.addWidget(sizer3)
 #         vboxtop.addStretch (0.5)

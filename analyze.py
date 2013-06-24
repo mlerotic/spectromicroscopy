@@ -277,7 +277,7 @@ class analyze:
                 self.sse = np.zeros((npixels))
                 for i in range(npixels):
                     clind = indx[i]
-                    self.sse[i] = np.sum(np.square(self.stack.od[i,:]-self.clusterspectra[clind,:]))         
+                    self.sse[i] = np.sqrt(np.sum(np.square(self.stack.od[i,:]-self.clusterspectra[clind,:])))         
                    
                 self.sse = np.reshape(self.sse, (self.stack.n_cols, self.stack.n_rows), order='F')
         

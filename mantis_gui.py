@@ -3131,10 +3131,18 @@ class PageCluster(wx.Panel):
         fig.add_axes((0.02,0.02,0.96,0.96))
         axes = fig.gca()
         
+#         divider = make_axes_locatable(axes)
+#         axcb = divider.new_horizontal(size="3%", pad=0.03)  
+#         fig.add_axes(axcb)  
+#         axes.set_position([0.03,0.03,0.8,0.94])
+               
         mtplot.rcParams['font.size'] = self.fontsize
         
         
         im = axes.imshow(mapimage, cmap=mtplot.cm.get_cmap('gray'))
+        
+        #cbar = axes.figure.colorbar(im, orientation='vertical',cax=axcb) 
+        
         axes.axis("off")
        
         self.ClusterDistMapPan.draw()
@@ -7380,7 +7388,7 @@ class SpectralROI(wx.Frame):
     title = "Spectral Regions of Interest"
 
     def __init__(self, common, stack):
-        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(630, 700))
+        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(630, 720))
                
         ico = logos.getlogo_2l_32Icon()
         self.SetIcon(ico)
@@ -7412,13 +7420,15 @@ class SpectralROI(wx.Frame):
         
         panel = wx.Panel(self, -1)
         vbox = wx.BoxSizer(wx.VERTICAL)
-               
+        text = wx.StaticText(panel, 0, 'First select I0 region below the edge, then select I region above the edge:')
+        
         i1panel = wx.Panel(panel, -1, style = wx.SUNKEN_BORDER)
         self.SpectrumPanel = wxmpl.PlotPanel(i1panel, -1, size=(6.0, 3.7), cursor=False, crosshairs=False, location=False, zoom=False)
         
         wxmpl.EVT_SELECTION(i1panel, self.SpectrumPanel.GetId(), self.OnSelection)
 
-        vbox.Add(i1panel, 0, wx.ALL, 20)
+        vbox.Add(text, 0, wx.TOP|wx.LEFT, 20)
+        vbox.Add(i1panel, 0, wx.BOTTOM|wx.LEFT, 20)
         
        
         hbox2 = wx.BoxSizer(wx.HORIZONTAL)
@@ -7511,10 +7521,30 @@ class SpectralROI(wx.Frame):
         fig.clf()
         fig.add_axes((0.02,0.02,0.96,0.96))
         
-        
         axes = fig.gca()
+        divider = make_axes_locatable(axes)
+        axcb = divider.new_horizontal(size="3%", pad=0.03)  
+
+        fig.add_axes(axcb)
+        
+        axes.set_position([0.03,0.03,0.8,0.94])
+        
         
         im = axes.imshow(self.odthickmap, cmap=mtplot.cm.get_cmap("gray")) 
+
+        cbar = axes.figure.colorbar(im, orientation='vertical',cax=axcb) 
+
+        #Show Scale Bar
+        startx = int(self.stack.n_rows*0.05)
+        starty = self.stack.n_cols-int(self.stack.n_cols*0.05)-self.stack.scale_bar_pixels_y
+        um_string = '$\mu m$'
+        microns = '$'+self.stack.scale_bar_string+' $'+um_string
+        axes.text(self.stack.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center',
+                  color = 'black', fontsize=14)
+        #Matplotlib has flipped scales so I'm using rows instead of cols!
+        p = mtplot.patches.Rectangle((startx,starty), self.stack.scale_bar_pixels_x, self.stack.scale_bar_pixels_y,
+                               color = 'black', fill = True)
+        axes.add_patch(p)
 
          
         axes.axis("off")  
