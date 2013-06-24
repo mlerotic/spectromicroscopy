@@ -43,6 +43,8 @@ import henke
 Winsizex = 1000
 Winsizey = 740
 
+ImgDpi = 40
+
 PlotH = 3.46
 PlotW = PlotH*1.61803
 
@@ -1822,7 +1824,7 @@ class PageSpectral(wx.Panel):
                 
                    
             fileName_img = self.SaveFileName+"_TSmap_" +str(i+1)+"."+ext               
-            fig.savefig(fileName_img)
+            fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
             
 #----------------------------------------------------------------------        
     def OnEditSpectraListClick(self, event):
@@ -2557,7 +2559,7 @@ class ShowCompositeRBGmap(wx.Frame):
 
                             
         fig = self.RGBImagePanel.get_figure()
-        fig.savefig(SaveFileName)
+        fig.savefig(SaveFileName, bbox_inches='tight', pad_inches = 0.0)
                 
    
 
@@ -3173,32 +3175,49 @@ class PageCluster(wx.Panel):
              scatt_png = True, scatt_pdf = False): 
         
         self.SaveFileName = os.path.join(path,filename)
+        
+        from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas    
+        mtplot.rcParams['pdf.fonttype'] = 42
    
         try: 
-            mtplot.rcParams['pdf.fonttype'] = 42
             
             if img_png:
                 ext = 'png'
                 suffix = "." + ext
             
-                fileName_evals = self.SaveFileName+"_CAcimg."+ext          
-            
-                fig = self.ClusterImagePan.get_figure()
-                fig.savefig(fileName_evals)
+                fig = mtplot.figure.Figure(figsize = (float(self.stk.n_rows)/10, float(self.stk.n_cols)/10))
+                canvas = FigureCanvas(fig)
+                fig.clf()
+                fig.add_axes((0.0,0.0,1.0,1.0))
+                axes = fig.gca()      
+                mtplot.rcParams['font.size'] = self.fontsize        
+        
+                im = axes.imshow(self.clusterimage, cmap=self.clusterclrmap1, norm=self.bnorm1)
+                axes.axis("off")
+                
+                fileName_caimg = self.SaveFileName+"_CAcimg."+ext       
+                fig.savefig(fileName_caimg, dpi=ImgDpi, pad_inches = 0.0)
                 
             
             if img_pdf:
                 ext = 'pdf'
                 suffix = "." + ext
             
-                fileName_evals = self.SaveFileName+"_CAcimg."+ext          
-            
-                fig = self.ClusterImagePan.get_figure()
-                fig.savefig(fileName_evals)
+                fig = mtplot.figure.Figure(figsize = (float(self.stk.n_rows)/30, float(self.stk.n_cols)/30))
+                canvas = FigureCanvas(fig)
+                fig.clf()
+                fig.add_axes((0.0,0.0,1.0,1.0))
+                axes = fig.gca()      
+                mtplot.rcParams['font.size'] = self.fontsize        
+        
+                im = axes.imshow(self.clusterimage, cmap=self.clusterclrmap1, norm=self.bnorm1)
+                axes.axis("off")
+                
+                fileName_caimg = self.SaveFileName+"_CAcimg."+ext       
+                fig.savefig(fileName_caimg, dpi=300, pad_inches = 0.0)
                             
             
-            from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas    
-            mtplot.rcParams['pdf.fonttype'] = 42
+
                   
             ext = 'png'
             suffix = "." + ext
@@ -3211,16 +3230,16 @@ class PageCluster(wx.Panel):
                     colorcl = min(i,9)
                     indvclusterimage[ind] = colorcl
 
-                    fig = mtplot.figure.Figure(figsize =(PlotH, PlotH))
+                    fig = mtplot.figure.Figure(figsize =(float(self.stk.n_rows)/10, float(self.stk.n_cols)/10))
                     canvas = FigureCanvas(fig)
-                    fig.add_axes((0.02,0.02,0.96,0.96))
+                    fig.add_axes((0.0,0.0,1.0,1.0))
                     axes = fig.gca()      
                     mtplot.rcParams['font.size'] = self.fontsize        
                     im = axes.imshow(indvclusterimage, cmap=self.clusterclrmap2, norm=self.bnorm2)
                     axes.axis("off")
                    
                     fileName_img = self.SaveFileName+"_CAimg_" +str(i+1)+"."+ext               
-                    fig.savefig(fileName_img)
+                    fig.savefig(fileName_img, dpi=ImgDpi, pad_inches = 0.0)
                 
             if spec_png:
                 for i in range (self.numclusters):
@@ -3262,16 +3281,16 @@ class PageCluster(wx.Panel):
                     colorcl = min(i,9)
                     indvclusterimage[ind] = colorcl
 
-                    fig = mtplot.figure.Figure(figsize =(PlotH, PlotH))
+                    fig = mtplot.figure.Figure(figsize =(float(self.stk.n_rows)/30, float(self.stk.n_cols)/30))
                     canvas = FigureCanvas(fig)
-                    fig.add_axes((0.02,0.02,0.96,0.96))
+                    fig.add_axes((0.0,0.0,1.0,1.0))
                     axes = fig.gca()      
                     mtplot.rcParams['font.size'] = self.fontsize        
                     im = axes.imshow(indvclusterimage, cmap=self.clusterclrmap2, norm=self.bnorm2)
                     axes.axis("off")
                    
                     fileName_img = self.SaveFileName+"_CAimg_" +str(i+1)+"."+ext               
-                    fig.savefig(fileName_img)
+                    fig.savefig(fileName_img, dpi=300, pad_inches = 0.0)
                 
             if spec_pdf:
                 for i in range (self.numclusters):
@@ -3403,9 +3422,11 @@ class PageCluster(wx.Panel):
         colors_i = npy.linspace(0,self.maxclcolors,self.maxclcolors+1)
 
        
-        self.colors=['#0000FF','#FF0000','#FFFF00','#33FF33','#B366FF',
+        self.colors=['#0000FF','#FF0000','#DFE32D','#36F200','#B366FF',
                 '#FF470A','#33FFFF','#006600','#CCCC99','#993300',
                 '#000000']
+
+
         
         self.clusterclrmap1=mtplot.colors.LinearSegmentedColormap.from_list('clustercm',self.colors)
      
@@ -3414,7 +3435,7 @@ class PageCluster(wx.Panel):
         colors_i = npy.linspace(0,self.maxclcolors+2,self.maxclcolors+3)
         
         #use black color for clusters > maxclcolors, the other 2 colors are for background      
-        colors2=['#0000FF','#FF0000','#FFFF00','#33FF33','#B366FF',
+        colors2=['#0000FF','#FF0000','#DFE32D','#36F200','#B366FF',
                 '#FF470A','#33FFFF','#006600','#CCCC99','#993300',
                 '#000000','#FFFFFF','#EEEEEE']
         
@@ -4087,7 +4108,7 @@ class PagePCA(wx.Panel):
                     axes.axis("off") 
                                 
                     fileName_img = self.SaveFileName+"_PCA_" +str(i+1)+"."+ext
-                    fig.savefig(fileName_img)
+                    fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
             
             if spec_png:
                 for i in range (self.numsigpca):
@@ -4135,7 +4156,7 @@ class PagePCA(wx.Panel):
                     axes.axis("off") 
                                 
                     fileName_img = self.SaveFileName+"_PCA_" +str(i+1)+"."+ext
-                    fig.savefig(fileName_img)
+                    fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
             
             if spec_pdf:
                 for i in range (self.numsigpca):
@@ -5138,9 +5159,10 @@ class PageStack(wx.Panel):
                 fig.savefig(fileName_spec)
 
             if img_png:
+                
                 fileName_img = self.SaveFileName+"_" +str(self.stk.ev[self.iev])+"eV."+ext
                 fig = self.AbsImagePanel.get_figure()
-                fig.savefig(fileName_img)
+                fig.savefig(fileName_img, pad_inches = 0.0)
                 
             #Save all images in the stack
             if img_all:
@@ -5156,16 +5178,16 @@ class PageStack(wx.Panel):
                         #Show OD image
                         image = self.stk.od3d[:,:,i]
 
-                    fig = mtplot.figure.Figure(figsize =(PlotH, PlotH))
+                    fig = mtplot.figure.Figure(figsize =(float(self.stk.n_rows)/10, float(self.stk.n_cols)/10))
                     fig.clf()
                     canvas = FigureCanvas(fig)
-                    fig.add_axes((0.02,0.02,0.96,0.96))
+                    fig.add_axes((0.0,0.0,1.0,1.0))
                     axes = fig.gca()
                     im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable)) 
                     axes.axis("off") 
                                 
                     fileName_img = self.SaveFileName+"_imnum_" +str(i+1)+"."+ext
-                    fig.savefig(fileName_img)
+                    fig.savefig(fileName_img,  dpi=ImgDpi, pad_inches = 0.0)
                 wx.EndBusyCursor()
                     
             ext = 'pdf'
@@ -5180,7 +5202,7 @@ class PageStack(wx.Panel):
             if img_pdf:
                 fileName_img = self.SaveFileName+"_" +str(self.stk.ev[self.iev])+"eV."+ext
                 fig = self.AbsImagePanel.get_figure()
-                fig.savefig(fileName_img)
+                fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
                 
             if sp_csv:
                 fileName_spec = self.SaveFileName+"_spectrum.csv"
