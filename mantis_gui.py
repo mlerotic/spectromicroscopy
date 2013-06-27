@@ -1343,7 +1343,7 @@ class PageSpectral(wx.Panel):
         self.anlz = anlz
         
         self.i_tspec = 1
-        self.showraw = False
+        self.showraw = True
         self.show_scale_bar = 0
         
         self.SetBackgroundColour("White")
@@ -1481,7 +1481,7 @@ class PageSpectral(wx.Panel):
         self.rb_fit.SetFont(self.com.font)
         self.Bind(wx.EVT_RADIOBUTTON, self.OnRBRawFit, id=self.rb_raw.GetId())
         self.Bind(wx.EVT_RADIOBUTTON, self.OnRBRawFit, id=self.rb_fit.GetId())
-        self.rb_fit.SetValue(True)
+        self.rb_raw.SetValue(True)
 
         self.add_scale_cb = wx.CheckBox(panel4, -1, '  Scale')
         self.add_scale_cb.SetFont(self.com.font)
@@ -2044,11 +2044,7 @@ class PageSpectral(wx.Panel):
     def loadTSpectrum(self):
 
         tspectrum = self.anlz.target_spectra[self.i_tspec-1, :]
-        
-        tspectrumfit = self.anlz.target_pcafit_spectra[self.i_tspec-1, :]
-        
-        diff = npy.abs(tspectrum-tspectrumfit)
-            
+                 
         
         fig = self.TSpectrumPanel.get_figure()
         fig.clf()
@@ -2058,9 +2054,13 @@ class PageSpectral(wx.Panel):
         mtplot.rcParams['font.size'] = self.fontsize
 
         line1 = axes.plot(self.stk.ev,tspectrum, color='black', label = 'Raw data')
-        line2 = axes.plot(self.stk.ev,tspectrumfit, color='green', label = 'Fit')
+
+        if self.com.pca_calculated == 1:       
+            tspectrumfit = self.anlz.target_pcafit_spectra[self.i_tspec-1, :]  
+            diff = npy.abs(tspectrum-tspectrumfit)      
+            line2 = axes.plot(self.stk.ev,tspectrumfit, color='green', label = 'Fit')
         
-        line3 = axes.plot(self.stk.ev,diff, color='grey', label = 'Abs(Raw-Fit)')
+            line3 = axes.plot(self.stk.ev,diff, color='grey', label = 'Abs(Raw-Fit)')
         
 
         fontP = mtplot.font_manager.FontProperties()
@@ -2080,9 +2080,10 @@ class PageSpectral(wx.Panel):
         
         self.textctrl_sp.AppendText('Common Name: '+ 
                                     self.anlz.tspec_names[self.i_tspec-1]+'\n')
-        self.textctrl_sp.AppendText('RMS Error: '+ str('{0:7.5f}').format(self.anlz.target_rms[self.i_tspec-1]))
-        
-        self.ShowFitWeights()
+        if self.com.pca_calculated == 1:       
+            self.textctrl_sp.AppendText('RMS Error: '+ str('{0:7.5f}').format(self.anlz.target_rms[self.i_tspec-1]))
+            
+            self.ShowFitWeights()
         
         
 #---------------------------------------------------------------------- 
@@ -8721,6 +8722,8 @@ class MainFrame(wx.Frame):
             self.page1.rb_flux.Disable()
             self.page1.rb_od.Disable()
             self.page2.button_calcpca.Disable()
+            self.page4.button_loadtspec.Disable()
+            self.page4.button_addflat.Disable()
         else:
             self.page1.button_limitev.Enable()
             self.page1.button_subregion.Enable()
@@ -8728,6 +8731,8 @@ class MainFrame(wx.Frame):
             self.page1.rb_flux.Enable()
             self.page1.rb_od.Enable()   
             self.page2.button_calcpca.Enable() 
+            self.page4.button_loadtspec.Enable()
+            self.page4.button_addflat.Enable()   
             
             
             
@@ -8735,15 +8740,13 @@ class MainFrame(wx.Frame):
             self.page2.button_savepca.Disable()
             self.page2.slidershow.Disable() 
             self.page3.button_calcca.Disable()
-            self.page4.button_loadtspec.Disable()
-            self.page4.button_addflat.Disable()
+            self.page4.rb_fit.Disable()
             if self.page7: self.page7.button_calckeng.Disable()
         else:
             self.page2.button_savepca.Enable()
             self.page2.slidershow.Enable()
-            self.page3.button_calcca.Enable()
-            self.page4.button_loadtspec.Enable()
-            self.page4.button_addflat.Enable()     
+            self.page3.button_calcca.Enable()  
+            self.page4.rb_fit.Enable()  
             if self.page7: self.page7.button_calckeng.Enable()       
             
         if self.common.cluster_calculated == 0:   

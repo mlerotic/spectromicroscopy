@@ -38,6 +38,8 @@ class analyze:
 
         self.stack = stkdata
         
+        self.pca_calculated = 0
+        
        
         self.target_spectra = 0
         self.tspectrum_loaded = 0
@@ -137,6 +139,10 @@ class analyze:
 #        except:
 #            print "pca not converging"
             
+        self.pca_calculated = 1
+        
+        if self.n_target_spectra > 1:
+            self.fit_target_spectra()
 
         return    
     
@@ -547,6 +553,10 @@ class analyze:
 #       We will call T(S_physical,S_abstract) by the name
 #       target_spectrumfit_coeffs(S_physical,S_abstract).
 
+
+        if self.pca_calculated == 0:
+            return
+        
         CT = self.eigenvecs[:,0:self.numsigpca]
         self.target_pcafit_coeffs = np.dot(self.target_spectra, CT )
       
@@ -580,6 +590,7 @@ class analyze:
         self.target_rms = (self.target_spectra-self.target_pcafit_spectra)**2
         self.target_rms = np.sqrt(np.sum(self.target_rms, axis=1)/self.stack.n_ev)
         
+        return
 
     
 #-----------------------------------------------------------------------------
@@ -591,9 +602,10 @@ class analyze:
     def calc_svd_maps(self, usefittedspectra = False):
         
         if usefittedspectra:
-            U, s, V = np.linalg.svd(self.target_spectra, full_matrices=False)
-        else:
             U, s, V = np.linalg.svd(self.target_pcafit_spectra, full_matrices=False)
+        else:
+            U, s, V = np.linalg.svd(self.target_spectra, full_matrices=False)
+            
       
         mu_inverse = t_inverse = np.dot(np.dot(V.T, np.linalg.inv(np.diag(s))), U.T)
         self.target_svd_maps = np.dot(self.stack.od, mu_inverse)
