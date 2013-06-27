@@ -459,7 +459,7 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
         
         spectrum_common_name = ' '
  
-        f = open(str(filename),'r')
+        f = open(str(filename),'rU')
         
         elist = []
         ilist = []    
@@ -491,20 +491,27 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
         
         spectrum_common_name = ' '
  
-        f = open(str(filename),'r')
+        f = open(str(filename),'rU')
         
         elist = []
         ilist = []    
+        
+        
+        #Check the first character of the line and skip if not a number
+        allowedchars = ['0','1','2','3','4','5','6','7','8','9','-','.']
     
+
         for line in f:
             if line.startswith('*'):
                 if 'Common name' in line:
                     spectrum_common_name = line.split(':')[-1].strip()
-
+            elif line[0] not in allowedchars:
+                continue
             else:
                 e, i = [float (x) for x in line.split(',')] 
                 elist.append(e)
                 ilist.append(i)
+                
                 
         spectrum_evdata = np.array(elist)
         spectrum_data = np.array(ilist) 

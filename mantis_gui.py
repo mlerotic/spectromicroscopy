@@ -1589,7 +1589,8 @@ class PageSpectral(wx.Panel):
     def OnTSpecFromFile(self, event):
         
 
-        try: 
+        #try: 
+        if True:
             wildcard = "Spectrum files (*.csv)|*.csv"
             dialog = wx.FileDialog(None, "Choose Spectrum file",
                                    style=wx.OPEN)
@@ -1613,9 +1614,9 @@ class PageSpectral(wx.Panel):
                     
             wx.EndBusyCursor()
             
-        except:
-            wx.EndBusyCursor()  
-            wx.MessageBox("Spectrum file not loaded.")
+#         except:
+#             wx.EndBusyCursor()  
+#             wx.MessageBox("Spectrum file not loaded.")
                                    
         dialog.Destroy()
                                  
@@ -8684,7 +8685,7 @@ class MainFrame(wx.Frame):
 #----------------------------------------------------------------------        
     def refresh_widgets(self):
         
-        #page 1
+
         if self.common.stack_loaded == 0:
             self.page1.button_i0ffile.Disable()
             self.page1.button_i0histogram.Disable() 
