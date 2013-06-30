@@ -1735,10 +1735,7 @@ class PageSpectral(wx.Panel):
         for i in range (self.anlz.n_target_spectra):
             #Save spectra images
             tspectrum = self.anlz.target_spectra[i, :]
-            tspectrumfit = self.anlz.target_pcafit_spectra[i, :]
-            
-            diff = npy.abs(tspectrum-tspectrumfit)
-            
+                        
         
             fig = mtplot.figure.Figure(figsize =(PlotW, PlotH))
             canvas = FigureCanvas(fig)
@@ -1749,9 +1746,12 @@ class PageSpectral(wx.Panel):
             mtplot.rcParams['font.size'] = self.fontsize
 
             line1 = axes.plot(self.stk.ev,tspectrum, color='black', label = 'Raw data')
-            line2 = axes.plot(self.stk.ev,tspectrumfit, color='green', label = 'Fit')
-        
-            line3 = axes.plot(self.stk.ev,diff, color='grey', label = 'Abs(Raw-Fit)')
+            
+            if self.com.pca_calculated == 1: 
+                tspectrumfit = self.anlz.target_pcafit_spectra[i, :]
+                diff = npy.abs(tspectrum-tspectrumfit)
+                line2 = axes.plot(self.stk.ev,tspectrumfit, color='green', label = 'Fit')
+                line3 = axes.plot(self.stk.ev,diff, color='grey', label = 'Abs(Raw-Fit)')
             
             fontP = mtplot.font_manager.FontProperties()
             fontP.set_size('small')
@@ -1766,7 +1766,7 @@ class PageSpectral(wx.Panel):
             
             if savecsv:
                 fileName_spec = self.SaveFileName+"_Tspectrum_" +str(i+1)+".csv"
-                self.stk.write_csv(fileName_spec, self.stk.ev, tspectrumfit)
+                self.stk.write_csv(fileName_spec, self.stk.ev, tspectrum)
 #----------------------------------------------------------------------
     def SaveMaps(self, png_pdf=1):            
             
@@ -1957,8 +1957,8 @@ class PageSpectral(wx.Panel):
         
         self.com.spec_anl_calculated = 0
         self.i_tspec = 1
-        self.showraw = False
-        self.rb_fit.SetValue(True)
+        self.showraw = True
+        self.rb_raw.SetValue(True)
         
         self.slider_tspec.SetValue(self.i_tspec)
         
