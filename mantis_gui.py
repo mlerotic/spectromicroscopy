@@ -1593,7 +1593,7 @@ class PageSpectral(wx.Panel):
         if True:
             wildcard = "Spectrum files (*.csv)|*.csv"
             dialog = wx.FileDialog(None, "Choose Spectrum file",
-                                   style=wx.OPEN)
+                                   style=wx.OPEN|wx.FD_CHANGE_DIR)
             dialog.SetWildcard(wildcard)
             if dialog.ShowModal() == wx.ID_OK:
                 filepath = dialog.GetPath()
@@ -5050,7 +5050,7 @@ class PageStack(wx.Panel):
             wildcard = "I0 files (*.csv)|*.csv|SDF I0 files (*.hdr)|*.hdr"
             dialog = wx.FileDialog(None, "Choose i0 file",
                                    wildcard=wildcard,
-                                   style=wx.OPEN)
+                                   style=wx.OPEN|wx.FD_CHANGE_DIR)
             if dialog.ShowModal() == wx.ID_OK:
                 filepath_i0 = dialog.GetPath()
                 self.filename = dialog.GetFilename()
@@ -8474,7 +8474,7 @@ class MainFrame(wx.Frame):
         try:
             if wildcard == '':
                 wildcard =  "HDF5 files (*.hdf5)|*.hdf5|SDF files (*.hdr)|*.hdr|STK files (*.stk)|*.stk|TXRM (*.txrm)|*.txrm|XRM (*.xrm)|*.xrm|TIF (*.tif)|*.tif" 
-            dialog = wx.FileDialog(None, "Choose a file", style=wx.OPEN)
+            dialog = wx.FileDialog(None, "Choose a file", style=wx.OPEN|wx.FD_CHANGE_DIR)
             
             dialog.SetWildcard(wildcard)
             if dialog.ShowModal() == wx.ID_OK:
@@ -8619,7 +8619,7 @@ class MainFrame(wx.Frame):
 
         try:
             dialog = wx.DirDialog(None, "Choose a directory",
-                                   style=wx.DD_DIR_MUST_EXIST)
+                                   style=wx.DD_DIR_MUST_EXIST|wx.DD_CHANGE_DIR)
             #dialog.SetWildcard(wildcard)
             if dialog.ShowModal() == wx.ID_OK:
                 directory = dialog.GetPath()
