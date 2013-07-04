@@ -69,8 +69,12 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
         
            
 #----------------------------------------------------------------------   
-    def read_stk_i0(self, filename):
-        x1a_stk.x1astk.read_stk_i0(self,filename)
+    def read_stk_i0(self, filename, extension):
+        if extension == '.xas':
+            x1a_stk.x1astk.read_stk_i0_xas(self,filename)
+        elif extension == '.csv':
+            x1a_stk.x1astk.read_stk_i0_csv(self,filename)
+            
         self.calculate_optical_density()
         
         self.fill_h5_struct_normalization()

@@ -70,7 +70,7 @@ class x1astk:
         return
 
 #----------------------------------------------------------------------   
-    def read_stk_i0(self, filename):
+    def read_stk_i0_xas(self, filename):
 
         f = open(str(filename),'r')
         
@@ -96,7 +96,31 @@ class x1astk:
         return
     
 
-            
+#----------------------------------------------------------------------   
+    def read_stk_i0_csv(self, filename):
+
+        f = open(str(filename),'r')
+        
+        elist = []
+        ilist = []    
+    
+        for line in f:
+            if line.startswith("*"):
+                pass
+            else:
+                e, i = [float (x) for x in line.split(',')] 
+                elist.append(e)
+                ilist.append(i)
+                
+        self.evi0 = np.array(elist)
+        self.i0data = np.array(ilist) 
+                
+        f.close()
+        
+        self.i0_dwell = None
+           
+    
+        return            
         
         
         

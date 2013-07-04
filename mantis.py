@@ -7,6 +7,7 @@ Created on Jun 11, 2013
 import sys
 import os
 import numpy as npy
+import time
 
 from PyQt4 import QtCore, QtGui
 from PyQt4.QtGui import *
@@ -32,6 +33,8 @@ Winsizey = 700
 
 PlotH = 4.0
 PlotW = PlotH*1.61803
+
+ImgDpi = 40
 
 #----------------------------------------------------------------------
 class common:
@@ -123,7 +126,7 @@ class PagePCA(QtGui.QWidget):
             
         self.slidershow = QtGui.QScrollBar(QtCore.Qt.Vertical)
         self.slidershow.setFocusPolicy(QtCore.Qt.StrongFocus)
-        #self.slidershow.Disable()          
+        #self.slidershow.setEnabled(False)          
         #self.slidershow.SetFocus()
         #self.Bind(wx.EVT_SCROLL, self.OnPCAScroll, self.slidershow)
         
@@ -140,13 +143,13 @@ class PagePCA(QtGui.QWidget):
         
         self.button_calcpca = QtGui.QPushButton('Calculate PCA')
         #self.button_calcpca.SetFont(self.com.font)
-        #self.Bind(wx.EVT_BUTTON, self.OnCalcPCA, id=self.button_calcpca.GetId())     
-        #self.button_calcpca.Disable()   
+        #.clicked.connect( self.OnCalcPCA, id=self.button_calcpca.GetId())     
+        #self.button_calcpca.setEnabled(False)   
         vbox21.addWidget(self.button_calcpca)
         self.button_savepca = QtGui.QPushButton('Save PCA Results...')
         #self.button_savepca.SetFont(self.com.font)
-        #self.Bind(wx.EVT_BUTTON, self.OnSave, id=self.button_savepca.GetId())
-        #self.button_savepca.Disable()
+        #.clicked.connect( self.OnSave, id=self.button_savepca.GetId())
+        #self.button_savepca.setEnabled(False)
         vbox21.addWidget(self.button_savepca)
         
         hbox21 = QtGui.QHBoxLayout()
@@ -285,44 +288,37 @@ class PageStack(QtGui.QWidget):
         vbox1.setSpacing(0)
         
         self.button_align = QtGui.QPushButton('Align images...')
-        #self.Bind(wx.EVT_BUTTON, self.OnAlignImgs, id=self.button_align.GetId())
-        #self.button_align.SetFont(self.com.font)
-        #self.button_align.Disable()
+        self.button_align.clicked.connect(self.OnAlignImgs)
+        self.button_align.setEnabled(False)
         vbox1.addWidget(self.button_align) 
         
         self.button_i0ffile = QtGui.QPushButton('I0 from file...')
-        #self.button_i0ffile.SetFont(self.com.font)
-        #self.Bind(wx.EVT_BUTTON, self.OnI0FFile, id=self.button_i0ffile.GetId())
-        #self.button_i0ffile.Disable()
+        self.button_i0ffile.clicked.connect(self.OnI0FFile)
+        self.button_i0ffile.setEnabled(False)
         vbox1.addWidget(self.button_i0ffile)
         self.button_i0histogram = QtGui.QPushButton('I0 from histogram...')
-        #self.button_i0histogram.SetFont(self.com.font)
-        #self.Bind(wx.EVT_BUTTON, self.OnI0histogram, id=self.button_i0histogram.GetId())   
-        #self.button_i0histogram.Disable()     
+        self.button_i0histogram.clicked.connect( self.OnI0histogram)   
+        self.button_i0histogram.setEnabled(False)     
         vbox1.addWidget(self.button_i0histogram)
         self.button_showi0 = QtGui.QPushButton('Show I0...')
-        #self.button_showi0.SetFont(self.com.font)
-        #self.Bind(wx.EVT_BUTTON, self.OnShowI0, id=self.button_showi0.GetId())   
-        #self.button_showi0.Disable()
+        self.button_showi0.clicked.connect( self.OnShowI0)   
+        self.button_showi0.setEnabled(False)
         vbox1.addWidget(self.button_showi0)
         
         
         self.button_limitev = QtGui.QPushButton('Limit energy range...')
-        #self.Bind(wx.EVT_BUTTON, self.OnLimitEv, id=self.button_limitev.GetId())
-        #self.button_limitev.SetFont(self.com.font)
-        #self.button_limitev.Disable()
+        self.button_limitev.clicked.connect( self.OnLimitEv)
+        self.button_limitev.setEnabled(False)
         vbox1.addWidget(self.button_limitev)
         
         self.button_subregion = QtGui.QPushButton('Clip to subregion...')
-        #self.Bind(wx.EVT_BUTTON, self.OnCliptoSubregion, id=self.button_subregion.GetId())
-        #self.button_subregion.SetFont(self.com.font)
-        #self.button_subregion.Disable()
+        self.button_subregion.clicked.connect(self.OnCliptoSubregion)
+        self.button_subregion.setEnabled(False)
         vbox1.addWidget(self.button_subregion)       
             
         self.button_savestack = QtGui.QPushButton('Save preprocessed stack')
-        #self.button_savestack.SetFont(self.com.font)
-        #self.Bind(wx.EVT_BUTTON, self.OnSaveStack, id=self.button_savestack.GetId())
-        #self.button_savestack.Disable()          
+        self.button_savestack.clicked.connect(self.OnSaveStack)
+        self.button_savestack.setEnabled(False)          
         vbox1.addWidget(self.button_savestack)
         
         sizer1.setLayout(vbox1)
@@ -350,16 +346,14 @@ class PageStack(QtGui.QWidget):
         vbox22 = QtGui.QVBoxLayout()
         self.button_slideshow = QtGui.QPushButton('Play stack movie')
         self.button_slideshow.setMaximumSize (150 , 150)
-        #self.Bind(wx.EVT_BUTTON, self.OnSlideshow, id=self.button_slideshow.GetId())
-        #self.button_slideshow.SetFont(self.com.font)
-        #self.button_slideshow.Disable()
+        self.button_slideshow.clicked.connect( self.OnSlideshow)
+        self.button_slideshow.setEnabled(False)
         vbox22.addWidget(self.button_slideshow)
         
         self.button_save = QtGui.QPushButton( 'Save images...')
         self.button_save.setMaximumSize (150 , 150)
-        #self.button_save.SetFont(self.com.font)
-        #self.Bind(wx.EVT_BUTTON, self.OnSave, id=self.button_save.GetId())
-        #self.button_save.Disable()          
+        self.button_save.clicked.connect( self.OnSave)
+        self.button_save.setEnabled(False)          
         vbox22.addWidget(self.button_save)
               
         hbox20.addLayout(vbox22)
@@ -374,26 +368,24 @@ class PageStack(QtGui.QWidget):
 
         self.rb_flux = QtGui.QRadioButton( 'Flux', self)
         self.rb_od = QtGui.QRadioButton('Optical Density',self)
-        #self.rb_flux.SetFont(self.com.font)
-        #self.rb_od.SetFont(self.com.font)
-        #self.Bind(wx.EVT_RADIOBUTTON, self.onrb_fluxod, id=self.rb_flux.GetId())
-        #self.Bind(wx.EVT_RADIOBUTTON, self.onrb_fluxod, id=self.rb_od.GetId())
+        self.rb_flux.setChecked(True)
+        self.rb_flux.toggled.connect(self.OnRb_fluxod)
+        
+
         vbox23.addWidget(self.rb_flux)
         vbox23.addWidget(self.rb_od)
         vbox23.addStretch (1)
          
-        #self.rb_flux.Disable()
-        #self.rb_od.Disable()
+        self.rb_flux.setEnabled(False)
+        self.rb_od.setEnabled(False)
  
         self.add_scale_cb = QtGui.QCheckBox('Scalebar', self) 
-        #self.add_scale_cb.SetFont(self.com.font)
-        #self.Bind(wx.EVT_CHECKBOX, self.OnShowScale, self.add_scale_cb)
-        #self.add_scale_cb.SetValue(True)
+        self.add_scale_cb.toggle()
+        self.add_scale_cb.stateChanged.connect(self.OnShowScale)
         vbox23.addWidget(self.add_scale_cb)
          
         self.add_colbar_cb = QtGui.QCheckBox('Colorbar', self)
-        #self.add_colbar_cb.SetFont(self.com.font)
-        #self.Bind(wx.EVT_CHECKBOX, self.OnShowColBar, self.add_colbar_cb)
+        self.add_colbar_cb.stateChanged.connect(self.OnShowColBar)
         vbox23.addWidget(self.add_colbar_cb)
         sizer22.setLayout(vbox23)
          
@@ -407,32 +399,33 @@ class PageStack(QtGui.QWidget):
         fgs21 = QtGui.QGridLayout()
          
         self.tc_min = QtGui.QLabel(self)
-        #self.tc_min.SetFont(self.com.font)
         self.tc_min.setText('Minimum: \t{0:5d}%'.format(int(100*self.brightness_min)))
          
         self.tc_max = QtGui.QLabel(self)
-        #self.tc_max.SetFont(self.com.font)
         self.tc_max.setText('Maximum:{0:5d}%'.format(int(100*self.brightness_max)))
  
         self.slider_brightness_min = QtGui.QSlider(QtCore.Qt.Horizontal, self)
-        #self.slider_brightness_min = wx.Slider(panel4, -1, self.dispbrightness_min, 0, 49, size= (50,20), style=wx.SL_HORIZONTAL)        
-        #self.slider_brightness_min.SetFocus()
-        #self.Bind(wx.EVT_SCROLL, self.OnScrollBrightnessMin, self.slider_brightness_min)
-         
-        self.slider_brightness_max = QtGui.QSlider(QtCore.Qt.Horizontal, self)
-        #self.slider_brightness_max = wx.Slider(panel4, -1, self.dispbrightness_max, 50, 120, style=wx.SL_HORIZONTAL)        
-        #self.slider_brightness_max.SetFocus()
-        #self.Bind(wx.EVT_SCROLL, self.OnScrollBrightnessMax, self.slider_brightness_max)        
+        self.slider_brightness_min.setRange(0,49)
+        self.slider_brightness_min.setValue(self.dispbrightness_min)
+        self.slider_brightness_min.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.slider_brightness_min.valueChanged[int].connect(self.OnScrollBrightnessMin)
+
+                 
+        self.slider_brightness_max = QtGui.QSlider(QtCore.Qt.Horizontal, self)      
+        self.slider_brightness_max.setRange(50,120)
+        self.slider_brightness_max.setValue(self.dispbrightness_max)
+        self.slider_brightness_max.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.slider_brightness_max.valueChanged[int].connect(self.OnScrollBrightnessMax)  
          
         self.tc_gamma = QtGui.QLabel(self)
-        #self.tc_gamma.SetFont(self.com.font)
         self.tc_gamma.setText('Gamma:  \t{0:5.2f}'.format(self.gamma))
          
         self.slider_gamma = QtGui.QSlider(QtCore.Qt.Horizontal, self)
-        #self.slider_gamma = wx.Slider(panel4, -1, self.displaygamma, 1, 20, style=wx.SL_HORIZONTAL)        
-        #self.slider_gamma.SetFocus()
-        #self.Bind(wx.EVT_SCROLL, self.OnScrollGamma, self.slider_gamma)
-       
+        self.slider_gamma.setRange(1,20)
+        self.slider_gamma.setValue(self.displaygamma)
+        self.slider_gamma.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.slider_gamma.valueChanged[int].connect(self.OnScrollGamma)  
+               
          
         fgs21.addWidget(self.tc_min, 0, 0)
         fgs21.addWidget(self.slider_brightness_min, 0, 1)
@@ -446,19 +439,16 @@ class PageStack(QtGui.QWidget):
     
         vbox24 = QtGui.QVBoxLayout()
         self.button_despike = QtGui.QPushButton('Despike')
-        #self.button_despike.SetFont(self.com.font)
-        #self.Bind(wx.EVT_BUTTON, self.OnDespike, id=self.button_despike.GetId())   
-        #self.button_despike.Disable()     
+        self.button_despike.clicked.connect( self.OnDespike)   
+        self.button_despike.setEnabled(False)     
         vbox24.addWidget(self.button_despike)
         self.button_resetdisplay = QtGui.QPushButton( 'Reset')
-        #self.button_resetdisplay.SetFont(self.com.font)
-        #self.Bind(wx.EVT_BUTTON, self.onResetDisplaySettings, id=self.button_resetdisplay.GetId())   
-        #self.button_resetdisplay.Disable()     
+        self.button_resetdisplay.clicked.connect( self.OnResetDisplaySettings)   
+        self.button_resetdisplay.setEnabled(False)     
         vbox24.addWidget(self.button_resetdisplay)
         self.button_displaycolor = QtGui.QPushButton('Color Table...   ')
-        #self.button_displaycolor.SetFont(self.com.font)
-        #self.Bind(wx.EVT_BUTTON, self.onSetColorTable, id=self.button_displaycolor.GetId())   
-        #self.button_displaycolor.Disable()     
+        self.button_displaycolor.clicked.connect( self.OnSetColorTable)   
+        self.button_displaycolor.setEnabled(False)     
         vbox24.addWidget(self.button_displaycolor)
         
         hbox23.addSpacing(20)
@@ -477,58 +467,48 @@ class PageStack(QtGui.QWidget):
 
         
         self.button_addROI = QtGui.QPushButton('Add ROI')
-        #self.button_addROI.SetFont(self.com.font)
-        #self.Bind(wx.EVT_BUTTON, self.OnAddROI, id=self.button_addROI.GetId())
-        #self.button_addROI.Disable()
+        self.button_addROI.clicked.connect( self.OnAddROI)
+        self.button_addROI.setEnabled(False)
         vbox3.addWidget(self.button_addROI)
         
         self.button_acceptROI = QtGui.QPushButton('Accept ROI')
-        #self.button_acceptROI.SetFont(self.com.font)
-        #self.Bind(wx.EVT_BUTTON, self.OnAcceptROI, id=self.button_acceptROI.GetId())   
-        #self.button_acceptROI.Disable()     
+        self.button_acceptROI.clicked.connect( self.OnAcceptROI)   
+        self.button_acceptROI.setEnabled(False)     
         vbox3.addWidget(self.button_acceptROI)
         
         self.button_resetROI = QtGui.QPushButton('Reset ROI')
-        #self.button_resetROI.SetFont(self.com.font)
-        #self.Bind(wx.EVT_BUTTON, self.OnResetROI, id=self.button_resetROI.GetId())
-        #self.button_resetROI.Disable()
+        self.button_resetROI.clicked.connect( self.OnResetROI)
+        self.button_resetROI.setEnabled(False)
         vbox3.addWidget(self.button_resetROI) 
 
         self.button_setROII0 = QtGui.QPushButton('Set ROI As I0')
-        #self.button_setROII0.SetFont(self.com.font)
-        #self.Bind(wx.EVT_BUTTON, self.OnSetROII0, id=self.button_setROII0.GetId())
-        #self.button_setROII0.Disable()
+        self.button_setROII0.clicked.connect( self.OnSetROII0)
+        self.button_setROII0.setEnabled(False)
         vbox3.addWidget(self.button_setROII0)
         
         self.button_saveROIspectr = QtGui.QPushButton( 'Save ROI Spectrum...')
-        #self.button_saveROIspectr.SetFont(self.com.font)
-        #self.Bind(wx.EVT_BUTTON, self.OnSaveROISpectrum, id=self.button_saveROIspectr.GetId())   
-        #self.button_saveROIspectr.Disable()     
+        self.button_saveROIspectr.clicked.connect( self.OnSaveROISpectrum)   
+        self.button_saveROIspectr.setEnabled(False)     
         vbox3.addWidget(self.button_saveROIspectr)
         
         self.button_ROIdosecalc = QtGui.QPushButton('ROI Dose Calculation...')
-        #self.button_ROIdosecalc.SetFont(self.com.font)
-        #self.Bind(wx.EVT_BUTTON, self.OnROI_DoseCalc, id=self.button_ROIdosecalc.GetId())   
-        #self.button_ROIdosecalc.Disable()     
+        self.button_ROIdosecalc.clicked.connect( self.OnROI_DoseCalc)   
+        self.button_ROIdosecalc.setEnabled(False)     
         vbox3.addWidget(self.button_ROIdosecalc)        
         
         self.button_spectralROI = QtGui.QPushButton('Spectral ROI...')
-        #self.button_spectralROI.SetFont(self.com.font)
-        #self.Bind(wx.EVT_BUTTON, self.OnSpectralROI, id=self.button_spectralROI.GetId())   
-        #self.button_spectralROI.Disable()     
+        self.button_spectralROI.clicked.connect( self.OnSpectralROI)   
+        self.button_spectralROI.setEnabled(False)     
         vbox3.addWidget(self.button_spectralROI)
         sizer3.setLayout(vbox3)
         
 
-       
-        
         
 
         #panel 4     
         vbox4 = QtGui.QVBoxLayout()
         
         self.tc_imageeng = QtGui.QLabel(self)
-        #self.tc_imageeng.SetFont(self.com.font)
         self.tc_imageeng.setText("Image at energy: ")
         vbox4.addWidget(self.tc_imageeng)
         
@@ -558,7 +538,6 @@ class PageStack(QtGui.QWidget):
         vbox5 = QtGui.QVBoxLayout()
         
         self.tc_spec = QtGui.QLabel(self)
-        #self.tc_spec.SetFont(self.com.font)
         self.tc_spec.setText("Spectrum ")
         vbox5.addWidget(self.tc_spec)
         
@@ -596,6 +575,261 @@ class PageStack(QtGui.QWidget):
         self.setLayout(vboxtop)
 
 
+#----------------------------------------------------------------------
+        
+    def OnI0FFile(self, event):
+
+
+        if True:
+            
+        #try:
+                       
+            wildcard = "I0 CSV files (*.csv);; I0 files (*.xas);;SDF I0 files (*.hdr)"
+            
+            filepath = QtGui.QFileDialog.getOpenFileName(self, 'Open file', '', wildcard)
+            
+
+            filepath = str(filepath)
+            if filepath == '':
+                return
+            
+            filepath_i0 =  os.path.dirname(str(filepath))
+            self.filename =  os.path.basename(str(filepath))
+            
+
+                                                        
+            basename, extension = os.path.splitext(self.filename)      
+            
+            
+            if extension == '.hdr':
+                QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))                           
+
+                x=self.stk.n_cols
+                y=self.stk.n_rows
+                z=self.iev               
+
+                self.ix = x/2
+                self.iy = y/2
+                self.stk.read_sdf_i0(filepath)
+                self.loadSpectrum(self.ix, self.iy)
+                self.loadImage()
+                self.com.i0_loaded = 1
+                QtGui.QApplication.restoreOverrideCursor()
+                
+                
+            elif extension == '.xas':
+                QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))                          
+
+                x=self.stk.n_cols
+                y=self.stk.n_rows
+                z=self.iev               
+
+                self.ix = x/2
+                self.iy = y/2
+
+                self.stk.read_stk_i0(filepath, extension)
+
+                self.loadSpectrum(self.ix, self.iy)
+                self.loadImage()
+                self.com.i0_loaded = 1
+                QtGui.QApplication.restoreOverrideCursor()
+
+            elif extension == '.csv':
+                QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))                          
+
+                x=self.stk.n_cols
+                y=self.stk.n_rows
+                z=self.iev               
+
+                self.ix = x/2
+                self.iy = y/2
+
+                self.stk.read_stk_i0(filepath, extension)
+
+                self.loadSpectrum(self.ix, self.iy)
+                self.loadImage()
+                self.com.i0_loaded = 1
+                QtGui.QApplication.restoreOverrideCursor()
+            
+#         except:
+#             QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))  
+#             self.com.i0_loaded = 0        
+#             QtGui.QApplication.restoreOverrideCursor()
+#             QtGui.QMessageBox.warning(self,'Error',"I0 file not loaded.")
+#             import sys; print sys.exc_info()
+                       
+                          
+        self.window().refresh_widgets()
+
+        
+        
+        
+#----------------------------------------------------------------------       
+    def OnI0histogram(self, event):    
+        #self.window().Hide()
+        histogram = ShowHistogram(self, self.stk)
+        histogram.show()
+         
+
+#----------------------------------------------------------------------       
+    def I0histogramCalculated(self):    
+        
+        plot = PlotFrame(self, self.stk.evi0hist,self.stk.i0datahist)
+        plot.show()
+        
+         
+        self.loadSpectrum(self.ix, self.iy)
+        self.loadImage()
+        
+        self.com.i0_loaded = 1
+        self.window().refresh_widgets()
+        
+#----------------------------------------------------------------------    
+    def OnShowI0(self, event):     
+
+        plot = PlotFrame(self, self.stk.evi0,self.stk.i0data)
+        plot.show()
+ 
+#----------------------------------------------------------------------    
+    def OnSaveStack(self, event): 
+        
+        self.window().SaveStackH5()
+               
+#----------------------------------------------------------------------    
+    def OnSave(self, event):     
+        
+        savewin = SaveWinP1(self)
+        savewin.show()
+
+#----------------------------------------------------------------------        
+    def OnLimitEv(self, evt):   
+        
+        limitevwin = LimitEv(self, self.com, self.stk)
+        limitevwin.show()
+
+#----------------------------------------------------------------------        
+    def OnCliptoSubregion(self, evt):    
+        clipwin = CliptoSubregion(self, self.com, self.stk)
+        clipwin.show() 
+   
+#----------------------------------------------------------------------    
+    def Save(self, filename, path, spec_png = True, spec_pdf = False, sp_csv = False, img_png = True, img_pdf = False, img_all = False): 
+
+        self.SaveFileName = os.path.join(path,filename)
+      
+        
+        try: 
+            ext = 'png'
+            suffix = "." + ext
+            matplotlib.rcParams['pdf.fonttype'] = 42
+            
+            if spec_png:
+                fileName_spec = self.SaveFileName+"_spectrum."+ext
+                
+                            
+                fig = self.SpectrumPanel.get_figure()
+                fig.savefig(fileName_spec)
+
+            if img_png:
+                
+                fileName_img = self.SaveFileName+"_" +str(self.stk.ev[self.iev])+"eV."+ext
+                fig = self.AbsImagePanel.get_figure()
+                fig.savefig(fileName_img, pad_inches = 0.0)
+                
+            #Save all images in the stack
+            if img_all:
+                QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+                from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+                matplotlib.rcParams['pdf.fonttype'] = 42
+
+                for i in range (self.stk.n_ev):
+                    if self.showflux:
+                        #Show flux image      
+                        image = self.stk.absdata[:,:,i] 
+                    else:
+                        #Show OD image
+                        image = self.stk.od3d[:,:,i]
+
+                    fig = matplotlib.figure.Figure(figsize =(float(self.stk.n_rows)/10, float(self.stk.n_cols)/10))
+                    fig.clf()
+                    canvas = FigureCanvas(fig)
+                    fig.add_axes((0.0,0.0,1.0,1.0))
+                    axes = fig.gca()
+                    im = axes.imshow(image, cmap=matplotlib.cm.get_cmap(self.colortable)) 
+                    axes.axis("off") 
+                                
+                    fileName_img = self.SaveFileName+"_imnum_" +str(i+1)+"."+ext
+                    fig.savefig(fileName_img,  dpi=ImgDpi, pad_inches = 0.0)
+                QtGui.QApplication.restoreOverrideCursor()
+                    
+            ext = 'pdf'
+            suffix = "." + ext
+            
+            if spec_pdf:
+                fileName_spec = self.SaveFileName+"_spectrum."+ext
+            
+                fig = self.SpectrumPanel.get_figure()
+                fig.savefig(fileName_spec)
+
+            if img_pdf:
+                fileName_img = self.SaveFileName+"_" +str(self.stk.ev[self.iev])+"eV."+ext
+                fig = self.AbsImagePanel.get_figure()
+                fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
+                
+            if sp_csv:
+                fileName_spec = self.SaveFileName+"_spectrum.csv"
+                self.stk.write_csv(fileName_spec, self.stk.ev, self.spectrum)
+            
+        except IOError, e:
+            if e.strerror:
+                err = e.strerror 
+            else: 
+                err = e 
+   
+            QtGui.QMessageBox.warning(self,'Error','Could not save file: %s' % err)
+
+
+        
+#----------------------------------------------------------------------    
+    def OnAlignImgs(self, event):  
+        
+        #self.window().Hide()
+        imgregwin = ImageRegistration(self, self.com, self.stk)
+        imgregwin.Show()
+
+#----------------------------------------------------------------------    
+    def OnSlideshow(self, event):  
+
+        if (self.com.stack_loaded == 1) and (self.addroi == 0):    
+            
+            if (self.movie_playing == 1):
+                self.movie_playing = 0
+                return
+            
+            self.button_slideshow.setText("Stop stack movie")
+            old_iev =  self.iev
+            self.movie_playing = 1
+            
+            for i in range(self.stk.n_ev):   
+                QtGui.qApp.processEvents()
+                if self.movie_playing == 0:
+                    break
+                self.iev = i                   
+                self.loadImage()
+                self.slider_eng.setValue(self.iev)
+                self.loadSpectrum(self.ix, self.iy)
+                
+                time.sleep(0.01)
+                
+            self.iev = old_iev 
+            self.loadImage()
+            self.slider_eng.setValue(self.iev)
+            self.loadSpectrum(self.ix, self.iy)
+            self.button_slideshow.setText("Play stack movie")
+            self.movie_playing = 0
+            
+
+                        
 #----------------------------------------------------------------------            
     def OnScrollEng(self, value):
         self.iev = value
@@ -669,14 +903,115 @@ class PageStack(QtGui.QWidget):
                 self.line.set_data(self.roixdata,self.roiydata)
                 self.previous_point = [x,y]
                 if len(self.roixdata) == 3:
-                    self.button_acceptROI.Enable()
+                    self.button_acceptROI.setEnabled(True)
                 self.loadImage()
 
+#----------------------------------------------------------------------          
+    def OnRb_fluxod(self, enabled):
+        
+        state = enabled      
+      
+        if state:
+            self.showflux = True
+        else:        
+            self.showflux = False
+            
+        self.ResetDisplaySettings()
+        self.loadImage()
 
+#----------------------------------------------------------------------           
+    def OnShowScale(self,state):
+        
+        if state == QtCore.Qt.Checked:
+            self.show_scale_bar = 1
+        else: 
+            self.show_scale_bar = 0
+        
+        if self.com.stack_loaded == 1:
+            self.loadImage()
+            
+ #----------------------------------------------------------------------           
+    def OnShowColBar(self, state):
+        
+        if state == QtCore.Qt.Checked:
+            self.show_colorbar = 1
+        else: 
+            self.show_colorbar = 0
+        
+        if self.com.stack_loaded == 1:
+            self.loadImage()
+
+#----------------------------------------------------------------------
+    def OnResetDisplaySettings(self, event):
+        
+        self.ResetDisplaySettings()
+        self.loadImage()
+         
+#----------------------------------------------------------------------
+    def OnScrollBrightnessMin(self, value):
+        
+        self.dispbrightness_min = value
+        
+        self.brightness_min = float(self.dispbrightness_min)/100.0
+        
+        self.defaultdisplay = 0.0
+        
+        self.tc_min.setText('Minimum: \t{0:5d}%'.format(int(100*self.brightness_min)))
+        
+        if self.com.stack_loaded == 1:
+            self.loadImage()
+        
+#----------------------------------------------------------------------
+    def OnScrollBrightnessMax(self, value):
+        
+        self.dispbrightness_max = value
+        
+        self.brightness_max = float(self.dispbrightness_max)/100.0
+        
+        self.defaultdisplay = 0.0
+        
+        self.tc_max.setText('Maximum:{0:5d}%'.format(int(100*self.brightness_max)))
+        
+        if self.com.stack_loaded == 1:
+            self.loadImage()
+        
+#----------------------------------------------------------------------
+    def OnScrollGamma(self, value):
+        
+        self.displaygamma = value
+        
+        self.gamma = float(self.displaygamma)/10.0  
+        
+        self.defaultdisplay = 0.0
+        
+        self.tc_gamma.setText('Gamma:  \t{0:5.2f}'.format(self.gamma))
+        
+        if self.com.stack_loaded == 1:
+            self.loadImage()
+#----------------------------------------------------------------------        
+    def OnDespike(self, evt):    
+
+        image = self.stk.absdata[:,:,self.iev] 
+       
+        image = self.stk.despike(image)
+        
+        
+        self.stk.data_struct.exchange.data = self.stk.absdata
+        
+        if self.com.i0_loaded:
+            self.stk.calculate_optical_density()
+        
+        self.loadImage()
+
+#----------------------------------------------------------------------
+    def OnSetColorTable(self, event):
+        
+        colorwin = ColorTableFrame(self)
+        colorwin.show()
+                                    
 #----------------------------------------------------------------------        
     def loadImage(self):
         
-                  
         
         if self.defaultdisplay == 1.0:
             #use a pointer to the data not a copy
@@ -730,8 +1065,11 @@ class PageStack(QtGui.QWidget):
                 imgmin = 0.0
                 if (self.gamma != 1.0):
                     image = npy.power(image, self.gamma)
+            vmin=(imgmin+imgmax*self.brightness_min)
+            vmax=imgmax*self.brightness_max
+            if vmin > vmax : vmax = vmin + 0.1
             im = axes.imshow(image, cmap=matplotlib.cm.get_cmap(self.colortable), 
-                             vmin=(imgmin+imgmax*self.brightness_min),vmax=imgmax*self.brightness_max)
+                             vmin=vmin,vmax=vmax)
              
         if (self.showROImask == 1) and (self.addroi == 1):
             im_red = axes.imshow(self.ROIpix_masked,cmap=matplotlib.cm.get_cmap("autumn")) 
@@ -795,29 +1133,428 @@ class PageStack(QtGui.QWidget):
 #----------------------------------------------------------------------
     def ResetDisplaySettings(self):
         
-        pass
 
-#         self.defaultdisplay = 1.0
-#         
-#         self.dispbrightness_min = 0
-#         self.dispbrightness_max = 100
-#         self.displaygamma = 10.0
-#         
-#         self.brightness_min = 0.0
-#         self.brightness_max = 1.0
-#         self.gamma = 1.0
-#         
-#         self.slider_brightness_max.SetValue(self.dispbrightness_max)
-#         self.slider_brightness_min.SetValue(self.dispbrightness_min) 
-#         self.slider_gamma.SetValue(self.displaygamma)      
-# 
-#         self.tc_min.Clear()
-#         self.tc_min.AppendText('Minimum: \t{0:5d}%'.format(int(100*self.brightness_min)))
-#         self.tc_max.Clear()
-#         self.tc_max.AppendText('Maximum:{0:5d}%'.format(int(100*self.brightness_max)))        
-#         self.tc_gamma.Clear()
-#         self.tc_gamma.AppendText('Gamma:  \t{0:5.2f}'.format(self.gamma))      
+
+        self.defaultdisplay = 1.0
+         
+        self.dispbrightness_min = 0
+        self.dispbrightness_max = 100
+        self.displaygamma = 10.0
+         
+        self.brightness_min = 0.0
+        self.brightness_max = 1.0
+        self.gamma = 1.0
+         
+        self.slider_brightness_max.setValue(self.dispbrightness_max)
+        self.slider_brightness_min.setValue(self.dispbrightness_min) 
+        self.slider_gamma.setValue(self.displaygamma)      
+ 
+        self.tc_min.setText('Minimum: \t{0:5d}%'.format(int(100*self.brightness_min)))
+        self.tc_max.setText('Maximum:{0:5d}%'.format(int(100*self.brightness_max)))        
+        self.tc_gamma.setText('Gamma:  \t{0:5.2f}'.format(self.gamma))      
+
+
                 
+#----------------------------------------------------------------------         
+# Determine if a point is inside a given polygon or not. The algorithm is called
+# "Ray Casting Method".
+    def point_in_poly(self, x, y, polyx, polyy):
+
+        n = len(polyx)
+        inside = False
+
+        p1x = polyx[0]
+        p1y = polyy[0]
+        for i in range(n+1):
+            p2x = polyx[i % n]
+            p2y = polyy[i % n]
+            if y > min(p1y,p2y):
+                if y <= max(p1y,p2y):
+                    if x <= max(p1x,p2x):
+                        if p1y != p2y:
+                            xinters = (y-p1y)*(p2x-p1x)/(p2y-p1y)+p1x
+                            if p1x == p2x or x <= xinters:
+                                inside = not inside
+            p1x,p1y = p2x,p2y
+
+        return inside
+        
+#----------------------------------------------------------------------    
+    def OnAddROI(self, evt):    
+        self.addroi = 1
+        self.previous_point = []
+        self.start_point = []
+        self.end_point = []
+        self.line = None
+        self.roixdata = []
+        self.roiydata = []
+                
+        fig = self.specfig
+        fig.clf()
+        self.SpectrumPanel.draw()
+        self.tc_spec.setText("Average ROI Spectrum: ")
+        
+        self.button_acceptROI.setEnabled(False)
+        self.button_resetROI.setEnabled(True)
+        self.button_ROIdosecalc.setEnabled(False) 
+        self.window().refresh_widgets()
+
+        return
+        
+        
+#----------------------------------------------------------------------    
+    def CalcROISpectrum(self):
+              
+        self.ROIspectrum = npy.zeros((self.stk.n_ev))
+               
+        indices = npy.where(self.ROIpix == 255)
+        numroipix = self.ROIpix[indices].shape[0]
+            
+        for ie in range(self.stk.n_ev):
+            thiseng_od = self.stk.od3d[:,:,ie]
+            self.ROIspectrum[ie] = npy.sum(thiseng_od[indices])/numroipix
+                 
+#----------------------------------------------------------------------          
+    def ShowROISpectrum(self):
+        
+        self.CalcROISpectrum()
+
+        fig = self.specfig
+        fig.clf()
+        fig.add_axes((0.15,0.15,0.75,0.75))
+        axes = fig.gca()
+        
+        matplotlib.rcParams['font.size'] = self.fontsize
+
+        specplot = axes.plot(self.stk.ev,self.ROIspectrum)
+        
+        axes.set_xlabel('Photon Energy [eV]')
+        axes.set_ylabel('Optical Density')
+        
+        self.SpectrumPanel.draw()
+        
+        self.tc_spec.setText("Average ROI Spectrum: ")
+        
+#----------------------------------------------------------------------    
+    def OnAcceptROI(self, evt):    
+        QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+        self.roixdata.append(self.start_point[0])
+        self.roiydata.append(self.start_point[1])
+        self.line.set_data(self.roixdata,self.roiydata)
+        self.loadImage()
+        
+        #find pixels inside the polygon 
+        if self.ROIpix == None:
+            self.ROIpix = npy.zeros((self.stk.n_cols,self.stk.n_rows))    
+        
+        for i in range(self.stk.n_cols):
+            for j in range(self.stk.n_rows):
+                Pinside = self.point_in_poly(i, j, self.roixdata, self.roiydata)
+                if Pinside == True:
+                    self.ROIpix[j,i] = 255
+              
+        self.ROIpix = npy.ma.array(self.ROIpix)
+        
+        self.ROIpix_masked =  npy.ma.masked_values(self.ROIpix, 0)
+        
+        self.showROImask = 1
+        self.line = None
+        self.previous_point = []
+        self.start_point = []
+        self.end_point = []
+        self.roixdata = []
+        self.roiydata = []
+
+        self.button_saveROIspectr.setEnabled(True)
+        self.button_setROII0.setEnabled(True)
+        self.button_ROIdosecalc.setEnabled(True) 
+        self.window().refresh_widgets()
+                
+        self.loadImage()
+        if (self.com.i0_loaded == 1):
+            self.ShowROISpectrum()
+            
+        QtGui.QApplication.restoreOverrideCursor()
+        
+    
+#----------------------------------------------------------------------    
+    def OnResetROI(self, evt): 
+        self.addroi = 0   
+        self.showROImask = 0
+        self.ROIpix = None
+        
+        self.button_acceptROI.setEnabled(False)
+        self.button_setROII0.setEnabled(False)
+        self.button_resetROI.setEnabled(False)
+        self.button_saveROIspectr.setEnabled(False)
+        self.button_ROIdosecalc.setEnabled(False) 
+        self.window().refresh_widgets()
+        
+        self.loadImage()
+        if (self.com.i0_loaded == 1):
+            self.loadSpectrum(self.ix, self.iy)
+        pass
+    
+#----------------------------------------------------------------------    
+    def CalcROI_I0Spectrum(self):
+   
+        self.ROIspectrum = npy.zeros((self.stk.n_ev))
+               
+        indices = npy.where(self.ROIpix == 255)
+        numroipix = self.ROIpix[indices].shape[0]
+            
+        for ie in range(self.stk.n_ev):
+            thiseng_abs = self.stk.absdata[:,:,ie]
+            self.ROIspectrum[ie] = npy.sum(thiseng_abs[indices])/numroipix
+                
+#----------------------------------------------------------------------    
+    def OnSetROII0(self, evt):    
+        self.CalcROI_I0Spectrum()   
+        
+        self.stk.set_i0(self.ROIspectrum, self.stk.ev)  
+        
+        plot = PlotFrame(self, self.stk.evi0,self.stk.i0data)
+        plot.show()              
+         
+        x=self.stk.n_cols
+        y=self.stk.n_rows
+             
+        self.ix = int(x/2)
+        self.iy = int(y/2)
+        
+        self.com.i0_loaded = 1
+        
+        self.addroi = 0   
+        self.showROImask = 0
+        self.ROIpix = None
+        
+        self.loadSpectrum(self.ix, self.iy)
+        self.loadImage()
+        
+        self.button_acceptROI.setEnabled(False)
+        self.button_setROII0.setEnabled(False)
+        self.window().refresh_widgets()
+        
+#----------------------------------------------------------------------    
+    def OnROI_DoseCalc(self, event):  
+        
+        self.CalcROISpectrum()
+        
+        DoseCalculation(self.com, self.stk, self.ROIspectrum).Show()
+        
+        
+#----------------------------------------------------------------------    
+    def OnSaveROISpectrum(self, event):  
+        
+
+
+
+        wildcard = "CSV files (*.csv)"
+
+        fileName = QtGui.QFileDialog.getSaveFileName(self, 'Save ROI Spectrum (.csv)', '', wildcard)
+
+        fileName = str(fileName)
+        if fileName == '':
+            return
+
+        path, ext = os.path.splitext(fileName) 
+        ext = ext[1:].lower() 
+   
+        try:
+            if (self.com.i0_loaded == 1):
+                self.stk.write_csv(fileName, self.stk.ev, self.ROIspectrum)
+            else:
+                self.CalcROI_I0Spectrum()
+                self.stk.write_csv(fileName, self.stk.ev, self.ROIspectrum)
+                     
+                
+        except IOError, e:
+            if e.strerror:
+                err = e.strerror 
+            else: 
+                err = e 
+   
+            QtGui.QMessageBox.warning(self,'Error','Could not save file: %s' % err)
+            
+
+#----------------------------------------------------------------------        
+    def OnSpectralROI(self, evt):    
+        specroiwin = SpectralROI(self, self.com, self.stk)
+        specroiwin.show()     
+     
+#---------------------------------------------------------------------- 
+class SaveWinP1(QtGui.QDialog):
+
+    def __init__(self, parent):    
+        QtGui.QWidget.__init__(self, parent)
+        
+        self.parent = parent
+
+        
+        self.resize(400, 500)
+        self.setWindowTitle('Stack File List')
+        
+        pal = QtGui.QPalette()
+        self.setAutoFillBackground(True)
+        pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
+        self.setPalette(pal)
+
+
+#---------------------------------------------------------------------- 
+class ShowHistogram(QtGui.QDialog):
+
+    def __init__(self, parent, stack):    
+        QtGui.QWidget.__init__(self, parent)
+        
+        self.parent = parent
+
+        self.stk = stack
+        
+        self.resize(400, 500)
+        self.setWindowTitle('Stack File List')
+        
+        pal = QtGui.QPalette()
+        self.setAutoFillBackground(True)
+        pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
+        self.setPalette(pal)
+                
+
+
+#---------------------------------------------------------------------- 
+class LimitEv(QtGui.QDialog):
+
+    def __init__(self, parent,  common, stack):    
+        QtGui.QWidget.__init__(self, parent)
+        
+        self.parent = parent
+
+        self.stack = stack
+        self.com = common  
+        
+        self.resize(400, 500)
+        self.setWindowTitle('Stack File List')
+        
+        pal = QtGui.QPalette()
+        self.setAutoFillBackground(True)
+        pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
+        self.setPalette(pal)
+
+
+#---------------------------------------------------------------------- 
+class CliptoSubregion(QtGui.QDialog):
+
+    def __init__(self, parent,  common, stack):    
+        QtGui.QWidget.__init__(self, parent)
+        
+        self.parent = parent
+
+        self.stack = stack
+        self.com = common  
+        
+        self.resize(400, 500)
+        self.setWindowTitle('Stack File List')
+        
+        pal = QtGui.QPalette()
+        self.setAutoFillBackground(True)
+        pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
+        self.setPalette(pal)
+ 
+ 
+#---------------------------------------------------------------------- 
+class ImageRegistration(QtGui.QDialog):
+
+    def __init__(self, parent,  common, stack):    
+        QtGui.QWidget.__init__(self, parent)
+        
+        self.parent = parent
+
+        self.stack = stack
+        self.com = common  
+        
+        self.resize(400, 500)
+        self.setWindowTitle('Stack File List')
+        
+        pal = QtGui.QPalette()
+        self.setAutoFillBackground(True)
+        pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
+        self.setPalette(pal)    
+        
+        
+#---------------------------------------------------------------------- 
+class SpectralROI(QtGui.QDialog):
+
+    def __init__(self, parent,  common, stack):    
+        QtGui.QWidget.__init__(self, parent)
+        
+        self.parent = parent
+
+        self.stack = stack
+        self.com = common  
+        
+        self.resize(400, 500)
+        self.setWindowTitle('Stack File List')
+        
+        pal = QtGui.QPalette()
+        self.setAutoFillBackground(True)
+        pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
+        self.setPalette(pal) 
+
+
+#---------------------------------------------------------------------- 
+class DoseCalculation(QtGui.QDialog):
+
+    def __init__(self, parent,  common, stack):    
+        QtGui.QWidget.__init__(self, parent)
+        
+        self.parent = parent
+
+        self.stack = stack
+        self.com = common  
+        
+        self.resize(400, 500)
+        self.setWindowTitle('Stack File List')
+        
+        pal = QtGui.QPalette()
+        self.setAutoFillBackground(True)
+        pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
+        self.setPalette(pal) 
+                
+
+#---------------------------------------------------------------------- 
+class PlotFrame(QtGui.QDialog):
+
+    def __init__(self, parent, datax, datay, title = "I0 data"):    
+        QtGui.QWidget.__init__(self, parent)
+        
+        self.parent = parent
+
+        self.datax = datax
+        self.datay = datay
+        
+        self.resize(400, 500)
+        self.setWindowTitle('Stack File List')
+        
+        pal = QtGui.QPalette()
+        self.setAutoFillBackground(True)
+        pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
+        self.setPalette(pal) 
+
+#---------------------------------------------------------------------- 
+class ColorTableFrame(QtGui.QDialog):
+
+    def __init__(self, parent):    
+        QtGui.QWidget.__init__(self, parent)
+        
+        self.parent = parent
+
+        
+        self.resize(400, 500)
+        self.setWindowTitle('Stack File List')
+        
+        pal = QtGui.QPalette()
+        self.setAutoFillBackground(True)
+        pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
+        self.setPalette(pal)                                                    
 
 """ ------------------------------------------------------------------------------------------------"""
 class PageLoadData(QtGui.QWidget):
@@ -1057,6 +1794,8 @@ class StackListFrame(QtGui.QDialog):
 
     def __init__(self, parent, filepath, com, stack, data_struct):    
         QtGui.QWidget.__init__(self, parent)
+        
+        self.parent = parent
 
         self.data_struct = data_struct
         self.stk = stack
@@ -1070,7 +1809,7 @@ class StackListFrame(QtGui.QDialog):
         pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
         self.setPalette(pal)
         
-        self.filepath = filepath
+        self.filepath = str(filepath)
         
         self.have1st = 0
         self.havelast = 0
@@ -1088,21 +1827,22 @@ class StackListFrame(QtGui.QDialog):
         vbox.addWidget(self.textt)  
         
 
-
-
         self.filelist = QtGui.QTableWidget()
+        self.filelist.setMinimumHeight(450)
         self.filelist.setColumnCount(4)
         self.filelist.setHorizontalHeaderLabels(('File list', 'X', 'Y', 'eV'))
         self.filelist.setShowGrid(False)
+        self.filelist.verticalHeader().setVisible(False)
         
-        self.filelist.setColumnWidth(0,150)
+        self.filelist.setColumnWidth(0,200)
         self.filelist.setColumnWidth(1,50)
         self.filelist.setColumnWidth(2,50)
         self.filelist.setColumnWidth(3,50)
         
-        self.filelist.setRowCount(3)
+        self.filelist.setRowCount(0)
+        
+        self.filelist.cellClicked.connect(self.OnFileList)
 
-        self.filelist.setItem(1, 0, QtGui.QTableWidgetItem('3'))
 
 
         vbox.addWidget(self.filelist)
@@ -1123,14 +1863,12 @@ class StackListFrame(QtGui.QDialog):
         
         
         self.button_accept = QtGui.QPushButton('Accept')
-        #self.button_accept.Disable()
-        #self.button_accept.SetFont(self.com.font)
-        #self.Bind(wx.EVT_BUTTON, self.OnAccept, id=self.button_accept.GetId())
+        #self.button_accept.setEnabled(False)
+        self.button_accept.clicked.connect( self.OnAccept)
         hbox.addWidget(self.button_accept)
         
         button_cancel = QtGui.QPushButton('Cancel')
-        #self.Bind(wx.EVT_BUTTON, self.OnCancel, id=button_cancel.GetId())
-        #button_cancel.SetFont(self.com.font)
+        button_cancel.clicked.connect( self.close)
         hbox.addWidget(button_cancel)
         
         vbox.addLayout(hbox)
@@ -1140,13 +1878,39 @@ class StackListFrame(QtGui.QDialog):
         
         
         self.setLayout(vbox)
-
         
+        self.ShowFileList()
+
+#----------------------------------------------------------------------          
+    def OnFileList(self, row, column):
+    
+    
+        if (self.have1st == 1) and (self.havelast==1):
+            self.have1st = 0
+            self.havelast = 0
+            #self.button_accept.setEnabled(False)
+            self.tc_first.setText('First stack file: ')
+            self.tc_last.setText('Last stack file: ')
+            
+        item = self.filelist.item(row, 0)
+        fn =  item.text()
+        if self.have1st == 0:
+            self.tc_first.setText('First stack file: ' + fn) 
+            self.textt.setText('Select last stack file')
+            self.file1st = fn
+            self.have1st = 1
+        elif self.havelast == 0:
+            self.tc_last.setText('Last stack file: ' + fn) 
+            self.textt.setText('Select first stack file')         
+            self.filelast = fn
+            #self.button_accept.setEnabled(True)
+            self.havelast = 1
+                    
 #----------------------------------------------------------------------           
     def ShowFileList(self):    
         
-                
-        self.sm_files = [x for x in os.listdir(self.filepath) if x.endswith('.sm')]
+        filepath = str(self.filepath)
+        self.sm_files = [x for x in os.listdir(filepath) if x.endswith('.sm')]
         
         if self.sm_files:
             
@@ -1166,15 +1930,20 @@ class StackListFrame(QtGui.QDialog):
             for i in range(len(self.sm_files)):
                 #print sm_files
                 filename = self.sm_files[i]
-                file = os.path.join(self.filepath, filename)
+                file = os.path.join(filepath, filename)
             
                 filever, ncols, nrows, iev = self.sm.read_sm_header(file)
             
-                if filever > 0:           
-                    self.filelist.InsertStringItem(count,filename)
-                    self.filelist.SetStringItem(count,1,str(ncols))
-                    self.filelist.SetStringItem(count,2,str(nrows))
-                    self.filelist.SetStringItem(count,3,'{0:5.2f}'.format(iev))
+                
+                if filever > 0:  
+                    self.filelist.insertRow(count)
+                    self.filelist.setRowHeight(count,20)
+
+                    self.filelist.setItem(count, 0, QtGui.QTableWidgetItem(filename))
+                    self.filelist.setItem(count, 1, QtGui.QTableWidgetItem(str(ncols)))
+                    self.filelist.setItem(count, 2, QtGui.QTableWidgetItem(str(nrows)))
+                    self.filelist.setItem(count, 3, QtGui.QTableWidgetItem('{0:5.2f}'.format(iev)))
+                                     
                     count += 1
                 else:
                     continue
@@ -1182,7 +1951,7 @@ class StackListFrame(QtGui.QDialog):
             return
          
             
-        self.xrm_files = [x for x in os.listdir(self.filepath) if x.endswith('.xrm')] 
+        self.xrm_files = [x for x in os.listdir(filepath) if x.endswith('.xrm')] 
         
 
         if self.xrm_files:        
@@ -1197,22 +1966,102 @@ class StackListFrame(QtGui.QDialog):
             for i in range(len(self.xrm_files)):
 
                 filename = self.xrm_files[i]
-                file = os.path.join(self.filepath, filename)
+                file = os.path.join(filepath, filename)
 
                 ncols, nrows, iev = self.xrm.read_xrm_fileinfo(file)
   
-                if ncols > 0:           
-                    self.filelist.InsertStringItem(count,filename)
-                    self.filelist.SetStringItem(count,1,str(ncols))
-                    self.filelist.SetStringItem(count,2,str(nrows))
-                    self.filelist.SetStringItem(count,3,'{0:5.2f}'.format(iev))
+                if ncols > 0:                       
+                    self.filelist.insertRow(count)
+                    self.filelist.setRowHeight(count,20)
+
+                    self.filelist.setItem(count, 0, QtGui.QTableWidgetItem(filename))
+                    self.filelist.setItem(count, 1, QtGui.QTableWidgetItem(str(ncols)))
+                    self.filelist.setItem(count, 2, QtGui.QTableWidgetItem(str(nrows)))
+                    self.filelist.setItem(count, 3, QtGui.QTableWidgetItem('{0:5.2f}'.format(iev)))
+                            
                     count += 1
 
             
         self.sm_files = self.xrm_files
         return
         
+
         
+#----------------------------------------------------------------------        
+    def OnAccept(self, evt):
+        
+        QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+        
+        self.parent.new_stack_refresh()
+        self.stk.new_data()
+        
+        ind1st = self.sm_files.index(self.file1st) 
+        indlast = self.sm_files.index(self.filelast)
+        
+        filelist = self.sm_files[ind1st:indlast+1]
+        
+
+        if self.filetype == 'sm':
+            self.sm.read_sm_list(filelist, self.filepath, self.data_struct)
+        elif self.filetype == 'xrm':
+            self.xrm.read_xrm_list(filelist, self.filepath, self.data_struct)
+        else:
+            print 'Wrong file type'
+            return
+        
+        
+        #fill the gui structure data
+        self.stk.absdata = self.data_struct.exchange.data
+        
+        datadim = npy.int32(self.stk.absdata.shape)
+        self.stk.n_cols = datadim[0].copy()
+        self.stk.n_rows =  datadim[1].copy()
+        self.stk.ev = self.data_struct.exchange.energy 
+        self.stk.n_ev = npy.int32(self.stk.ev.shape[0]).copy()
+        
+        npixels = self.stk.n_cols*self.stk.n_rows*self.stk.n_ev
+        
+        
+        self.stk.x_dist = self.data_struct.exchange.x 
+        self.stk.y_dist = self.data_struct.exchange.y
+        
+        self.stk.data_dwell = self.data_struct.spectromicroscopy.data_dwell
+        
+        
+        self.stk.fill_h5_struct_from_stk()
+        
+        self.stk.scale_bar()
+                   
+
+        self.parent.page1.iev = int(self.stk.n_ev/3)
+   
+        self.parent.ix = int(self.stk.n_cols/2)
+        self.parent.iy = int(self.stk.n_rows/2)
+                        
+        self.common.stack_loaded = 1
+        
+        self.parent.refresh_widgets()
+        self.parent.page1.ResetDisplaySettings()
+        self.parent.page1.filename = filelist[0]
+        self.parent.page1.textctrl.setText(filelist[0])
+ 
+        self.parent.page0.slider_eng.setRange(0,self.stk.n_ev-1)
+        self.parent.page0.iev = self.stk.n_ev/2
+        self.parent.page0.slider_eng.setValue(self.parent.page1.iev)       
+        
+        self.parent.page1.slider_eng.setRange(0,self.stk.n_ev-1)
+        self.parent.page1.iev = self.stk.n_ev/2
+        self.parent.page1.slider_eng.setValue(self.parent.page1.iev)
+        
+        self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
+        self.parent.page1.loadImage()
+        
+        self.parent.page0.ShowInfo(filelist[0], self.filepath)
+        
+        QtGui.QApplication.restoreOverrideCursor()
+        self.close()
+        
+                
                         
         
 #---------------------------------------------------------------------- 
@@ -1381,21 +2230,19 @@ class MainFrame(QtGui.QMainWindow):
         self.actionOpenSL = QtGui.QAction(self)
         self.actionOpenSL.setObjectName('actionOpenSL')
         self.actionOpenSL.setIcon(QtGui.QIcon(os.path.join('images','open-sl.png')))
-        #toolbar = self.addToolBar('actionOpenSL') 
         self.toolbar.addAction(self.actionOpenSL)
         self.actionOpenSL.triggered.connect(self.BuildStack)
         
         self.actionSave = QtGui.QAction(self)
         self.actionSave.setObjectName('actionSave')
         self.actionSave.setIcon(QtGui.QIcon(os.path.join('images','media-floppy.png')))
-        #toolbar = self.addToolBar('actionSave') 
         self.toolbar.addAction(self.actionSave)
         self.actionSave.triggered.connect(self.onSaveAsH5)
+        self.actionSave.setEnabled(False)
 
         self.actionInfo = QtGui.QAction(self)
         self.actionInfo.setObjectName('actionInfo')
         self.actionInfo.setIcon(QtGui.QIcon(os.path.join('images','help-browser.png')))
-        #toolbar = self.addToolBar('actionInfo') 
         self.toolbar.addAction(self.actionInfo)
         self.actionInfo.triggered.connect(self.onAbout)
         
@@ -1541,7 +2388,7 @@ class MainFrame(QtGui.QMainWindow):
 #             import sys; print sys.exc_info()
                    
 
-        #self.refresh_widgets()
+        self.refresh_widgets()
 
 
 #----------------------------------------------------------------------
@@ -1571,7 +2418,7 @@ class MainFrame(QtGui.QMainWindow):
 #             self.new_stack_refresh()
 #             self.refresh_widgets()
 #                                 
-#             wx.MessageBox(".sm files not loaded.")
+#             QtGui.QMessageBox.warning(self,'Error',".sm files not loaded.")
 #             import sys; print sys.exc_info()
             
 #----------------------------------------------------------------------
@@ -1627,6 +2474,103 @@ class MainFrame(QtGui.QMainWindow):
         self.popup.show()
 
 
+        
+#----------------------------------------------------------------------        
+    def refresh_widgets(self):
+        
+        
+
+        if self.common.stack_loaded == 0:
+            self.page1.button_i0ffile.setEnabled(False)
+            self.page1.button_i0histogram.setEnabled(False) 
+            self.page1.button_save.setEnabled(False) 
+            self.page1.button_savestack.setEnabled(False)
+            self.page1.button_align.setEnabled(False)
+            self.page1.button_slideshow.setEnabled(False)
+            self.page1.button_addROI.setEnabled(False)
+            self.page1.button_spectralROI.setEnabled(False)
+            self.page1.button_resetdisplay.setEnabled(False) 
+            self.page1.button_despike.setEnabled(False)   
+            self.page1.button_displaycolor.setEnabled(False)
+            self.actionSave.setEnabled(False)
+        else:
+            self.page1.button_i0ffile.setEnabled(True)
+            self.page1.button_i0histogram.setEnabled(True) 
+            self.page1.button_save.setEnabled(True) 
+            self.page1.button_savestack.setEnabled(True)  
+            self.page1.button_align.setEnabled(True)  
+            self.page1.button_slideshow.setEnabled(True)
+            self.page1.button_addROI.setEnabled(True)  
+            self.page1.button_spectralROI.setEnabled(True)
+            self.page1.button_resetdisplay.setEnabled(True) 
+            self.page1.button_despike.setEnabled(True) 
+            self.page1.button_displaycolor.setEnabled(True)
+            self.actionSave.setEnabled(True)  
+             
+             
+        if self.common.i0_loaded == 0:
+            self.page1.button_limitev.setEnabled(False)
+            self.page1.button_subregion.setEnabled(False)
+            self.page1.button_showi0.setEnabled(False) 
+            self.page1.rb_flux.setEnabled(False)
+            self.page1.rb_od.setEnabled(False)
+            #self.page2.button_calcpca.setEnabled(False)
+            #self.page4.button_loadtspec.setEnabled(False)
+            #self.page4.button_addflat.setEnabled(False)
+        else:
+            self.page1.button_limitev.setEnabled(True)
+            self.page1.button_subregion.setEnabled(True)
+            self.page1.button_showi0.setEnabled(True)
+            self.page1.rb_flux.setEnabled(True)
+            self.page1.rb_od.setEnabled(True)   
+            #self.page2.button_calcpca.setEnabled(True) 
+            #self.page4.button_loadtspec.setEnabled(True)
+            #self.page4.button_addflat.setEnabled(True)   
+             
+             
+             
+#         if self.common.pca_calculated == 0:      
+#             self.page2.button_savepca.setEnabled(False)
+#             self.page2.slidershow.setEnabled(False) 
+#             self.page3.button_calcca.setEnabled(False)
+#             self.page4.rb_fit.setEnabled(False)
+#             if self.page7: self.page7.button_calckeng.setEnabled(False)
+#         else:
+#             self.page2.button_savepca.setEnabled(True)
+#             self.page2.slidershow.setEnabled(True)
+#             self.page3.button_calcca.setEnabled(True)  
+#             self.page4.rb_fit.setEnabled(True)  
+#             if self.page7: self.page7.button_calckeng.setEnabled(True)       
+#             
+#         if self.common.cluster_calculated == 0:   
+#             self.page3.button_scatterplots.setEnabled(False)
+#             self.page3.button_savecluster.setEnabled(False)
+#             self.page3.slidershow.setEnabled(False)
+#             self.page4.button_addclspec.setEnabled(False)
+#         else:
+#             self.page3.button_scatterplots.setEnabled(True)
+#             self.page3.button_savecluster.setEnabled(True)  
+#             self.page3.slidershow.setEnabled(True)
+#             self.page4.button_addclspec.setEnabled(True)
+#             
+#         if self.common.spec_anl_calculated == 0:
+#             self.page4.button_removespec.setEnabled(False)
+#             self.page4.button_movespdown.setEnabled(False)
+#             self.page4.button_movespup.setEnabled(False)
+#             self.page4.button_save.setEnabled(False)
+#             self.page4.button_showrgb.setEnabled(False) 
+#         else:
+#             self.page4.button_removespec.setEnabled(True)
+#             self.page4.button_movespdown.setEnabled(True)
+#             self.page4.button_movespup.setEnabled(True)
+#             self.page4.button_save.setEnabled(True) 
+#             self.page4.button_showrgb.setEnabled(True)          
+#                   
+#             
+#         self.page1.ResetDisplaySettings()
+#             
+#             
+            
 #----------------------------------------------------------------------        
     def new_stack_refresh(self):
         
@@ -1635,28 +2579,29 @@ class MainFrame(QtGui.QMainWindow):
         self.common.pca_calculated = 0
         self.common.cluster_calculated = 0
         
-        #self.refresh_widgets()
+        self.refresh_widgets()
+               
         
-#         #page 1
-#         self.page1.rb_flux.SetValue(True)
-#         self.page1.rb_od.SetValue(False)
-#         self.page1.showflux = True
-#         
-#         fig = self.page1.SpectrumPanel.get_figure()
-#         fig.clf()
-#         self.page1.SpectrumPanel.draw()
-#         self.page1.tc_spec.SetValue("Spectrum at point: ")       
-#         
-#         fig = self.page1.AbsImagePanel.get_figure()
-#         fig.clf()
-#         self.page1.AbsImagePanel.draw()        
-#         self.page1.tc_imageeng.SetValue("Image at energy: ")
-#         
-#         self.page1.textctrl.SetValue(' ')
-#         
-#         self.page1.ResetDisplaySettings()
-#         
-#         
+        #page 1
+        self.page1.rb_flux.setChecked(True)
+        self.page1.rb_od.setChecked(False)
+        self.page1.showflux = True
+         
+        fig = self.page1.specfig
+        fig.clf()
+        self.page1.SpectrumPanel.draw()
+        self.page1.tc_spec.setText("Spectrum at point: ")       
+         
+        fig = self.page1.absimgfig
+        fig.clf()
+        self.page1.AbsImagePanel.draw()        
+        self.page1.tc_imageeng.setText("Image at energy: ")
+         
+        self.page1.textctrl.setText(' ')
+         
+        self.page1.ResetDisplaySettings()
+         
+         
 #         #page 2
 #         fig = self.page2.PCAEvalsPan.get_figure()
 #         fig.clf()
@@ -1711,7 +2656,7 @@ class MainFrame(QtGui.QMainWindow):
 #         
 #         #page 7
 #         if self.page7:
-#             self.page7.button_calckeng.Disable()
+#             self.page7.button_calckeng.setEnabled(False)
 #             fig = self.page7.KESpecPan.get_figure()
 #             fig.clf()
 #             self.page7.KESpecPan.draw()         

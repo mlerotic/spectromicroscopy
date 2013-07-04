@@ -5047,7 +5047,7 @@ class PageStack(wx.Panel):
 
 
         try: 
-            wildcard = "I0 files (*.csv)|*.csv|SDF I0 files (*.hdr)|*.hdr"
+            wildcard = "I0 CSV files (*.csv)|*.csv| I0 files (*.xas)|*.xas|SDF I0 files (*.hdr)|*.hdr"
             dialog = wx.FileDialog(None, "Choose i0 file",
                                    wildcard=wildcard,
                                    style=wx.OPEN|wx.FD_CHANGE_DIR)
@@ -5074,7 +5074,7 @@ class PageStack(wx.Panel):
                 wx.EndBusyCursor()
                 
                 
-            elif extension == '.csv':
+            elif extension == '.xas':
                 wx.BeginBusyCursor()                                    
 
                 x=self.stk.n_cols
@@ -5084,13 +5084,30 @@ class PageStack(wx.Panel):
                 self.ix = x/2
                 self.iy = y/2
 
-                self.stk.read_stk_i0(filepath_i0)
+                self.stk.read_stk_i0(filepath_i0, extension)
 
                 self.loadSpectrum(self.ix, self.iy)
                 self.loadImage()
                 self.com.i0_loaded = 1
                 wx.EndBusyCursor()
 
+            elif extension == '.csv':
+                wx.BeginBusyCursor()                             
+
+                x=self.stk.n_cols
+                y=self.stk.n_rows
+                z=self.iev               
+
+                self.ix = x/2
+                self.iy = y/2
+
+                self.stk.read_stk_i0(filepath_i0, extension)
+
+                self.loadSpectrum(self.ix, self.iy)
+                self.loadImage()
+                self.com.i0_loaded = 1
+                wx.EndBusyCursor()
+                
             
         except:
             wx.BeginBusyCursor()  
