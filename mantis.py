@@ -23,7 +23,6 @@ from mpl_toolkits.axes_grid import make_axes_locatable
 import data_struct
 import data_stack
 import analyze
-import logos
 import nnma
 import henke
 
@@ -55,49 +54,480 @@ class common:
         
 """ ------------------------------------------------------------------------------------------------"""
 class PageKeyEng(QtGui.QWidget):
-    def __init__(self):
+    def __init__(self, common, data_struct, stack, anlz):
         super(PageKeyEng, self).__init__()
 
-        self.initUI()
+        self.initUI(common, data_struct, stack, anlz)
         
 #----------------------------------------------------------------------          
-    def initUI(self): 
+    def initUI(self, common, data_struct, stack, anlz): 
         pass
     
 
 """ ------------------------------------------------------------------------------------------------"""
 class PageSpectral(QtGui.QWidget):
-    def __init__(self):
+    def __init__(self, common, data_struct, stack, anlz):
         super(PageSpectral, self).__init__()
 
-        self.initUI()
+        self.initUI(common, data_struct, stack, anlz)
         
 #----------------------------------------------------------------------          
-    def initUI(self): 
-        pass
+    def initUI(self, common, data_struct, stack, anlz): 
+
+        self.data_struct = data_struct
+        self.stk = stack
+        self.com = common
+        self.anlz = anlz
+        
+        self.i_tspec = 1
+        self.showraw = True
+        self.show_scale_bar = 0
+        
+        self.SetBackgroundColour("White")
+           
+        self.fontsize = self.com.fontsize        
+        
+        vbox = QtGui.QVBoxLayout()
+        hboxT = QtGui.QHBoxLayout()
+        hboxB = QtGui.QHBoxLayout()
+    
+        #panel 1        
+        vbox1 = QtGui.QVBoxLayout()     
+  
+        self.tc_spmap = wx.TextCtrl(panel1, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.tc_spmap.SetFont(self.com.font)
+        self.tc_spmap.SetValue("Spectrum composition map")
+
+        i1panel = wx.Panel(panel1, -1, style = wx.SUNKEN_BORDER)
+        self.MapPanel = wxmpl.PlotPanel(i1panel, -1, size =(PlotH, PlotH), cursor=False, crosshairs=False, location=False, zoom=False)                            
+  
+        vbox1.Add((0,10))
+        vbox1.Add(self.tc_spmap,1, wx.LEFT | wx.EXPAND, 20)        
+        vbox1.Add(i1panel, 0,  wx.LEFT, 20)
+
+
+     
+     
+#         #panel 2
+#         panel2 = wx.Panel(self, -1)
+#         vbox2 = wx.BoxSizer(wx.VERTICAL)
+#         panel2.SetBackgroundColour("White")
+#         
+#         self.tc_tspec = wx.TextCtrl(panel2, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+#         self.tc_tspec.SetFont(self.com.font)
+#         self.tc_tspec.SetValue("Target Spectrum: ")
+#         hbox11 = wx.BoxSizer(wx.HORIZONTAL)         
+#         
+#         i2panel = wx.Panel(panel2, -1, style = wx.SUNKEN_BORDER)
+#         self.TSpectrumPanel = wxmpl.PlotPanel(i2panel, -1, size=(PlotW, PlotH), cursor=False, crosshairs=False, location=False, zoom=False)
+# 
+#         self.slider_tspec = wx.Slider(panel2, -1, 1, 1, 5, style=wx.SL_LEFT|wx.SL_VERTICAL )        
+#         self.slider_tspec.SetFocus()
+#         self.Bind(wx.EVT_SCROLL, self.OnTSScroll, self.slider_tspec)
+#         
+#         vbox21 = wx.BoxSizer(wx.VERTICAL)               
+#         self.tspecspin = wx.SpinButton(panel2, -1, size = ((8,-1)), style=wx.SP_ARROW_KEYS)
+#         self.Bind(wx.EVT_SPIN_UP, self.OnTspecSpinUp, self.tspecspin)
+#         self.Bind(wx.EVT_SPIN_DOWN, self.OnTspecSpinDown, self.tspecspin)
+#         
+#         vbox21.Add((0,3))
+#         vbox21.Add(self.slider_tspec, 1,  wx.EXPAND) 
+#         vbox21.Add(self.tspecspin, 0,  wx.EXPAND)      
+# 
+#         hbox11.Add(i2panel, 0)
+#         hbox11.Add(vbox21, 0,  wx.EXPAND)
+#           
+#         vbox2.Add((0,10))
+#         vbox2.Add(self.tc_tspec, 1, wx.LEFT | wx.EXPAND, 20)       
+#         vbox2.Add(hbox11, 0, wx.LEFT , 20)
+#         
+#         panel2.SetSizer(vbox2)
+#         
+#         
+#         #panel 3
+#         panel3 = wx.Panel(self, -1)
+#         sb = wx.StaticBox(panel3, -1, 'Target Spectrum')
+#         sb.SetBackgroundColour("white")
+#         sizer1 = wx.StaticBoxSizer(sb, orient=wx.VERTICAL)
+#         vbox31 = wx.BoxSizer(wx.VERTICAL)
+#         vbox31.Add((0,10)) 
+#         
+#         self.button_loadtspec = wx.Button(panel3, -1, 'Load Spectrum')
+#         self.button_loadtspec.SetFont(self.com.font)
+#         self.Bind(wx.EVT_BUTTON, self.OnTSpecFromFile, id=self.button_loadtspec.GetId())
+#         self.button_loadtspec.Disable()
+#         vbox31.Add(self.button_loadtspec, 0, wx.EXPAND)
+#         self.button_addflat = wx.Button(panel3, -1, 'Add Flat Spectrum')
+#         self.button_addflat.SetFont(self.com.font)
+#         self.Bind(wx.EVT_BUTTON, self.OnFlatTSpec, id=self.button_addflat.GetId())
+#         self.button_addflat.Disable()
+#         vbox31.Add(self.button_addflat, 0, wx.EXPAND)
+#         self.button_addclspec = wx.Button(panel3, -1, 'Add Cluster Spectra')
+#         self.button_addclspec.SetFont(self.com.font)
+#         self.Bind(wx.EVT_BUTTON, self.OnAddClusterSpectra, id=self.button_addclspec.GetId())   
+#         self.button_addclspec.Disable()     
+#         vbox31.Add(self.button_addclspec, 0, wx.EXPAND)
+#         
+#         self.button_showrgb = wx.Button(panel3, -1, 'Composite RGB image...')
+#         self.button_showrgb.SetFont(self.com.font)
+#         self.Bind(wx.EVT_BUTTON, self.OnCompositeRGB, id=self.button_showrgb.GetId())   
+#         self.button_showrgb.Disable()     
+#         vbox31.Add(self.button_showrgb, 0, wx.EXPAND)        
+# 
+#         self.button_save = wx.Button(panel3, -1, 'Save Images...', (10,10))
+#         self.button_save.SetFont(self.com.font)
+#         self.Bind(wx.EVT_BUTTON, self.OnSave, id=self.button_save.GetId())
+#         self.button_save.Disable()          
+#         vbox31.Add(self.button_save, 0, wx.EXPAND)
+#         sizer1.Add(vbox31,1, wx.LEFT|wx.RIGHT|wx.EXPAND,2)
+#         panel3.SetSizer(sizer1)
+#         
+# 
+#         
+#         #panel 4
+#         panel4 = wx.Panel(self, -1)
+#         vbox4 = wx.BoxSizer(wx.VERTICAL)
+#         sb = wx.StaticBox(panel4, -1, 'Display')
+#         sb.SetBackgroundColour("white")
+#         sizer4 = wx.StaticBoxSizer(sb, orient=wx.VERTICAL)
+# 
+#         sb = wx.StaticBox(panel4, -1, 'Spectrum')
+#         sb.SetBackgroundColour("white")
+#         sizer41 = wx.StaticBoxSizer(sb, orient=wx.VERTICAL)
+#         self.textctrl_sp = wx.TextCtrl(panel4, -1, style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+#         self.textctrl_sp.SetFont(self.com.font)
+#         sizer41.Add(self.textctrl_sp, 1, wx.EXPAND|wx.TOP|wx.LEFT, 5)
+#       
+#         hbox40 = wx.BoxSizer(wx.HORIZONTAL)    
+#         hbox40.Add(sizer41, 1, wx.EXPAND)
+#         vbox4.Add(hbox40, 0, wx.EXPAND)
+#         
+#         self.textctrl_sp.AppendText('Common Name: \n')
+#         self.textctrl_sp.AppendText('RMS Error: ')
+#         
+#         hbox41 = wx.BoxSizer(wx.HORIZONTAL)
+#         
+#         sb = wx.StaticBox(panel4, -1, 'Composition Map')
+#         sb.SetBackgroundColour("white")
+#         sizer42 = wx.StaticBoxSizer(sb,  orient=wx.VERTICAL)
+#         self.rb_raw = wx.RadioButton(panel4, -1, 'Raw', style=wx.RB_GROUP)
+#         self.rb_fit = wx.RadioButton(panel4, -1, 'Fitted')
+#         self.rb_raw.SetFont(self.com.font)
+#         self.rb_fit.SetFont(self.com.font)
+#         self.Bind(wx.EVT_RADIOBUTTON, self.OnRBRawFit, id=self.rb_raw.GetId())
+#         self.Bind(wx.EVT_RADIOBUTTON, self.OnRBRawFit, id=self.rb_fit.GetId())
+#         self.rb_raw.SetValue(True)
+# 
+#         self.add_scale_cb = wx.CheckBox(panel4, -1, '  Scale')
+#         self.add_scale_cb.SetFont(self.com.font)
+#         self.Bind(wx.EVT_CHECKBOX, self.OnShowScale, self.add_scale_cb)
+#         
+#         sizer42.Add((0,3))
+#         sizer42.Add(self.rb_raw)
+#         sizer42.Add((0,5))
+#         sizer42.Add(self.rb_fit)
+#         sizer42.Add((0,10))
+#         sizer42.Add(self.add_scale_cb)
+#         
+#         hbox41.Add(sizer42, 1, wx.EXPAND)
+#                 
+#         sb = wx.StaticBox(panel4, -1, 'Fit Weights')
+#         sb.SetBackgroundColour("white")
+#         sizer43 = wx.StaticBoxSizer(sb,  orient=wx.VERTICAL)
+#         hbox42 = wx.BoxSizer(wx.HORIZONTAL)
+#         hbox42.Add((3,0))
+#         
+#         self.tc_spfitlist = wx.TextCtrl(panel4, -1, style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+#         self.tc_spfitlist.SetFont(self.com.font)
+#         
+#         hbox42.Add(self.tc_spfitlist,1,wx.EXPAND)
+#         
+#         sizer43.Add(hbox42,1,wx.EXPAND)       
+# 
+#         
+#         vbox43 = wx.BoxSizer(wx.VERTICAL)
+#         self.button_removespec = wx.Button(panel4, -1, 'Remove Spectrum')
+#         self.button_removespec.SetFont(self.com.font)
+#         self.Bind(wx.EVT_BUTTON, self.OnRemoveSpectrum, id=self.button_removespec.GetId())   
+#         self.button_removespec.Disable()     
+#         vbox43.Add(self.button_removespec, 0, wx.EXPAND)
+#         self.button_movespup = wx.Button(panel4, -1, 'Move Spectrum Up')
+#         self.button_movespup.SetFont(self.com.font)
+#         self.Bind(wx.EVT_BUTTON, self.OnMoveSpectrumUp, id=self.button_movespup.GetId())   
+#         self.button_movespup.Disable()     
+#         vbox43.Add(self.button_movespup, 0, wx.EXPAND)
+#         self.button_movespdown = wx.Button(panel4, -1, 'Move Spectrum Down')
+#         self.button_movespdown.SetFont(self.com.font)
+#         self.Bind(wx.EVT_BUTTON, self.OnMoveSpectrumDown, id=self.button_movespdown.GetId())   
+#         self.button_movespdown.Disable()     
+#         vbox43.Add(self.button_movespdown, 0, wx.EXPAND)
+#                        
+# 
+#                
+#             
+#         hbox41.Add((10,0))
+#         hbox41.Add(sizer43, 1, wx.EXPAND)
+#         hbox41.Add(vbox43, 1, wx.EXPAND|wx.ALL, 5)
+#         vbox4.Add(hbox41, 1, wx.EXPAND)
+# 
+#         sizer4.Add(vbox4,1, wx.EXPAND)
+#         
+#         panel4.SetSizer(sizer4)
+#         
+#         
+#         #panel 5
+#         panel5 = wx.Panel(self, -1)
+#         sb = wx.StaticBox(panel5, -1, 'Target Spectra')
+#         sb.SetBackgroundColour("white")
+#         sizer5 = wx.StaticBoxSizer(sb, orient= wx.VERTICAL)
+#         
+#         hbox51 = wx.BoxSizer(wx.HORIZONTAL)
+#         hbox51.Add((0,2))
+# 
+#         self.tc_speclist =  wx.ListCtrl(panel5, -1, 
+#                                         style=wx.LC_REPORT|wx.LC_NO_HEADER|wx.NO_BORDER|wx.LC_EDIT_LABELS|wx.LC_SINGLE_SEL)
+#         self.tc_speclist.InsertColumn(0, 'Spectra')
+#         self.Bind(wx.EVT_LIST_ITEM_FOCUSED , self.OnSpectraListClick, self.tc_speclist)
+#         self.Bind(wx.EVT_LIST_END_LABEL_EDIT, self.OnEditSpectraListClick, self.tc_speclist)
+#         self.tc_speclist.SetBackgroundColour('white')
+#         self.tc_speclist.SetFont(self.com.font)
+#         hbox51.Add(self.tc_speclist, 1, wx.EXPAND)
+#         sizer5.Add(hbox51,1, wx.ALL|wx.EXPAND,2)        
+#         panel5.SetSizer(sizer5)
+#         
+# #        self.tc_speclist = wx.TextCtrl(panel5, -1, style=wx.TE_MULTILINE|wx.TE_RICH|wx.BORDER_NONE)
+# #        self.tc_speclist.SetFont(self.com.font)
+# #        hbox51.Add(self.tc_speclist, 1, wx.EXPAND)
+# #        sizer5.Add(hbox51,1, wx.ALL|wx.EXPAND,2)        
+# #        panel5.SetSizer(sizer5)
+# 
+#         
+#         hboxB.Add(panel2, 0, wx.BOTTOM | wx.TOP, 9)
+#         hboxB.Add(panel1, 0, wx.BOTTOM | wx.TOP, 9)
+#         hboxT.Add((10,0)) 
+#                
+#         hboxT.Add(panel3, 0, wx.LEFT | wx.RIGHT | wx.TOP | wx.EXPAND, 9)
+#         hboxT.Add(panel4, 2.5, wx.LEFT | wx.RIGHT |wx.TOP | wx.EXPAND, 9)
+#         hboxT.Add(panel5, 1, wx.LEFT | wx.RIGHT |wx.TOP | wx.EXPAND, 9)
+# 
+#         vbox.Add(hboxT, 0, wx.ALL, 5)
+#         
+#         vbox.Add((0, 5))
+#         
+#         vbox.Add(hboxB, 0, wx.LEFT | wx.RIGHT, 5)
+#   
+#         self.SetSizer(vbox) 
+        
+        
     
     
 """ ------------------------------------------------------------------------------------------------"""
 class PageCluster(QtGui.QWidget):
-    def __init__(self):
+    def __init__(self, common, data_struct, stack, anlz):
         super(PageCluster, self).__init__()
 
-        self.initUI()
+        self.initUI(common, data_struct, stack, anlz)
         
 #----------------------------------------------------------------------          
-    def initUI(self): 
-        pass
+    def initUI(self, common, data_struct, stack, anlz): 
+        
+        self.data_struct = data_struct
+        self.stk = stack
+        self.com = common
+        self.anlz = anlz
+              
+        
+        self.selcluster = 1
+        self.numclusters = 0
+        self.init_nclusters = 5
+        self.wo_1st_pca = 0
+        self.sigma_split = 0
+        
+        self.MakeColorTable()             
+        
+
+    
+        
+        #panel 1
+        sizer1 = QtGui.QGroupBox('Cluster analysis')
+        vbox1 = QtGui.QVBoxLayout()
+        #vbox1.setSpacing(0)
+        
+        self.button_calcca = QtGui.QPushButton('Calculate Clusters')
+        #self.button_calcca.clicked.connect( self.OnCalcClusters)   
+        self.button_calcca.setEnabled(False)
+        vbox1.addWidget(self.button_calcca)
+        self.button_scatterplots = QtGui.QPushButton('Show scatter plots...')
+        #self.button_scatterplots.clicked.connect( self.OnShowScatterplots)
+        self.button_scatterplots.setEnabled(False)
+        vbox1.addWidget(self.button_scatterplots)
+        self.button_savecluster = QtGui.QPushButton('Save CA Results...')
+        #self.button_savecluster.clicked.connect( self.OnSave)
+        self.button_savecluster.setEnabled(False)
+        vbox1.addWidget(self.button_savecluster)
+        
+
+                
+        hbox11 = QtGui.QHBoxLayout()
+        text1 = QtGui.QLabel(self)
+        text1.setText('Number of clusters')
+        hbox11.addWidget(text1)
+        self.nclusterspin = QtGui.QSpinBox()
+        self.nclusterspin.setRange(2,20)
+        self.nclusterspin.setValue(self.init_nclusters)
+        #self.Bind(wx.EVT_SPINCTRL, self.OnNClusterspin, self.nclusterspin)
+        hbox11.addWidget(text1)
+        hbox11.addWidget(self.nclusterspin)  
+        
+        vbox1.addLayout(hbox11) 
+         
+        hbox12 = QtGui.QHBoxLayout()
+        text1a = QtGui.QLabel(self)
+        text1a.setText("Number of clusters found")
+        hbox12.addWidget(text1a)
+        
+        self.ntc_clusters_found = QtGui.QLabel(self)
+        self.ntc_clusters_found.setText(str(self.numclusters))
+        hbox12.addWidget(self.ntc_clusters_found)
+  
+        vbox1.addLayout(hbox12) 
+          
+         
+        hbox13 = QtGui.QHBoxLayout()
+        self.remove1stpcacb = QtGui.QCheckBox('Reduce thickness effects', self)
+        #self.remove1stpcacb.stateChanged.connect(self.OnRemove1stpca)
+        hbox13.addWidget(self.remove1stpcacb)
+        
+        vbox1.addLayout(hbox13) 
+ 
+        hbox14 = QtGui.QHBoxLayout()
+        self.cb_splitclusters = QtGui.QCheckBox('Divide clusters with large Sigma', self)
+        #self.cb_splitclusters.stateChanged.connect(self.OnSplitClusters)
+        hbox14.addWidget(self.cb_splitclusters)
+        
+        vbox1.addLayout(hbox14) 
+        
+        sizer1.setLayout(vbox1)
+        
+                
+                 
+        #panel 2        
+        vbox2 = QtGui.QVBoxLayout()
+         
+        tc_clustercomp = QtGui.QLabel(self)
+        tc_clustercomp.setText("Composite cluster image")  
+        vbox2.addWidget(tc_clustercomp)      
+          
+        self.clusterimgfig = Figure((PlotH, PlotH))
+        self.ClusterImagePan = FigureCanvas(self.clusterimgfig)
+        #wxmpl.EVT_POINT(i2panel, self.ClusterImagePan.GetId(), self.OnPointClusterImage) 
+        self.ClusterImagePan.setParent(self)
+        vbox2.addWidget(self.ClusterImagePan)
+         
+         
+        #panel 3 
+        vbox3 = QtGui.QVBoxLayout()
+        fgs = QtGui.QGridLayout()
+         
+        self.tc_cluster = QtGui.QLabel(self)
+        self.tc_cluster.setText("Cluster ")
+        fgs.addWidget(self.tc_cluster, 0, 0, QtCore .Qt. AlignLeft)
+ 
+        self.clusterindvimgfig = Figure((PlotH*0.73, PlotH*0.73))
+        self.ClusterIndvImagePan = FigureCanvas(self.clusterindvimgfig)
+        self.ClusterIndvImagePan.setParent(self)
+        fgs.addWidget(self.ClusterIndvImagePan, 1, 0, QtCore .Qt. AlignLeft)
+         
+        self.slidershow = QtGui.QScrollBar(QtCore.Qt.Vertical)
+        self.slidershow.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.slidershow.setEnabled(False)
+        #self.slidershow.valueChanged[int].connect(self.OnClusterScroll)
+        self.slidershow.setRange(1, 20)
+        fgs.addWidget(self.slidershow, 1, 1, QtCore .Qt. AlignLeft)
+            
+         
+        text3 = QtGui.QLabel(self)
+        text3.setText('Cluster Distance Map')
+        fgs.addWidget(text3, 0, 2, QtCore .Qt. AlignLeft)
+        self.clusterdistmapfig = Figure((PlotH*0.73, PlotH*0.73))
+        self.ClusterDistMapPan = FigureCanvas(self.clusterdistmapfig)
+        self.ClusterDistMapPan.setParent(self)
+        fgs.addWidget(self.ClusterDistMapPan, 1, 2, QtCore .Qt. AlignLeft)          
+ 
+        vbox3.addLayout(fgs)
+ 
+         
+        
+
+        #panel 4 
+        vbox4 = QtGui.QVBoxLayout()
+         
+        self.tc_clustersp = QtGui.QLabel(self)
+        self.tc_clustersp.setText("Cluster spectrum")   
+        vbox4.addWidget(self.tc_clustersp)      
+ 
+        self.clusterspecfig = Figure((PlotW, PlotH))
+        self.ClusterSpecPan = FigureCanvas(self.clusterspecfig)
+        self.ClusterSpecPan.setParent(self)
+        vbox4.addWidget(self.ClusterSpecPan)
+ 
+         
+ 
+        
+        
+        vboxtop = QtGui.QVBoxLayout()
+        gridsizertop = QtGui.QGridLayout()
+        
+        gridsizertop.addWidget(sizer1, 0, 0, QtCore .Qt. AlignLeft)
+        gridsizertop.addLayout(vbox2, 1, 0, QtCore .Qt. AlignLeft)
+        
+        gridsizertop.addLayout(vbox3, 0, 1, QtCore .Qt. AlignLeft)
+        gridsizertop.addLayout(vbox4, 1, 1, QtCore .Qt. AlignLeft)
+        
+        vboxtop.addStretch(1)
+        vboxtop.addLayout(gridsizertop)
+        vboxtop.addStretch(1)
+        self.setLayout(vboxtop)
+                
+        
+#----------------------------------------------------------------------     
+    def MakeColorTable(self):
+        self.maxclcolors = 11
+        colors_i = npy.linspace(0,self.maxclcolors,self.maxclcolors+1)
+
+       
+        self.colors=['#0000FF','#FF0000','#DFE32D','#36F200','#B366FF',
+                '#FF470A','#33FFFF','#006600','#CCCC99','#993300',
+                '#000000']
+
+
+        
+        self.clusterclrmap1=matplotlib.colors.LinearSegmentedColormap.from_list('clustercm',self.colors)
+     
+        self.bnorm1 = matplotlib.colors.BoundaryNorm(colors_i, self.clusterclrmap1.N)
+        
+        colors_i = npy.linspace(0,self.maxclcolors+2,self.maxclcolors+3)
+        
+        #use black color for clusters > maxclcolors, the other 2 colors are for background      
+        colors2=['#0000FF','#FF0000','#DFE32D','#36F200','#B366FF',
+                '#FF470A','#33FFFF','#006600','#CCCC99','#993300',
+                '#000000','#FFFFFF','#EEEEEE']
+        
+        self.clusterclrmap2=matplotlib.colors.LinearSegmentedColormap.from_list('clustercm2',colors2)
+     
+        self.bnorm2 = matplotlib.colors.BoundaryNorm(colors_i, self.clusterclrmap2.N)
+        
     
     
 """ ------------------------------------------------------------------------------------------------"""
 class PagePCA(QtGui.QWidget):
-    def __init__(self):
+    def __init__(self, common, data_struct, stack, anlz):
         super(PagePCA, self).__init__()
 
-        self.initUI()
+        self.initUI(common, data_struct, stack, anlz)
         
 #----------------------------------------------------------------------          
-    def initUI(self): 
+    def initUI(self, common, data_struct, stack, anlz): 
 
 
         
@@ -105,23 +535,15 @@ class PagePCA(QtGui.QWidget):
         vbox1 = QtGui.QVBoxLayout()
         
         self.tc_PCAcomp = QtGui.QLabel(self)
-        #self.tc_PCAcomp.SetFont(self.com.font)
         self.tc_PCAcomp.setText("PCA component ")
         vbox1.addWidget(self.tc_PCAcomp)
         
         hbox11 = QtGui.QHBoxLayout()
    
-        #i1panel = wx.Panel(panel1, -1, style = wx.SUNKEN_BORDER)
-        #self.PCAImagePan = wxmpl.PlotPanel(i1panel, -1, size =(ph*1.10, ph), cursor=False, crosshairs=False, location=False, zoom=False)
-        self.image = QtGui.QImage(os.path.join('images','Mantis_img.jpg'))
-        
-        self.imageLabel = QtGui.QLabel()
-        self.imageLabel.setBackgroundRole(QtGui.QPalette.Base)
-        #self.imageLabel.setSizePolicy()
-        #self.imageLabel.setScaledContents(True)
-        
-        self.imageLabel.setPixmap(QtGui.QPixmap.fromImage(self.image))
-        hbox11.addWidget(self.imageLabel)
+        self.pcaimgfig = Figure((PlotH*1.10, PlotH))
+        self.PCAImagePan = FigureCanvas(self.pcaimgfig)
+        self.PCAImagePan.setParent(self)
+        hbox11.addWidget(self.PCAImagePan)
                        
             
         self.slidershow = QtGui.QScrollBar(QtCore.Qt.Vertical)
@@ -142,12 +564,10 @@ class PagePCA(QtGui.QWidget):
         vbox21 = QtGui.QVBoxLayout()        
         
         self.button_calcpca = QtGui.QPushButton('Calculate PCA')
-        #self.button_calcpca.SetFont(self.com.font)
         #.clicked.connect( self.OnCalcPCA, id=self.button_calcpca.GetId())     
         #self.button_calcpca.setEnabled(False)   
         vbox21.addWidget(self.button_calcpca)
         self.button_savepca = QtGui.QPushButton('Save PCA Results...')
-        #self.button_savepca.SetFont(self.com.font)
         #.clicked.connect( self.OnSave, id=self.button_savepca.GetId())
         #self.button_savepca.setEnabled(False)
         vbox21.addWidget(self.button_savepca)
@@ -155,7 +575,6 @@ class PagePCA(QtGui.QWidget):
         hbox21 = QtGui.QHBoxLayout()
         text1 = QtGui.QLabel(self)
         text1.setText('Number of significant components')
-        #text1.SetFont(self.com.font)
         #self.npcaspin = wx.SpinCtrl(panel2, -1, '',  size= (60, -1), style=wx.ALIGN_LEFT)
         #self.npcaspin.SetRange(1,20)
         #self.Bind(wx.EVT_SPINCTRL, self.OnNPCAspin, self.npcaspin)
@@ -180,45 +599,34 @@ class PagePCA(QtGui.QWidget):
         #panel 3
         vbox3 = QtGui.QVBoxLayout()
    
-        #i3panel = wx.Panel(panel3, -1, style = wx.SUNKEN_BORDER)
-        #self.PCASpecPan = wxmpl.PlotPanel(i3panel, -1, size =(pw, ph), cursor=False, crosshairs=False, location=False, zoom=False)
+
  
         self.text_pcaspec = QtGui.QLabel(self)
         #self.text_pcaspec.SetFont(self.com.font)
         self.text_pcaspec.setText("PCA spectrum ") 
         vbox3.addWidget(self.text_pcaspec)
                         
-        image = QtGui.QImage(os.path.join('images','spectrum.jpg'))       
-        self.imageLabel = QtGui.QLabel()
-        self.imageLabel.setBackgroundRole(QtGui.QPalette.Base)
-        #self.imageLabel.setSizePolicy()
-        #self.imageLabel.setScaledContents(True)
-        self.imageLabel.setPixmap(QtGui.QPixmap.fromImage(image))
-        vbox3.addWidget(self.imageLabel)   
 
- 
+        self.pcaspecfig = Figure((PlotW, PlotH))
+        self.PCASpecPan = FigureCanvas(self.pcaspecfig)
+        self.PCASpecPan.setParent(self)
+        vbox3.addWidget(self.PCASpecPan)
+        
     
         
         #panel 4
         vbox4 = QtGui.QVBoxLayout()
- 
-        #i4panel = wx.Panel(panel4, -1, style = wx.SUNKEN_BORDER)
-        #self.PCAEvalsPan = wxmpl.PlotPanel(i4panel, -1, size =(pw, ph*0.75), cursor=False, crosshairs=False, location=False, zoom=False)
-        #wxmpl.EVT_POINT(i4panel, self.PCAEvalsPan.GetId(), self.OnPointEvalsImage)   
+  
          
         text4 = QtGui.QLabel(self)
-        #text4.SetFont(self.com.font)
         text4.setText("PCA eigenvalues ")        
         vbox4.addWidget(text4)
         
-        image2 = QtGui.QImage(os.path.join('images','spectrum.jpg'))       
-        self.imageLabel2 = QtGui.QLabel()
-        self.imageLabel2.setBackgroundRole(QtGui.QPalette.Base)
-        #self.imageLabel.setSizePolicy()
-        #self.imageLabel.setScaledContents(True)
-        self.imageLabel2.setPixmap(QtGui.QPixmap.fromImage(image2))
-        vbox4.addWidget(self.imageLabel2)           
-
+        self.pcaevalsfig = Figure((PlotW, PlotH*0.75))
+        self.PCAEvalsPan = FigureCanvas(self.pcaevalsfig)
+        self.PCAEvalsPan.setParent(self)
+        vbox4.addWidget(self.PCAEvalsPan)
+                 
 
     
         
@@ -2180,20 +2588,15 @@ class MainFrame(QtGui.QMainWindow):
         tabs    = QtGui.QTabWidget()
         
 
-  
-        self.page2 = PagePCA()
-        self.page3 = PageCluster()
-        self.page4 = PageSpectral()
-        self.page5 = PageKeyEng()
-        self.page7 = None
+
         
         # create the page windows as tabs
         self.page0 = PageLoadData(self.common, self.data_struct, self.stk)
         self.page1 = PageStack(self.common, self.data_struct, self.stk)
-#         self.page2 = PagePCA(nb, self.common, self.data_struct, self.stk, self.anlz)
-#         self.page3 = PageCluster(nb, self.common, self.data_struct, self.stk, self.anlz)
-#         self.page4 = PageSpectral(nb, self.common, self.data_struct, self.stk, self.anlz)
-#         self.page7 = None
+        self.page2 = PagePCA(self.common, self.data_struct, self.stk, self.anlz)
+        self.page3 = PageCluster(self.common, self.data_struct, self.stk, self.anlz)
+        self.page4 = PageSpectral(self.common, self.data_struct, self.stk, self.anlz)
+        self.page5 = PageKeyEng(self.common, self.data_struct, self.stk, self.anlz)
         
         
         tabs.addTab(self.page0,"Load Data")
