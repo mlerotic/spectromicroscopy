@@ -19,6 +19,7 @@ from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg as NavigationToolbar
 from matplotlib.figure import Figure
 from mpl_toolkits.axes_grid import make_axes_locatable
+matplotlib.interactive( True )
 
 import data_struct
 import data_stack
@@ -38,7 +39,6 @@ ImgDpi = 40
 #----------------------------------------------------------------------
 class common:
     def __init__(self):
-        self.fontsize = 8
         
         self.stack_loaded = 0
         self.i0_loaded = 0
@@ -61,7 +61,160 @@ class PageKeyEng(QtGui.QWidget):
         
 #----------------------------------------------------------------------          
     def initUI(self, common, data_struct, stack, anlz): 
-        pass
+        
+        
+        self.com = common 
+        self.data_struct = data_struct
+        self.stk = stack       
+        self.anlz = anlz
+        
+        self.selica = 1       
+        self.numica = 2
+        
+        
+        pw = PlotW*0.8
+        ph = PlotH*0.8
+        
+        
+        self.i_eng = 0
+        self.keyengs_calculated = 0
+       
+         
+          
+        #panel 1        
+        vbox1 = QtGui.QVBoxLayout()
+               
+        self.tc_1 = QtGui.QLabel(self)
+        self.tc_1.setText("Average Optical Density")    
+        
+        frame = QtGui.QFrame()
+        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        fbox = QtGui.QHBoxLayout()
+   
+        self.kespecfig = Figure((pw, ph))
+        self.KESpecPan = FigureCanvas(self.kespecfig)
+        #self.KESpecPan.mpl_connect('button_press_event', self.OnPointSpectrum)
+        fbox.addWidget(self.KESpecPan)
+        frame.setLayout(fbox)
+            
+        vbox1.addStretch(1)
+        vbox1.addWidget(self.tc_1)        
+        vbox1.addWidget(frame)
+        vbox1.addStretch(1)
+ 
+                    
+                
+        #panel 2
+        sizer2 = QtGui.QGroupBox('Key Energies Analysis')
+        vbox2 = QtGui.QVBoxLayout()
+                
+        self.button_calckeng = QtGui.QPushButton('Find Key Energies')
+        #self.button_calckeng.clicked.connect(self.OnCalcKeyEng)     
+        self.button_calckeng.setEnabled(False)  
+        vbox2.addWidget( self.button_calckeng) 
+        self.button_save = QtGui.QPushButton('Save Results...')
+        #self.button_save.clicked.connect(self.OnSave)
+        self.button_save.setEnabled(False)
+        
+        
+        hbox21 = QtGui.QHBoxLayout()
+        text1 = QtGui.QLabel(self)
+        text1.setText("Threshold")
+        
+    
+        self.tc_keyengthresh = QtGui.QDoubleSpinBox()
+        self.tc_keyengthresh.setRange(0,5)
+        self.tc_keyengthresh.setValue(0.1) 
+        self.tc_keyengthresh.setSingleStep(0.1)   
+
+
+        hbox21.addWidget(text1)
+        hbox21.addWidget(self.tc_keyengthresh)    
+        
+        line = QtGui.QFrame()
+        line.setFrameShape(QtGui.QFrame.HLine)
+        line.setFrameShadow(QtGui.QFrame.Sunken) 
+              
+        vbox2.addLayout(hbox21)    
+        vbox2.addWidget(line)  
+        vbox2.addWidget( self.button_save)        
+        
+
+        sizer2.setLayout(vbox2)
+
+
+        #panel 3
+        vbox3 = QtGui.QVBoxLayout()
+    
+        t1 = QtGui.QLabel(self)
+        t1.setText("Key Energies")       
+         
+        self.lc_1 = QListWidget()   
+#         self.lc_1.InsertColumn(0, 'KEng')
+#         self.lc_1.SetColumnWidth(0, 160)  
+#self.Bind(wx.EVT_LIST_ITEM_SELECTED , self.OnEngListClick, self.lc_1)  
+        self.lc_1.setMinimumSize(200, 400)
+         
+        vbox3.addWidget(t1)
+        vbox3.addWidget(self.lc_1)
+                 
+      
+        #panel 4     
+        vbox4 = QtGui.QVBoxLayout()
+         
+        self.tc_imageeng = QtGui.QLabel(self)
+        self.tc_imageeng.setText("Image at key energy: ")
+        vbox4.addWidget(self.tc_imageeng)
+         
+        hbox41 = QtGui.QHBoxLayout()
+
+        frame = QtGui.QFrame()
+        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        fbox = QtGui.QHBoxLayout()
+  
+        self.absimgfig = Figure((ph, ph))
+        self.AbsImagePanel = FigureCanvas(self.absimgfig)
+   
+        fbox.addWidget(self.AbsImagePanel)
+        frame.setLayout(fbox)
+        hbox41.addWidget(frame)       
+
+        self.slider_eng = QtGui.QScrollBar(QtCore.Qt.Vertical)
+        self.slider_eng.setFocusPolicy(QtCore.Qt.StrongFocus)
+        #self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
+        self.slider_eng.setRange(0, 100)
+        hbox41.addWidget(self.slider_eng)
+        hbox41.addStretch(1)
+        vbox4.addLayout(hbox41)
+         
+ 
+
+        
+
+        vboxtop1 = QtGui.QVBoxLayout()
+                     
+        vboxtop1.addStretch(1) 
+        vboxtop1.addWidget(sizer2)
+        vboxtop1.addStretch(1) 
+        vboxtop1.addLayout(vbox3)
+         
+        vboxtop2 = QtGui.QVBoxLayout()  
+        vboxtop2.addStretch(1)       
+        vboxtop2.addLayout(vbox1)
+        vboxtop2.addStretch(1)
+        vboxtop2.addLayout(vbox4)
+
+                
+        hboxtop = QtGui.QHBoxLayout()  
+        hboxtop.addStretch(1)     
+        hboxtop.addLayout(vboxtop1)
+        hboxtop.addStretch(1) 
+        hboxtop.addLayout(vboxtop2)
+        hboxtop.addStretch(1) 
+
+        
+        hboxtop.setContentsMargins(20,20,20,20)
+        self.setLayout(hboxtop) 
     
 
 """ ------------------------------------------------------------------------------------------------"""
@@ -83,242 +236,1211 @@ class PageSpectral(QtGui.QWidget):
         self.showraw = True
         self.show_scale_bar = 0
         
-        self.SetBackgroundColour("White")
-           
-        self.fontsize = self.com.fontsize        
-        
+
         vbox = QtGui.QVBoxLayout()
         hboxT = QtGui.QHBoxLayout()
         hboxB = QtGui.QHBoxLayout()
     
+    
+        #panel 5
+        sizer5 = QtGui.QGroupBox('Target Spectra')
+        vbox5 = QtGui.QVBoxLayout()
+ 
+        self.tc_speclist =  QListWidget()  
+        self.tc_speclist.itemClicked.connect(self.OnSpectraListClick)
+        #self.tc_speclist.doubleClicked.connect(self.OnEditSpectraListClick)      
+        vbox5.addWidget(self.tc_speclist)
+        sizer5.setLayout(vbox5)
+        
+        
+        
         #panel 1        
         vbox1 = QtGui.QVBoxLayout()     
   
-        self.tc_spmap = wx.TextCtrl(panel1, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
-        self.tc_spmap.SetFont(self.com.font)
-        self.tc_spmap.SetValue("Spectrum composition map")
+        self.tc_spmap = QtGui.QLabel(self)
+        self.tc_spmap.setText("Spectrum composition map")
 
-        i1panel = wx.Panel(panel1, -1, style = wx.SUNKEN_BORDER)
-        self.MapPanel = wxmpl.PlotPanel(i1panel, -1, size =(PlotH, PlotH), cursor=False, crosshairs=False, location=False, zoom=False)                            
+        frame = QtGui.QFrame()
+        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        fbox = QtGui.QHBoxLayout()
+
+        self.mapfig = Figure((PlotH, PlotH))
+        self.MapPanel = FigureCanvas(self.mapfig)
+        self.MapPanel.setParent(self)
+        fbox.addWidget(self.MapPanel)
+        frame.setLayout(fbox)
+        
+        vbox1.addWidget(self.tc_spmap)        
+        vbox1.addWidget(frame)
   
+                  
+     
+     
+        #panel 2
+        vbox2 = QtGui.QVBoxLayout()
+         
+        self.tc_tspec = QtGui.QLabel(self)
+        self.tc_tspec.setText("Target Spectrum: ")
+        hbox11 = QtGui.QHBoxLayout()       
+         
+        frame = QtGui.QFrame()
+        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        fbox = QtGui.QHBoxLayout()
+        self.TSpecfig = Figure((PlotW, PlotH))
+        self.TSpectrumPanel = FigureCanvas(self.TSpecfig)
+        fbox.addWidget(self.TSpectrumPanel)
+        frame.setLayout(fbox)
+        
+        self.slider_tspec = QtGui.QScrollBar(QtCore.Qt.Vertical)
+        self.slider_tspec.setFocusPolicy(QtCore.Qt.StrongFocus)
+        #self.slider_tspec.setEnabled(False)
+        self.slider_tspec.valueChanged[int].connect(self.OnTSScroll)
+        self.slider_tspec.setRange(1, 5)
+           
+ 
+        hbox11.addWidget(frame)
+        hbox11.addWidget(self.slider_tspec)
+           
+        vbox2.addWidget(self.tc_tspec)       
+        vbox2.addLayout(hbox11)
+         
+         
+         
+        #panel 3
+        sizer3 = QtGui.QGroupBox('Target Spectrum')
+        vbox3 = QtGui.QVBoxLayout()
+        
+         
+        self.button_loadtspec = QtGui.QPushButton('Load Spectrum')
+        self.button_loadtspec.clicked.connect(self.OnTSpecFromFile)
+        self.button_loadtspec.setEnabled(False)
+        vbox3.addWidget(self.button_loadtspec)
+        self.button_addflat = QtGui.QPushButton('Add Flat Spectrum')
+        self.button_addflat.clicked.connect( self.OnFlatTSpec)
+        self.button_addflat.setEnabled(False)
+        vbox3.addWidget(self.button_addflat)
+        self.button_addclspec = QtGui.QPushButton('Add Cluster Spectra')
+        self.button_addclspec.clicked.connect( self.OnAddClusterSpectra)   
+        self.button_addclspec.setEnabled(False)
+        vbox3.addWidget(self.button_addclspec)
+         
+        self.button_showrgb = QtGui.QPushButton('Composite RGB image...')
+        self.button_showrgb.clicked.connect( self.OnCompositeRGB)   
+        self.button_showrgb.setEnabled(False)
+        vbox3.addWidget(self.button_showrgb)        
+ 
+        self.button_save = QtGui.QPushButton('Save Images...')
+        self.button_save.clicked.connect( self.OnSave)
+        self.button_save.setEnabled(False)
+        vbox3.addWidget(self.button_save)
+
+        sizer3.setLayout(vbox3)
+         
+ 
+         
+        #panel 4
+        sizer4 = QtGui.QGroupBox('Display')
+        vbox4 = QtGui.QVBoxLayout()
+                
+
+        sb = QtGui.QGroupBox('Spectrum')
+        vbox41 = QtGui.QVBoxLayout()
+
+        self.textctrl_sp1 =  QtGui.QLabel(self)
+        vbox41.addWidget(self.textctrl_sp1)
+        self.textctrl_sp2 =  QtGui.QLabel(self)
+        vbox41.addWidget(self.textctrl_sp2)
+               
+        
+         
+        self.textctrl_sp1.setText('Common Name: ')
+        self.textctrl_sp2.setText('RMS Error: ')
+        
+        sb.setLayout(vbox41)
+        vbox4.addWidget(sb)
+
+
+         
+        
+        hbox4b = QtGui.QHBoxLayout() 
+          
+        sb = QtGui.QGroupBox('Composition Map')
+        vbox42 = QtGui.QVBoxLayout()
+        
+        
+        self.rb_raw = QtGui.QRadioButton( 'Raw', self)
+        self.rb_fit = QtGui.QRadioButton('Fitted',self)
+        self.rb_raw.setChecked(True)
+        self.rb_raw.toggled.connect(self.OnRBRawFit)
+        
+
+        vbox42.addWidget(self.rb_raw)
+        vbox42.addWidget(self.rb_fit)
+
+
+        self.add_scale_cb = QtGui.QCheckBox('Scale', self) 
+        #self.add_scale_cb.toggle()
+        self.add_scale_cb.stateChanged.connect(self.OnShowScale)
+        vbox42.addWidget(self.add_scale_cb)
+        sb.setLayout(vbox42)
+        hbox4b.addWidget(sb)
+        
+        
+        
+                  
+        sb = QtGui.QGroupBox('Fit Weights')
+        vbox43 = QtGui.QVBoxLayout()
+
+        self.tc_spfitlist = QListWidget()
+        vbox43.addWidget(self.tc_spfitlist)
+          
+        sb.setLayout(vbox43)
+        hbox4b.addWidget(sb)
+          
+          
+        vbox44 = QtGui.QVBoxLayout()
+        self.button_removespec = QtGui.QPushButton('Remove Spectrum')
+        self.button_removespec.clicked.connect(self.OnRemoveSpectrum)   
+        self.button_removespec.setEnabled(False)    
+        vbox44.addWidget(self.button_removespec)
+        self.button_movespup = QtGui.QPushButton('Move Spectrum Up')
+        self.button_movespup.clicked.connect(self.OnMoveSpectrumUp)   
+        self.button_movespup.setEnabled(False)  
+        vbox44.addWidget(self.button_movespup)
+        self.button_movespdown = QtGui.QPushButton('Move Spectrum Down')
+        self.button_movespdown.clicked.connect(self.OnMoveSpectrumDown)   
+        self.button_movespdown.setEnabled(False) 
+        vbox44.addWidget(self.button_movespdown)
+        hbox4b.addLayout(vbox44)         
+       
+        vbox4.addLayout(hbox4b)
+        sizer4.setLayout(vbox4)
+         
+         
+
+
+         
+
+        hboxB.addLayout(vbox2)
+        hboxB.addStretch(1)
+        hboxB.addLayout(vbox1)
+        
+
+                
+        hboxT.addWidget(sizer3)
+        hboxT.addWidget(sizer4)
+        hboxT.addWidget(sizer5)
+ 
+        vbox.setContentsMargins(20,20,20,20)
+   
+        vbox.addStretch(1)
+        vbox.addLayout(hboxT)
+        vbox.addStretch(3)
+        vbox.addLayout(hboxB)
+        vbox.addStretch(1)
+        self.setLayout(vbox)
+        
+        
+        
+#----------------------------------------------------------------------
+    def OnTSpecFromFile(self, event):
+        
+
+        #try: 
+        if True:
+            
+            wildcard = "Spectrum files (*.csv)"
+            
+            filepath = QtGui.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', '', wildcard)
+            
+
+            filepath = str(filepath)
+            if filepath == '':
+                return
+            
+            self.filename =  os.path.basename(str(filepath))
+            
+                                                        
+            QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))    
+                                            
+            self.anlz.read_target_spectrum(filename=filepath)
+            self.com.spec_anl_calculated = 1
+            
+            self.i_tspec = self.anlz.n_target_spectra      
+            self.slider_tspec.setMaximum(self.anlz.n_target_spectra)
+            self.slider_tspec.setValue(self.i_tspec)
+            
+            self.loadTSpectrum()
+            self.loadTargetMap()    
+            self.ShowSpectraList()
+                    
+            QtGui.QApplication.restoreOverrideCursor()
+            
+#         except:
+#             QtGui.QApplication.restoreOverrideCursor()  
+#             wx.MessageBox("Spectrum file not loaded.")
+                                   
+                                 
+        self.window().refresh_widgets()
+        
+
+#----------------------------------------------------------------------
+    def OnFlatTSpec(self, event):
+
+        try: 
+            QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor)) 
+            self.anlz.read_target_spectrum(flat=True)
+            self.com.spec_anl_calculated = 1
+            
+            self.i_tspec = self.anlz.n_target_spectra      
+            self.slider_tspec.setMaximum(self.anlz.n_target_spectra)
+            self.slider_tspec.setValue(self.i_tspec)
+            
+            self.loadTSpectrum()
+            self.loadTargetMap()
+            self.ShowSpectraList()
+        
+            QtGui.QApplication.restoreOverrideCursor()
+            
+        except:
+            QtGui.QApplication.restoreOverrideCursor()  
+            QtGui.QMessageBox.warning(self, 'Error', 'Flat spectrum not loaded.')
+            
+                                                      
+        self.window().refresh_widgets()
+        
+#----------------------------------------------------------------------
+    def OnAddClusterSpectra(self, event):
+
+        #try:
+        if True: 
+            QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor)) 
+            self.anlz.add_cluster_target_spectra()
+            self.com.spec_anl_calculated = 1
+            
+            self.i_tspec = self.anlz.n_target_spectra      
+            self.slider_tspec.setMaximum(self.anlz.n_target_spectra)
+            self.slider_tspec.setValue(self.i_tspec)
+            
+            self.ShowSpectraList() 
+            self.loadTSpectrum()
+            self.loadTargetMap()  
+             
+        
+            QtGui.QApplication.restoreOverrideCursor()
+            
+#        except:
+#            QtGui.QApplication.restoreOverrideCursor()  
+#            wx.MessageBox("Cluster spectra not loaded.")
+ 
+                                                        
+        self.window().refresh_widgets()
+        
+#----------------------------------------------------------------------
+    def OnCompositeRGB(self, event):
+
+        ShowCompositeRBGmap(self.com, self.anlz).Show()
+                
+#----------------------------------------------------------------------
+    def OnSave(self, event):
+        
+        pass
+        #SaveWinP4().Show()
+        
+        
+#----------------------------------------------------------------------
+    def Save(self, filename, path, spec_png = True, spec_pdf = False, spec_csv = False, img_png = True, img_pdf = False):
+
+        self.SaveFileName = os.path.join(path,filename)
+   
+        try: 
+            if img_png:
+                self.SaveMaps(png_pdf=1)
+            if img_pdf:
+                self.SaveMaps(png_pdf=2)
+                
+            if spec_png:    
+                self.SaveSpectra(png_pdf=1)
+            if spec_pdf:
+                self.SaveSpectra(png_pdf=2)
+            if spec_csv:
+                self.SaveSpectra(savecsv = True)
+                
+                
+            
+        except IOError, e:
+            if e.strerror:
+                err = e.strerror 
+            else: 
+                err = e 
+            QtGui.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % err)
+
+            
+#----------------------------------------------------------------------
+    def SaveSpectra(self, png_pdf=1, savecsv = False):
+        
+        
+        from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas   
+        matplotlib.rcParams['pdf.fonttype'] = 42
+            
+        colors=['#FF0000','#000000','#FFFFFF']
+        spanclrmap=matplotlib.colors.LinearSegmentedColormap.from_list('spancm',colors)
+        
+        if png_pdf == 1:   
+            ext = 'png'
+        else:
+            ext = 'pdf'
+        suffix = "." + ext
+        
+        
+        for i in range (self.anlz.n_target_spectra):
+            #Save spectra images
+            tspectrum = self.anlz.target_spectra[i, :]
+                        
+        
+            fig = matplotlib.figure.Figure(figsize =(PlotW, PlotH))
+            canvas = FigureCanvas(fig)
+            fig.clf()
+            fig.add_axes((0.15,0.15,0.75,0.75))
+            axes = fig.gca()
+        
+            matplotlib.rcParams['font.size'] = self.fontsize
+
+            line1 = axes.plot(self.stk.ev,tspectrum, color='black', label = 'Raw data')
+            
+            if self.com.pca_calculated == 1: 
+                tspectrumfit = self.anlz.target_pcafit_spectra[i, :]
+                diff = npy.abs(tspectrum-tspectrumfit)
+                line2 = axes.plot(self.stk.ev,tspectrumfit, color='green', label = 'Fit')
+                line3 = axes.plot(self.stk.ev,diff, color='grey', label = 'Abs(Raw-Fit)')
+            
+            fontP = matplotlib.font_manager.FontProperties()
+            fontP.set_size('small')
+       
+            axes.legend(loc=4, prop = fontP)
+                        
+            axes.set_xlabel('Photon Energy [eV]')
+            axes.set_ylabel('Optical Density')
+
+            fileName_spec = self.SaveFileName+"_Tspectrum_" +str(i+1)+"."+ext
+            fig.savefig(fileName_spec)    
+            
+            if savecsv:
+                fileName_spec = self.SaveFileName+"_Tspectrum_" +str(i+1)+".csv"
+                self.stk.write_csv(fileName_spec, self.stk.ev, tspectrum)
+#----------------------------------------------------------------------
+    def SaveMaps(self, png_pdf=1):            
+            
+            
+        from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas  
+        matplotlib.rcParams['pdf.fonttype'] = 42 
+            
+        colors=['#FF0000','#000000','#FFFFFF']
+        spanclrmap=matplotlib.colors.LinearSegmentedColormap.from_list('spancm',colors)
+            
+        if png_pdf == 1:   
+            ext = 'png'
+        else:
+            ext = 'pdf'
+        suffix = "." + ext                       
+                       
+            
+        for i in range (self.anlz.n_target_spectra):
+              
+            #Save composition maps
+            if self.showraw == True:
+                tsmapimage = self.anlz.target_svd_maps[:,:,i]
+            else:
+                tsmapimage = self.anlz.target_pcafit_maps[:,:,i] 
+  
+            fig = matplotlib.figure.Figure(figsize =(PlotH, PlotH))
+            canvas = FigureCanvas(fig)
+            fig.clf()
+            axes = fig.gca()
+    
+            divider = make_axes_locatable(axes)
+            ax_cb = divider.new_horizontal(size="3%", pad=0.03)  
+
+            fig.add_axes(ax_cb)
+            axes.set_position([0.03,0.03,0.8,0.94])
+        
+        
+            min_val = npy.min(tsmapimage)
+            max_val = npy.max(tsmapimage)
+            bound = npy.max((npy.abs(min_val), npy.abs(max_val)))
+        
+            if self.show_scale_bar == 1:
+                um_string = '$\mu m$'
+                microns = '$'+self.stk.scale_bar_string+' $'+um_string
+                axes.text(self.stk.scale_bar_pixels_x+10,self.stk.n_cols-9, microns, horizontalalignment='left', verticalalignment='center',
+                              color = 'white', fontsize=14)
+                #Matplotlib has flipped scales so I'm using rows instead of cols!
+                p = matplotlib.patches.Rectangle((5,self.stk.n_cols-10), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
+                                            color = 'white', fill = True)
+                axes.add_patch(p)     
+     
+            im = axes.imshow(tsmapimage, cmap=spanclrmap, vmin = -bound, vmax = bound)
+            cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
+    
+            axes.axis("off") 
+                
+                   
+            fileName_img = self.SaveFileName+"_TSmap_" +str(i+1)+"."+ext               
+            fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
+            
+#----------------------------------------------------------------------        
+    def OnEditSpectraListClick(self):
+        item = self.tc_speclist.currentItem()
+        self.tc_speclist.editItem(item)
+        self.anlz.tspec_names[self.i_tspec-1] = item.data()
+        self.loadTSpectrum()
+
+#----------------------------------------------------------------------        
+    def OnSpectraListClick(self):
+        item = self.tc_speclist.currentRow()
+        
+        sel = item
+        self.i_tspec = sel+1
+        
+        if self.com.spec_anl_calculated == 1:
+            self.loadTSpectrum()
+            self.loadTargetMap()
+            self.slider_tspec.setValue(self.i_tspec)
+            
+#----------------------------------------------------------------------        
+    def OnTSScroll(self, value):
+        
+        sel = value
+        self.i_tspec = sel
+        
+        self.tc_speclist.setCurrentRow(self.i_tspec-1) 
+        
+
+        if self.com.spec_anl_calculated == 1:
+            self.loadTSpectrum()
+            self.loadTargetMap()
+            
+#----------------------------------------------------------------------            
+    def OnTspecSpinUp(self, event):
+        if (self.com.spec_anl_calculated == 1) and (self.i_tspec > 1):
+            self.i_tspec = self.i_tspec - 1
+            self.slider_tspec.setValue(self.i_tspec)
+
+            self.loadTSpectrum()
+            self.loadTargetMap()
+            
+#----------------------------------------------------------------------            
+    def OnTspecSpinDown(self, event):
+        if (self.com.spec_anl_calculated == 1) and (self.i_tspec < self.anlz.n_target_spectra):
+            self.i_tspec = self.i_tspec + 1
+            self.slider_tspec.setValue(self.i_tspec) 
+            
+            self.loadTSpectrum()
+            self.loadTargetMap()
+
+
+#----------------------------------------------------------------------          
+    def OnRBRawFit(self, enabled):
+        state = enabled
+           
+        if state:
+            self.showraw = True
+        else:        
+            self.showraw = False
+            
+        if self.com.spec_anl_calculated == 1:
+            self.loadTSpectrum()
+            self.loadTargetMap()
+            
+#----------------------------------------------------------------------           
+    def OnShowScale(self, state):
+        
+        if state == QtCore.Qt.Checked:
+            self.show_scale_bar = 1
+        else: self.show_scale_bar = 0
+        
+        if self.com.spec_anl_calculated == 1:
+            self.loadTSpectrum()
+            self.loadTargetMap()
+            
+#----------------------------------------------------------------------           
+    def OnRemoveSpectrum(self, event):
+        QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor)) 
+        self.anlz.remove_spectrum(self.i_tspec-1)
+        self.com.spec_anl_calculated = 1
+            
+        self.i_tspec = self.i_tspec-1
+        if self.i_tspec<0:
+            self.i_tspec=0
+        self.slider_tspec.setMaximum(self.anlz.n_target_spectra)
+        self.slider_tspec.setValue(self.i_tspec)
+            
+        if self.anlz.tspectrum_loaded == 1:
+            self.loadTSpectrum()
+            self.loadTargetMap()  
+            self.ShowSpectraList()  
+        else:
+            self.com.spec_anl_calculated = 0
+            self.ClearWidgets()
+        
+        QtGui.QApplication.restoreOverrideCursor()
+        
+#----------------------------------------------------------------------           
+    def OnMoveSpectrumDown(self, event):
+        
+        if self.i_tspec < self.anlz.n_target_spectra:
+            self.anlz.move_spectrum(self.i_tspec-1, self.i_tspec)
+            
+            self.i_tspec += 1
+            self.slider_tspec.setValue(self.i_tspec)
+            self.loadTSpectrum()
+            self.loadTargetMap()  
+            self.ShowSpectraList()
+        
+        
+#----------------------------------------------------------------------           
+    def OnMoveSpectrumUp(self, event):        
+        
+        if self.i_tspec > 1:
+            self.anlz.move_spectrum(self.i_tspec-1, self.i_tspec-2)      
+            
+            self.i_tspec -= 1
+            self.slider_tspec.setValue(self.i_tspec)
+            self.loadTSpectrum()
+            self.loadTargetMap() 
+            self.ShowSpectraList()
+        
+#----------------------------------------------------------------------           
+    def ClearWidgets(self):
+        
+        fig = self.MapPanel.get_figure()
+        fig.clf()
+        self.MapPanel.draw()
+        fig = self.TSpectrumPanel.get_figure()
+        fig.clf()
+        self.TSpectrumPanel.draw()
+        
+        self.tc_tspec.setText("Target Spectrum: ")
+        self.tc_speclist.clear()
+        self.tc_spfitlist.clear()
+        
+        self.com.spec_anl_calculated = 0
+        self.i_tspec = 1
+        self.showraw = True
+        self.rb_raw.setValue(True)
+        
+        self.slider_tspec.setValue(self.i_tspec)
+        
+        
+        self.textctrl_sp1.setText('Common Name: \n')
+        self.textctrl_sp2.setText('RMS Error: ')
+        
+        self.window().refresh_widgets()
+            
+#----------------------------------------------------------------------           
+    def ShowFitWeights(self):    
+        
+        self.tc_spfitlist.clear()     
+        
+        norm_factor = 100./npy.sum(npy.absolute(self.anlz.target_pcafit_coeffs[self.i_tspec-1, :]))
+        
+        for i in range(self.anlz.numsigpca):
+            textitem = '{0}: {1:5.2f} %'.format(i+1, norm_factor
+                                                    *abs(self.anlz.target_pcafit_coeffs[self.i_tspec-1, i]))
+            
+
+            self.tc_spfitlist.addItem(textitem)
+        self.tc_spfitlist.setCurrentRow(0)
+
+#----------------------------------------------------------------------           
+    def ShowSpectraList(self):    
+        
+        self.tc_speclist.clear()   
+        
+        for i in range(self.anlz.n_target_spectra):
+            self.tc_speclist.addItem(self.anlz.tspec_names[i])
+            
+        
+#----------------------------------------------------------------------      
+    def loadTargetMap(self):
+
+        if self.showraw == True:
+            tsmapimage = self.anlz.target_svd_maps[:,:,self.i_tspec-1]
+        else:
+            tsmapimage = self.anlz.target_pcafit_maps[:,:,self.i_tspec-1] 
+        
+        
+        colors=['#FF0000','#000000','#FFFFFF']
+        
+        spanclrmap=matplotlib.colors.LinearSegmentedColormap.from_list('spancm',colors)
+                
+        fig = self.mapfig
+        fig.clf()
+     
+        axes = fig.gca()
+    
+        divider = make_axes_locatable(axes)
+        ax_cb = divider.new_horizontal(size="3%", pad=0.03)  
+
+        fig.add_axes(ax_cb)
+        
+        axes.set_position([0.03,0.03,0.8,0.94])
+        
+        
+        min_val = npy.min(tsmapimage)
+        max_val = npy.max(tsmapimage)
+        bound = npy.max((npy.abs(min_val), npy.abs(max_val)))
+        
+        if self.show_scale_bar == 1:
+            um_string = '$\mu m$'
+            microns = '$'+self.stk.scale_bar_string+' $'+um_string
+            axes.text(self.stk.scale_bar_pixels_x+10,self.stk.n_cols-9, microns, horizontalalignment='left', verticalalignment='center',
+                      color = 'white', fontsize=14)
+            #Matplotlib has flipped scales so I'm using rows instead of cols!
+            p = matplotlib.patches.Rectangle((5,self.stk.n_cols-10), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
+                                   color = 'white', fill = True)
+            axes.add_patch(p)     
+     
+        im = axes.imshow(tsmapimage, cmap=spanclrmap, vmin = -bound, vmax = bound)
+        cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
+    
+        axes.axis("off") 
+        self.MapPanel.draw()
+
+        
+        
+#----------------------------------------------------------------------     
+    def loadTSpectrum(self):
+
+        tspectrum = self.anlz.target_spectra[self.i_tspec-1, :]
+                 
+        
+        fig = self.TSpecfig
+        fig.clf()
+        fig.add_axes((0.15,0.15,0.75,0.75))
+        axes = fig.gca()
+        
+
+        line1 = axes.plot(self.stk.ev,tspectrum, color='black', label = 'Raw data')
+
+        if self.com.pca_calculated == 1:       
+            tspectrumfit = self.anlz.target_pcafit_spectra[self.i_tspec-1, :]  
+            diff = npy.abs(tspectrum-tspectrumfit)      
+            line2 = axes.plot(self.stk.ev,tspectrumfit, color='green', label = 'Fit')
+        
+            line3 = axes.plot(self.stk.ev,diff, color='grey', label = 'Abs(Raw-Fit)')
+        
+
+        fontP = matplotlib.font_manager.FontProperties()
+        fontP.set_size('small')
+       
+        axes.legend(loc=4, prop = fontP)
+                        
+        axes.set_xlabel('Photon Energy [eV]')
+        axes.set_ylabel('Optical Density')
+        
+        self.TSpectrumPanel.draw()
+        
+        self.tc_tspec.setText("Target Spectrum: " + 
+                               self.anlz.tspec_names[self.i_tspec-1])
+        
+        
+        self.textctrl_sp1.setText('Common Name: '+ 
+                                    self.anlz.tspec_names[self.i_tspec-1]+'\n')
+        if self.com.pca_calculated == 1:       
+            self.textctrl_sp2.setText('RMS Error: '+ str('{0:7.5f}').format(self.anlz.target_rms[self.i_tspec-1]))
+            
+            self.ShowFitWeights()
+        
+
+
+#---------------------------------------------------------------------- 
+class ShowCompositeRBGmap(QtGui.QDialog):
+
+    def __init__(self, parent,  common, analz):    
+        QtGui.QWidget.__init__(self, parent)
+        
+        self.parent = parent
+
+        
+        self.resize(630, 500)
+        self.setWindowTitle('Composite RBG Map')
+        
+        pal = QtGui.QPalette()
+        self.setAutoFillBackground(True)
+        pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
+        self.setPalette(pal)
+                
+
+        
+        self.com = common 
+        self.anlz = analz
+
+        
+        self.show_info = 0
+        
+        
+        self.n_cols = self.anlz.stack.n_cols 
+        self.n_rows = self.anlz.stack.n_rows
+        
+        self.rgbimage = npy.zeros((self.n_cols, self.n_rows, 3), dtype=float)
+        
+        self.minr = 0
+        self.maxr = 100
+        self.weightr = 100
+        self.ming = 0 
+        self.maxg = 100
+        self.weightg = 100
+        self.minb = 0
+        self.maxb = 100
+        self.weightb = 100       
+        
+        self.r_spec = 0
+        self.g_spec = 1
+        self.b_spec = 2
+        
+    
+        vboxtop = wx.BoxSizer(wx.HORIZONTAL)
+        
+        panel = wx.Panel(self, -1)
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        hbox1 = wx.BoxSizer(wx.HORIZONTAL)   
+        
+        vbox1 = wx.BoxSizer(wx.VERTICAL)    
+       
+        sizer1 = wx.StaticBoxSizer(wx.StaticBox(panel, -1, 'Red spectrum'), orient=wx.VERTICAL)
+
+        fgs1 = wx.FlexGridSizer(3, 2, 2, 5)
+        r = wx.StaticText(panel, label="Red")
+        r.SetFont(self.com.font)
+        rl = wx.StaticText(panel, label="Limits")
+        rl.SetFont(self.com.font)
+        rw = wx.StaticText(panel, label="Weight")
+        rw.SetFont(self.com.font)        
+        
+        
+        self.combor = wx.ComboBox(panel, size=(150, -1), choices=self.anlz.tspec_names, style=wx.CB_READONLY)       
+        self.Bind(wx.EVT_COMBOBOX, self.OnSelectR, self.combor)
+        self.combor.SetToolTip(wx.ToolTip("select spectrum from dropdown-list"))
+        self.combor.SetValue(self.anlz.tspec_names[self.r_spec])
+        
+        hbox12 = wx.BoxSizer(wx.HORIZONTAL)   
+        
+        bsize = 75
+        
+        self.tcrmin = wx.lib.intctrl.IntCtrl( panel, size=( bsize, -1 ), value = 0 , limited = True )
+        self.tcrmax = wx.lib.intctrl.IntCtrl( panel, size=( bsize, -1 ), value = 100, limited = True )
+        
+        self.tcrmin.SetMin(0)
+        self.tcrmin.SetMax(100)
+        self.tcrmax.SetMin(0)
+        self.tcrmax.SetMax(100)
+        
+                        
+        hbox12.Add(self.tcrmin)
+        hbox12.Add(self.tcrmax)
+        
+        self.Bind(wx.lib.intctrl.EVT_INT, self.OnLimitMinR, self.tcrmin)
+        self.Bind(wx.lib.intctrl.EVT_INT, self.OnLimitMaxR, self.tcrmax)
+        
+        self.tcrweight = wx.lib.intctrl.IntCtrl( panel, value = 100, limited = True )
+        
+        self.tcrweight.SetMin(0)
+        self.tcrweight.SetMax(100)
+        
+        self.Bind(wx.lib.intctrl.EVT_INT, self.OnWeightR, self.tcrweight)
+        
+        fgs1.AddMany([(r, 0, wx.ALIGN_CENTER_VERTICAL), (self.combor, 0, wx.EXPAND), (rl, 0, wx.ALIGN_CENTER_VERTICAL), 
+            (hbox12, 0, wx.EXPAND),(rw, 0, wx.ALIGN_CENTER_VERTICAL), (self.tcrweight, 0, wx.EXPAND)])
+        
+        sizer1.Add(fgs1, 0, wx.EXPAND|wx.ALL, 10)
+        
+        
+        sizer2 = wx.StaticBoxSizer(wx.StaticBox(panel, -1, 'Green spectrum'), orient=wx.VERTICAL)
+        
+        fgs2 = wx.FlexGridSizer(3, 2, 2, 5)
+        g = wx.StaticText(panel, label="Green")
+        g.SetFont(self.com.font)
+        gl = wx.StaticText(panel, label="Limits")
+        gl.SetFont(self.com.font)
+        gw = wx.StaticText(panel, label="Weight")
+        gw.SetFont(self.com.font)        
+        
+        
+        self.combog = wx.ComboBox(panel, size=(150, -1), choices=self.anlz.tspec_names, style=wx.CB_READONLY)
+        self.Bind(wx.EVT_COMBOBOX, self.OnSelectG, self.combog)        
+        self.combog.SetToolTip(wx.ToolTip("select spectrum from dropdown-list"))
+        self.combog.SetValue(self.anlz.tspec_names[self.g_spec])
+        
+        hbox22 = wx.BoxSizer(wx.HORIZONTAL)   
+        
+        self.tcgmin = wx.lib.intctrl.IntCtrl( panel, size=( bsize, -1 ), value = 0, limited = True   )
+        self.tcgmax = wx.lib.intctrl.IntCtrl( panel, size=( bsize, -1 ), value = 100, limited = True  )
+        
+        self.tcgmin.SetMin(0)
+        self.tcgmin.SetMax(100)
+        self.tcgmax.SetMin(0)
+        self.tcgmax.SetMax(100)
+        
+        hbox22.Add(self.tcgmin)
+        hbox22.Add(self.tcgmax)
+        
+        self.Bind(wx.lib.intctrl.EVT_INT, self.OnLimitMinG, self.tcgmin)
+        self.Bind(wx.lib.intctrl.EVT_INT, self.OnLimitMaxG, self.tcgmax)
+        
+        self.tcgweight = wx.lib.intctrl.IntCtrl( panel, value = 100, limited = True )
+        
+        self.tcgweight.SetMin(0)
+        self.tcgweight.SetMax(100)
+        
+        self.Bind(wx.lib.intctrl.EVT_INT, self.OnWeightG, self.tcgweight)
+        
+        fgs2.AddMany([(g, 0, wx.ALIGN_CENTER_VERTICAL), (self.combog, 0, wx.EXPAND), (gl, 0, wx.ALIGN_CENTER_VERTICAL), 
+            (hbox22, 0, wx.EXPAND),(gw, 0, wx.ALIGN_CENTER_VERTICAL), (self.tcgweight, 0, wx.EXPAND)])
+        
+        sizer2.Add(fgs2, 0, wx.EXPAND|wx.ALL, 10)
+        
+        
+        sizer3 = wx.StaticBoxSizer(wx.StaticBox(panel, -1, 'Blue spectrum'), orient=wx.VERTICAL)
+        
+        fgs3 = wx.FlexGridSizer(3, 2, 2, 5)
+        b = wx.StaticText(panel, label="Blue")
+        b.SetFont(self.com.font)
+        bl = wx.StaticText(panel, label="Limits")
+        bl.SetFont(self.com.font)
+        bw = wx.StaticText(panel, label="Weight")
+        bw.SetFont(self.com.font)        
+        
+               
+        self.combob = wx.ComboBox(panel, size=(150, -1), choices=self.anlz.tspec_names, style=wx.CB_READONLY)        
+        self.Bind(wx.EVT_COMBOBOX, self.OnSelectB, self.combob)
+        self.combob.SetToolTip(wx.ToolTip("select spectrum from dropdown-list"))
+        self.combob.SetValue(self.anlz.tspec_names[self.b_spec])
+        
+        hbox32 = wx.BoxSizer(wx.HORIZONTAL)   
+        
+        self.tcbmin = wx.lib.intctrl.IntCtrl( panel, size=( bsize, -1 ), value = 0, limited = True   )
+        self.tcbmax = wx.lib.intctrl.IntCtrl( panel, size=( bsize, -1 ), value = 100, limited = True  )
+        
+        self.tcbmin.SetMin(0)
+        self.tcbmin.SetMax(100)
+        self.tcbmax.SetMin(0)
+        self.tcbmax.SetMax(100)
+        
+        hbox32.Add(self.tcbmin)
+        hbox32.Add(self.tcbmax)
+        
+        self.Bind(wx.lib.intctrl.EVT_INT, self.OnLimitMinB, self.tcbmin)
+        self.Bind(wx.lib.intctrl.EVT_INT, self.OnLimitMaxB, self.tcbmax)
+        
+        self.tcbweight = wx.lib.intctrl.IntCtrl( panel, value = 100, limited = True  )
+        
+        self.tcbweight.SetMin(0)
+        self.tcbweight.SetMax(100)
+        
+        self.Bind(wx.lib.intctrl.EVT_INT, self.OnWeightB, self.tcbweight)
+        
+        fgs3.AddMany([(b, 0, wx.ALIGN_CENTER_VERTICAL), (self.combob, 0, wx.EXPAND), (bl, 0, wx.ALIGN_CENTER_VERTICAL), 
+            (hbox32, 0, wx.EXPAND),(bw, 0, wx.ALIGN_CENTER_VERTICAL), (self.tcbweight, 0, wx.EXPAND)])
+        
+        sizer3.Add(fgs3, 0, wx.EXPAND|wx.ALL, 10)
+        
+                
+        vbox1.Add(sizer1, 0, wx.EXPAND)
+        vbox1.Add(sizer2, 0, wx.EXPAND)
+        vbox1.Add(sizer3, 0, wx.EXPAND)
+        
+        self.show_info_cb = wx.CheckBox(panel, -1, '  Show Info on the Image')
+        self.show_info_cb.SetFont(self.com.font)
+        self.Bind(wx.EVT_CHECKBOX, self.OnShowInfo, self.show_info_cb)
         vbox1.Add((0,10))
-        vbox1.Add(self.tc_spmap,1, wx.LEFT | wx.EXPAND, 20)        
-        vbox1.Add(i1panel, 0,  wx.LEFT, 20)
+        vbox1.Add(self.show_info_cb, 0, wx.EXPAND)
+        
+        hbox1.Add(vbox1, 0,  wx.LEFT|wx.RIGHT ,20)
 
-
-     
-     
-#         #panel 2
-#         panel2 = wx.Panel(self, -1)
-#         vbox2 = wx.BoxSizer(wx.VERTICAL)
-#         panel2.SetBackgroundColour("White")
-#         
-#         self.tc_tspec = wx.TextCtrl(panel2, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
-#         self.tc_tspec.SetFont(self.com.font)
-#         self.tc_tspec.SetValue("Target Spectrum: ")
-#         hbox11 = wx.BoxSizer(wx.HORIZONTAL)         
-#         
-#         i2panel = wx.Panel(panel2, -1, style = wx.SUNKEN_BORDER)
-#         self.TSpectrumPanel = wxmpl.PlotPanel(i2panel, -1, size=(PlotW, PlotH), cursor=False, crosshairs=False, location=False, zoom=False)
-# 
-#         self.slider_tspec = wx.Slider(panel2, -1, 1, 1, 5, style=wx.SL_LEFT|wx.SL_VERTICAL )        
-#         self.slider_tspec.SetFocus()
-#         self.Bind(wx.EVT_SCROLL, self.OnTSScroll, self.slider_tspec)
-#         
-#         vbox21 = wx.BoxSizer(wx.VERTICAL)               
-#         self.tspecspin = wx.SpinButton(panel2, -1, size = ((8,-1)), style=wx.SP_ARROW_KEYS)
-#         self.Bind(wx.EVT_SPIN_UP, self.OnTspecSpinUp, self.tspecspin)
-#         self.Bind(wx.EVT_SPIN_DOWN, self.OnTspecSpinDown, self.tspecspin)
-#         
-#         vbox21.Add((0,3))
-#         vbox21.Add(self.slider_tspec, 1,  wx.EXPAND) 
-#         vbox21.Add(self.tspecspin, 0,  wx.EXPAND)      
-# 
-#         hbox11.Add(i2panel, 0)
-#         hbox11.Add(vbox21, 0,  wx.EXPAND)
-#           
-#         vbox2.Add((0,10))
-#         vbox2.Add(self.tc_tspec, 1, wx.LEFT | wx.EXPAND, 20)       
-#         vbox2.Add(hbox11, 0, wx.LEFT , 20)
-#         
-#         panel2.SetSizer(vbox2)
-#         
-#         
-#         #panel 3
-#         panel3 = wx.Panel(self, -1)
-#         sb = wx.StaticBox(panel3, -1, 'Target Spectrum')
-#         sb.SetBackgroundColour("white")
-#         sizer1 = wx.StaticBoxSizer(sb, orient=wx.VERTICAL)
-#         vbox31 = wx.BoxSizer(wx.VERTICAL)
-#         vbox31.Add((0,10)) 
-#         
-#         self.button_loadtspec = wx.Button(panel3, -1, 'Load Spectrum')
-#         self.button_loadtspec.SetFont(self.com.font)
-#         self.Bind(wx.EVT_BUTTON, self.OnTSpecFromFile, id=self.button_loadtspec.GetId())
-#         self.button_loadtspec.Disable()
-#         vbox31.Add(self.button_loadtspec, 0, wx.EXPAND)
-#         self.button_addflat = wx.Button(panel3, -1, 'Add Flat Spectrum')
-#         self.button_addflat.SetFont(self.com.font)
-#         self.Bind(wx.EVT_BUTTON, self.OnFlatTSpec, id=self.button_addflat.GetId())
-#         self.button_addflat.Disable()
-#         vbox31.Add(self.button_addflat, 0, wx.EXPAND)
-#         self.button_addclspec = wx.Button(panel3, -1, 'Add Cluster Spectra')
-#         self.button_addclspec.SetFont(self.com.font)
-#         self.Bind(wx.EVT_BUTTON, self.OnAddClusterSpectra, id=self.button_addclspec.GetId())   
-#         self.button_addclspec.Disable()     
-#         vbox31.Add(self.button_addclspec, 0, wx.EXPAND)
-#         
-#         self.button_showrgb = wx.Button(panel3, -1, 'Composite RGB image...')
-#         self.button_showrgb.SetFont(self.com.font)
-#         self.Bind(wx.EVT_BUTTON, self.OnCompositeRGB, id=self.button_showrgb.GetId())   
-#         self.button_showrgb.Disable()     
-#         vbox31.Add(self.button_showrgb, 0, wx.EXPAND)        
-# 
-#         self.button_save = wx.Button(panel3, -1, 'Save Images...', (10,10))
-#         self.button_save.SetFont(self.com.font)
-#         self.Bind(wx.EVT_BUTTON, self.OnSave, id=self.button_save.GetId())
-#         self.button_save.Disable()          
-#         vbox31.Add(self.button_save, 0, wx.EXPAND)
-#         sizer1.Add(vbox31,1, wx.LEFT|wx.RIGHT|wx.EXPAND,2)
-#         panel3.SetSizer(sizer1)
-#         
-# 
-#         
-#         #panel 4
-#         panel4 = wx.Panel(self, -1)
-#         vbox4 = wx.BoxSizer(wx.VERTICAL)
-#         sb = wx.StaticBox(panel4, -1, 'Display')
-#         sb.SetBackgroundColour("white")
-#         sizer4 = wx.StaticBoxSizer(sb, orient=wx.VERTICAL)
-# 
-#         sb = wx.StaticBox(panel4, -1, 'Spectrum')
-#         sb.SetBackgroundColour("white")
-#         sizer41 = wx.StaticBoxSizer(sb, orient=wx.VERTICAL)
-#         self.textctrl_sp = wx.TextCtrl(panel4, -1, style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
-#         self.textctrl_sp.SetFont(self.com.font)
-#         sizer41.Add(self.textctrl_sp, 1, wx.EXPAND|wx.TOP|wx.LEFT, 5)
-#       
-#         hbox40 = wx.BoxSizer(wx.HORIZONTAL)    
-#         hbox40.Add(sizer41, 1, wx.EXPAND)
-#         vbox4.Add(hbox40, 0, wx.EXPAND)
-#         
-#         self.textctrl_sp.AppendText('Common Name: \n')
-#         self.textctrl_sp.AppendText('RMS Error: ')
-#         
-#         hbox41 = wx.BoxSizer(wx.HORIZONTAL)
-#         
-#         sb = wx.StaticBox(panel4, -1, 'Composition Map')
-#         sb.SetBackgroundColour("white")
-#         sizer42 = wx.StaticBoxSizer(sb,  orient=wx.VERTICAL)
-#         self.rb_raw = wx.RadioButton(panel4, -1, 'Raw', style=wx.RB_GROUP)
-#         self.rb_fit = wx.RadioButton(panel4, -1, 'Fitted')
-#         self.rb_raw.SetFont(self.com.font)
-#         self.rb_fit.SetFont(self.com.font)
-#         self.Bind(wx.EVT_RADIOBUTTON, self.OnRBRawFit, id=self.rb_raw.GetId())
-#         self.Bind(wx.EVT_RADIOBUTTON, self.OnRBRawFit, id=self.rb_fit.GetId())
-#         self.rb_raw.SetValue(True)
-# 
-#         self.add_scale_cb = wx.CheckBox(panel4, -1, '  Scale')
-#         self.add_scale_cb.SetFont(self.com.font)
-#         self.Bind(wx.EVT_CHECKBOX, self.OnShowScale, self.add_scale_cb)
-#         
-#         sizer42.Add((0,3))
-#         sizer42.Add(self.rb_raw)
-#         sizer42.Add((0,5))
-#         sizer42.Add(self.rb_fit)
-#         sizer42.Add((0,10))
-#         sizer42.Add(self.add_scale_cb)
-#         
-#         hbox41.Add(sizer42, 1, wx.EXPAND)
-#                 
-#         sb = wx.StaticBox(panel4, -1, 'Fit Weights')
-#         sb.SetBackgroundColour("white")
-#         sizer43 = wx.StaticBoxSizer(sb,  orient=wx.VERTICAL)
-#         hbox42 = wx.BoxSizer(wx.HORIZONTAL)
-#         hbox42.Add((3,0))
-#         
-#         self.tc_spfitlist = wx.TextCtrl(panel4, -1, style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
-#         self.tc_spfitlist.SetFont(self.com.font)
-#         
-#         hbox42.Add(self.tc_spfitlist,1,wx.EXPAND)
-#         
-#         sizer43.Add(hbox42,1,wx.EXPAND)       
-# 
-#         
-#         vbox43 = wx.BoxSizer(wx.VERTICAL)
-#         self.button_removespec = wx.Button(panel4, -1, 'Remove Spectrum')
-#         self.button_removespec.SetFont(self.com.font)
-#         self.Bind(wx.EVT_BUTTON, self.OnRemoveSpectrum, id=self.button_removespec.GetId())   
-#         self.button_removespec.Disable()     
-#         vbox43.Add(self.button_removespec, 0, wx.EXPAND)
-#         self.button_movespup = wx.Button(panel4, -1, 'Move Spectrum Up')
-#         self.button_movespup.SetFont(self.com.font)
-#         self.Bind(wx.EVT_BUTTON, self.OnMoveSpectrumUp, id=self.button_movespup.GetId())   
-#         self.button_movespup.Disable()     
-#         vbox43.Add(self.button_movespup, 0, wx.EXPAND)
-#         self.button_movespdown = wx.Button(panel4, -1, 'Move Spectrum Down')
-#         self.button_movespdown.SetFont(self.com.font)
-#         self.Bind(wx.EVT_BUTTON, self.OnMoveSpectrumDown, id=self.button_movespdown.GetId())   
-#         self.button_movespdown.Disable()     
-#         vbox43.Add(self.button_movespdown, 0, wx.EXPAND)
-#                        
-# 
-#                
-#             
-#         hbox41.Add((10,0))
-#         hbox41.Add(sizer43, 1, wx.EXPAND)
-#         hbox41.Add(vbox43, 1, wx.EXPAND|wx.ALL, 5)
-#         vbox4.Add(hbox41, 1, wx.EXPAND)
-# 
-#         sizer4.Add(vbox4,1, wx.EXPAND)
-#         
-#         panel4.SetSizer(sizer4)
-#         
-#         
-#         #panel 5
-#         panel5 = wx.Panel(self, -1)
-#         sb = wx.StaticBox(panel5, -1, 'Target Spectra')
-#         sb.SetBackgroundColour("white")
-#         sizer5 = wx.StaticBoxSizer(sb, orient= wx.VERTICAL)
-#         
-#         hbox51 = wx.BoxSizer(wx.HORIZONTAL)
-#         hbox51.Add((0,2))
-# 
-#         self.tc_speclist =  wx.ListCtrl(panel5, -1, 
-#                                         style=wx.LC_REPORT|wx.LC_NO_HEADER|wx.NO_BORDER|wx.LC_EDIT_LABELS|wx.LC_SINGLE_SEL)
-#         self.tc_speclist.InsertColumn(0, 'Spectra')
-#         self.Bind(wx.EVT_LIST_ITEM_FOCUSED , self.OnSpectraListClick, self.tc_speclist)
-#         self.Bind(wx.EVT_LIST_END_LABEL_EDIT, self.OnEditSpectraListClick, self.tc_speclist)
-#         self.tc_speclist.SetBackgroundColour('white')
-#         self.tc_speclist.SetFont(self.com.font)
-#         hbox51.Add(self.tc_speclist, 1, wx.EXPAND)
-#         sizer5.Add(hbox51,1, wx.ALL|wx.EXPAND,2)        
-#         panel5.SetSizer(sizer5)
-#         
-# #        self.tc_speclist = wx.TextCtrl(panel5, -1, style=wx.TE_MULTILINE|wx.TE_RICH|wx.BORDER_NONE)
-# #        self.tc_speclist.SetFont(self.com.font)
-# #        hbox51.Add(self.tc_speclist, 1, wx.EXPAND)
-# #        sizer5.Add(hbox51,1, wx.ALL|wx.EXPAND,2)        
-# #        panel5.SetSizer(sizer5)
-# 
-#         
-#         hboxB.Add(panel2, 0, wx.BOTTOM | wx.TOP, 9)
-#         hboxB.Add(panel1, 0, wx.BOTTOM | wx.TOP, 9)
-#         hboxT.Add((10,0)) 
-#                
-#         hboxT.Add(panel3, 0, wx.LEFT | wx.RIGHT | wx.TOP | wx.EXPAND, 9)
-#         hboxT.Add(panel4, 2.5, wx.LEFT | wx.RIGHT |wx.TOP | wx.EXPAND, 9)
-#         hboxT.Add(panel5, 1, wx.LEFT | wx.RIGHT |wx.TOP | wx.EXPAND, 9)
-# 
-#         vbox.Add(hboxT, 0, wx.ALL, 5)
-#         
-#         vbox.Add((0, 5))
-#         
-#         vbox.Add(hboxB, 0, wx.LEFT | wx.RIGHT, 5)
-#   
-#         self.SetSizer(vbox) 
+        i1panel = wx.Panel(panel, -1, style = wx.SUNKEN_BORDER)
+        self.RGBImagePanel = wxmpl.PlotPanel(i1panel, -1, size =(PlotH,PlotH), cursor=False, crosshairs=False, location=False, zoom=False)
+        hbox1.Add(i1panel, 0)
+        
+        vbox.Add(hbox1, 0, wx.EXPAND| wx.TOP, 10) 
+        
+             
+        hbox2 = wx.BoxSizer(wx.HORIZONTAL)
+               
+        button_save = wx.Button(panel, -1, 'Save image')
+        self.Bind(wx.EVT_BUTTON, self.OnSave, id=button_save.GetId())
+        hbox2.Add(button_save, 1, wx.ALL,20)
+        
+        button_close = wx.Button(panel, -1, 'Dismiss')
+        self.Bind(wx.EVT_BUTTON, self.OnClose, id=button_close.GetId())
+        hbox2.Add(button_close, 1, wx.ALL ,20)
+        
+        vbox.Add(hbox2, 0, wx.EXPAND|wx.TOP, 10 )
+        
+        panel.SetSizer(vbox)
+        
+        vboxtop.Add(panel,1, wx.EXPAND )
+        
+        self.SetSizer(vboxtop)
+        
+        self.SetPosition((220, 150))
+        
+        self.CalcR()
+        self.CalcG()
+        self.CalcB()        
+        self.draw_image()        
         
         
+#----------------------------------------------------------------------           
+    def OnSelectR(self, event):
+        item = event.GetSelection()
+        self.r_spec = item
+        
+        self.CalcR()
+        self.draw_image()
+        
+#----------------------------------------------------------------------           
+    def CalcR(self):
+        tsmap = self.anlz.target_pcafit_maps[:,:,self.r_spec].copy()
+
+        uscale_min = tsmap.min()
+        uscale_max = tsmap.max()
+        
+        scale_min = uscale_min + (uscale_max-uscale_min)*float(self.minr)/100.
+        scale_max = uscale_min + (uscale_max-uscale_min)*float(self.maxr)/100.
+        
+
+        if scale_min >= scale_max: 
+            tsmap = npy.zeros((self.n_cols, self.n_rows), dtype=float)
+        else:
+            tsmap = tsmap.clip(min=scale_min, max=scale_max)
+            tsmap = (tsmap -scale_min) / (scale_max - scale_min)
+            
+        indices = npy.where(tsmap < 0)
+        tsmap[indices] = 0.0
+        indices = npy.where(tsmap > 1)
+        tsmap[indices] = 1.0
+    
+        self.rgbimage[:,:,0] = tsmap*float(self.weightr)/100.
+        
+#----------------------------------------------------------------------           
+    def OnLimitMinR(self, event):
+        ctl = event.GetEventObject()
+        value = ctl.GetValue()
+        self.minr = value
+        #print 'self.minr=', self.minr
+        self.CalcR()
+        self.draw_image()
+    
+#----------------------------------------------------------------------           
+    def OnLimitMaxR(self, event):
+        ctl = event.GetEventObject()
+        value = ctl.GetValue()
+        self.maxr = value
+        #print 'self.maxr=', self.maxr
+        self.CalcR()
+        self.draw_image()
+        
+            
+#----------------------------------------------------------------------           
+    def OnWeightR(self, event):
+        ctl = event.GetEventObject()
+        value = ctl.GetValue()
+        self.weightr = value
+        #print 'self.weightr=', self.weightr
+        self.CalcR()
+        self.draw_image()
+        
+#----------------------------------------------------------------------           
+    def OnSelectG(self, event):
+        item = event.GetSelection()
+        self.g_spec = item
+
+        self.CalcG()
+        self.draw_image()
+        
+#----------------------------------------------------------------------           
+    def CalcG(self):
+        
+        tsmap = self.anlz.target_pcafit_maps[:,:,self.g_spec].copy()
+
+        uscale_min = tsmap.min()
+        uscale_max = tsmap.max()
+        
+        scale_min = uscale_min + (uscale_max-uscale_min)*float(self.ming)/100.
+        scale_max = uscale_min + (uscale_max-uscale_min)*float(self.maxg)/100.
+
+        if scale_min >= scale_max: 
+            tsmap = npy.zeros((self.n_cols, self.n_rows), dtype=float)
+        else:
+            tsmap = tsmap.clip(min=scale_min, max=scale_max)
+            tsmap = (tsmap - scale_min) / (scale_max - scale_min)
+
+
+        indices = npy.where(tsmap < 0)
+        tsmap[indices] = 0.0
+        indices = npy.where(tsmap > 1)
+        tsmap[indices] = 1.0
+    
+        self.rgbimage[:,:,1] = tsmap*float(self.weightg)/100.
+        
+#----------------------------------------------------------------------           
+    def OnLimitMinG(self, event):
+        ctl = event.GetEventObject()
+        value = ctl.GetValue()
+        self.ming = value
+        #print 'self.ming=', self.ming
+        self.CalcG()
+        self.draw_image()
+        
+#----------------------------------------------------------------------           
+    def OnLimitMaxG(self, event):
+        ctl = event.GetEventObject()
+        value = ctl.GetValue()
+        self.maxg = value
+        #print 'self.maxg=', self.maxg
+        self.CalcG()
+        self.draw_image()
+            
+#----------------------------------------------------------------------           
+    def OnWeightG(self, event):
+        ctl = event.GetEventObject()
+        value = ctl.GetValue()
+        self.weightg = value
+        #print 'self.weightg=', self.weightg
+        self.CalcG()
+        self.draw_image()
+        
+#----------------------------------------------------------------------           
+    def OnSelectB(self, event):
+        item = event.GetSelection()
+        self.b_spec = item
+        
+        self.CalcB()
+        self.draw_image()
+        
+#----------------------------------------------------------------------           
+    def CalcB(self):
+        
+        tsmap = self.anlz.target_pcafit_maps[:,:,self.b_spec].copy()
+
+        uscale_min = tsmap.min()
+        uscale_max = tsmap.max()
+        
+        scale_min = uscale_min + (uscale_max-uscale_min)*float(self.minb)/100.
+        scale_max = uscale_min + (uscale_max-uscale_min)*float(self.maxb)/100.
+
+        if scale_min >= scale_max: 
+            tsmap = npy.zeros((self.n_cols, self.n_rows), dtype=float)
+        else:
+            tsmap = tsmap.clip(min=scale_min, max=scale_max)
+            tsmap = (tsmap - scale_min) / (scale_max - scale_min)
+
+        indices = npy.where(tsmap < 0)
+        tsmap[indices] = 0.0
+        indices = npy.where(tsmap > 1)
+        tsmap[indices] = 1.0
+    
+        self.rgbimage[:,:,2] = tsmap*float(self.weightb)/100.
+                
+#----------------------------------------------------------------------           
+    def OnLimitMinB(self, event):
+        ctl = event.GetEventObject()
+        value = ctl.GetValue()
+        self.minb = value
+        #print 'self.minb=', self.minb
+        self.CalcB()
+        self.draw_image()
+        
+#----------------------------------------------------------------------           
+    def OnLimitMaxB(self, event):
+        ctl = event.GetEventObject()
+        value = ctl.GetValue()
+        self.maxb = value
+        #print 'self.maxb=', self.maxb
+        self.CalcB()
+        self.draw_image()
+            
+#----------------------------------------------------------------------           
+    def OnWeightB(self, event):
+        ctl = event.GetEventObject()
+        value = ctl.GetValue()
+        self.weightb = value
+        #print 'self.weightb=', self.weightb
+        self.CalcB()
+        self.draw_image()
+        
+#----------------------------------------------------------------------           
+    def OnShowInfo(self, event):
+        if self.show_info_cb.GetValue():
+            self.show_info = 1
+        else: 
+            self.show_info = 0
+        
+        self.draw_image()
+        
+#----------------------------------------------------------------------        
+    def draw_image(self):
+               
+               
+        fig = self.RGBImagePanel.get_figure()
+        fig.clf()
+        fig.add_axes((0.02,0.02,0.96,0.96))
+        
+        
+        axes = fig.gca()
+        fig.patch.set_alpha(1.0) 
+      
+        im = axes.imshow(self.rgbimage) 
+        
+        axes.axis("off")  
+        
+        if self.show_info == 1:
+            startx = int(self.n_rows*0.02)
+            starty = self.n_cols-int(self.n_cols*0.15)
+            info = 'R:%s [%d] \nG:%s [%d] \nB:%s [%d]' % (self.anlz.tspec_names[self.r_spec], self.weightr,
+                                                        self.anlz.tspec_names[self.g_spec], self.weightg,
+                                                        self.anlz.tspec_names[self.b_spec], self.weightb)
+            axes.text(+startx+1,starty+1, info, horizontalalignment='left', verticalalignment='center',
+                      color = 'white', fontsize=8)
+
+            
+        self.RGBImagePanel.draw()
+        
+#----------------------------------------------------------------------              
+    def OnSave(self, evt):
+
+        wildcard = 'Portable Network Graphics (*.png)|*.png|Adobe PDF Files (*.pdf)|*.pdf'               
+        SaveFileName = wx.FileSelector('Save Plot', default_extension='png', 
+                                   wildcard=wildcard, parent=self, flags=wx.SAVE|wx.OVERWRITE_PROMPT) 
+        
+        if not SaveFileName: 
+            return      
+        path, ext = os.path.splitext(SaveFileName) 
+        ext = ext[1:].lower() 
+        
+       
+        if ext != 'png' and ext != 'pdf': 
+            error_message = ( 
+                  'Only the PNG and PDF image formats are supported.\n' 
+                 'A file extension of `png\' or `pdf\' must be used.') 
+
+            QtGui.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % error_message)
+            return 
+   
+
+        matplotlib.rcParams['pdf.fonttype'] = 42
+
+                            
+        fig = self.RGBImagePanel.get_figure()
+        fig.savefig(SaveFileName, bbox_inches='tight', pad_inches = 0.0)
+                
+   
+
+#----------------------------------------------------------------------              
+    def OnClose(self, evt):
+        self.Destroy()             
+                
     
     
 """ ------------------------------------------------------------------------------------------------"""
@@ -342,31 +1464,29 @@ class PageCluster(QtGui.QWidget):
         self.init_nclusters = 5
         self.wo_1st_pca = 0
         self.sigma_split = 0
+        self.showallspectra = 0
         
         self.MakeColorTable()             
-        
-
-    
+         
         
         #panel 1
         sizer1 = QtGui.QGroupBox('Cluster analysis')
         vbox1 = QtGui.QVBoxLayout()
-        #vbox1.setSpacing(0)
+        
         
         self.button_calcca = QtGui.QPushButton('Calculate Clusters')
-        #self.button_calcca.clicked.connect( self.OnCalcClusters)   
+        self.button_calcca.clicked.connect( self.OnCalcClusters)   
         self.button_calcca.setEnabled(False)
         vbox1.addWidget(self.button_calcca)
         self.button_scatterplots = QtGui.QPushButton('Show scatter plots...')
-        #self.button_scatterplots.clicked.connect( self.OnShowScatterplots)
+        self.button_scatterplots.clicked.connect( self.OnShowScatterplots)
         self.button_scatterplots.setEnabled(False)
-        vbox1.addWidget(self.button_scatterplots)
         self.button_savecluster = QtGui.QPushButton('Save CA Results...')
-        #self.button_savecluster.clicked.connect( self.OnSave)
+        self.button_savecluster.clicked.connect( self.OnSave)
         self.button_savecluster.setEnabled(False)
-        vbox1.addWidget(self.button_savecluster)
         
-
+        vbox1.addStretch(1)
+        
                 
         hbox11 = QtGui.QHBoxLayout()
         text1 = QtGui.QLabel(self)
@@ -375,7 +1495,7 @@ class PageCluster(QtGui.QWidget):
         self.nclusterspin = QtGui.QSpinBox()
         self.nclusterspin.setRange(2,20)
         self.nclusterspin.setValue(self.init_nclusters)
-        #self.Bind(wx.EVT_SPINCTRL, self.OnNClusterspin, self.nclusterspin)
+        self.nclusterspin.valueChanged[int].connect(self.OnNClusterspin)
         hbox11.addWidget(text1)
         hbox11.addWidget(self.nclusterspin)  
         
@@ -395,17 +1515,29 @@ class PageCluster(QtGui.QWidget):
          
         hbox13 = QtGui.QHBoxLayout()
         self.remove1stpcacb = QtGui.QCheckBox('Reduce thickness effects', self)
-        #self.remove1stpcacb.stateChanged.connect(self.OnRemove1stpca)
+        self.remove1stpcacb.stateChanged.connect(self.OnRemove1stpca)
         hbox13.addWidget(self.remove1stpcacb)
         
         vbox1.addLayout(hbox13) 
  
         hbox14 = QtGui.QHBoxLayout()
         self.cb_splitclusters = QtGui.QCheckBox('Divide clusters with large Sigma', self)
-        #self.cb_splitclusters.stateChanged.connect(self.OnSplitClusters)
+        self.cb_splitclusters.stateChanged.connect(self.OnSplitClusters)
         hbox14.addWidget(self.cb_splitclusters)
         
+        
+        line = QtGui.QFrame()
+        line.setFrameShape(QtGui.QFrame.HLine)
+        line.setFrameShadow(QtGui.QFrame.Sunken) 
+        
+        
         vbox1.addLayout(hbox14) 
+        vbox1.addStretch(1)
+        vbox1.addWidget(line) 
+        vbox1.addStretch(1)     
+        vbox1.addWidget(self.button_scatterplots)
+        vbox1.addWidget(self.button_savecluster)
+        
         
         sizer1.setLayout(vbox1)
         
@@ -418,12 +1550,17 @@ class PageCluster(QtGui.QWidget):
         tc_clustercomp.setText("Composite cluster image")  
         vbox2.addWidget(tc_clustercomp)      
           
+        frame = QtGui.QFrame()
+        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        fbox = QtGui.QHBoxLayout()
+   
         self.clusterimgfig = Figure((PlotH, PlotH))
         self.ClusterImagePan = FigureCanvas(self.clusterimgfig)
-        #wxmpl.EVT_POINT(i2panel, self.ClusterImagePan.GetId(), self.OnPointClusterImage) 
+        self.ClusterImagePan.mpl_connect('button_press_event', self.OnPointClusterImage)
         self.ClusterImagePan.setParent(self)
-        vbox2.addWidget(self.ClusterImagePan)
-         
+        fbox.addWidget(self.ClusterImagePan)
+        frame.setLayout(fbox)
+        vbox2.addWidget(frame)         
          
         #panel 3 
         vbox3 = QtGui.QVBoxLayout()
@@ -432,16 +1569,22 @@ class PageCluster(QtGui.QWidget):
         self.tc_cluster = QtGui.QLabel(self)
         self.tc_cluster.setText("Cluster ")
         fgs.addWidget(self.tc_cluster, 0, 0, QtCore .Qt. AlignLeft)
- 
+
+        frame = QtGui.QFrame()
+        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        fbox = QtGui.QHBoxLayout()
+
         self.clusterindvimgfig = Figure((PlotH*0.73, PlotH*0.73))
         self.ClusterIndvImagePan = FigureCanvas(self.clusterindvimgfig)
         self.ClusterIndvImagePan.setParent(self)
-        fgs.addWidget(self.ClusterIndvImagePan, 1, 0, QtCore .Qt. AlignLeft)
-         
+        fbox.addWidget(self.ClusterIndvImagePan)
+        frame.setLayout(fbox)   
+        fgs.addWidget(frame, 1, 0, QtCore .Qt. AlignLeft)
+             
         self.slidershow = QtGui.QScrollBar(QtCore.Qt.Vertical)
         self.slidershow.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.slidershow.setEnabled(False)
-        #self.slidershow.valueChanged[int].connect(self.OnClusterScroll)
+        self.slidershow.valueChanged[int].connect(self.OnClusterScroll)
         self.slidershow.setRange(1, 20)
         fgs.addWidget(self.slidershow, 1, 1, QtCore .Qt. AlignLeft)
             
@@ -449,10 +1592,15 @@ class PageCluster(QtGui.QWidget):
         text3 = QtGui.QLabel(self)
         text3.setText('Cluster Distance Map')
         fgs.addWidget(text3, 0, 2, QtCore .Qt. AlignLeft)
+        frame = QtGui.QFrame()
+        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        fbox = QtGui.QHBoxLayout()
         self.clusterdistmapfig = Figure((PlotH*0.73, PlotH*0.73))
         self.ClusterDistMapPan = FigureCanvas(self.clusterdistmapfig)
         self.ClusterDistMapPan.setParent(self)
-        fgs.addWidget(self.ClusterDistMapPan, 1, 2, QtCore .Qt. AlignLeft)          
+        fbox.addWidget(self.ClusterDistMapPan)
+        frame.setLayout(fbox)
+        fgs.addWidget(frame, 1, 2, QtCore .Qt. AlignLeft)          
  
         vbox3.addLayout(fgs)
  
@@ -466,19 +1614,43 @@ class PageCluster(QtGui.QWidget):
         self.tc_clustersp.setText("Cluster spectrum")   
         vbox4.addWidget(self.tc_clustersp)      
  
+        frame = QtGui.QFrame()
+        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        fbox = QtGui.QHBoxLayout()
+
         self.clusterspecfig = Figure((PlotW, PlotH))
         self.ClusterSpecPan = FigureCanvas(self.clusterspecfig)
         self.ClusterSpecPan.setParent(self)
-        vbox4.addWidget(self.ClusterSpecPan)
  
+        fbox.addWidget(self.ClusterSpecPan)
+        frame.setLayout(fbox)
+        vbox4.addWidget(frame) 
          
- 
+
+        #panel 5
+        sizer5 = QtGui.QGroupBox('Display')
+        vbox5 = QtGui.QVBoxLayout()         
+         
+        hbox51 = QtGui.QHBoxLayout()
+        self.showallspectracb = QtGui.QCheckBox('Show all spectra', self)
+        self.showallspectracb.stateChanged.connect(self.OnShowallspectra)
+        hbox51.addWidget(self.showallspectracb)
+        
+        vbox5.addLayout(hbox51)         
+        
+        sizer5.setLayout(vbox5)
+        
         
         
         vboxtop = QtGui.QVBoxLayout()
+        
+        vboxtopL = QtGui.QVBoxLayout()
+        vboxtopL.addWidget(sizer1)
+        vboxtopL.addWidget(sizer5)
+        
         gridsizertop = QtGui.QGridLayout()
         
-        gridsizertop.addWidget(sizer1, 0, 0, QtCore .Qt. AlignLeft)
+        gridsizertop.addLayout(vboxtopL, 0, 0, QtCore .Qt. AlignLeft)
         gridsizertop.addLayout(vbox2, 1, 0, QtCore .Qt. AlignLeft)
         
         gridsizertop.addLayout(vbox3, 0, 1, QtCore .Qt. AlignLeft)
@@ -517,7 +1689,630 @@ class PageCluster(QtGui.QWidget):
      
         self.bnorm2 = matplotlib.colors.BoundaryNorm(colors_i, self.clusterclrmap2.N)
         
+
+
+        
+        
+#----------------------------------------------------------------------
+    def OnCalcClusters(self, event):
+       
+        QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+        self.calcclusters = False  
+        
+        if True:
+        #try: 
+            self.CalcClusters()
+            
+            self.calcclusters = True
+            
+            self.selcluster = 1
+            self.slidershow.setValue(self.selcluster)
+            self.slidershow.setMaximum(self.numclusters)
+            
+            self.showClusterImage()
+            self.showClusterSpectrum()
+            self.showIndvClusterImage()     
+            self.showClusterDistanceMap()
+            self.com.cluster_calculated = 1       
+            QtGui.QApplication.restoreOverrideCursor()
+            
+#        except:
+#            self.com.cluster_calculated = 0
+#            QtGui.QApplication.restoreOverrideCursor()     
+            
+        self.window().refresh_widgets()
+            
+#----------------------------------------------------------------------        
+    def OnNClusterspin(self, value):
+        num = value
+        self.init_nclusters = num
+                       
+ 
+#----------------------------------------------------------------------        
+    def OnClusterScroll(self, value):
+        sel = value
+        self.selcluster = sel
+        if self.com.cluster_calculated == 1:
+            self.showClusterSpectrum()
+            self.showIndvClusterImage()
+            
+#----------------------------------------------------------------------            
+    def OnClusterSpinUp(self, event):
+        if (self.com.cluster_calculated == 1) and (self.selcluster > 1):
+            self.selcluster = self.selcluster - 1
+            self.slidershow.setValue(self.selcluster)
+
+            self.showClusterSpectrum()
+            self.showIndvClusterImage()
+            
+#----------------------------------------------------------------------            
+    def OnClusterSpinDown(self, event):
+        if (self.com.cluster_calculated == 1) and (self.selcluster < self.numclusters):
+            self.selcluster = self.selcluster + 1
+            self.slidershow.setValue(self.selcluster) 
+            
+            self.showClusterSpectrum()
+            self.showIndvClusterImage()
+                       
+#----------------------------------------------------------------------  
+    def OnPointClusterImage(self, evt):
+        x = evt.xdata
+        y = evt.ydata
+        
+
+        if self.com.cluster_calculated == 1:   
+            try:  
+                self.ix = int(npy.floor(y))           
+                self.iy = int(npy.floor(x))  
+                        
+                if self.ix<0 :
+                    self.ix=0
+                if self.ix>self.stk.n_cols :
+                    self.ix=self.stk.n_cols
+                if self.iy<0 :
+                    self.iy=0
+                if self.iy>self.stk.n_rows :
+                    self.iy=self.stk.n_rows 
+                    
+                    
+                self.selcluster = self.anlz.cluster_indices[self.ix,self.iy] + 1
+                
+                self.slidershow.setValue(self.selcluster)
+                
+                self.showClusterSpectrum()
+                self.showIndvClusterImage()
+            except:
+                pass
+            
+                       
+#----------------------------------------------------------------------
+    def CalcClusters(self):
+        nclusters = self.anlz.calculate_clusters(self.init_nclusters, self.wo_1st_pca, self.sigma_split)
+        self.numclusters = nclusters
+        self.ntc_clusters_found.setText(str(self.numclusters))
     
+        
+        
+        
+#----------------------------------------------------------------------     
+#Show composite cluster image  
+    def showClusterImage(self):       
+        
+        self.clusterimage = self.anlz.cluster_indices  
+        
+        #print self.selpca
+
+        fig = self.clusterimgfig
+        fig.clf()
+        fig.add_axes((0.02,0.02,0.96,0.96))
+        axes = fig.gca()
+        
+        
+        
+        im = axes.imshow(self.clusterimage, cmap=self.clusterclrmap1, norm=self.bnorm1)
+        axes.axis("off")
+        #cbar = axes.figure.colorbar(im)         
+        self.ClusterImagePan.draw()
+
+
+      
+#----------------------------------------------------------------------     
+#Show composite cluster image  
+    def showIndvClusterImage(self):
+        
+        indvclusterimage = npy.zeros((self.anlz.stack.n_cols, self.anlz.stack.n_rows))+20.      
+        ind = npy.where(self.anlz.cluster_indices == self.selcluster-1)    
+        colorcl = min(self.selcluster-1,self.maxclcolors-1)
+        indvclusterimage[ind] = colorcl
+
+        fig = self.clusterindvimgfig
+        fig.clf()
+        fig.add_axes((0.02,0.02,0.96,0.96))
+        axes = fig.gca()
+            
+        
+        im = axes.imshow(indvclusterimage, cmap=self.clusterclrmap2, norm=self.bnorm2)
+        axes.axis("off")
+
+        self.ClusterIndvImagePan.draw()
+        
+        self.tc_cluster.setText("Cluster " + str(self.selcluster))
+         
+   
+#----------------------------------------------------------------------     
+    def showClusterSpectrum(self):
+        
+         
+        clusterspectrum = self.anlz.clusterspectra[self.selcluster-1, ]
+
+       
+        fig = self.clusterspecfig
+        fig.clf()
+        fig.add_axes((0.15,0.15,0.75,0.75))
+        axes = fig.gca()
+        
+        
+        if self.showallspectra == 0:
+            if self.selcluster >= self.maxclcolors:
+                clcolor = self.colors[self.maxclcolors-1]
+            else:
+                clcolor = self.colors[self.selcluster-1]
+            specplot = axes.plot(self.anlz.stack.ev,clusterspectrum, color = clcolor)
+            self.tc_clustersp.setText("Cluster " + str(self.selcluster)+ " spectrum"  ) 
+
+        else:
+            #Show all spectra
+            for i in range(1, self.numclusters+1):
+                if i >= self.maxclcolors:
+                    clcolor = self.colors[self.maxclcolors-1]
+                else:
+                    clcolor = self.colors[i-1]  
+                clusterspectrum = self.anlz.clusterspectra[i-1, ]/npy.amax(self.anlz.clusterspectra[i-1, ])           
+                specplot = axes.plot(self.anlz.stack.ev,clusterspectrum, color = clcolor)
+            
+            self.tc_clustersp.setText(" Normalized Cluster spectra"  ) 
+            
+        
+        axes.set_xlabel('Photon Energy [eV]')
+        axes.set_ylabel('Optical Density')
+        
+        
+        self.ClusterSpecPan.draw()
+        
+        
+        
+        
+#----------------------------------------------------------------------     
+    def showClusterDistanceMap(self):       
+        
+        mapimage = self.anlz.cluster_distances
+        
+        #print self.selpca
+
+        fig = self.clusterdistmapfig
+        fig.clf()
+        fig.add_axes((0.02,0.02,0.96,0.96))
+        axes = fig.gca()
+        
+#         divider = make_axes_locatable(axes)
+#         axcb = divider.new_horizontal(size="3%", pad=0.03)  
+#         fig.add_axes(axcb)  
+#         axes.set_position([0.03,0.03,0.8,0.94])
+               
+        
+        
+        im = axes.imshow(mapimage, cmap=matplotlib.cm.get_cmap('gray'))
+        
+        #cbar = axes.figure.colorbar(im, orientation='vertical',cax=axcb) 
+        
+        axes.axis("off")
+       
+        self.ClusterDistMapPan.draw()
+        
+#----------------------------------------------------------------------           
+    def OnRemove1stpca(self, state):
+        if state == QtCore.Qt.Checked:
+            self.wo_1st_pca = 1
+        else: self.wo_1st_pca = 0
+
+#----------------------------------------------------------------------           
+    def OnSplitClusters(self, state):
+        if state == QtCore.Qt.Checked:
+            self.sigma_split = 1
+        else: self.sigma_split = 0        
+
+#----------------------------------------------------------------------           
+    def OnShowallspectra(self, state):
+        if state == QtCore.Qt.Checked:
+            self.showallspectra = 1
+        else: self.showallspectra = 0     
+        
+        if self.com.cluster_calculated == 1:   
+            self.showClusterSpectrum()
+                
+#----------------------------------------------------------------------    
+    def OnSave(self, event):     
+               
+        pass
+        #SaveWinP3().Show()
+        
+        
+#----------------------------------------------------------------------    
+    def Save(self, filename, path, spec_png = True, spec_pdf = False, spec_csv = False,
+             img_png = True, img_pdf = False, 
+             indimgs_png = True, indimgs_pdf = False,
+             scatt_png = True, scatt_pdf = False): 
+        
+        self.SaveFileName = os.path.join(path,filename)
+        
+        from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas    
+        matplotlib.rcParams['pdf.fonttype'] = 42
+   
+        try: 
+            
+            if img_png:
+                ext = 'png'
+                suffix = "." + ext
+            
+                fig = matplotlib.figure.Figure(figsize = (float(self.stk.n_rows)/10, float(self.stk.n_cols)/10))
+                canvas = FigureCanvas(fig)
+                fig.clf()
+                fig.add_axes((0.0,0.0,1.0,1.0))
+                axes = fig.gca()         
+        
+                im = axes.imshow(self.clusterimage, cmap=self.clusterclrmap1, norm=self.bnorm1)
+                axes.axis("off")
+                
+                fileName_caimg = self.SaveFileName+"_CAcimg."+ext       
+                fig.savefig(fileName_caimg, dpi=ImgDpi, pad_inches = 0.0)
+                
+            
+            if img_pdf:
+                ext = 'pdf'
+                suffix = "." + ext
+            
+                fig = matplotlib.figure.Figure(figsize = (float(self.stk.n_rows)/30, float(self.stk.n_cols)/30))
+                canvas = FigureCanvas(fig)
+                fig.clf()
+                fig.add_axes((0.0,0.0,1.0,1.0))
+
+        
+                im = axes.imshow(self.clusterimage, cmap=self.clusterclrmap1, norm=self.bnorm1)
+                axes.axis("off")
+                
+                fileName_caimg = self.SaveFileName+"_CAcimg."+ext       
+                fig.savefig(fileName_caimg, dpi=300, pad_inches = 0.0)
+                            
+            
+
+                  
+            ext = 'png'
+            suffix = "." + ext
+                
+            if indimgs_png:
+                for i in range (self.numclusters):
+              
+                    indvclusterimage = npy.zeros((self.anlz.stack.n_cols, self.anlz.stack.n_rows))+20.      
+                    ind = npy.where(self.anlz.cluster_indices == i)    
+                    colorcl = min(i,9)
+                    indvclusterimage[ind] = colorcl
+
+                    fig = matplotlib.figure.Figure(figsize =(float(self.stk.n_rows)/10, float(self.stk.n_cols)/10))
+                    canvas = FigureCanvas(fig)
+                    fig.add_axes((0.0,0.0,1.0,1.0))
+                    axes = fig.gca()            
+                    im = axes.imshow(indvclusterimage, cmap=self.clusterclrmap2, norm=self.bnorm2)
+                    axes.axis("off")
+                   
+                    fileName_img = self.SaveFileName+"_CAimg_" +str(i+1)+"."+ext               
+                    fig.savefig(fileName_img, dpi=ImgDpi, pad_inches = 0.0)
+                
+            if spec_png:
+                for i in range (self.numclusters):
+                   
+                    clusterspectrum = self.anlz.clusterspectra[i, ]
+                    fig = matplotlib.figure.Figure(figsize =(PlotW, PlotH))
+                    canvas = FigureCanvas(fig)
+                    fig.add_axes((0.15,0.15,0.75,0.75))
+                    axes = fig.gca()
+                    if i >= self.maxclcolors:
+                        clcolor = self.colors[self.maxclcolors-1]
+                    else:
+                        clcolor = self.colors[i]
+        
+                    specplot = axes.plot(self.anlz.stack.ev,clusterspectrum, color = clcolor)
+        
+                    axes.set_xlabel('Photon Energy [eV]')
+                    axes.set_ylabel('Optical Density')
+
+                    fileName_spec = self.SaveFileName+"_CAspectrum_" +str(i+1)+"."+ext
+                    fig.savefig(fileName_spec)   
+                    
+            if spec_csv:
+                for i in range (self.numclusters):
+                    clusterspectrum = self.anlz.clusterspectra[i, ]
+                    fileName_spec = self.SaveFileName+"_CAspectrum_" +str(i+1)+".csv"
+                    self.stk.write_csv(fileName_spec, self.anlz.stack.ev, clusterspectrum)
+                                                     
+                
+            ext = 'pdf'
+            suffix = "." + ext
+                
+            if indimgs_pdf:
+                for i in range (self.numclusters):
+              
+                    indvclusterimage = npy.zeros((self.anlz.stack.n_cols, self.anlz.stack.n_rows))+20.      
+                    ind = npy.where(self.anlz.cluster_indices == i)    
+                    colorcl = min(i,9)
+                    indvclusterimage[ind] = colorcl
+
+                    fig = matplotlib.figure.Figure(figsize =(float(self.stk.n_rows)/30, float(self.stk.n_cols)/30))
+                    canvas = FigureCanvas(fig)
+                    fig.add_axes((0.0,0.0,1.0,1.0))
+                    axes = fig.gca()       
+                    im = axes.imshow(indvclusterimage, cmap=self.clusterclrmap2, norm=self.bnorm2)
+                    axes.axis("off")
+                   
+                    fileName_img = self.SaveFileName+"_CAimg_" +str(i+1)+"."+ext               
+                    fig.savefig(fileName_img, dpi=300, pad_inches = 0.0)
+                
+            if spec_pdf:
+                for i in range (self.numclusters):
+                   
+                    clusterspectrum = self.anlz.clusterspectra[i, ]
+                    fig = matplotlib.figure.Figure(figsize =(PlotW, PlotH))
+                    canvas = FigureCanvas(fig)
+                    fig.add_axes((0.15,0.15,0.75,0.75))
+                    axes = fig.gca()
+                    if i >= self.maxclcolors:
+                        clcolor = self.colors[self.maxclcolors-1]
+                    else:
+                        clcolor = self.colors[i]
+        
+                    specplot = axes.plot(self.anlz.stack.ev,clusterspectrum, color = clcolor)
+        
+                    axes.set_xlabel('Photon Energy [eV]')
+                    axes.set_ylabel('Optical Density')
+
+                    fileName_spec = self.SaveFileName+"_CAspectrum_" +str(i+1)+"."+ext
+                    fig.savefig(fileName_spec) 
+                    
+            if scatt_png:
+                self.SaveScatt(png_pdf = 1)
+            if scatt_pdf:
+                self.SaveScatt(png_pdf = 2)                   
+            
+        except IOError, e:
+            if e.strerror:
+                err = e.strerror 
+            else: 
+                err = e 
+   
+            QtGui.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % err)
+
+  
+  
+#----------------------------------------------------------------------    
+#If png_pdg = 1 save png, if =2 save pdf
+    def SaveScatt(self, png_pdf = 1): 
+          
+        od_reduced = self.anlz.pcaimages[:,:,0:self.anlz.numsigpca]        
+        od_reduced = npy.reshape(od_reduced, (self.stk.n_cols*self.stk.n_rows,self.anlz.numsigpca), order='F')
+
+        clindices = self.anlz.cluster_indices
+        clindices = npy.reshape(clindices, (self.stk.n_cols*self.stk.n_rows), order='F')
+        
+        path, ext = os.path.splitext(self.SaveFileName) 
+        ext = ext[1:].lower() 
+        
+        if png_pdf == 1:
+            ext = 'png'
+        else:
+            ext = 'pdf'
+        
+   
+        try: 
+            QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+            
+            suffix = "." + ext
+            
+            nplots = 0
+            for ip in range(self.anlz.numsigpca):
+                for jp in range(self.anlz.numsigpca):
+                    if jp >= (ip+1):
+                        nplots = nplots+1    
+            nplotsrows = npy.ceil(nplots/2)    
+            
+            plotsize = 2.5    
+            
+            from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas  
+            
+            if nplots > 1 :
+                fig = matplotlib.figure.Figure(figsize =(6.0,plotsize*nplotsrows))
+                fig.subplots_adjust(wspace = 0.4, hspace = 0.4)
+            else:
+                fig = matplotlib.figure.Figure(figsize =(3.0,2.5))
+                fig.subplots_adjust(bottom = 0.2, left = 0.2)
+                
+            canvas = FigureCanvas(fig)
+            #axes = fig.gca()
+            matplotlib.rcParams['font.size'] = 6   
+            
+                                   
+            pplot = 1
+            for ip in range(self.anlz.numsigpca):
+                for jp in range(self.anlz.numsigpca):
+                    if jp >= (ip+1):
+                        
+
+                        x_comp = od_reduced[:,ip]
+                        y_comp = od_reduced[:,jp]
+                        if nplots > 1 :
+                            axes = fig.add_subplot(nplotsrows,2, pplot)
+                        else:
+                            axes = fig.add_subplot(1,1,1)
+                            
+                        pplot = pplot+1
+                        
+                        for i in range(self.numclusters):
+                            thiscluster = npy.where(clindices == i)
+                            axes.plot(x_comp[thiscluster], y_comp[thiscluster],'.',color=self.colors[i],alpha=0.5)
+                        axes.set_xlabel('Component '+str(ip+1))
+                        axes.set_ylabel('Component '+str(jp+1))
+                            
+    
+            fileName_sct = self.SaveFileName+"_CAscatterplot_" +str(i+1)+"."+ext
+            matplotlib.rcParams['pdf.fonttype'] = 42
+            fig.savefig(fileName_sct)
+            
+            QtGui.QApplication.restoreOverrideCursor()
+     
+            
+        except IOError, e:
+            QtGui.QApplication.restoreOverrideCursor()
+            if e.strerror:
+                err = e.strerror 
+            else: 
+                err = e 
+   
+            QtGui.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % err)
+
+            
+                
+#----------------------------------------------------------------------     
+    def OnShowScatterplots(self, evt):   
+        
+        scattplwin = Scatterplots(self.window(), self.com, self.anlz)
+        scattplwin.show()
+
+
+#---------------------------------------------------------------------- 
+class Scatterplots(QtGui.QDialog):
+
+    def __init__(self, parent,  common, analz):    
+        QtGui.QWidget.__init__(self, parent)
+        
+        self.parent = parent
+
+        
+        self.resize(600, 470)
+        self.setWindowTitle('Scatter plots')
+        
+        pal = QtGui.QPalette()
+        self.setAutoFillBackground(True)
+        pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
+        self.setPalette(pal)
+                
+         
+         
+        self.colors = self.parent.page3.colors
+         
+        self.com = common       
+         
+        self.anlz = analz
+        self.numsigpca = self.anlz.numsigpca  
+        self.ncols = self.anlz.stack.n_cols
+        self.nrows = self.anlz.stack.n_rows
+         
+        self.od_reduced = self.anlz.pcaimages[:,:,0:self.numsigpca]        
+        self.od_reduced = npy.reshape(self.od_reduced, (self.ncols*self.nrows,self.numsigpca), order='F')
+         
+        self.clindices = self.anlz.cluster_indices
+        self.clindices = npy.reshape(self.clindices, (self.ncols*self.nrows), order='F')
+        self.numclusters = self.parent.page3.numclusters
+              
+                      
+        self.pca_y = 1
+        self.pca_x = 1
+         
+ 
+                 
+        vbox = QtGui.QVBoxLayout()
+           
+        grid1 = QtGui.QGridLayout()
+
+        frame = QtGui.QFrame()
+        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        fbox = QtGui.QHBoxLayout()
+        self.scattplfig = Figure((5.0, 4.8))
+        self.ScatterPPanel = FigureCanvas(self.scattplfig)
+        self.ScatterPPanel.setParent(self)
+        fbox.addWidget(self.ScatterPPanel)
+        frame.setLayout(fbox)
+        
+        self.slidershow_y = QtGui.QSlider(QtCore.Qt.Vertical)
+        self.slidershow_y.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.slidershow_y.setRange(1, self.numsigpca)
+        self.slidershow_y.setValue(self.pca_y)          
+        self.slidershow_y.valueChanged[int].connect(self.OnSliderScroll_y)
+               
+        grid1.addWidget(self.slidershow_y, 0, 0)
+        grid1.addWidget(frame, 0, 1)
+                
+         
+        self.slidershow_x = QtGui.QSlider(QtCore.Qt.Horizontal)
+        self.slidershow_x.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.slidershow_x.setRange(1, self.numsigpca)
+        self.slidershow_x.setValue(self.pca_x)          
+        self.slidershow_x.valueChanged[int].connect(self.OnSliderScroll_x)
+         
+        #grid1.addWidget(wx.StaticText(panel, -1, ''))
+        grid1.addWidget(self.slidershow_x, 1,  1)
+         
+        hbox = QtGui.QVBoxLayout()
+         
+        button_close = QtGui.QPushButton('Close')
+        button_close.clicked.connect( self.close)
+                
+        hbox.addStretch(1)
+        hbox.addWidget(button_close)
+         
+        vbox.addLayout(grid1)
+        vbox.addLayout(hbox)
+                 
+         
+        self.setLayout(vbox)
+         
+        self.draw_scatterplot()
+        
+        
+#----------------------------------------------------------------------        
+    def OnSliderScroll_x(self, value):
+        self.pca_x = value
+        
+        self.draw_scatterplot()
+
+#----------------------------------------------------------------------        
+    def OnSliderScroll_y(self, value):
+        self.pca_y = value
+        
+        self.draw_scatterplot()        
+
+      
+#----------------------------------------------------------------------        
+    def draw_scatterplot(self):
+                
+        x_comp = self.od_reduced[:,self.pca_x-1]
+        y_comp = self.od_reduced[:,self.pca_y-1]
+        
+        fig = self.scattplfig
+        fig.clf()
+        axes = fig.gca()
+             
+        
+        for i in range(self.numclusters):
+            thiscluster = npy.where(self.clindices == i)
+            axes.plot(x_comp[thiscluster], y_comp[thiscluster],'.',color=self.colors[i],alpha=0.5)
+            
+        axes.set_xlabel('Component '+str(self.pca_x))
+        axes.set_ylabel('Component '+str(self.pca_y))
+      
+        self.ScatterPPanel.draw()
+       
+  
+        
+        
+            
     
 """ ------------------------------------------------------------------------------------------------"""
 class PagePCA(QtGui.QWidget):
@@ -529,7 +2324,14 @@ class PagePCA(QtGui.QWidget):
 #----------------------------------------------------------------------          
     def initUI(self, common, data_struct, stack, anlz): 
 
-
+        self.com = common 
+        self.data_struct = data_struct
+        self.stk = stack       
+        self.anlz = anlz
+        
+        
+        self.selpca = 1       
+        self.numsigpca = 2
         
         #panel 1        
         vbox1 = QtGui.QVBoxLayout()
@@ -539,18 +2341,24 @@ class PagePCA(QtGui.QWidget):
         vbox1.addWidget(self.tc_PCAcomp)
         
         hbox11 = QtGui.QHBoxLayout()
-   
+
+        frame = QtGui.QFrame()
+        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        fbox = QtGui.QHBoxLayout()
         self.pcaimgfig = Figure((PlotH*1.10, PlotH))
         self.PCAImagePan = FigureCanvas(self.pcaimgfig)
-        self.PCAImagePan.setParent(self)
-        hbox11.addWidget(self.PCAImagePan)
-                       
+        self.PCAImagePan.setParent(self) 
+        
+        fbox.addWidget(self.PCAImagePan)
+        frame.setLayout(fbox)
+        hbox11.addWidget(frame)                        
             
         self.slidershow = QtGui.QScrollBar(QtCore.Qt.Vertical)
         self.slidershow.setFocusPolicy(QtCore.Qt.StrongFocus)
-        #self.slidershow.setEnabled(False)          
-        #self.slidershow.SetFocus()
-        #self.Bind(wx.EVT_SCROLL, self.OnPCAScroll, self.slidershow)
+        self.slidershow.setRange(1,20)
+        self.slidershow.setEnabled(False)          
+        self.slidershow.valueChanged[int].connect(self.OnPCAScroll)
+
         
         hbox11.addWidget(self.slidershow)
 
@@ -564,26 +2372,31 @@ class PagePCA(QtGui.QWidget):
         vbox21 = QtGui.QVBoxLayout()        
         
         self.button_calcpca = QtGui.QPushButton('Calculate PCA')
-        #.clicked.connect( self.OnCalcPCA, id=self.button_calcpca.GetId())     
-        #self.button_calcpca.setEnabled(False)   
+        self.button_calcpca.clicked.connect( self.OnCalcPCA)     
+        self.button_calcpca.setEnabled(False)   
         vbox21.addWidget(self.button_calcpca)
         self.button_savepca = QtGui.QPushButton('Save PCA Results...')
-        #.clicked.connect( self.OnSave, id=self.button_savepca.GetId())
-        #self.button_savepca.setEnabled(False)
+        self.button_savepca.clicked.connect( self.OnSave)
+        self.button_savepca.setEnabled(False)
         vbox21.addWidget(self.button_savepca)
         
+
         hbox21 = QtGui.QHBoxLayout()
         text1 = QtGui.QLabel(self)
         text1.setText('Number of significant components')
-        #self.npcaspin = wx.SpinCtrl(panel2, -1, '',  size= (60, -1), style=wx.ALIGN_LEFT)
-        #self.npcaspin.SetRange(1,20)
-        #self.Bind(wx.EVT_SPINCTRL, self.OnNPCAspin, self.npcaspin)
-        vbox21.addWidget(text1)
+    
+        
+        self.npcaspin = QtGui.QSpinBox()
+        self.npcaspin.setRange(1,20)      
+        self.npcaspin.valueChanged[int].connect(self.OnNPCAspin)
+        
+        hbox21.addWidget(text1)
+        hbox21.addWidget(self.npcaspin)
+        vbox21.addLayout(hbox21)
               
         hbox22 = QtGui.QHBoxLayout()
         text2 = QtGui.QLabel(self)
         text2.setText( 'Cumulative variance')
-        #text2.SetFont(self.com.font)
         self.vartc = QtGui.QLabel(self)
         self.vartc.setText('0%')
         hbox22.addWidget(text2)
@@ -602,31 +2415,41 @@ class PagePCA(QtGui.QWidget):
 
  
         self.text_pcaspec = QtGui.QLabel(self)
-        #self.text_pcaspec.SetFont(self.com.font)
         self.text_pcaspec.setText("PCA spectrum ") 
         vbox3.addWidget(self.text_pcaspec)
                         
+        frame = QtGui.QFrame()
+        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        fbox = QtGui.QHBoxLayout()
 
         self.pcaspecfig = Figure((PlotW, PlotH))
         self.PCASpecPan = FigureCanvas(self.pcaspecfig)
         self.PCASpecPan.setParent(self)
-        vbox3.addWidget(self.PCASpecPan)
-        
+       
+        fbox.addWidget(self.PCASpecPan)
+        frame.setLayout(fbox)
+        vbox3.addWidget(frame)       
     
         
         #panel 4
-        vbox4 = QtGui.QVBoxLayout()
-  
+        vbox4 = QtGui.QVBoxLayout()  
          
         text4 = QtGui.QLabel(self)
         text4.setText("PCA eigenvalues ")        
         vbox4.addWidget(text4)
-        
+
+        frame = QtGui.QFrame()
+        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        fbox = QtGui.QHBoxLayout()
+       
         self.pcaevalsfig = Figure((PlotW, PlotH*0.75))
         self.PCAEvalsPan = FigureCanvas(self.pcaevalsfig)
         self.PCAEvalsPan.setParent(self)
-        vbox4.addWidget(self.PCAEvalsPan)
-                 
+        self.PCAEvalsPan.mpl_connect('button_press_event', self.OnPointEvalsImage)
+         
+        fbox.addWidget(self.PCAEvalsPan)
+        frame.setLayout(fbox)
+        vbox4.addWidget(frame)                 
 
     
         
@@ -643,7 +2466,300 @@ class PagePCA(QtGui.QWidget):
         vboxtop.addStretch(1)
         self.setLayout(vboxtop)
 
+        
+#----------------------------------------------------------------------
+    def OnCalcPCA(self, event):
+       
+        QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+        self.calcpca = False  
+        self.selpca = 1       
+        self.numsigpca = 2
+        self.slidershow.setValue(self.selpca)
+        
+        scrollmax = npy.min([self.stk.n_ev, 20])
+        self.slidershow.setMaximum(scrollmax)
 
+        try: 
+            self.CalcPCA()
+            self.calcpca = True
+            self.loadPCAImage()
+            self.loadPCASpectrum()
+            self.showEvals()
+            self.com.pca_calculated = 1
+            QtGui.QApplication.restoreOverrideCursor()
+        except:
+            self.com.pca_calculated = 0
+            QtGui.QApplication.restoreOverrideCursor()
+            QtGui.QMessageBox.warning(self, 'Error', 'PCA not calculated.')
+        
+        self.window().refresh_widgets()
+
+#----------------------------------------------------------------------        
+    def OnNPCAspin(self, value):
+        num = value
+        self.numsigpca = num
+        
+        if self.com.pca_calculated == 1:      
+            self.anlz.numsigpca = self.numsigpca 
+        
+            # cumulative variance
+            var = self.anlz.variance[:self.numsigpca].sum()
+            self.vartc.setText(str(var.round(decimals=2)*100)+'%')
+                 
+       
+        
+#----------------------------------------------------------------------
+    def CalcPCA(self):
+ 
+        self.anlz.calculate_pca()
+     
+        #Scree plot criterion
+        self.numsigpca = self.anlz.numsigpca
+        
+        self.npcaspin.setValue(self.numsigpca)
+      
+        # cumulative variance
+        var = self.anlz.variance[:self.numsigpca].sum()
+        self.vartc.setText(str(var.round(decimals=2)*100)+'%')
+        
+
+        
+
+ 
+#----------------------------------------------------------------------        
+    def OnPCAScroll(self, value):
+        self.sel = value
+        self.selpca = self.sel
+        if self.calcpca == True:
+            self.loadPCAImage()
+            self.loadPCASpectrum()
+
+
+ 
+            
+#----------------------------------------------------------------------  
+    def OnPointEvalsImage(self, evt):
+        x = evt.xdata
+        y = evt.ydata
+                
+        if self.com.pca_calculated == 1:     
+            #Find the closest point to the point clicked on the plot
+            self.selpca = int(npy.round(x))
+                       
+            self.loadPCAImage()
+            self.loadPCASpectrum()
+            
+
+
+#----------------------------------------------------------------------    
+    def OnSave(self, event):     
+
+        pass
+        #SaveWinP2().Show()
+
+
+            
+#----------------------------------------------------------------------    
+    def Save(self, filename, path, spec_png = True, spec_pdf = False, spec_csv = False,
+             img_png = True, img_pdf = False, evals_png = True, evals_pdf = False): 
+        
+        
+        self.SaveFileName = os.path.join(path,filename)
+   
+        try: 
+
+            matplotlib.rcParams['pdf.fonttype'] = 42
+            if evals_png:
+                ext = 'png'
+                suffix = "." + ext
+                fileName_evals = self.SaveFileName+"_PCAevals."+ext
+                            
+                fig = self.PCAEvalsPan.get_figure()
+                fig.savefig(fileName_evals)
+                
+            if evals_pdf:
+                ext = 'pdf'
+                suffix = "." + ext
+                fileName_evals = self.SaveFileName+"_PCAevals."+ext
+                            
+                fig = self.PCAEvalsPan.get_figure()
+                fig.savefig(fileName_evals)                
+
+                        
+            from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+            matplotlib.rcParams['pdf.fonttype'] = 42
+            
+            ext = 'png'
+            suffix = "." + ext        
+                
+            if img_png:
+                for i in range (self.numsigpca):
+              
+                    self.pcaimage = self.anlz.pcaimages[:,:,i]
+              
+                    fig = matplotlib.figure.Figure(figsize =(PlotH*1.15, PlotH))
+                    canvas = FigureCanvas(fig)
+                    axes = fig.gca()
+                    divider = make_axes_locatable(axes)
+                    ax_cb = divider.new_horizontal(size="3%", pad=0.03)  
+                    fig.add_axes(ax_cb)
+                    axes.set_position([0.03,0.03,0.8,0.94])
+                    bound = self.anlz.pcaimagebounds[i]       
+        
+                    im = axes.imshow(self.pcaimage, cmap=matplotlib.cm.get_cmap("seismic_r"), vmin = -bound, vmax = bound)
+                    cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
+                    axes.axis("off") 
+                                
+                    fileName_img = self.SaveFileName+"_PCA_" +str(i+1)+"."+ext
+                    fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
+            
+            if spec_png:
+                for i in range (self.numsigpca):
+                
+                    pcaspectrum = self.anlz.eigenvecs[:,i]
+                    fig = matplotlib.figure.Figure(figsize =(PlotW, PlotH))
+                    canvas = FigureCanvas(fig)
+                    fig.add_axes((0.15,0.15,0.75,0.75))
+                    axes = fig.gca()
+                    specplot = axes.plot(self.stk.ev, pcaspectrum)    
+                    axes.set_xlabel('Photon Energy [eV]')
+                    axes.set_ylabel('Optical Density')
+                
+                    fileName_spec = self.SaveFileName+"_PCAspectrum_" +str(i+1)+"."+ext
+                    fig.savefig(fileName_spec)
+                    
+            if spec_csv:
+                for i in range (self.numsigpca):
+                    pcaspectrum = self.anlz.eigenvecs[:,i]
+                    fileName_spec = self.SaveFileName+"_PCAspectrum_" +str(i+1)+".csv"
+                    self.stk.write_csv(fileName_spec, self.stk.ev, pcaspectrum)
+                    
+                
+            ext = 'pdf'
+            suffix = "." + ext        
+                
+            if img_pdf:
+                for i in range (self.numsigpca):
+              
+                    self.pcaimage = self.anlz.pcaimages[:,:,i]
+              
+                    fig = matplotlib.figure.Figure(figsize =(PlotH*1.15, PlotH))
+                    canvas = FigureCanvas(fig)
+                    axes = fig.gca()
+                    divider = make_axes_locatable(axes)
+                    ax_cb = divider.new_horizontal(size="3%", pad=0.03)  
+                    fig.add_axes(ax_cb)
+                    axes.set_position([0.03,0.03,0.8,0.94])
+                    bound = self.anlz.pcaimagebounds[i]            
+        
+                    im = axes.imshow(self.pcaimage, cmap=matplotlib.cm.get_cmap("seismic_r"), vmin = -bound, vmax = bound)
+                    cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
+                    axes.axis("off") 
+                                
+                    fileName_img = self.SaveFileName+"_PCA_" +str(i+1)+"."+ext
+                    fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
+            
+            if spec_pdf:
+                for i in range (self.numsigpca):
+                
+                    self.pcaspectrum = self.anlz.eigenvecs[:,i]
+                    fig = matplotlib.figure.Figure(figsize =(PlotW, PlotH))
+                    canvas = FigureCanvas(fig)
+                    fig.add_axes((0.15,0.15,0.75,0.75))
+                    axes = fig.gca()
+                    specplot = axes.plot(self.stk.ev,self.pcaspectrum)    
+                    axes.set_xlabel('Photon Energy [eV]')
+                    axes.set_ylabel('Optical Density')
+                
+                    fileName_spec = self.SaveFileName+"_PCAspectrum_" +str(i+1)+"."+ext
+                    fig.savefig(fileName_spec)                
+            
+        except IOError, e:
+            if e.strerror:
+                err = e.strerror 
+            else: 
+                err = e 
+   
+            QtGui.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % err)
+
+            
+        
+     
+#----------------------------------------------------------------------      
+    def showEvals(self):
+        
+        evalmax = npy.min([self.stk.n_ev, 40])
+        self.pcaevals = self.anlz.eigenvals[0:evalmax]
+        
+
+        fig = self.pcaevalsfig
+        fig.clf()
+        fig.add_axes((0.15,0.15,0.75,0.75))
+        axes = fig.gca()
+        
+       
+        evalsplot = axes.semilogy(npy.arange(1,evalmax+1), self.pcaevals,'b.')    
+        
+        axes.set_xlabel('Principal Component')
+        axes.set_ylabel('Log(Eigenvalue)')
+         
+
+        self.PCAEvalsPan.draw()
+
+
+#----------------------------------------------------------------------      
+    def loadPCAImage(self):
+        
+        self.tc_PCAcomp.setText("PCA component " + str(self.selpca))
+        self.text_pcaspec.setText("PCA spectrum "+ str(self.selpca))          
+        
+        self.pcaimage = self.anlz.pcaimages[:,:,self.selpca-1]
+        
+        
+        fig = self.pcaimgfig
+        fig.clf()
+     
+        axes = fig.gca()
+    
+        divider = make_axes_locatable(axes)
+        ax_cb = divider.new_horizontal(size="3%", pad=0.03)  
+
+        fig.add_axes(ax_cb)
+        
+        axes.set_position([0.03,0.03,0.8,0.94])
+        
+        bound = self.anlz.pcaimagebounds[self.selpca-1]
+        
+     
+        im = axes.imshow(self.pcaimage, cmap=matplotlib.cm.get_cmap("seismic_r"), vmin = -bound, vmax = bound)
+        cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
+    
+        axes.axis("off") 
+        self.PCAImagePan.draw()
+
+        
+        
+#----------------------------------------------------------------------     
+    def loadPCASpectrum(self):
+
+        self.pcaspectrum = self.anlz.eigenvecs[:,self.selpca-1]
+            
+        
+        fig = self.pcaspecfig
+        fig.clf()
+        fig.add_axes((0.15,0.15,0.75,0.75))
+        axes = fig.gca()
+        
+
+        specplot = axes.plot(self.stk.ev,self.pcaspectrum)
+                        
+        axes.set_xlabel('Photon Energy [eV]')
+        axes.set_ylabel('Optical Density')
+        
+        self.PCASpecPan.draw()
+        
+        
+        
 
 """ ------------------------------------------------------------------------------------------------"""
 class PageStack(QtGui.QWidget):
@@ -658,7 +2774,6 @@ class PageStack(QtGui.QWidget):
         self.data_struct = data_struct
         self.stk = stack
         self.com = common                  
-
         
         self.filename = " "
        
@@ -666,7 +2781,6 @@ class PageStack(QtGui.QWidget):
         self.iy = 0
         self.iev = 50  
         self.showflux = True
-        self.fontsize = self.com.fontsize
         self.show_colorbar = 0
         
         self.dispbrightness_min = 0
@@ -922,13 +3036,19 @@ class PageStack(QtGui.QWidget):
         
         
         hbox41 = QtGui.QHBoxLayout()
+        
+        
+        frame = QtGui.QFrame()
+        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        fbox = QtGui.QHBoxLayout()
+   
         self.absimgfig = Figure((PlotH, PlotH))
         self.AbsImagePanel = FigureCanvas(self.absimgfig)
         self.AbsImagePanel.setParent(self)
         self.AbsImagePanel.mpl_connect('button_press_event', self.OnPointAbsimage)
-        
-        hbox41.addWidget(self.AbsImagePanel)   
-
+        fbox.addWidget(self.AbsImagePanel)
+        frame.setLayout(fbox)
+        hbox41.addWidget(frame)        
        
 
         self.slider_eng = QtGui.QScrollBar(QtCore.Qt.Vertical)
@@ -941,7 +3061,6 @@ class PageStack(QtGui.QWidget):
         vbox4.addLayout(hbox41)
         
 
-
         #panel 5     
         vbox5 = QtGui.QVBoxLayout()
         
@@ -949,14 +3068,18 @@ class PageStack(QtGui.QWidget):
         self.tc_spec.setText("Spectrum ")
         vbox5.addWidget(self.tc_spec)
         
-        
-
+        frame = QtGui.QFrame()
+        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        fbox = QtGui.QHBoxLayout()
+      
         self.specfig = Figure((PlotW, PlotH))
         self.SpectrumPanel = FigureCanvas(self.specfig)
         self.SpectrumPanel.setParent(self)
         self.SpectrumPanel.mpl_connect('button_press_event', self.OnPointSpectrum)
-        vbox5.addWidget(self.SpectrumPanel)
-               
+
+        fbox.addWidget(self.SpectrumPanel)
+        frame.setLayout(fbox)
+        vbox5.addWidget(frame)                 
     
         vboxtop = QtGui.QVBoxLayout()
         
@@ -1203,7 +3326,7 @@ class PageStack(QtGui.QWidget):
         
         #self.window().Hide()
         imgregwin = ImageRegistration(self, self.com, self.stk)
-        imgregwin.Show()
+        imgregwin.show()
 
 #----------------------------------------------------------------------    
     def OnSlideshow(self, event):  
@@ -1522,8 +3645,7 @@ class PageStack(QtGui.QWidget):
             axes.set_xlabel('Photon Energy [eV]')
             axes.set_ylabel('Flux')
  
-         
-        matplotlib.rcParams['font.size'] = self.fontsize
+    
  
         specplot = axes.plot(self.stk.ev,self.spectrum)
          
@@ -1632,7 +3754,6 @@ class PageStack(QtGui.QWidget):
         fig.add_axes((0.15,0.15,0.75,0.75))
         axes = fig.gca()
         
-        matplotlib.rcParams['font.size'] = self.fontsize
 
         specplot = axes.plot(self.stk.ev,self.ROIspectrum)
         
@@ -1980,10 +4101,10 @@ class PageLoadData(QtGui.QWidget):
         
         self.filename = " "
        
-        self.fontsize = self.com.fontsize
         
         self.iev = 0
         
+        self.initMatplotlib()
 
         #panel 1
         sizer1 = QtGui.QGroupBox('Load Data Stack')
@@ -2063,12 +4184,20 @@ class PageLoadData(QtGui.QWidget):
         vbox5.addWidget(self.tc_imageeng)
         
         
+
         hbox51 = QtGui.QHBoxLayout()
+        
+        frame = QtGui.QFrame()
+        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        fbox = QtGui.QHBoxLayout()
    
         self.absimgfig = Figure((PlotH*.9, PlotH*.9))
         self.AbsImagePanel = FigureCanvas(self.absimgfig)
         self.AbsImagePanel.setParent(self)
-        hbox51.addWidget(self.AbsImagePanel)
+        
+        fbox.addWidget(self.AbsImagePanel)
+        frame.setLayout(fbox)
+        hbox51.addWidget(frame)
         
 
         self.slider_eng = QtGui.QScrollBar(QtCore.Qt.Vertical)
@@ -2078,7 +4207,9 @@ class PageLoadData(QtGui.QWidget):
         
         hbox51.addWidget(self.slider_eng)        
 
+        
         vbox5.addLayout(hbox51)
+        
         
        
         vboxtop = QtGui.QVBoxLayout()
@@ -2106,6 +4237,15 @@ class PageLoadData(QtGui.QWidget):
         vboxtop.setContentsMargins(50,50,50,50)
         self.setLayout(vboxtop)
 
+#----------------------------------------------------------------------   
+    def initMatplotlib(self):  
+               
+       
+        matplotlib.rcParams['figure.facecolor'] = 'white'
+
+        matplotlib.rcParams['font.size'] = 10.0
+        
+        
 #----------------------------------------------------------------------          
     def OnLoadHDF5(self, event):
 
@@ -2616,8 +4756,11 @@ class MainFrame(QtGui.QMainWindow):
 #         layout.addLayout(leftLayout)
 #         layout.addLayout(rightLayout)
         #self.setLayout(layout)
+        
                               
         self.show()
+
+        
         
 
 #----------------------------------------------------------------------   
@@ -2866,7 +5009,7 @@ class MainFrame(QtGui.QMainWindow):
             QtGui.QMessageBox.warning(self, 'Error', 'Could not save HDF5 file.')
                    
 
-        #self.refresh_widgets()
+        self.refresh_widgets()
         
         return
        
@@ -2917,62 +5060,62 @@ class MainFrame(QtGui.QMainWindow):
             self.page1.button_showi0.setEnabled(False) 
             self.page1.rb_flux.setEnabled(False)
             self.page1.rb_od.setEnabled(False)
-            #self.page2.button_calcpca.setEnabled(False)
-            #self.page4.button_loadtspec.setEnabled(False)
-            #self.page4.button_addflat.setEnabled(False)
+            self.page2.button_calcpca.setEnabled(False)
+            self.page4.button_loadtspec.setEnabled(False)
+            self.page4.button_addflat.setEnabled(False)
         else:
             self.page1.button_limitev.setEnabled(True)
             self.page1.button_subregion.setEnabled(True)
             self.page1.button_showi0.setEnabled(True)
             self.page1.rb_flux.setEnabled(True)
             self.page1.rb_od.setEnabled(True)   
-            #self.page2.button_calcpca.setEnabled(True) 
-            #self.page4.button_loadtspec.setEnabled(True)
-            #self.page4.button_addflat.setEnabled(True)   
+            self.page2.button_calcpca.setEnabled(True) 
+            self.page4.button_loadtspec.setEnabled(True)
+            self.page4.button_addflat.setEnabled(True)   
              
              
              
-#         if self.common.pca_calculated == 0:      
-#             self.page2.button_savepca.setEnabled(False)
-#             self.page2.slidershow.setEnabled(False) 
-#             self.page3.button_calcca.setEnabled(False)
-#             self.page4.rb_fit.setEnabled(False)
-#             if self.page7: self.page7.button_calckeng.setEnabled(False)
-#         else:
-#             self.page2.button_savepca.setEnabled(True)
-#             self.page2.slidershow.setEnabled(True)
-#             self.page3.button_calcca.setEnabled(True)  
-#             self.page4.rb_fit.setEnabled(True)  
-#             if self.page7: self.page7.button_calckeng.setEnabled(True)       
-#             
-#         if self.common.cluster_calculated == 0:   
-#             self.page3.button_scatterplots.setEnabled(False)
-#             self.page3.button_savecluster.setEnabled(False)
-#             self.page3.slidershow.setEnabled(False)
-#             self.page4.button_addclspec.setEnabled(False)
-#         else:
-#             self.page3.button_scatterplots.setEnabled(True)
-#             self.page3.button_savecluster.setEnabled(True)  
-#             self.page3.slidershow.setEnabled(True)
-#             self.page4.button_addclspec.setEnabled(True)
-#             
-#         if self.common.spec_anl_calculated == 0:
-#             self.page4.button_removespec.setEnabled(False)
-#             self.page4.button_movespdown.setEnabled(False)
-#             self.page4.button_movespup.setEnabled(False)
-#             self.page4.button_save.setEnabled(False)
-#             self.page4.button_showrgb.setEnabled(False) 
-#         else:
-#             self.page4.button_removespec.setEnabled(True)
-#             self.page4.button_movespdown.setEnabled(True)
-#             self.page4.button_movespup.setEnabled(True)
-#             self.page4.button_save.setEnabled(True) 
-#             self.page4.button_showrgb.setEnabled(True)          
-#                   
-#             
-#         self.page1.ResetDisplaySettings()
-#             
-#             
+        if self.common.pca_calculated == 0:      
+            self.page2.button_savepca.setEnabled(False)
+            self.page2.slidershow.setEnabled(False) 
+            self.page3.button_calcca.setEnabled(False)
+            self.page4.rb_fit.setEnabled(False)
+            self.page5.button_calckeng.setEnabled(False)
+        else:
+            self.page2.button_savepca.setEnabled(True)
+            self.page2.slidershow.setEnabled(True)
+            self.page3.button_calcca.setEnabled(True)  
+            self.page4.rb_fit.setEnabled(True)  
+            self.page5.button_calckeng.setEnabled(True)       
+             
+        if self.common.cluster_calculated == 0:   
+            self.page3.button_scatterplots.setEnabled(False)
+            self.page3.button_savecluster.setEnabled(False)
+            self.page3.slidershow.setEnabled(False)
+            self.page4.button_addclspec.setEnabled(False)
+        else:
+            self.page3.button_scatterplots.setEnabled(True)
+            self.page3.button_savecluster.setEnabled(True)  
+            self.page3.slidershow.setEnabled(True)
+            self.page4.button_addclspec.setEnabled(True)
+             
+        if self.common.spec_anl_calculated == 0:
+            self.page4.button_removespec.setEnabled(False)
+            self.page4.button_movespdown.setEnabled(False)
+            self.page4.button_movespup.setEnabled(False)
+            self.page4.button_save.setEnabled(False)
+            self.page4.button_showrgb.setEnabled(False) 
+        else:
+            self.page4.button_removespec.setEnabled(True)
+            self.page4.button_movespdown.setEnabled(True)
+            self.page4.button_movespup.setEnabled(True)
+            self.page4.button_save.setEnabled(True) 
+            self.page4.button_showrgb.setEnabled(True)          
+                   
+             
+        self.page1.ResetDisplaySettings()
+             
+             
             
 #----------------------------------------------------------------------        
     def new_stack_refresh(self):
