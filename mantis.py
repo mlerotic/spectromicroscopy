@@ -93,7 +93,7 @@ class PageKeyEng(QtGui.QWidget):
    
         self.kespecfig = Figure((pw, ph))
         self.KESpecPan = FigureCanvas(self.kespecfig)
-        #self.KESpecPan.mpl_connect('button_press_event', self.OnPointSpectrum)
+        self.KESpecPan.mpl_connect('button_press_event', self.OnPointSpectrum)
         fbox.addWidget(self.KESpecPan)
         frame.setLayout(fbox)
             
@@ -103,17 +103,16 @@ class PageKeyEng(QtGui.QWidget):
         vbox1.addStretch(1)
  
                     
-                
         #panel 2
         sizer2 = QtGui.QGroupBox('Key Energies Analysis')
         vbox2 = QtGui.QVBoxLayout()
                 
         self.button_calckeng = QtGui.QPushButton('Find Key Energies')
-        #self.button_calckeng.clicked.connect(self.OnCalcKeyEng)     
+        self.button_calckeng.clicked.connect(self.OnCalcKeyEng)     
         self.button_calckeng.setEnabled(False)  
         vbox2.addWidget( self.button_calckeng) 
         self.button_save = QtGui.QPushButton('Save Results...')
-        #self.button_save.clicked.connect(self.OnSave)
+        self.button_save.clicked.connect(self.OnSave)
         self.button_save.setEnabled(False)
         
         
@@ -150,9 +149,7 @@ class PageKeyEng(QtGui.QWidget):
         t1.setText("Key Energies")       
          
         self.lc_1 = QListWidget()   
-#         self.lc_1.InsertColumn(0, 'KEng')
-#         self.lc_1.SetColumnWidth(0, 160)  
-#self.Bind(wx.EVT_LIST_ITEM_SELECTED , self.OnEngListClick, self.lc_1)  
+        self.lc_1.itemClicked.connect(self.OnEngListClick)
         self.lc_1.setMinimumSize(200, 400)
          
         vbox3.addWidget(t1)
@@ -181,7 +178,7 @@ class PageKeyEng(QtGui.QWidget):
 
         self.slider_eng = QtGui.QScrollBar(QtCore.Qt.Vertical)
         self.slider_eng.setFocusPolicy(QtCore.Qt.StrongFocus)
-        #self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
+        self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
         self.slider_eng.setRange(0, 100)
         hbox41.addWidget(self.slider_eng)
         hbox41.addStretch(1)
@@ -215,6 +212,230 @@ class PageKeyEng(QtGui.QWidget):
         
         hboxtop.setContentsMargins(20,20,20,20)
         self.setLayout(hboxtop) 
+
+
+        
+        
+#----------------------------------------------------------------------
+    def OnCalcKeyEng(self, event):
+        
+
+        QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+        
+        threshold = self.tc_keyengthresh.value()
+  
+        self.keyenergies = []
+        
+        self.keyenergies = self.anlz.calc_key_engs(threshold)
+        
+        if len(self.keyenergies) > 0:        
+            self.keyengs_calculated = 1
+        
+            self.i_eng = 0
+            self.slider_eng.setRange(0,len(self.keyenergies)-1)
+            self.slider_eng.setValue(self.i_eng)
+
+            self.ShowPlots()
+            self.ShowImage()
+            self.ShowKEngs()
+            
+            self.button_save.setEnabled(True)
+            
+        else:
+            self.ShowPlots()
+            fig = self.absimgfig
+            fig.clf()
+            self.AbsImagePanel.draw()               
+            self.lc_1.clear()
+            
+            self.button_save.Disable()
+            
+        QtGui.QApplication.restoreOverrideCursor() 
+
+        
+#----------------------------------------------------------------------            
+    def OnScrollEng(self, value):
+        self.i_eng = value
+
+        if self.keyengs_calculated == 1:
+            self.ShowImage()
+            self.ShowKEngs()
+            
+#----------------------------------------------------------------------            
+    def OnEngspinUp(self, event):
+        if (self.keyengs_calculated == 1) and (self.i_eng > 0):
+            self.i_eng = self.i_eng - 1
+            self.slider_eng.setValue(self.i_eng)
+
+            self.ShowImage()
+            self.ShowKEngs()
+
+            
+#----------------------------------------------------------------------            
+    def OnEngspinDown(self, event):
+        if (self.keyengs_calculated == 1) and (self.i_eng < len(self.keyenergies)-1):
+            self.i_eng = self.i_eng + 1
+            self.slider_eng.setValue(self.i_eng)
+
+            self.ShowImage()
+            self.ShowKEngs()
+
+#----------------------------------------------------------------------  
+    def OnPointSpectrum(self, evt):
+        x = evt.xdata
+        y = evt.ydata
+        
+        if (self.keyengs_calculated == 1):      
+            if x < self.stk.ev[0]:
+                sel_ev = 0
+            elif x > self.stk.ev[self.stk.n_ev-1]:
+                sel_ev = self.stk.n_ev-1
+            else:
+                indx = npy.abs(self.stk.ev - x).argmin()
+                sel_ev = indx
+                
+            
+            self.i_eng=(npy.abs(self.keyenergies-self.stk.ev[sel_ev])).argmin()                 
+
+            self.ShowImage()
+            self.ShowKEngs()
+            
+            self.slider_eng.setValue(self.i_eng)
+                              
+#----------------------------------------------------------------------     
+    def ShowPlots(self):
+
+
+        odtotal = self.stk.od3d.sum(axis=0)   
+        odtotal = odtotal.sum(axis=0)/(self.stk.n_rows*self.stk.n_cols)      
+        odtotal /= odtotal.max()/0.7
+
+        
+        fig = self.kespecfig
+        fig.clf()
+        fig.add_axes((0.15,0.15,0.75,0.75))
+        axes = fig.gca()
+        
+
+        
+        specplot = axes.plot(self.stk.ev,odtotal)
+#        for i in range(self.anlz.numsigpca):
+#            pcaspectrum = self.anlz.eigenvecs[:,i]
+#            specplot = axes.plot(self.stk.ev,pcaspectrum)
+
+
+        for i in range(len(self.keyenergies)):
+            axes.axvline(x=self.keyenergies[i], color = 'g', alpha=0.5)
+                        
+        axes.set_xlabel('Photon Energy [eV]')
+        axes.set_ylabel('Optical Density')
+        
+        self.KESpecPan.draw()
+
+#----------------------------------------------------------------------        
+    def OnEngListClick(self):
+        item = self.lc_1.currentRow()
+                
+        self.i_eng = item
+        
+        self.ShowKEngs()     
+        self.ShowImage()
+         
+#----------------------------------------------------------------------           
+    def ShowKEngs(self):    
+        
+        self.lc_1.clear()
+        
+        for i in range(len(self.keyenergies)):
+            self.lc_1.addItem('{0:08.2f}'.format(self.keyenergies[i]))
+            
+
+#----------------------------------------------------------------------        
+    def ShowImage(self):
+        
+        iev=(npy.abs(self.stk.ev-self.keyenergies[self.i_eng])).argmin() 
+        image = self.stk.absdata[:,:,int(iev)].copy() 
+
+        fig = self.absimgfig
+        fig.clf()
+        fig.add_axes((0.02,0.02,0.96,0.96))
+        axes = fig.gca()
+        fig.patch.set_alpha(1.0)
+        
+        im = axes.imshow(image, cmap=matplotlib.cm.get_cmap("gray")) 
+        
+        #Show Scale Bar
+        startx = int(self.stk.n_rows*0.05)
+        starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
+        um_string = '$\mu m$'
+        microns = '$'+self.stk.scale_bar_string+' $'+um_string
+        axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center',
+                  color = 'black', fontsize=14)
+        #Matplotlib has flipped scales so I'm using rows instead of cols!
+        p = matplotlib.patches.Rectangle((startx,starty), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
+                               color = 'black', fill = True)
+        axes.add_patch(p)
+            
+       
+        axes.axis("off")      
+        self.AbsImagePanel.draw()
+        
+        self.tc_imageeng.setText('Image at key energy: {0:5.2f} eV'.format(float(self.stk.ev[iev])))
+ 
+#----------------------------------------------------------------------
+    def OnSave(self, event):
+
+
+        #Save images
+                       
+        fileName = wx.FileSelector('Save OD Plot with Key Energies', default_extension='png', 
+                                   wildcard=('Portable Network Graphics (*.png)|*.png|' 
+                                             + 'Adobe PDF Files (*.pdf)|*.pdf|All files (*.*)|*.*'), 
+                                              parent=self, flags=wx.SAVE|wx.OVERWRITE_PROMPT) 
+   
+        if not fileName: 
+            return 
+
+        path, ext = os.path.splitext(fileName) 
+        ext = ext[1:].lower() 
+       
+        if ext != 'png' and ext != 'pdf': 
+            error_message = ( 
+                  'Only the PNG and PDF image formats are supported.\n' 
+                 'A file extension of `png\' or `pdf\' must be used.') 
+            QtGui.QMessageBox.warning(self, 'Error', 'Error - Could not save file.')
+            return 
+   
+        try: 
+
+            matplotlib.rcParams['pdf.fonttype'] = 42
+            
+            fig = self.KESpecPan.get_figure()
+            fig.savefig(fileName)
+
+            
+        except IOError, e:
+            if e.strerror:
+                err = e.strerror 
+            else: 
+                err = e 
+   
+            
+            QtGui.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % err)
+            
+            
+        #Save text file with list of energies
+        textfilepath = path+'_keyenergies.csv'
+        file = open(textfilepath, 'w')
+        print>>file, '*********************  Key Energies  ********************'
+        for i in range(len(self.keyenergies)):
+            print>>file, '%.6f' %(self.keyenergies[i])
+        
+        file.close()        
+            
+        return
+          
+ 
     
 
 """ ------------------------------------------------------------------------------------------------"""
@@ -478,7 +699,7 @@ class PageSpectral(QtGui.QWidget):
             
 #         except:
 #             QtGui.QApplication.restoreOverrideCursor()  
-#             wx.MessageBox("Spectrum file not loaded.")
+#             QtGui.QMessageBox.warning(self, 'Error', 'Spectrum file not loaded.')
                                    
                                  
         self.window().refresh_widgets()
@@ -539,7 +760,8 @@ class PageSpectral(QtGui.QWidget):
 #----------------------------------------------------------------------
     def OnCompositeRGB(self, event):
 
-        ShowCompositeRBGmap(self.com, self.anlz).Show()
+        compimgwin = ShowCompositeRBGmap(self.window(), self.com, self.anlz)
+        compimgwin.show()
                 
 #----------------------------------------------------------------------
     def OnSave(self, event):
@@ -957,13 +1179,13 @@ class PageSpectral(QtGui.QWidget):
 #---------------------------------------------------------------------- 
 class ShowCompositeRBGmap(QtGui.QDialog):
 
-    def __init__(self, parent,  common, analz):    
+    def __init__(self, parent, common, analz):    
         QtGui.QWidget.__init__(self, parent)
         
         self.parent = parent
 
         
-        self.resize(630, 500)
+        self.resize(630, 400)
         self.setWindowTitle('Composite RBG Map')
         
         pal = QtGui.QPalette()
@@ -982,7 +1204,7 @@ class ShowCompositeRBGmap(QtGui.QDialog):
         
         self.n_cols = self.anlz.stack.n_cols 
         self.n_rows = self.anlz.stack.n_rows
-        
+         
         self.rgbimage = npy.zeros((self.n_cols, self.n_rows, 3), dtype=float)
         
         self.minr = 0
@@ -1000,190 +1222,211 @@ class ShowCompositeRBGmap(QtGui.QDialog):
         self.b_spec = 2
         
     
-        vboxtop = wx.BoxSizer(wx.HORIZONTAL)
-        
-        panel = wx.Panel(self, -1)
-        vbox = wx.BoxSizer(wx.VERTICAL)
-        hbox1 = wx.BoxSizer(wx.HORIZONTAL)   
-        
-        vbox1 = wx.BoxSizer(wx.VERTICAL)    
-       
-        sizer1 = wx.StaticBoxSizer(wx.StaticBox(panel, -1, 'Red spectrum'), orient=wx.VERTICAL)
 
-        fgs1 = wx.FlexGridSizer(3, 2, 2, 5)
-        r = wx.StaticText(panel, label="Red")
-        r.SetFont(self.com.font)
-        rl = wx.StaticText(panel, label="Limits")
-        rl.SetFont(self.com.font)
-        rw = wx.StaticText(panel, label="Weight")
-        rw.SetFont(self.com.font)        
+        sizer1 = QtGui.QGroupBox('Red spectrum')
+
+        fgs1 = QtGui.QGridLayout()
+        
+        r = QtGui.QLabel(self) 
+        r.setText('Red')
+        rl = QtGui.QLabel(self) 
+        rl.setText('Limits')
+        rw = QtGui.QLabel(self) 
+        rw.setText('Weight')     
         
         
-        self.combor = wx.ComboBox(panel, size=(150, -1), choices=self.anlz.tspec_names, style=wx.CB_READONLY)       
-        self.Bind(wx.EVT_COMBOBOX, self.OnSelectR, self.combor)
-        self.combor.SetToolTip(wx.ToolTip("select spectrum from dropdown-list"))
-        self.combor.SetValue(self.anlz.tspec_names[self.r_spec])
+        self.combor = QtGui.QComboBox(self)
+        self.combor.addItems(self.anlz.tspec_names)
+        self.combor.activated[int].connect(self.OnSelectR) 
+
+        #self.combor.SetToolTip(wx.ToolTip("select spectrum from dropdown-list"))
+        self.combor.setCurrentIndex(self.r_spec)
         
-        hbox12 = wx.BoxSizer(wx.HORIZONTAL)   
+        hbox12 = QtGui.QHBoxLayout() 
         
-        bsize = 75
         
-        self.tcrmin = wx.lib.intctrl.IntCtrl( panel, size=( bsize, -1 ), value = 0 , limited = True )
-        self.tcrmax = wx.lib.intctrl.IntCtrl( panel, size=( bsize, -1 ), value = 100, limited = True )
+        self.tcrmin = QtGui.QSpinBox()
+        self.tcrmin.setRange(0,100)
+        self.tcrmin.setValue(0)
+        self.tcrmin.valueChanged[int].connect(self.OnLimitMinR)
         
-        self.tcrmin.SetMin(0)
-        self.tcrmin.SetMax(100)
-        self.tcrmax.SetMin(0)
-        self.tcrmax.SetMax(100)
-        
+        self.tcrmax = QtGui.QSpinBox()
+        self.tcrmax.setRange(0,100)
+        self.tcrmax.setValue(100)
+        self.tcrmax.valueChanged[int].connect(self.OnLimitMaxR)        
                         
-        hbox12.Add(self.tcrmin)
-        hbox12.Add(self.tcrmax)
+        hbox12.addWidget(self.tcrmin)
+        hbox12.addWidget(self.tcrmax)
         
-        self.Bind(wx.lib.intctrl.EVT_INT, self.OnLimitMinR, self.tcrmin)
-        self.Bind(wx.lib.intctrl.EVT_INT, self.OnLimitMaxR, self.tcrmax)
+        self.tcrweight = QtGui.QSpinBox()
+        self.tcrweight.setRange(0,100)
+        self.tcrweight.setValue(100)
+        self.tcrweight.valueChanged[int].connect(self.OnWeightR)
         
-        self.tcrweight = wx.lib.intctrl.IntCtrl( panel, value = 100, limited = True )
+        fgs1.addWidget(r, 0, 0)
+        fgs1.addWidget(self.combor, 0, 1)  
+        fgs1.addWidget(rl, 1, 0)  
+        fgs1.addLayout(hbox12, 1, 1)
+        fgs1.addWidget(rw, 2, 0)  
+        fgs1.addWidget(self.tcrweight, 2, 1)  
         
-        self.tcrweight.SetMin(0)
-        self.tcrweight.SetMax(100)
-        
-        self.Bind(wx.lib.intctrl.EVT_INT, self.OnWeightR, self.tcrweight)
-        
-        fgs1.AddMany([(r, 0, wx.ALIGN_CENTER_VERTICAL), (self.combor, 0, wx.EXPAND), (rl, 0, wx.ALIGN_CENTER_VERTICAL), 
-            (hbox12, 0, wx.EXPAND),(rw, 0, wx.ALIGN_CENTER_VERTICAL), (self.tcrweight, 0, wx.EXPAND)])
-        
-        sizer1.Add(fgs1, 0, wx.EXPAND|wx.ALL, 10)
-        
-        
-        sizer2 = wx.StaticBoxSizer(wx.StaticBox(panel, -1, 'Green spectrum'), orient=wx.VERTICAL)
-        
-        fgs2 = wx.FlexGridSizer(3, 2, 2, 5)
-        g = wx.StaticText(panel, label="Green")
-        g.SetFont(self.com.font)
-        gl = wx.StaticText(panel, label="Limits")
-        gl.SetFont(self.com.font)
-        gw = wx.StaticText(panel, label="Weight")
-        gw.SetFont(self.com.font)        
+        sizer1.setLayout(fgs1)
         
         
-        self.combog = wx.ComboBox(panel, size=(150, -1), choices=self.anlz.tspec_names, style=wx.CB_READONLY)
-        self.Bind(wx.EVT_COMBOBOX, self.OnSelectG, self.combog)        
-        self.combog.SetToolTip(wx.ToolTip("select spectrum from dropdown-list"))
-        self.combog.SetValue(self.anlz.tspec_names[self.g_spec])
-        
-        hbox22 = wx.BoxSizer(wx.HORIZONTAL)   
-        
-        self.tcgmin = wx.lib.intctrl.IntCtrl( panel, size=( bsize, -1 ), value = 0, limited = True   )
-        self.tcgmax = wx.lib.intctrl.IntCtrl( panel, size=( bsize, -1 ), value = 100, limited = True  )
-        
-        self.tcgmin.SetMin(0)
-        self.tcgmin.SetMax(100)
-        self.tcgmax.SetMin(0)
-        self.tcgmax.SetMax(100)
-        
-        hbox22.Add(self.tcgmin)
-        hbox22.Add(self.tcgmax)
-        
-        self.Bind(wx.lib.intctrl.EVT_INT, self.OnLimitMinG, self.tcgmin)
-        self.Bind(wx.lib.intctrl.EVT_INT, self.OnLimitMaxG, self.tcgmax)
-        
-        self.tcgweight = wx.lib.intctrl.IntCtrl( panel, value = 100, limited = True )
-        
-        self.tcgweight.SetMin(0)
-        self.tcgweight.SetMax(100)
-        
-        self.Bind(wx.lib.intctrl.EVT_INT, self.OnWeightG, self.tcgweight)
-        
-        fgs2.AddMany([(g, 0, wx.ALIGN_CENTER_VERTICAL), (self.combog, 0, wx.EXPAND), (gl, 0, wx.ALIGN_CENTER_VERTICAL), 
-            (hbox22, 0, wx.EXPAND),(gw, 0, wx.ALIGN_CENTER_VERTICAL), (self.tcgweight, 0, wx.EXPAND)])
-        
-        sizer2.Add(fgs2, 0, wx.EXPAND|wx.ALL, 10)
-        
-        
-        sizer3 = wx.StaticBoxSizer(wx.StaticBox(panel, -1, 'Blue spectrum'), orient=wx.VERTICAL)
-        
-        fgs3 = wx.FlexGridSizer(3, 2, 2, 5)
-        b = wx.StaticText(panel, label="Blue")
-        b.SetFont(self.com.font)
-        bl = wx.StaticText(panel, label="Limits")
-        bl.SetFont(self.com.font)
-        bw = wx.StaticText(panel, label="Weight")
-        bw.SetFont(self.com.font)        
-        
-               
-        self.combob = wx.ComboBox(panel, size=(150, -1), choices=self.anlz.tspec_names, style=wx.CB_READONLY)        
-        self.Bind(wx.EVT_COMBOBOX, self.OnSelectB, self.combob)
-        self.combob.SetToolTip(wx.ToolTip("select spectrum from dropdown-list"))
-        self.combob.SetValue(self.anlz.tspec_names[self.b_spec])
-        
-        hbox32 = wx.BoxSizer(wx.HORIZONTAL)   
-        
-        self.tcbmin = wx.lib.intctrl.IntCtrl( panel, size=( bsize, -1 ), value = 0, limited = True   )
-        self.tcbmax = wx.lib.intctrl.IntCtrl( panel, size=( bsize, -1 ), value = 100, limited = True  )
-        
-        self.tcbmin.SetMin(0)
-        self.tcbmin.SetMax(100)
-        self.tcbmax.SetMin(0)
-        self.tcbmax.SetMax(100)
-        
-        hbox32.Add(self.tcbmin)
-        hbox32.Add(self.tcbmax)
-        
-        self.Bind(wx.lib.intctrl.EVT_INT, self.OnLimitMinB, self.tcbmin)
-        self.Bind(wx.lib.intctrl.EVT_INT, self.OnLimitMaxB, self.tcbmax)
-        
-        self.tcbweight = wx.lib.intctrl.IntCtrl( panel, value = 100, limited = True  )
-        
-        self.tcbweight.SetMin(0)
-        self.tcbweight.SetMax(100)
-        
-        self.Bind(wx.lib.intctrl.EVT_INT, self.OnWeightB, self.tcbweight)
-        
-        fgs3.AddMany([(b, 0, wx.ALIGN_CENTER_VERTICAL), (self.combob, 0, wx.EXPAND), (bl, 0, wx.ALIGN_CENTER_VERTICAL), 
-            (hbox32, 0, wx.EXPAND),(bw, 0, wx.ALIGN_CENTER_VERTICAL), (self.tcbweight, 0, wx.EXPAND)])
-        
-        sizer3.Add(fgs3, 0, wx.EXPAND|wx.ALL, 10)
-        
-                
-        vbox1.Add(sizer1, 0, wx.EXPAND)
-        vbox1.Add(sizer2, 0, wx.EXPAND)
-        vbox1.Add(sizer3, 0, wx.EXPAND)
-        
-        self.show_info_cb = wx.CheckBox(panel, -1, '  Show Info on the Image')
-        self.show_info_cb.SetFont(self.com.font)
-        self.Bind(wx.EVT_CHECKBOX, self.OnShowInfo, self.show_info_cb)
-        vbox1.Add((0,10))
-        vbox1.Add(self.show_info_cb, 0, wx.EXPAND)
-        
-        hbox1.Add(vbox1, 0,  wx.LEFT|wx.RIGHT ,20)
+  
+        sizer2 = QtGui.QGroupBox('Green spectrum')
 
-        i1panel = wx.Panel(panel, -1, style = wx.SUNKEN_BORDER)
-        self.RGBImagePanel = wxmpl.PlotPanel(i1panel, -1, size =(PlotH,PlotH), cursor=False, crosshairs=False, location=False, zoom=False)
-        hbox1.Add(i1panel, 0)
+        fgs2 = QtGui.QGridLayout()
         
-        vbox.Add(hbox1, 0, wx.EXPAND| wx.TOP, 10) 
+        g = QtGui.QLabel(self) 
+        g.setText('Green')
+        gl = QtGui.QLabel(self) 
+        gl.setText('Limits')
+        gw = QtGui.QLabel(self) 
+        gw.setText('Weight')     
+        
+        
+        self.combog = QtGui.QComboBox(self)
+        self.combog.addItems(self.anlz.tspec_names)
+        self.combog.activated[int].connect(self.OnSelectG) 
+
+        #self.combor.SetToolTip(wx.ToolTip("select spectrum from dropdown-list"))
+        self.combog.setCurrentIndex(self.g_spec)
+        
+        hbox12 = QtGui.QHBoxLayout() 
+        
+        
+        self.tcgmin = QtGui.QSpinBox()
+        self.tcgmin.setRange(0,100)
+        self.tcgmin.setValue(0)
+        self.tcgmin.valueChanged[int].connect(self.OnLimitMinG)
+        
+        self.tcgmax = QtGui.QSpinBox()
+        self.tcgmax.setRange(0,100)
+        self.tcgmax.setValue(100)
+        self.tcgmax.valueChanged[int].connect(self.OnLimitMaxG)        
+                        
+        hbox12.addWidget(self.tcgmin)
+        hbox12.addWidget(self.tcgmax)
+        
+        self.tcgweight = QtGui.QSpinBox()
+        self.tcgweight.setRange(0,100)
+        self.tcgweight.setValue(100)
+        self.tcgweight.valueChanged[int].connect(self.OnWeightG)
+                
+        
+        fgs2.addWidget(g, 0, 0)
+        fgs2.addWidget(self.combog, 0, 1)  
+        fgs2.addWidget(gl, 1, 0)  
+        fgs2.addLayout(hbox12, 1, 1)
+        fgs2.addWidget(gw, 2, 0)  
+        fgs2.addWidget(self.tcgweight, 2, 1)  
+        
+        
+        sizer2.setLayout(fgs2)
+                 
+
+
+        sizer3 = QtGui.QGroupBox('Blue spectrum')
+
+        fgs3 = QtGui.QGridLayout()
+        
+        b = QtGui.QLabel(self) 
+        b.setText('Blue')
+        bl = QtGui.QLabel(self) 
+        bl.setText('Limits')
+        bw = QtGui.QLabel(self) 
+        bw.setText('Weight')     
+        
+        
+        self.combob = QtGui.QComboBox(self)
+        self.combob.addItems(self.anlz.tspec_names)
+        self.combob.activated[int].connect(self.OnSelectB) 
+
+        #self.combor.SetToolTip(wx.ToolTip("select spectrum from dropdown-list"))
+        self.combob.setCurrentIndex(self.b_spec)
+        
+        hbox12 = QtGui.QHBoxLayout() 
+        
+        
+        self.tcbmin = QtGui.QSpinBox()
+        self.tcbmin.setRange(0,100)
+        self.tcbmin.setValue(0)
+        self.tcbmin.valueChanged[int].connect(self.OnLimitMinB)
+        
+        self.tcbmax = QtGui.QSpinBox()
+        self.tcbmax.setRange(0,100)
+        self.tcbmax.setValue(100)
+        self.tcbmax.valueChanged[int].connect(self.OnLimitMaxB)        
+                        
+        hbox12.addWidget(self.tcbmin)
+        hbox12.addWidget(self.tcbmax)
+        
+        self.tcbweight = QtGui.QSpinBox()
+        self.tcbweight.setRange(0,100)
+        self.tcbweight.setValue(100)
+        self.tcbweight.valueChanged[int].connect(self.OnWeightB)
+                
+        
+        fgs3.addWidget(b, 0, 0)
+        fgs3.addWidget(self.combob, 0, 1)  
+        fgs3.addWidget(bl, 1, 0)  
+        fgs3.addLayout(hbox12, 1, 1)
+        fgs3.addWidget(bw, 2, 0)  
+        fgs3.addWidget(self.tcbweight, 2, 1)  
+        
+        
+        sizer3.setLayout(fgs3)
+        
+          
+
+        
+        vbox = QtGui.QVBoxLayout()
+        hbox1 = QtGui.QHBoxLayout()
+        vbox1 = QtGui.QVBoxLayout()
+                       
+        vbox1.addWidget(sizer1)
+        vbox1.addWidget(sizer2)
+        vbox1.addWidget(sizer3)
+        
+        
+        
+        self.show_info_cb = QtGui.QCheckBox( 'Show Info on the Image', self)
+        self.show_info_cb.stateChanged.connect(self.OnShowInfo)
+        vbox1.addWidget(self.show_info_cb)
+        
+        hbox1.addLayout(vbox1)
+        
+        frame = QtGui.QFrame()
+        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        fbox = QtGui.QHBoxLayout()
+        self.RGBImagefig = Figure((PlotH, PlotH))
+        self.RGBImagePanel = FigureCanvas(self.RGBImagefig)
+        fbox.addWidget(self.RGBImagePanel)
+        frame.setLayout(fbox)
+
+        hbox1.addWidget(frame)
+        
+        
+        vbox.addLayout(hbox1) 
         
              
-        hbox2 = wx.BoxSizer(wx.HORIZONTAL)
-               
-        button_save = wx.Button(panel, -1, 'Save image')
-        self.Bind(wx.EVT_BUTTON, self.OnSave, id=button_save.GetId())
-        hbox2.Add(button_save, 1, wx.ALL,20)
+        hbox2 = QtGui.QHBoxLayout()
         
-        button_close = wx.Button(panel, -1, 'Dismiss')
-        self.Bind(wx.EVT_BUTTON, self.OnClose, id=button_close.GetId())
-        hbox2.Add(button_close, 1, wx.ALL ,20)
+        button_save = QtGui.QPushButton('Save image')
+        button_save.clicked.connect( self.OnSave)   
+        hbox2.addWidget(button_save)
         
-        vbox.Add(hbox2, 0, wx.EXPAND|wx.TOP, 10 )
+        button_close = QtGui.QPushButton('Dismiss')
+        button_close.clicked.connect( self.close)   
+        hbox2.addWidget(button_close)
+    
         
-        panel.SetSizer(vbox)
+        vbox.addLayout(hbox2)
         
-        vboxtop.Add(panel,1, wx.EXPAND )
         
-        self.SetSizer(vboxtop)
-        
-        self.SetPosition((220, 150))
+        self.setLayout(vbox)
+
         
         self.CalcR()
         self.CalcG()
@@ -1192,8 +1435,8 @@ class ShowCompositeRBGmap(QtGui.QDialog):
         
         
 #----------------------------------------------------------------------           
-    def OnSelectR(self, event):
-        item = event.GetSelection()
+    def OnSelectR(self, value):
+        item = value
         self.r_spec = item
         
         self.CalcR()
@@ -1224,18 +1467,16 @@ class ShowCompositeRBGmap(QtGui.QDialog):
         self.rgbimage[:,:,0] = tsmap*float(self.weightr)/100.
         
 #----------------------------------------------------------------------           
-    def OnLimitMinR(self, event):
-        ctl = event.GetEventObject()
-        value = ctl.GetValue()
+    def OnLimitMinR(self, value):
+
         self.minr = value
         #print 'self.minr=', self.minr
         self.CalcR()
         self.draw_image()
     
 #----------------------------------------------------------------------           
-    def OnLimitMaxR(self, event):
-        ctl = event.GetEventObject()
-        value = ctl.GetValue()
+    def OnLimitMaxR(self, value):
+
         self.maxr = value
         #print 'self.maxr=', self.maxr
         self.CalcR()
@@ -1243,17 +1484,16 @@ class ShowCompositeRBGmap(QtGui.QDialog):
         
             
 #----------------------------------------------------------------------           
-    def OnWeightR(self, event):
-        ctl = event.GetEventObject()
-        value = ctl.GetValue()
+    def OnWeightR(self, value):
+
         self.weightr = value
         #print 'self.weightr=', self.weightr
         self.CalcR()
         self.draw_image()
         
 #----------------------------------------------------------------------           
-    def OnSelectG(self, event):
-        item = event.GetSelection()
+    def OnSelectG(self, value):
+        item = value
         self.g_spec = item
 
         self.CalcG()
@@ -1285,35 +1525,32 @@ class ShowCompositeRBGmap(QtGui.QDialog):
         self.rgbimage[:,:,1] = tsmap*float(self.weightg)/100.
         
 #----------------------------------------------------------------------           
-    def OnLimitMinG(self, event):
-        ctl = event.GetEventObject()
-        value = ctl.GetValue()
+    def OnLimitMinG(self, value):
+
         self.ming = value
         #print 'self.ming=', self.ming
         self.CalcG()
         self.draw_image()
         
 #----------------------------------------------------------------------           
-    def OnLimitMaxG(self, event):
-        ctl = event.GetEventObject()
-        value = ctl.GetValue()
+    def OnLimitMaxG(self, value):
+
         self.maxg = value
         #print 'self.maxg=', self.maxg
         self.CalcG()
         self.draw_image()
             
 #----------------------------------------------------------------------           
-    def OnWeightG(self, event):
-        ctl = event.GetEventObject()
-        value = ctl.GetValue()
+    def OnWeightG(self, value):
+
         self.weightg = value
         #print 'self.weightg=', self.weightg
         self.CalcG()
         self.draw_image()
         
 #----------------------------------------------------------------------           
-    def OnSelectB(self, event):
-        item = event.GetSelection()
+    def OnSelectB(self, value):
+        item = value
         self.b_spec = item
         
         self.CalcB()
@@ -1344,35 +1581,33 @@ class ShowCompositeRBGmap(QtGui.QDialog):
         self.rgbimage[:,:,2] = tsmap*float(self.weightb)/100.
                 
 #----------------------------------------------------------------------           
-    def OnLimitMinB(self, event):
-        ctl = event.GetEventObject()
-        value = ctl.GetValue()
+    def OnLimitMinB(self, value):
+
         self.minb = value
         #print 'self.minb=', self.minb
         self.CalcB()
         self.draw_image()
         
 #----------------------------------------------------------------------           
-    def OnLimitMaxB(self, event):
-        ctl = event.GetEventObject()
-        value = ctl.GetValue()
+    def OnLimitMaxB(self, value):
+
         self.maxb = value
         #print 'self.maxb=', self.maxb
         self.CalcB()
         self.draw_image()
             
 #----------------------------------------------------------------------           
-    def OnWeightB(self, event):
-        ctl = event.GetEventObject()
-        value = ctl.GetValue()
+    def OnWeightB(self, value):
+
         self.weightb = value
         #print 'self.weightb=', self.weightb
         self.CalcB()
         self.draw_image()
         
 #----------------------------------------------------------------------           
-    def OnShowInfo(self, event):
-        if self.show_info_cb.GetValue():
+    def OnShowInfo(self, state):
+        
+        if state == QtCore.Qt.Checked:
             self.show_info = 1
         else: 
             self.show_info = 0
@@ -1383,7 +1618,7 @@ class ShowCompositeRBGmap(QtGui.QDialog):
     def draw_image(self):
                
                
-        fig = self.RGBImagePanel.get_figure()
+        fig = self.RGBImagefig
         fig.clf()
         fig.add_axes((0.02,0.02,0.96,0.96))
         
@@ -1410,12 +1645,14 @@ class ShowCompositeRBGmap(QtGui.QDialog):
 #----------------------------------------------------------------------              
     def OnSave(self, evt):
 
-        wildcard = 'Portable Network Graphics (*.png)|*.png|Adobe PDF Files (*.pdf)|*.pdf'               
-        SaveFileName = wx.FileSelector('Save Plot', default_extension='png', 
-                                   wildcard=wildcard, parent=self, flags=wx.SAVE|wx.OVERWRITE_PROMPT) 
+        wildcard = "Portable Network Graphics (*.png);;Adobe PDF Files (*.pdf);;"
+
+        SaveFileName = QtGui.QFileDialog.getSaveFileName(self, 'Save Plot', '', wildcard)
+
+        SaveFileName = str(SaveFileName)
+        if SaveFileName == '':
+            return
         
-        if not SaveFileName: 
-            return      
         path, ext = os.path.splitext(SaveFileName) 
         ext = ext[1:].lower() 
         
@@ -1432,7 +1669,7 @@ class ShowCompositeRBGmap(QtGui.QDialog):
         matplotlib.rcParams['pdf.fonttype'] = 42
 
                             
-        fig = self.RGBImagePanel.get_figure()
+        fig = self.RGBImagefig
         fig.savefig(SaveFileName, bbox_inches='tight', pad_inches = 0.0)
                 
    
@@ -5148,71 +5385,70 @@ class MainFrame(QtGui.QMainWindow):
         self.page1.ResetDisplaySettings()
          
          
-#         #page 2
-#         fig = self.page2.PCAEvalsPan.get_figure()
-#         fig.clf()
-#         self.page2.PCAEvalsPan.draw()
-#         
-#         fig = self.page2.PCAImagePan.get_figure()
-#         fig.clf()
-#         self.page2.PCAImagePan.draw()
-#         
-#         fig = self.page2.PCASpecPan.get_figure()
-#         fig.clf()
-#         self.page2.PCASpecPan.draw()
-#         
-#         self.page2.vartc.SetLabel('0%')
-#         self.page2.npcaspin.SetValue(1)
-#         self.page2.tc_PCAcomp.SetValue("PCA component ")
-#         self.page2.text_pcaspec.SetValue("PCA spectrum ")
-#         
-#         self.page2.selpca = 1       
-#         self.page2.numsigpca = 2
-#         self.page2.slidershow.SetValue(self.page2.selpca)
-#         
-#         #page 3
-#         fig = self.page3.ClusterImagePan.get_figure()
-#         fig.clf()
-#         self.page3.ClusterImagePan.draw()
-#         
-#         fig = self.page3.ClusterIndvImagePan.get_figure()
-#         fig.clf()
-#         self.page3.ClusterIndvImagePan.draw()
-#         
-#         fig = self.page3.ClusterSpecPan.get_figure()
-#         fig.clf()
-#         self.page3.ClusterSpecPan.draw()
-#         
-#         fig = self.page3.ClusterDistMapPan.get_figure()
-#         fig.clf()
-#         self.page3.ClusterDistMapPan.draw()       
-#        
-#         self.page3.selcluster = 1
-#         self.page3.slidershow.SetValue(self.page3.selcluster)
-#         self.page3.numclusters = 5
-#         self.page3.nclusterspin.SetValue(self.page3.numclusters)
-#         self.page3.tc_cluster.SetValue("Cluster ")
-#         self.page3.tc_clustersp.SetValue("Cluster spectrum")
-#         self.page3.wo_1st_pca = 0
-#         self.page3.remove1stpcacb.SetValue(False)
-# 
-#         
-#         #page 4
-#         self.page4.ClearWidgets()
-#         
-#         #page 7
-#         if self.page7:
-#             self.page7.button_calckeng.setEnabled(False)
-#             fig = self.page7.KESpecPan.get_figure()
-#             fig.clf()
-#             self.page7.KESpecPan.draw()         
-#             fig = self.page7.AbsImagePanel.get_figure()
-#             fig.clf()
-#             self.page7.AbsImagePanel.draw()   
-#             self.page7.lc_1.DeleteAllItems()   
-#             self.page7.keyenergies = []
-#             self.page7.keyengs_calculated = 0    
-#                
+        #page 2
+        fig = self.page2.PCAEvalsPan.get_figure()
+        fig.clf()
+        self.page2.PCAEvalsPan.draw()
+         
+        fig = self.page2.PCAImagePan.get_figure()
+        fig.clf()
+        self.page2.PCAImagePan.draw()
+         
+        fig = self.page2.PCASpecPan.get_figure()
+        fig.clf()
+        self.page2.PCASpecPan.draw()
+         
+        self.page2.vartc.SetLabel('0%')
+        self.page2.npcaspin.SetValue(1)
+        self.page2.tc_PCAcomp.SetValue("PCA component ")
+        self.page2.text_pcaspec.SetValue("PCA spectrum ")
+         
+        self.page2.selpca = 1       
+        self.page2.numsigpca = 2
+        self.page2.slidershow.SetValue(self.page2.selpca)
+         
+        #page 3
+        fig = self.page3.ClusterImagePan.get_figure()
+        fig.clf()
+        self.page3.ClusterImagePan.draw()
+         
+        fig = self.page3.ClusterIndvImagePan.get_figure()
+        fig.clf()
+        self.page3.ClusterIndvImagePan.draw()
+         
+        fig = self.page3.ClusterSpecPan.get_figure()
+        fig.clf()
+        self.page3.ClusterSpecPan.draw()
+         
+        fig = self.page3.ClusterDistMapPan.get_figure()
+        fig.clf()
+        self.page3.ClusterDistMapPan.draw()       
+        
+        self.page3.selcluster = 1
+        self.page3.slidershow.SetValue(self.page3.selcluster)
+        self.page3.numclusters = 5
+        self.page3.nclusterspin.SetValue(self.page3.numclusters)
+        self.page3.tc_cluster.SetValue("Cluster ")
+        self.page3.tc_clustersp.SetValue("Cluster spectrum")
+        self.page3.wo_1st_pca = 0
+        self.page3.remove1stpcacb.SetValue(False)
+ 
+         
+        #page 4
+        self.page4.ClearWidgets()
+         
+        #page 5
+        self.page5.button_calckeng.setEnabled(False)
+        fig = self.page5.kespecfig
+        fig.clf()
+        self.page5.KESpecPan.draw()         
+        fig = self.page5.absimgfig
+        fig.clf()
+        self.page5.AbsImagePanel.draw()   
+        self.page5.lc_1.DeleteAllItems()   
+        self.page5.keyenergies = []
+        self.page5.keyengs_calculated = 0    
+                
 """ ------------------------------------------------------------------------------------------------"""
                         
 def main():
