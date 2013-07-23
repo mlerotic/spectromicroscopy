@@ -488,7 +488,7 @@ class analyze:
     def add_cluster_target_spectra(self):
         # Load spectrum from a file or cluster spectra 
 
-        self.tspec_names = []
+
         for i in range(self.nclusters):
    
             target_spectrum = self.clusterspectra[i,:]
