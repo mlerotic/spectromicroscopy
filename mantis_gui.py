@@ -50,7 +50,7 @@ PlotW = PlotH*1.61803
 
 verbose = False
 
-
+defaultDir = ''
 
 #----------------------------------------------------------------------
 class common:
@@ -1593,7 +1593,8 @@ class PageSpectral(wx.Panel):
         if True:
             wildcard = "Spectrum files (*.csv)|*.csv"
             dialog = wx.FileDialog(None, "Choose Spectrum file",
-                                   style=wx.OPEN|wx.FD_CHANGE_DIR)
+                                   defaultDir = defaultDir,
+                                   style=wx.OPEN)
             dialog.SetWildcard(wildcard)
             if dialog.ShowModal() == wx.ID_OK:
                 filepath = dialog.GetPath()
@@ -5050,7 +5051,8 @@ class PageStack(wx.Panel):
             wildcard = "I0 CSV files (*.csv)|*.csv| I0 files (*.xas)|*.xas|SDF I0 files (*.hdr)|*.hdr"
             dialog = wx.FileDialog(None, "Choose i0 file",
                                    wildcard=wildcard,
-                                   style=wx.OPEN|wx.FD_CHANGE_DIR)
+                                   defaultDir = defaultDir,
+                                   style=wx.OPEN)
             if dialog.ShowModal() == wx.ID_OK:
                 filepath_i0 = dialog.GetPath()
                 self.filename = dialog.GetFilename()
@@ -7908,39 +7910,39 @@ class PlotFrame(wx.Frame):
 #----------------------------------------------------------------------
     def Save(self, filename):
             
-        file = open(filename, 'w')
-        print>>file, '*********************  X-ray Absorption Data  ********************'
-        print>>file, '*'
-        print>>file, '* Formula: '
-        print>>file, '* Common name: ', self.title
-        print>>file, '* Edge: '
-        print>>file, '* Acquisition mode: '
-        print>>file, '* Source and purity: ' 
-        print>>file, '* Comments: Stack list ROI ""'
-        print>>file, '* Delta eV: '
-        print>>file, '* Min eV: '
-        print>>file, '* Max eV: '
-        print>>file, '* Y axis: '
-        print>>file, '* Contact person: '
-        print>>file, '* Write date: '
-        print>>file, '* Journal: '
-        print>>file, '* Authors: '
-        print>>file, '* Title: '
-        print>>file, '* Volume: '
-        print>>file, '* Issue number: '
-        print>>file, '* Year: '
-        print>>file, '* Pages: '
-        print>>file, '* Booktitle: '
-        print>>file, '* Editors: '
-        print>>file, '* Publisher: '
-        print>>file, '* Address: '
-        print>>file, '*--------------------------------------------------------------'
+        f = open(filename, 'w')
+        print>>f, '*********************  X-ray Absorption Data  ********************'
+        print>>f, '*'
+        print>>f, '* Formula: '
+        print>>f, '* Common name: ', self.title
+        print>>f, '* Edge: '
+        print>>f, '* Acquisition mode: '
+        print>>f, '* Source and purity: ' 
+        print>>f, '* Comments: Stack list ROI ""'
+        print>>f, '* Delta eV: '
+        print>>f, '* Min eV: '
+        print>>f, '* Max eV: '
+        print>>f, '* Y axis: '
+        print>>f, '* Contact person: '
+        print>>f, '* Write date: '
+        print>>f, '* Journal: '
+        print>>f, '* Authors: '
+        print>>f, '* Title: '
+        print>>f, '* Volume: '
+        print>>f, '* Issue number: '
+        print>>f, '* Year: '
+        print>>f, '* Pages: '
+        print>>f, '* Booktitle: '
+        print>>f, '* Editors: '
+        print>>f, '* Publisher: '
+        print>>f, '* Address: '
+        print>>f, '*--------------------------------------------------------------'
         dim = self.datax.shape
         n=dim[0]
         for ie in range(n):
-            print>>file, '%.6f, %.6f' %(self.datax[ie], self.datay[ie])
+            print>>f, '%.6f, %.6f' %(self.datax[ie], self.datay[ie])
         
-        file.close()
+        f.close()
     
         
 #----------------------------------------------------------------------              
@@ -8491,13 +8493,14 @@ class MainFrame(wx.Frame):
         try:
             if wildcard == '':
                 wildcard =  "HDF5 files (*.hdf5)|*.hdf5|SDF files (*.hdr)|*.hdr|STK files (*.stk)|*.stk|TXRM (*.txrm)|*.txrm|XRM (*.xrm)|*.xrm|TIF (*.tif)|*.tif" 
-            dialog = wx.FileDialog(None, "Choose a file", style=wx.OPEN|wx.FD_CHANGE_DIR)
+            dialog = wx.FileDialog(None, "Choose a file", style=wx.OPEN)
             
             dialog.SetWildcard(wildcard)
             if dialog.ShowModal() == wx.ID_OK:
                 filepath = dialog.GetPath()
                 self.page1.filename = dialog.GetFilename()
                 directory = dialog.GetDirectory()
+                defaultDir = directory
             else:
                 return
             

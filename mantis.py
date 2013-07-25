@@ -36,6 +36,7 @@ PlotW = PlotH*1.61803
 
 ImgDpi = 40
 
+
 #----------------------------------------------------------------------
 class common:
     def __init__(self):
@@ -357,7 +358,7 @@ class PageKeyEng(QtGui.QWidget):
 
         fig = self.absimgfig
         fig.clf()
-        fig.add_axes((0.02,0.02,0.96,0.96))
+        fig.add_axes(((0.0,0.0,1.0,1.0)))
         axes = fig.gca()
         fig.patch.set_alpha(1.0)
         
@@ -669,12 +670,11 @@ class PageSpectral(QtGui.QWidget):
     def OnTSpecFromFile(self, event):
         
 
-        #try: 
-        if True:
+        try: 
             
             wildcard = "Spectrum files (*.csv)"
             
-            filepath = QtGui.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', '', wildcard)
+            filepath = QtGui.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', '', wildcard, self.DefaultDir)
             
 
             filepath = str(filepath)
@@ -682,7 +682,8 @@ class PageSpectral(QtGui.QWidget):
                 return
             
             self.filename =  os.path.basename(str(filepath))
-            
+            directory =  os.path.dirname(str(filepath))
+            self.DefaultDir = directory            
                                                         
             QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))    
                                             
@@ -699,9 +700,9 @@ class PageSpectral(QtGui.QWidget):
                     
             QtGui.QApplication.restoreOverrideCursor()
             
-#         except:
-#             QtGui.QApplication.restoreOverrideCursor()  
-#             QtGui.QMessageBox.warning(self, 'Error', 'Spectrum file not loaded.')
+        except:
+            QtGui.QApplication.restoreOverrideCursor()  
+            QtGui.QMessageBox.warning(self, 'Error', 'Spectrum file not loaded.')
                                    
                                  
         self.window().refresh_widgets()
@@ -768,12 +769,14 @@ class PageSpectral(QtGui.QWidget):
 #----------------------------------------------------------------------
     def OnSave(self, event):
         
-        pass
-        #SaveWinP4().Show()
+
+        savewin = SaveWinP4(self.window())
+        savewin.show()
         
         
 #----------------------------------------------------------------------
-    def Save(self, filename, path, spec_png = True, spec_pdf = False, spec_csv = False, img_png = True, img_pdf = False):
+    def Save(self, filename, path, spec_png = True, spec_pdf = False, spec_svg = False, spec_csv = False, 
+             img_png = True, img_pdf = False, img_svg = False):
 
         self.SaveFileName = os.path.join(path,filename)
    
@@ -782,11 +785,15 @@ class PageSpectral(QtGui.QWidget):
                 self.SaveMaps(png_pdf=1)
             if img_pdf:
                 self.SaveMaps(png_pdf=2)
+            if img_svg:
+                self.SaveMaps(png_pdf=3)
                 
             if spec_png:    
                 self.SaveSpectra(png_pdf=1)
             if spec_pdf:
                 self.SaveSpectra(png_pdf=2)
+            if spec_pdf:
+                self.SaveSpectra(png_pdf=3)
             if spec_csv:
                 self.SaveSpectra(savecsv = True)
                 
@@ -810,10 +817,12 @@ class PageSpectral(QtGui.QWidget):
         colors=['#FF0000','#000000','#FFFFFF']
         spanclrmap=matplotlib.colors.LinearSegmentedColormap.from_list('spancm',colors)
         
-        if png_pdf == 1:   
+        if png_pdf == 1:
             ext = 'png'
-        else:
+        elif png_pdf == 2:
             ext = 'pdf'
+        elif png_pdf == 3:
+            ext = 'svg'
         suffix = "." + ext
         
         
@@ -828,7 +837,6 @@ class PageSpectral(QtGui.QWidget):
             fig.add_axes((0.15,0.15,0.75,0.75))
             axes = fig.gca()
         
-            matplotlib.rcParams['font.size'] = self.fontsize
 
             line1 = axes.plot(self.stk.ev,tspectrum, color='black', label = 'Raw data')
             
@@ -852,6 +860,7 @@ class PageSpectral(QtGui.QWidget):
             if savecsv:
                 fileName_spec = self.SaveFileName+"_Tspectrum_" +str(i+1)+".csv"
                 self.stk.write_csv(fileName_spec, self.stk.ev, tspectrum)
+                
 #----------------------------------------------------------------------
     def SaveMaps(self, png_pdf=1):            
             
@@ -862,10 +871,12 @@ class PageSpectral(QtGui.QWidget):
         colors=['#FF0000','#000000','#FFFFFF']
         spanclrmap=matplotlib.colors.LinearSegmentedColormap.from_list('spancm',colors)
             
-        if png_pdf == 1:   
+        if png_pdf == 1:
             ext = 'png'
-        else:
+        elif png_pdf == 2:
             ext = 'pdf'
+        elif png_pdf == 3:
+            ext = 'svg'
         suffix = "." + ext                       
                        
             
@@ -1223,7 +1234,6 @@ class ShowCompositeRBGmap(QtGui.QDialog):
         self.g_spec = 1
         self.b_spec = 2
         
-    
 
         sizer1 = QtGui.QGroupBox('Red spectrum')
 
@@ -1634,7 +1644,7 @@ class ShowCompositeRBGmap(QtGui.QDialog):
                
         fig = self.RGBImagefig
         fig.clf()
-        fig.add_axes((0.02,0.02,0.96,0.96))
+        fig.add_axes(((0.0,0.0,1.0,1.0)))
         
         
         axes = fig.gca()
@@ -1688,10 +1698,194 @@ class ShowCompositeRBGmap(QtGui.QDialog):
                 
    
 
-#----------------------------------------------------------------------              
-    def OnClose(self, evt):
-        self.Destroy()             
+
+#---------------------------------------------------------------------- 
+class SaveWinP4(QtGui.QDialog):
+
+    def __init__(self, parent):    
+        QtGui.QWidget.__init__(self, parent)
+        
+        self.parent = parent
+
+        
+        self.resize(400, 300)
+        self.setWindowTitle('Save')
+        
+        pal = QtGui.QPalette()
+        self.setAutoFillBackground(True)
+        pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
+        self.setPalette(pal)
+
+
+        self.com = self.parent.common          
+        
+        path, ext = os.path.splitext(self.com.filename) 
+        ext = ext[1:].lower()   
+        suffix = "." + ext
+        path, fn = os.path.split(self.com.filename)
+        filename = fn[:-len(suffix)]
+        
+        self.path = self.com.path
+        self.filename = filename
+                          
+        
+        vboxtop = QtGui.QVBoxLayout()
+        vboxtop.setContentsMargins(20,20,20,20)
+        
+        gridtop = QtGui.QGridLayout()
+        gridtop.setVerticalSpacing(20)
+    
+        fontb = QtGui.QFont()
+        fontb.setBold(True)            
+        
+        st1 = QtGui.QLabel(self)
+        st1.setText('Save')
+        st1.setFont(fontb)
+        st2 = QtGui.QLabel(self)
+        st2.setText('.pdf')
+        st2.setFont(fontb)
+        st3 = QtGui.QLabel(self)
+        st3.setText('.png')
+        st3.setFont(fontb)
+        st4 = QtGui.QLabel(self)
+        st4.setText('.svg')
+        st4.setFont(fontb)
+        st5 = QtGui.QLabel(self)
+        st5.setText('.csv')
+        st5.setFont(fontb)        
+        
+        
+        st6 = QtGui.QLabel(self)
+        st6.setText('_spectrum')
+        
+        self.cb11 = QtGui.QCheckBox('', self)
+        self.cb11.setChecked(True)
+        self.cb12 = QtGui.QCheckBox('', self)
+        self.cb13 = QtGui.QCheckBox('', self)   
+        self.cb14 = QtGui.QCheckBox('', self)
+        
+        st7 = QtGui.QLabel(self)
+        st7.setText('_images')
+        
+        self.cb21 = QtGui.QCheckBox('', self)
+        self.cb21.setChecked(True)
+        self.cb22 = QtGui.QCheckBox('', self)
+        self.cb23 = QtGui.QCheckBox('', self)
+        
+
+        
+        gridtop.addWidget(st1, 0, 0)
+        gridtop.addWidget(st2, 0, 1)
+        gridtop.addWidget(st3, 0, 2)
+        gridtop.addWidget(st4, 0, 3)
+        gridtop.addWidget(st5, 0, 4)
+                                
+        gridtop.addWidget(st6, 1, 0)
+        gridtop.addWidget(self.cb11, 1, 1)
+        gridtop.addWidget(self.cb12, 1, 2)  
+        gridtop.addWidget(self.cb13, 1, 3)  
+        gridtop.addWidget(self.cb14, 1, 4)           
+  
+        gridtop.addWidget(st7, 2, 0)
+        gridtop.addWidget(self.cb21, 2, 1)
+        gridtop.addWidget(self.cb22, 2, 2) 
+        gridtop.addWidget(self.cb23, 2, 3)  
+        
+
                 
+        vboxtop.addStretch(0.5)
+        vboxtop.addLayout(gridtop)
+        vboxtop.addStretch(1)
+        
+         
+        hbox0 = QtGui.QHBoxLayout()
+         
+        stf = QtGui.QLabel(self)
+        stf.setText('Filename:\t')
+        self.tc_savefn = QtGui.QLineEdit(self)
+        self.tc_savefn.setText(self.filename)
+
+        hbox0.addWidget(stf)
+        hbox0.addWidget(self.tc_savefn)         
+                  
+        hbox1 = QtGui.QHBoxLayout()
+                 
+        stp = QtGui.QLabel(self)
+        stp.setText('Path:  \t')
+        self.tc_savepath = QtGui.QLineEdit(self)
+        self.tc_savepath.setReadOnly(True)
+        self.tc_savepath.setText(self.path)
+        self.tc_savepath.setMinimumWidth(100)
+        hbox1.addWidget(stp)
+        hbox1.addWidget(self.tc_savepath)  
+         
+        button_path = QtGui.QPushButton('Browse...')
+        button_path.clicked.connect(self.OnBrowseDir)
+        hbox1.addWidget(button_path)
+         
+         
+        hbox2 = QtGui.QHBoxLayout()
+        button_save = QtGui.QPushButton('Save')
+        button_save.clicked.connect(self.OnSave)
+        hbox2.addWidget(button_save)
+         
+        button_cancel = QtGui.QPushButton('Cancel')
+        button_cancel.clicked.connect(self.close)
+        hbox2.addWidget(button_cancel)
+        
+        vboxtop.addLayout(hbox0)
+        vboxtop.addLayout(hbox1)
+        vboxtop.addStretch(1.0)
+        vboxtop.addLayout(hbox2)
+
+        
+        
+        self.setLayout(vboxtop)
+        
+#----------------------------------------------------------------------        
+    def OnBrowseDir(self, evt):
+        
+        directory = QtGui.QFileDialog.getExistingDirectory(self, "Choose a directory", self.path, QtGui.QFileDialog.ShowDirsOnly|QtGui.QFileDialog.ReadOnly)       
+                                                        
+        
+       
+        if directory == '':
+            return
+                 
+        directory = str(directory)
+        self.com.path = directory
+                    
+        self.path = directory
+        
+        self.tc_savepath.setText(self.path)
+            
+            
+                
+#----------------------------------------------------------------------        
+    def OnSave(self, evt):
+        
+        self.filename = str(self.tc_savefn.text())
+        
+        sp_pdf = self.cb11.isChecked()
+        sp_png = self.cb12.isChecked()
+        sp_svg = self.cb13.isChecked()
+        sp_csv = self.cb14.isChecked()
+        im_pdf = self.cb21.isChecked()
+        im_png = self.cb22.isChecked()
+        im_svg = self.cb23.isChecked()
+
+        
+        self.close() 
+        self.parent.page4.Save(self.filename, self.path,
+                                         spec_png = sp_png, 
+                                         spec_pdf = sp_pdf, 
+                                         spec_svg = sp_svg,
+                                         spec_csv = sp_csv,
+                                         img_png = im_png, 
+                                         img_pdf = im_pdf,
+                                         img_svg = im_svg)
+
+
     
     
 """ ------------------------------------------------------------------------------------------------"""
@@ -2055,7 +2249,7 @@ class PageCluster(QtGui.QWidget):
 
         fig = self.clusterimgfig
         fig.clf()
-        fig.add_axes((0.02,0.02,0.96,0.96))
+        fig.add_axes(((0.0,0.0,1.0,1.0)))
         axes = fig.gca()
         
         
@@ -2078,7 +2272,7 @@ class PageCluster(QtGui.QWidget):
 
         fig = self.clusterindvimgfig
         fig.clf()
-        fig.add_axes((0.02,0.02,0.96,0.96))
+        fig.add_axes(((0.0,0.0,1.0,1.0)))
         axes = fig.gca()
             
         
@@ -2184,15 +2378,15 @@ class PageCluster(QtGui.QWidget):
 #----------------------------------------------------------------------    
     def OnSave(self, event):     
                
-        pass
-        #SaveWinP3().Show()
+        savewin = SaveWinP3(self.window())
+        savewin.show()
         
         
 #----------------------------------------------------------------------    
-    def Save(self, filename, path, spec_png = True, spec_pdf = False, spec_csv = False,
-             img_png = True, img_pdf = False, 
-             indimgs_png = True, indimgs_pdf = False,
-             scatt_png = True, scatt_pdf = False): 
+    def Save(self, filename, path, spec_png = True, spec_pdf = False, spec_svg = False, spec_csv = False,
+             img_png = True, img_pdf = False, img_svg = False, 
+             indimgs_png = True, indimgs_pdf = False, indimgs_svg = False,
+             scatt_png = True, scatt_pdf = False, scatt_svg = False): 
         
         self.SaveFileName = os.path.join(path,filename)
         
@@ -2226,7 +2420,7 @@ class PageCluster(QtGui.QWidget):
                 canvas = FigureCanvas(fig)
                 fig.clf()
                 fig.add_axes((0.0,0.0,1.0,1.0))
-
+                axes = fig.gca() 
         
                 im = axes.imshow(self.clusterimage, cmap=self.clusterclrmap1, norm=self.bnorm1)
                 axes.axis("off")
@@ -2234,7 +2428,22 @@ class PageCluster(QtGui.QWidget):
                 fileName_caimg = self.SaveFileName+"_CAcimg."+ext       
                 fig.savefig(fileName_caimg, dpi=300, pad_inches = 0.0)
                             
+            if img_pdf:
+                ext = 'svg'
+                suffix = "." + ext
             
+                fig = matplotlib.figure.Figure(figsize = (float(self.stk.n_rows)/30, float(self.stk.n_cols)/30))
+                canvas = FigureCanvas(fig)
+                fig.clf()
+                fig.add_axes((0.0,0.0,1.0,1.0))
+                axes = fig.gca() 
+        
+                im = axes.imshow(self.clusterimage, cmap=self.clusterclrmap1, norm=self.bnorm1)
+                axes.axis("off")
+                
+                fileName_caimg = self.SaveFileName+"_CAcimg."+ext       
+                fig.savefig(fileName_caimg, dpi=300, pad_inches = 0.0)
+                            
 
                   
             ext = 'png'
@@ -2278,6 +2487,29 @@ class PageCluster(QtGui.QWidget):
 
                     fileName_spec = self.SaveFileName+"_CAspectrum_" +str(i+1)+"."+ext
                     fig.savefig(fileName_spec)   
+                    
+                #Save all spectra in one plot
+                fig = matplotlib.figure.Figure(figsize =(PlotW, PlotH))
+                canvas = FigureCanvas(fig)
+                fig.add_axes((0.15,0.15,0.75,0.75))
+                axes = fig.gca()                
+                
+                for i in range (self.numclusters):
+                   
+                    clusterspectrum = self.anlz.clusterspectra[i-1, ]/npy.amax(self.anlz.clusterspectra[i-1, ])
+
+                    if i >= self.maxclcolors:
+                        clcolor = self.colors[self.maxclcolors-1]
+                    else:
+                        clcolor = self.colors[i]
+        
+                    specplot = axes.plot(self.anlz.stack.ev,clusterspectrum, color = clcolor)
+        
+                    axes.set_xlabel('Photon Energy [eV]')
+                    axes.set_ylabel('Optical Density')
+
+                fileName_spec = self.SaveFileName+"_CAspectra"+"."+ext
+                fig.savefig(fileName_spec)  
                     
             if spec_csv:
                 for i in range (self.numclusters):
@@ -2328,10 +2560,101 @@ class PageCluster(QtGui.QWidget):
                     fileName_spec = self.SaveFileName+"_CAspectrum_" +str(i+1)+"."+ext
                     fig.savefig(fileName_spec) 
                     
+                #Save all spectra in one plot
+                fig = matplotlib.figure.Figure(figsize =(PlotW, PlotH))
+                canvas = FigureCanvas(fig)
+                fig.add_axes((0.15,0.15,0.75,0.75))
+                axes = fig.gca()                
+                
+                for i in range (self.numclusters):
+                   
+                    clusterspectrum = self.anlz.clusterspectra[i-1, ]/npy.amax(self.anlz.clusterspectra[i-1, ])
+
+                    if i >= self.maxclcolors:
+                        clcolor = self.colors[self.maxclcolors-1]
+                    else:
+                        clcolor = self.colors[i]
+        
+                    specplot = axes.plot(self.anlz.stack.ev,clusterspectrum, color = clcolor)
+        
+                    axes.set_xlabel('Photon Energy [eV]')
+                    axes.set_ylabel('Optical Density')
+
+                fileName_spec = self.SaveFileName+"_CAspectra"+"."+ext
+                fig.savefig(fileName_spec)  
+ 
+            ext = 'svg'
+            suffix = "." + ext
+                
+            if indimgs_svg:
+                for i in range (self.numclusters):
+              
+                    indvclusterimage = npy.zeros((self.anlz.stack.n_cols, self.anlz.stack.n_rows))+20.      
+                    ind = npy.where(self.anlz.cluster_indices == i)    
+                    colorcl = min(i,9)
+                    indvclusterimage[ind] = colorcl
+
+                    fig = matplotlib.figure.Figure(figsize =(float(self.stk.n_rows)/30, float(self.stk.n_cols)/30))
+                    canvas = FigureCanvas(fig)
+                    fig.add_axes((0.0,0.0,1.0,1.0))
+                    axes = fig.gca()       
+                    im = axes.imshow(indvclusterimage, cmap=self.clusterclrmap2, norm=self.bnorm2)
+                    axes.axis("off")
+                   
+                    fileName_img = self.SaveFileName+"_CAimg_" +str(i+1)+"."+ext               
+                    fig.savefig(fileName_img, dpi=300, pad_inches = 0.0)
+                
+            if spec_svg:
+                for i in range (self.numclusters):
+                   
+                    clusterspectrum = self.anlz.clusterspectra[i, ]
+                    fig = matplotlib.figure.Figure(figsize =(PlotW, PlotH))
+                    canvas = FigureCanvas(fig)
+                    fig.add_axes((0.15,0.15,0.75,0.75))
+                    axes = fig.gca()
+                    if i >= self.maxclcolors:
+                        clcolor = self.colors[self.maxclcolors-1]
+                    else:
+                        clcolor = self.colors[i]
+        
+                    specplot = axes.plot(self.anlz.stack.ev,clusterspectrum, color = clcolor)
+        
+                    axes.set_xlabel('Photon Energy [eV]')
+                    axes.set_ylabel('Optical Density')
+
+                    fileName_spec = self.SaveFileName+"_CAspectrum_" +str(i+1)+"."+ext
+                    fig.savefig(fileName_spec) 
+                    
+                #Save all spectra in one plot
+                fig = matplotlib.figure.Figure(figsize =(PlotW, PlotH))
+                canvas = FigureCanvas(fig)
+                fig.add_axes((0.15,0.15,0.75,0.75))
+                axes = fig.gca()                
+                
+                for i in range (self.numclusters):
+                   
+                    clusterspectrum = self.anlz.clusterspectra[i-1, ]/npy.amax(self.anlz.clusterspectra[i-1, ])
+
+                    if i >= self.maxclcolors:
+                        clcolor = self.colors[self.maxclcolors-1]
+                    else:
+                        clcolor = self.colors[i]
+        
+                    specplot = axes.plot(self.anlz.stack.ev,clusterspectrum, color = clcolor)
+        
+                    axes.set_xlabel('Photon Energy [eV]')
+                    axes.set_ylabel('Optical Density')
+
+                fileName_spec = self.SaveFileName+"_CAspectra"+"."+ext
+                fig.savefig(fileName_spec)  
+                               
+                    
             if scatt_png:
                 self.SaveScatt(png_pdf = 1)
             if scatt_pdf:
-                self.SaveScatt(png_pdf = 2)                   
+                self.SaveScatt(png_pdf = 2)      
+            if scatt_svg:
+                self.SaveScatt(png_pdf = 3)              
             
         except IOError, e:
             if e.strerror:
@@ -2344,7 +2667,7 @@ class PageCluster(QtGui.QWidget):
   
   
 #----------------------------------------------------------------------    
-#If png_pdg = 1 save png, if =2 save pdf
+#If png_pdg = 1 save png, if =2 save pdf, if =3 save svg
     def SaveScatt(self, png_pdf = 1): 
           
         od_reduced = self.anlz.pcaimages[:,:,0:self.anlz.numsigpca]        
@@ -2358,8 +2681,11 @@ class PageCluster(QtGui.QWidget):
         
         if png_pdf == 1:
             ext = 'png'
-        else:
+        elif png_pdf == 2:
             ext = 'pdf'
+        elif png_pdf == 3:
+            ext = 'svg'
+        
         
    
         try: 
@@ -2561,9 +2887,229 @@ class Scatterplots(QtGui.QDialog):
         self.ScatterPPanel.draw()
        
   
+     
+#---------------------------------------------------------------------- 
+class SaveWinP3(QtGui.QDialog):
+
+    def __init__(self, parent):    
+        QtGui.QWidget.__init__(self, parent)
+        
+        self.parent = parent
+
+        
+        self.resize(400, 300)
+        self.setWindowTitle('Save')
+        
+        pal = QtGui.QPalette()
+        self.setAutoFillBackground(True)
+        pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
+        self.setPalette(pal)
+
+
+        self.com = self.parent.common          
+        
+        path, ext = os.path.splitext(self.com.filename) 
+        ext = ext[1:].lower()   
+        suffix = "." + ext
+        path, fn = os.path.split(self.com.filename)
+        filename = fn[:-len(suffix)]
+        
+        self.path = self.com.path
+        self.filename = filename
+                          
+        
+        vboxtop = QtGui.QVBoxLayout()
+        vboxtop.setContentsMargins(20,20,20,20)
+        
+        gridtop = QtGui.QGridLayout()
+        gridtop.setVerticalSpacing(20)
+    
+        fontb = QtGui.QFont()
+        fontb.setBold(True)            
+        
+        st1 = QtGui.QLabel(self)
+        st1.setText('Save')
+        st1.setFont(fontb)
+        st2 = QtGui.QLabel(self)
+        st2.setText('.pdf')
+        st2.setFont(fontb)
+        st3 = QtGui.QLabel(self)
+        st3.setText('.png')
+        st3.setFont(fontb)
+        st4 = QtGui.QLabel(self)
+        st4.setText('.svg')
+        st4.setFont(fontb)
+        st5 = QtGui.QLabel(self)
+        st5.setText('.csv')
+        st5.setFont(fontb)        
         
         
+        st6 = QtGui.QLabel(self)
+        st6.setText('_spectrum')
+        
+        self.cb11 = QtGui.QCheckBox('', self)
+        self.cb11.setChecked(True)
+        self.cb12 = QtGui.QCheckBox('', self)
+        self.cb13 = QtGui.QCheckBox('', self)   
+        self.cb14 = QtGui.QCheckBox('', self)
+        
+        st7 = QtGui.QLabel(self)
+        st7.setText('_composite_images')
+        
+        self.cb21 = QtGui.QCheckBox('', self)
+        self.cb21.setChecked(True)
+        self.cb22 = QtGui.QCheckBox('', self)
+        self.cb23 = QtGui.QCheckBox('', self)
+        
+        st8 = QtGui.QLabel(self)
+        st8.setText('_individual_images')  
+        
+        self.cb31 = QtGui.QCheckBox('', self)
+        self.cb31.setChecked(True) 
+        self.cb32 = QtGui.QCheckBox('', self)
+        self.cb33 = QtGui.QCheckBox('', self)
+
+        st9 = QtGui.QLabel(self)
+        st9.setText('_scatter_plots')  
+        
+        self.cb41 = QtGui.QCheckBox('', self)
+        self.cb41.setChecked(True) 
+        self.cb42 = QtGui.QCheckBox('', self)
+        self.cb43 = QtGui.QCheckBox('', self)
+        
+        
+        gridtop.addWidget(st1, 0, 0)
+        gridtop.addWidget(st2, 0, 1)
+        gridtop.addWidget(st3, 0, 2)
+        gridtop.addWidget(st4, 0, 3)
+        gridtop.addWidget(st5, 0, 4)
+                                
+        gridtop.addWidget(st6, 1, 0)
+        gridtop.addWidget(self.cb11, 1, 1)
+        gridtop.addWidget(self.cb12, 1, 2)  
+        gridtop.addWidget(self.cb13, 1, 3)  
+        gridtop.addWidget(self.cb14, 1, 4)           
+  
+        gridtop.addWidget(st7, 2, 0)
+        gridtop.addWidget(self.cb21, 2, 1)
+        gridtop.addWidget(self.cb22, 2, 2) 
+        gridtop.addWidget(self.cb23, 2, 3)  
+        
+        gridtop.addWidget(st8, 3, 0)
+        gridtop.addWidget(self.cb31, 3, 1)
+        gridtop.addWidget(self.cb32, 3, 2)  
+        gridtop.addWidget(self.cb33, 3, 3)
+        
+        gridtop.addWidget(st9, 4, 0)
+        gridtop.addWidget(self.cb41, 4, 1)
+        gridtop.addWidget(self.cb42, 4, 2)  
+        gridtop.addWidget(self.cb43, 4, 3)
+        
+                
+        vboxtop.addStretch(0.5)
+        vboxtop.addLayout(gridtop)
+        vboxtop.addStretch(1)
+        
+         
+        hbox0 = QtGui.QHBoxLayout()
+         
+        stf = QtGui.QLabel(self)
+        stf.setText('Filename:\t')
+        self.tc_savefn = QtGui.QLineEdit(self)
+        self.tc_savefn.setText(self.filename)
+
+        hbox0.addWidget(stf)
+        hbox0.addWidget(self.tc_savefn)         
+                  
+        hbox1 = QtGui.QHBoxLayout()
+                 
+        stp = QtGui.QLabel(self)
+        stp.setText('Path:  \t')
+        self.tc_savepath = QtGui.QLineEdit(self)
+        self.tc_savepath.setReadOnly(True)
+        self.tc_savepath.setText(self.path)
+        self.tc_savepath.setMinimumWidth(100)
+        hbox1.addWidget(stp)
+        hbox1.addWidget(self.tc_savepath)  
+         
+        button_path = QtGui.QPushButton('Browse...')
+        button_path.clicked.connect(self.OnBrowseDir)
+        hbox1.addWidget(button_path)
+         
+         
+        hbox2 = QtGui.QHBoxLayout()
+        button_save = QtGui.QPushButton('Save')
+        button_save.clicked.connect(self.OnSave)
+        hbox2.addWidget(button_save)
+         
+        button_cancel = QtGui.QPushButton('Cancel')
+        button_cancel.clicked.connect(self.close)
+        hbox2.addWidget(button_cancel)
+        
+        vboxtop.addLayout(hbox0)
+        vboxtop.addLayout(hbox1)
+        vboxtop.addStretch(1.0)
+        vboxtop.addLayout(hbox2)
+
+        
+        
+        self.setLayout(vboxtop)
+        
+#----------------------------------------------------------------------        
+    def OnBrowseDir(self, evt):
+        
+        directory = QtGui.QFileDialog.getExistingDirectory(self, "Choose a directory", self.path, QtGui.QFileDialog.ShowDirsOnly|QtGui.QFileDialog.ReadOnly)       
+                                                        
+        
+       
+        if directory == '':
+            return
+                 
+        directory = str(directory)
+        self.com.path = directory
+                    
+        self.path = directory
+        
+        self.tc_savepath.setText(self.path)
             
+            
+                
+#----------------------------------------------------------------------        
+    def OnSave(self, evt):
+        
+        self.filename = str(self.tc_savefn.text())
+        
+        sp_pdf = self.cb11.isChecked()
+        sp_png = self.cb12.isChecked()
+        sp_svg = self.cb13.isChecked()
+        sp_csv = self.cb14.isChecked()
+        im_pdf = self.cb21.isChecked()
+        im_png = self.cb22.isChecked()
+        im_svg = self.cb23.isChecked()
+        indim_pdf = self.cb31.isChecked()
+        indim_png = self.cb32.isChecked()
+        indim_svg = self.cb33.isChecked()
+        scatt_pdf = self.cb41.isChecked()
+        scatt_png = self.cb42.isChecked()
+        scatt_svg = self.cb43.isChecked()
+        
+        self.close() 
+        self.parent.page3.Save(self.filename, self.path,
+                                         spec_png = sp_png, 
+                                         spec_pdf = sp_pdf, 
+                                         spec_svg = sp_svg,
+                                         spec_csv = sp_csv,
+                                         img_png = im_png, 
+                                         img_pdf = im_pdf,
+                                         img_svg = im_svg,
+                                         indimgs_png = indim_png, 
+                                         indimgs_pdf = indim_pdf,
+                                         indimgs_svg = indim_svg,
+                                         scatt_png = scatt_png,
+                                         scatt_pdf = scatt_pdf,
+                                         scatt_svg = scatt_svg)   
+        
+                 
     
 """ ------------------------------------------------------------------------------------------------"""
 class PagePCA(QtGui.QWidget):
@@ -2805,14 +3351,15 @@ class PagePCA(QtGui.QWidget):
 #----------------------------------------------------------------------    
     def OnSave(self, event):     
 
-        pass
-        #SaveWinP2().Show()
+        savewin = SaveWinP2(self.window())
+        savewin.show()
 
 
             
 #----------------------------------------------------------------------    
-    def Save(self, filename, path, spec_png = True, spec_pdf = False, spec_csv = False,
-             img_png = True, img_pdf = False, evals_png = True, evals_pdf = False): 
+    def Save(self, filename, path, spec_png = True, spec_pdf = False, spec_svg = False, spec_csv = False,
+             img_png = True, img_pdf = False, img_svg = False, 
+             evals_png = True, evals_pdf = False, evals_svg = False): 
         
         
         self.SaveFileName = os.path.join(path,filename)
@@ -2834,7 +3381,15 @@ class PagePCA(QtGui.QWidget):
                 fileName_evals = self.SaveFileName+"_PCAevals."+ext
                             
                 fig = self.pcaevalsfig
-                fig.savefig(fileName_evals)                
+                fig.savefig(fileName_evals)     
+                
+            if evals_svg:
+                ext = 'svg'
+                suffix = "." + ext
+                fileName_evals = self.SaveFileName+"_PCAevals."+ext
+                            
+                fig = self.pcaevalsfig
+                fig.savefig(fileName_evals)             
 
                         
             from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
@@ -2924,7 +3479,46 @@ class PagePCA(QtGui.QWidget):
                 
                     fileName_spec = self.SaveFileName+"_PCAspectrum_" +str(i+1)+"."+ext
                     fig.savefig(fileName_spec)                
+
+            ext = 'svg'
+            suffix = "." + ext        
+                
+            if img_pdf:
+                for i in range (self.numsigpca):
+              
+                    self.pcaimage = self.anlz.pcaimages[:,:,i]
+              
+                    fig = matplotlib.figure.Figure(figsize =(PlotH*1.15, PlotH))
+                    canvas = FigureCanvas(fig)
+                    axes = fig.gca()
+                    divider = make_axes_locatable(axes)
+                    ax_cb = divider.new_horizontal(size="3%", pad=0.03)  
+                    fig.add_axes(ax_cb)
+                    axes.set_position([0.03,0.03,0.8,0.94])
+                    bound = self.anlz.pcaimagebounds[i]            
+        
+                    im = axes.imshow(self.pcaimage, cmap=matplotlib.cm.get_cmap("seismic_r"), vmin = -bound, vmax = bound)
+                    cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
+                    axes.axis("off") 
+                                
+                    fileName_img = self.SaveFileName+"_PCA_" +str(i+1)+"."+ext
+                    fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
             
+            if spec_pdf:
+                for i in range (self.numsigpca):
+                
+                    self.pcaspectrum = self.anlz.eigenvecs[:,i]
+                    fig = matplotlib.figure.Figure(figsize =(PlotW, PlotH))
+                    canvas = FigureCanvas(fig)
+                    fig.add_axes((0.15,0.15,0.75,0.75))
+                    axes = fig.gca()
+                    specplot = axes.plot(self.stk.ev,self.pcaspectrum)    
+                    axes.set_xlabel('Photon Energy [eV]')
+                    axes.set_ylabel('Optical Density')
+                
+                    fileName_spec = self.SaveFileName+"_PCAspectrum_" +str(i+1)+"."+ext
+                    fig.savefig(fileName_spec)         
+                                
         except IOError, e:
             if e.strerror:
                 err = e.strerror 
@@ -3009,7 +3603,205 @@ class PagePCA(QtGui.QWidget):
         
         self.PCASpecPan.draw()
         
+
+#---------------------------------------------------------------------- 
+class SaveWinP2(QtGui.QDialog):
+
+    def __init__(self, parent):    
+        QtGui.QWidget.__init__(self, parent)
         
+        self.parent = parent
+
+        
+        self.resize(400, 300)
+        self.setWindowTitle('Save')
+        
+        pal = QtGui.QPalette()
+        self.setAutoFillBackground(True)
+        pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
+        self.setPalette(pal)
+
+
+        self.com = self.parent.common          
+        
+        path, ext = os.path.splitext(self.com.filename) 
+        ext = ext[1:].lower()   
+        suffix = "." + ext
+        path, fn = os.path.split(self.com.filename)
+        filename = fn[:-len(suffix)]
+        
+        self.path = self.com.path
+        self.filename = filename
+                          
+        
+        vboxtop = QtGui.QVBoxLayout()
+        vboxtop.setContentsMargins(20,20,20,20)
+        
+        gridtop = QtGui.QGridLayout()
+        gridtop.setVerticalSpacing(20)
+    
+        fontb = QtGui.QFont()
+        fontb.setBold(True)            
+        
+        st1 = QtGui.QLabel(self)
+        st1.setText('Save')
+        st1.setFont(fontb)
+        st2 = QtGui.QLabel(self)
+        st2.setText('.pdf')
+        st2.setFont(fontb)
+        st3 = QtGui.QLabel(self)
+        st3.setText('.png')
+        st3.setFont(fontb)
+        st4 = QtGui.QLabel(self)
+        st4.setText('.svg')
+        st4.setFont(fontb)
+        st5 = QtGui.QLabel(self)
+        st5.setText('.csv')
+        st5.setFont(fontb)        
+        
+        
+        st6 = QtGui.QLabel(self)
+        st6.setText('_spectrum')
+        
+        self.cb11 = QtGui.QCheckBox('', self)
+        self.cb11.setChecked(True)
+        self.cb12 = QtGui.QCheckBox('', self)
+        self.cb13 = QtGui.QCheckBox('', self)   
+        self.cb14 = QtGui.QCheckBox('', self)
+        
+        st7 = QtGui.QLabel(self)
+        st7.setText('_image')
+        
+        self.cb21 = QtGui.QCheckBox('', self)
+        self.cb21.setChecked(True)
+        self.cb22 = QtGui.QCheckBox('', self)
+        self.cb23 = QtGui.QCheckBox('', self)
+        
+        st8 = QtGui.QLabel(self)
+        st8.setText('_eigenvals')   
+        self.cb31 = QtGui.QCheckBox('', self)
+        self.cb32 = QtGui.QCheckBox('', self)
+        self.cb33 = QtGui.QCheckBox('', self)
+
+
+        gridtop.addWidget(st1, 0, 0)
+        gridtop.addWidget(st2, 0, 1)
+        gridtop.addWidget(st3, 0, 2)
+        gridtop.addWidget(st4, 0, 3)
+        gridtop.addWidget(st5, 0, 4)
+                                
+        gridtop.addWidget(st6, 1, 0)
+        gridtop.addWidget(self.cb11, 1, 1)
+        gridtop.addWidget(self.cb12, 1, 2)  
+        gridtop.addWidget(self.cb13, 1, 3)  
+        gridtop.addWidget(self.cb14, 1, 4)           
+  
+        gridtop.addWidget(st7, 2, 0)
+        gridtop.addWidget(self.cb21, 2, 1)
+        gridtop.addWidget(self.cb22, 2, 2) 
+        gridtop.addWidget(self.cb23, 2, 3)  
+        
+        gridtop.addWidget(st8, 3, 0)
+        gridtop.addWidget(self.cb31, 3, 1)
+        gridtop.addWidget(self.cb32, 3, 2) 
+        gridtop.addWidget(self.cb33, 3, 3) 
+        
+        vboxtop.addStretch(0.5)
+        vboxtop.addLayout(gridtop)
+        vboxtop.addStretch(1)
+        
+         
+        hbox0 = QtGui.QHBoxLayout()
+         
+        stf = QtGui.QLabel(self)
+        stf.setText('Filename:\t')
+        self.tc_savefn = QtGui.QLineEdit(self)
+        self.tc_savefn.setText(self.filename)
+
+        hbox0.addWidget(stf)
+        hbox0.addWidget(self.tc_savefn)         
+                  
+        hbox1 = QtGui.QHBoxLayout()
+                 
+        stp = QtGui.QLabel(self)
+        stp.setText('Path:  \t')
+        self.tc_savepath = QtGui.QLineEdit(self)
+        self.tc_savepath.setReadOnly(True)
+        self.tc_savepath.setText(self.path)
+        self.tc_savepath.setMinimumWidth(100)
+        hbox1.addWidget(stp)
+        hbox1.addWidget(self.tc_savepath)  
+         
+        button_path = QtGui.QPushButton('Browse...')
+        button_path.clicked.connect(self.OnBrowseDir)
+        hbox1.addWidget(button_path)
+         
+         
+        hbox2 = QtGui.QHBoxLayout()
+        button_save = QtGui.QPushButton('Save')
+        button_save.clicked.connect(self.OnSave)
+        hbox2.addWidget(button_save)
+         
+        button_cancel = QtGui.QPushButton('Cancel')
+        button_cancel.clicked.connect(self.close)
+        hbox2.addWidget(button_cancel)
+        
+        vboxtop.addLayout(hbox0)
+        vboxtop.addLayout(hbox1)
+        vboxtop.addStretch(1.0)
+        vboxtop.addLayout(hbox2)
+
+        
+        
+        self.setLayout(vboxtop)
+        
+#----------------------------------------------------------------------        
+    def OnBrowseDir(self, evt):
+        
+        directory = QtGui.QFileDialog.getExistingDirectory(self, "Choose a directory", self.path, QtGui.QFileDialog.ShowDirsOnly|QtGui.QFileDialog.ReadOnly)       
+                                                        
+        
+       
+        if directory == '':
+            return
+                 
+        directory = str(directory)
+        self.com.path = directory
+                    
+        self.path = directory
+        
+        self.tc_savepath.setText(self.path)
+            
+            
+                
+#----------------------------------------------------------------------        
+    def OnSave(self, evt):
+        
+        self.filename = str(self.tc_savefn.text())
+        
+        sp_pdf = self.cb11.isChecked()
+        sp_png = self.cb12.isChecked()
+        sp_svg = self.cb13.isChecked()
+        sp_csv = self.cb14.isChecked()
+        im_pdf = self.cb21.isChecked()
+        im_png = self.cb22.isChecked()
+        im_svg = self.cb23.isChecked()
+        ev_pdf = self.cb31.isChecked()
+        ev_png = self.cb32.isChecked()
+        ev_svg = self.cb33.isChecked()
+        
+        self.close() 
+        self.parent.page2.Save(self.filename, self.path,
+                               spec_png = sp_png, 
+                               spec_pdf = sp_pdf, 
+                               spec_svg = sp_svg,
+                               spec_csv = sp_csv,
+                               img_png = im_png, 
+                               img_pdf = im_pdf,
+                               img_svg = im_svg,
+                               evals_png = ev_png, 
+                               evals_pdf = ev_pdf,
+                               evals_svg = ev_svg)        
         
 
 """ ------------------------------------------------------------------------------------------------"""
@@ -3480,7 +4272,7 @@ class PageStack(QtGui.QWidget):
 #----------------------------------------------------------------------    
     def OnSave(self, event):     
         
-        savewin = SaveWinP1(self)
+        savewin = SaveWinP1(self.window())
         savewin.show()
 
 #----------------------------------------------------------------------        
@@ -3495,7 +4287,8 @@ class PageStack(QtGui.QWidget):
         clipwin.show() 
    
 #----------------------------------------------------------------------    
-    def Save(self, filename, path, spec_png = True, spec_pdf = False, sp_csv = False, img_png = True, img_pdf = False, img_all = False): 
+    def Save(self, filename, path, spec_png = True, spec_pdf = False, spec_svg = False, sp_csv = False, 
+             img_png = True, img_pdf = False, img_svg = False, img_all = False): 
 
         self.SaveFileName = os.path.join(path,filename)
       
@@ -3508,7 +4301,6 @@ class PageStack(QtGui.QWidget):
             if spec_png:
                 fileName_spec = self.SaveFileName+"_spectrum."+ext
                 
-                            
                 fig = self.specfig
                 fig.savefig(fileName_spec)
 
@@ -3549,7 +4341,6 @@ class PageStack(QtGui.QWidget):
             
             if spec_pdf:
                 fileName_spec = self.SaveFileName+"_spectrum."+ext
-            
                 fig = self.specfig
                 fig.savefig(fileName_spec)
 
@@ -3561,6 +4352,21 @@ class PageStack(QtGui.QWidget):
             if sp_csv:
                 fileName_spec = self.SaveFileName+"_spectrum.csv"
                 self.stk.write_csv(fileName_spec, self.stk.ev, self.spectrum)
+                
+            ext = 'svg'
+            suffix = "." + ext
+            
+            if spec_svg:
+                fileName_spec = self.SaveFileName+"_spectrum."+ext
+                fig = self.specfig
+                fig.savefig(fileName_spec)
+
+            if img_svg:
+                fileName_img = self.SaveFileName+"_" +str(self.stk.ev[self.iev])+"eV."+ext
+                fig = self.absimgfig
+                fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
+                
+
             
         except IOError, e:
             if e.strerror:
@@ -3788,7 +4594,7 @@ class PageStack(QtGui.QWidget):
 #----------------------------------------------------------------------
     def OnSetColorTable(self, event):
         
-        colorwin = ColorTableFrame(self)
+        colorwin = ColorTableFrame(self.window())
         colorwin.show()
                                     
 #----------------------------------------------------------------------        
@@ -3817,7 +4623,7 @@ class PageStack(QtGui.QWidget):
         fig.clf()
          
         if self.show_colorbar == 0:
-            fig.add_axes((0.02,0.02,0.96,0.96))
+            fig.add_axes(((0.0,0.0,1.0,1.0)))
             axes = fig.gca()
  
         else:
@@ -4120,7 +4926,8 @@ class PageStack(QtGui.QWidget):
         
         self.CalcROISpectrum()
         
-        DoseCalculation(self.com, self.stk, self.ROIspectrum).Show()
+        dosewin = DoseCalculation(self, self.stk, self.ROIspectrum)
+        dosewin.show()
         
         
 #----------------------------------------------------------------------    
@@ -4171,13 +4978,195 @@ class SaveWinP1(QtGui.QDialog):
         self.parent = parent
 
         
-        self.resize(400, 500)
-        self.setWindowTitle('Stack File List')
+        self.resize(400, 300)
+        self.setWindowTitle('Save')
         
         pal = QtGui.QPalette()
         self.setAutoFillBackground(True)
         pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
         self.setPalette(pal)
+
+
+        self.com = self.parent.common          
+        
+        path, ext = os.path.splitext(self.com.filename) 
+        ext = ext[1:].lower()   
+        suffix = "." + ext
+        path, fn = os.path.split(self.com.filename)
+        filename = fn[:-len(suffix)]
+        
+        self.path = self.com.path
+        self.filename = filename
+                          
+        
+        vboxtop = QtGui.QVBoxLayout()
+        vboxtop.setContentsMargins(20,20,20,20)
+        
+        gridtop = QtGui.QGridLayout()
+        gridtop.setVerticalSpacing(20)
+    
+        fontb = QtGui.QFont()
+        fontb.setBold(True)            
+        
+        st1 = QtGui.QLabel(self)
+        st1.setText('Save')
+        st1.setFont(fontb)
+        st2 = QtGui.QLabel(self)
+        st2.setText('.pdf')
+        st2.setFont(fontb)
+        st3 = QtGui.QLabel(self)
+        st3.setText('.png')
+        st3.setFont(fontb)
+        st4 = QtGui.QLabel(self)
+        st4.setText('.svg')
+        st4.setFont(fontb)
+        st5 = QtGui.QLabel(self)
+        st5.setText('.csv')
+        st5.setFont(fontb)        
+        
+        
+        st6 = QtGui.QLabel(self)
+        st6.setText('_spectrum')
+        
+        self.cb11 = QtGui.QCheckBox('', self)
+        self.cb11.setChecked(True)
+        
+        self.cb12 = QtGui.QCheckBox('', self)
+        
+        self.cb13 = QtGui.QCheckBox('', self)   
+        
+        self.cb14 = QtGui.QCheckBox('', self)
+        
+        st7 = QtGui.QLabel(self)
+        st7.setText('_image')
+        
+        self.cb21 = QtGui.QCheckBox('', self)
+        self.cb21.setChecked(True)
+        
+        self.cb22 = QtGui.QCheckBox('', self)
+        
+        self.cb23 = QtGui.QCheckBox('', self)
+        
+        st8 = QtGui.QLabel(self)
+        st8.setText('all images')   
+        
+        self.cb32 = QtGui.QCheckBox('', self)
+
+
+        gridtop.addWidget(st1, 0, 0)
+        gridtop.addWidget(st2, 0, 1)
+        gridtop.addWidget(st3, 0, 2)
+        gridtop.addWidget(st4, 0, 3)
+        gridtop.addWidget(st5, 0, 4)
+                                
+        gridtop.addWidget(st6, 1, 0)
+        gridtop.addWidget(self.cb11, 1, 1)
+        gridtop.addWidget(self.cb12, 1, 2)  
+        gridtop.addWidget(self.cb13, 1, 3)  
+        gridtop.addWidget(self.cb14, 1, 4)           
+  
+        gridtop.addWidget(st7, 2, 0)
+        gridtop.addWidget(self.cb21, 2, 1)
+        gridtop.addWidget(self.cb22, 2, 2) 
+        gridtop.addWidget(self.cb23, 2, 3)  
+        
+        gridtop.addWidget(st8, 3, 0)
+        gridtop.addWidget(self.cb32, 3, 2)  
+        
+        vboxtop.addStretch(0.5)
+        vboxtop.addLayout(gridtop)
+        vboxtop.addStretch(1)
+        
+         
+        hbox0 = QtGui.QHBoxLayout()
+         
+        stf = QtGui.QLabel(self)
+        stf.setText('Filename:\t')
+        self.tc_savefn = QtGui.QLineEdit(self)
+        self.tc_savefn.setText(self.filename)
+
+        hbox0.addWidget(stf)
+        hbox0.addWidget(self.tc_savefn)         
+                  
+        hbox1 = QtGui.QHBoxLayout()
+                 
+        stp = QtGui.QLabel(self)
+        stp.setText('Path:  \t')
+        self.tc_savepath = QtGui.QLineEdit(self)
+        self.tc_savepath.setReadOnly(True)
+        self.tc_savepath.setText(self.path)
+        self.tc_savepath.setMinimumWidth(100)
+        hbox1.addWidget(stp)
+        hbox1.addWidget(self.tc_savepath)  
+         
+        button_path = QtGui.QPushButton('Browse...')
+        button_path.clicked.connect(self.OnBrowseDir)
+        hbox1.addWidget(button_path)
+         
+         
+        hbox2 = QtGui.QHBoxLayout()
+        button_save = QtGui.QPushButton('Save')
+        button_save.clicked.connect(self.OnSave)
+        hbox2.addWidget(button_save)
+         
+        button_cancel = QtGui.QPushButton('Cancel')
+        button_cancel.clicked.connect(self.close)
+        hbox2.addWidget(button_cancel)
+        
+        vboxtop.addLayout(hbox0)
+        vboxtop.addLayout(hbox1)
+        vboxtop.addStretch(1.0)
+        vboxtop.addLayout(hbox2)
+
+        
+        
+        self.setLayout(vboxtop)
+        
+#----------------------------------------------------------------------        
+    def OnBrowseDir(self, evt):
+        
+        directory = QtGui.QFileDialog.getExistingDirectory(self, "Choose a directory", self.path, QtGui.QFileDialog.ShowDirsOnly|QtGui.QFileDialog.ReadOnly)       
+                                                        
+        
+       
+        if directory == '':
+            return
+                 
+        directory = str(directory)
+        self.com.path = directory
+                    
+        self.path = directory
+        
+        self.tc_savepath.setText(self.path)
+            
+            
+                
+#----------------------------------------------------------------------        
+    def OnSave(self, evt):
+        
+        self.filename = str(self.tc_savefn.text())
+        
+        sp_pdf = self.cb11.isChecked()
+        sp_png = self.cb12.isChecked()
+        sp_svg = self.cb13.isChecked()
+        sp_csv = self.cb14.isChecked()
+        im_pdf = self.cb21.isChecked()
+        im_png = self.cb22.isChecked()
+        im_svg = self.cb23.isChecked()
+        im_all = self.cb32.isChecked()
+        
+        self.close() 
+        self.parent.page1.Save(self.filename, self.path,
+                                         spec_png = sp_png, 
+                                         spec_pdf = sp_pdf, 
+                                         spec_svg = sp_svg,
+                                         sp_csv = sp_csv,
+                                         img_png = im_png, 
+                                         img_pdf = im_pdf,
+                                         img_svg = im_svg,
+                                         img_all = im_all)
+
+
 
 
 #---------------------------------------------------------------------- 
@@ -4303,7 +5292,7 @@ class ShowHistogram(QtGui.QDialog):
                
         fig = self.absimgfig
         fig.clf()
-        fig.add_axes((0.02,0.02,0.96,0.96))
+        fig.add_axes(((0.0,0.0,1.0,1.0)))
         
         
         axes = fig.gca()
@@ -5186,7 +6175,7 @@ class ImageRegistration(QtGui.QDialog):
             
         fig = self.absimgfig
         fig.clf()
-        fig.add_axes((0.02,0.02,0.96,0.96))
+        fig.add_axes(((0.0,0.0,1.0,1.0)))
         axes = fig.gca()  
              
 
@@ -5244,7 +6233,7 @@ class ImageRegistration(QtGui.QDialog):
 
         fig = self.refimgfig
         fig.clf()
-        fig.add_axes((0.02,0.02,0.96,0.96))
+        fig.add_axes(((0.0,0.0,1.0,1.0)))
         axes = fig.gca()
         
     
@@ -5327,7 +6316,7 @@ class ImageRegistration(QtGui.QDialog):
         fig = self.cscorrfig
     
         fig.clf()
-        fig.add_axes((0.02,0.02,0.96,0.96))
+        fig.add_axes(((0.0,0.0,1.0,1.0)))
         axes = fig.gca()
     
         im = axes.imshow(ccorr, cmap=matplotlib.cm.get_cmap('gray')) 
@@ -5993,7 +6982,7 @@ class SpectralROI(QtGui.QDialog):
         self.stack = stack
         self.com = common  
         
-        self.resize(400, 500)
+        self.resize(630, 700)
         self.setWindowTitle('Spectral Regions of Interest')
         
         pal = QtGui.QPalette()
@@ -6001,11 +6990,301 @@ class SpectralROI(QtGui.QDialog):
         pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
         self.setPalette(pal) 
 
+        self.stack = stack
+        self.com = common
+               
+        
+        self.imin = 0
+        self.imax = 0
+        self.i0min = 0
+        self.i0max = 0
+        self.iselected = 0
+        self.i0selected = 0        
+        
+                
+        self.odtotal = self.stack.od3d.sum(axis=0)   
+        self.odtotal = self.odtotal.sum(axis=0)/(self.stack.n_rows*self.stack.n_cols) 
+        
+        self.image_i0 = npy.zeros((self.stack.n_cols, self.stack.n_rows))
+        self.image_i = npy.zeros((self.stack.n_cols, self.stack.n_rows))
+        self.odthickmap = npy.zeros((self.stack.n_cols, self.stack.n_rows))
+        
+
+        
+        vbox = QtGui.QVBoxLayout()
+        text = QtGui.QLabel(self)
+        text.setText('First select I0 region below the edge, then select I region above the edge:')
+        vbox.addWidget(text)
+        
+        frame = QtGui.QFrame()
+        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        fbox = QtGui.QHBoxLayout()
+   
+        self.specfig = Figure((6.0, 4.2))
+        self.SpectrumPanel = FigureCanvas(self.specfig)
+        self.SpectrumPanel.setParent(self)
+        self.SpectrumPanel.mpl_connect('button_press_event', self.OnSelection1)
+        self.SpectrumPanel.mpl_connect('button_release_event', self.OnSelection2)
+               
+        fbox.addWidget(self.SpectrumPanel)
+        frame.setLayout(fbox)
+        vbox.addWidget(frame)
+       
+       
+        hbox2 = QtGui.QHBoxLayout()
+               
+        
+        sizer2 =QtGui.QGroupBox('Selected Spectral Regions')
+        sizer2.setMinimumWidth(350)
+        vbox2 = QtGui.QVBoxLayout()
+        text = QtGui.QLabel(self)
+        text.setText('I Selection (red): ')
+        self.textctrl1 = QtGui.QLabel(self)
+        self.textctrl1.setText('[  ]' )
+        vbox2.addWidget(text)
+        vbox2.addWidget(self.textctrl1)
+        
+        text = QtGui.QLabel(self)
+        text.setText('I0 Selection (green): ')
+        self.textctrl2 = QtGui.QLabel(self)
+        self.textctrl2.setText('[  ]' )
+        vbox2.addWidget(text)
+        vbox2.addWidget(self.textctrl2)
+        sizer2.setLayout(vbox2)
+        
+        text = QtGui.QLabel(self)
+        text.setText('Optical density map')
+        vbox.addWidget(text)
+
+        frame = QtGui.QFrame()
+        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        fbox = QtGui.QHBoxLayout()
+   
+        self.odmfig = Figure((2.4,2.4))
+        self.ODMImagePanel = FigureCanvas(self.odmfig)
+        self.ODMImagePanel.setParent(self)
+               
+        fbox.addWidget(self.ODMImagePanel, stretch=0)
+        frame.setLayout(fbox)
+        hbox2.addWidget(frame, stretch=0)   
+        hbox2.addStretch(0.5)
+        hbox2.addWidget(sizer2)
+        
+        vbox.addLayout(hbox2)    
+          
+        hbox = QtGui.QHBoxLayout()
+        
+        button_save = QtGui.QPushButton('Save')
+        button_save.clicked.connect(self.OnSave)
+        hbox.addWidget(button_save)
+        
+        button_cancel = QtGui.QPushButton('Dismiss')
+        button_cancel.clicked.connect(self.close)
+        hbox.addWidget(button_cancel)
+        
+        vbox.addLayout(hbox)
+    
+        
+        self.setLayout(vbox)
+        
+        self.draw_spectrum()
+        
+        
+#----------------------------------------------------------------------        
+    def draw_spectrum(self):
+
+        
+        fig = self.specfig
+        fig.clf()
+        fig.add_axes((0.15,0.15,0.75,0.75))
+        self.axes = fig.gca()
+        
+
+        specplot = self.axes.plot(self.stack.ev,self.odtotal)
+        
+        if self.i0selected == 1:
+            self.axes.axvspan(self.stack.ev[self.i0min], self.stack.ev[self.i0max], facecolor='g', alpha=0.5)
+            
+        if self.iselected == 1:
+            self.axes.axvspan(self.stack.ev[self.imin], self.stack.ev[self.imax], facecolor='r', alpha=0.5)
+
+        
+        self.axes.set_xlabel('Photon Energy [eV]')
+        self.axes.set_ylabel('Optical Density')
+        
+
+        self.SpectrumPanel.draw()
+        
+    
+#----------------------------------------------------------------------        
+    def draw_image(self):
+
+               
+        fig = self.odmfig
+        fig.clf()
+        fig.add_axes((0.02,0.02,0.96,0.96))
+        
+        axes = fig.gca()
+        divider = make_axes_locatable(axes)
+        axcb = divider.new_horizontal(size="3%", pad=0.03)  
+
+        fig.add_axes(axcb)
+        
+        axes.set_position([0.03,0.03,0.8,0.94])
+        
+        
+        im = axes.imshow(self.odthickmap, cmap=matplotlib.cm.get_cmap("gray")) 
+
+        cbar = axes.figure.colorbar(im, orientation='vertical',cax=axcb) 
+
+        #Show Scale Bar
+        startx = int(self.stack.n_rows*0.05)
+        starty = self.stack.n_cols-int(self.stack.n_cols*0.05)-self.stack.scale_bar_pixels_y
+        um_string = '$\mu m$'
+        microns = '$'+self.stack.scale_bar_string+' $'+um_string
+        axes.text(self.stack.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center',
+                  color = 'white', fontsize=14)
+        #Matplotlib has flipped scales so I'm using rows instead of cols!
+        p = matplotlib.patches.Rectangle((startx,starty), self.stack.scale_bar_pixels_x, self.stack.scale_bar_pixels_y,
+                               color = 'white', fill = True)
+        axes.add_patch(p)
+
+         
+        axes.axis("off")  
+        self.ODMImagePanel.draw()
+        
+
+#----------------------------------------------------------------------        
+    def OnSelection1(self, evt):
+        
+        x1 = evt.xdata
+                
+        self.button_pressed = True
+        self.patch = None
+        self.conn = self.SpectrumPanel.mpl_connect('motion_notify_event', self.OnSelectionMotion) 
+        
+        if x1 == None:
+            return
+        
+        self.x1 = x1
+
+#----------------------------------------------------------------------        
+    def OnSelection2(self, evt):
+        
+        x2 = evt.xdata
+            
+
+        self.button_pressed = False
+        self.SpectrumPanel.mpl_disconnect(self.conn)    
+        
+        if x2 == None:
+            return    
+        
+        x1 = self.x1
+
+        
+        if (self.i0selected == 1) and (self.iselected ==1):
+            self.i0selected = 0
+            self.iselected = 0
+        
+        if self.i0selected == 0:       
+            self.i0min = npy.abs(self.stack.ev - x1).argmin()
+            self.i0max = npy.abs(self.stack.ev - x2).argmin()
+            
+            self.image_i0 = npy.sum(self.stack.absdata[:, :, self.i0min:self.i0max+1], axis=2)/(self.i0max+1-self.i0min)
+
+            self.textctrl1.setText('Selection: [ '+str(self.stack.ev[self.i0min]) + ' eV, '+ str(self.stack.ev[self.i0max])+' eV ]' )
+            self.i0selected = 1
+            
+        elif self.iselected == 0:
+            self.imin = npy.abs(self.stack.ev - x1).argmin()
+            self.imax = npy.abs(self.stack.ev - x2).argmin()
+                       
+            self.image_i = npy.sum(self.stack.absdata[:, :, self.imin:self.imax+1], axis=2)/(self.imax+1-self.imin)
+            
+            self.textctrl2.setText('Selection: [ '+str(self.stack.ev[self.imin]) + ' eV, '+ str(self.stack.ev[self.imax])+' eV ]' )
+            self.iselected = 1        
+            
+        if (self.i0selected == 1) and (self.iselected ==1):              
+            nonzeroind = self.image_i0.nonzero()
+            self.odthickmap = npy.zeros((self.stack.n_cols, self.stack.n_rows))
+            self.odthickmap[nonzeroind] = - npy.log(self.image_i[nonzeroind]/self.image_i0[nonzeroind])
+            self.draw_image()
+            
+        
+        self.draw_spectrum()
+
+
+#----------------------------------------------------------------------        
+    def OnSelectionMotion(self, event):        
+
+        x2 = event.xdata
+        
+        if x2 == None:
+            return  
+        
+        x1 = self.x1
+        
+                
+        fig = self.specfig
+
+        axes = fig.gca()
+
+        if self.patch != None:
+            self.patch.remove()
+        self.patch = self.axes.axvspan(x1, x2, facecolor='w', alpha=0.5)
+
+        self.SpectrumPanel.draw()    
+        
+        
+#----------------------------------------------------------------------        
+    def OnSave(self, evt):
+        #Save images
+
+        wildcard = "Portable Network Graphics (*.png);;Adobe PDF Files (*.pdf);;"
+
+        fileName = QtGui.QFileDialog.getSaveFileName(self, 'Save OD Map', '', wildcard)
+
+        fileName = str(fileName)
+        if fileName == '':
+            return
+        
+        path, ext = os.path.splitext(fileName) 
+        ext = ext[1:].lower() 
+                               
+
+        
+       
+        if ext != 'png' and ext != 'pdf': 
+            error_message = ( 
+                  'Only the PNG and PDF image formats are supported.\n' 
+                 'A file extension of `png\' or `pdf\' must be used.') 
+            QtGui.QMessageBox.warning(self, 'Error', 'Error - Could not save file.') 
+            return 
+   
+        try: 
+
+            matplotlib.rcParams['pdf.fonttype'] = 42
+            
+            fig = self.odmfig
+            fig.savefig(fileName)
+
+            
+        except IOError, e:
+            if e.strerror:
+                err = e.strerror 
+            else: 
+                err = e 
+   
+            QtGui.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % err) 
+            
+
+
 
 #---------------------------------------------------------------------- 
 class DoseCalculation(QtGui.QDialog):
 
-    def __init__(self, parent,  common, stack):    
+    def __init__(self, parent,  stack, ROIspectrum):    
         QtGui.QWidget.__init__(self, parent)
         
         self.parent = parent
@@ -6013,7 +7292,7 @@ class DoseCalculation(QtGui.QDialog):
         self.stack = stack
         self.com = common  
         
-        self.resize(400, 500)
+        self.resize(300, 170)
         self.setWindowTitle('Dose Calculation')
         
         pal = QtGui.QPalette()
@@ -6021,7 +7300,112 @@ class DoseCalculation(QtGui.QDialog):
         pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
         self.setPalette(pal) 
                 
+        self.stack = stack
+        self.com = common
+        self.ROIspectrum = ROIspectrum
+               
 
+        
+        vboxtop = QtGui.QVBoxLayout()
+        
+        
+        gridtop = QtGui.QGridLayout()
+
+        
+        #fontb = wx.SystemSettings_GetFont(wx.SYS_DEFAULT_GUI_FONT)
+        #fontb.SetWeight(wx.BOLD)
+        
+        
+        st1 = QtGui.QLabel(self)
+        st1.setText('Detector efficiency [%]:')
+        #st1.SetFont(fontb)
+        st2 = QtGui.QLabel(self)
+        st2.setText('I region composition:')
+        #st2.SetFont(fontb)
+#        st3 = QtGui.QLabel(self,'Xray absorption length:')
+#        st3.SetFont(fontb)
+        st4 = QtGui.QLabel(self)
+        st4.setText('Dose [Gray]:')
+        #st4.SetFont(fontb)
+
+        
+        self.tc_1 = QtGui.QLineEdit(self)
+        self.tc_1.setText('30')
+        
+        self.tc_2 = QtGui.QLineEdit(self)
+        
+#        self.tc_3 = wx.TextCtrl(panel1, -1, size=((200,-1)), style=wx.TE_RICH|wx.VSCROLL|wx.TE_READONLY, 
+#                                         value=' ')   
+        
+        self.tc_4 = QtGui.QLabel(self)
+        
+
+        gridtop.addWidget(st1, 0,0)
+        gridtop.addWidget( self.tc_1, 0,1)
+        gridtop.addWidget(st2, 1,0)
+        gridtop.addWidget( self.tc_2, 1,1)
+#        gridtop.addWidget(st3, 0)
+#        gridtop.addWidget( self.tc_3, 0)
+        gridtop.addWidget(st4, 2,0)        
+        gridtop.addWidget( self.tc_4, 2,1)             
+          
+
+
+        button_calcdose = QtGui.QPushButton('Calculate Dose')
+        button_calcdose.clicked.connect(self.OnCalcDose)
+                
+        button_cancel = QtGui.QPushButton('Dismiss')
+        button_cancel.clicked.connect(self.close)
+
+
+        vboxtop.addLayout(gridtop)
+        vboxtop.addWidget(button_calcdose) 
+        vboxtop.addWidget(button_cancel) 
+        
+        self.setLayout(vboxtop)
+        
+              
+#---------------------------------------------------------------------- 
+    def CalcDose(self):
+                      
+        
+        try:
+            detector_eff = 0.01*float(self.tc_1.text())
+        except:
+            print 'Please enter numeric number for detector efficiency.'
+            return
+            
+        
+        i_composition = str(self.tc_2.text())
+        
+        dose = 0.
+        
+        Chenke = henke.henke()
+        
+        #Check if composition array is recognizable
+        try:
+            z_array, atwt = Chenke.compound(i_composition,1.0)
+        except:
+            print 'Composition string error: Please re-enter composition string.'
+            return
+        
+        
+        dose = Chenke.dose_calc(self.stack, i_composition, self.ROIspectrum, self.stack.i0data, detector_eff)
+        
+        self.tc_4.setText(str(dose))
+        
+        return
+        
+        
+#---------------------------------------------------------------------- 
+    def OnCalcDose(self, evt):
+
+        QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+        self.CalcDose()
+        QtGui.QApplication.restoreOverrideCursor()
+        
+        
+        
 #---------------------------------------------------------------------- 
 class PlotFrame(QtGui.QDialog):
 
@@ -6029,17 +7413,140 @@ class PlotFrame(QtGui.QDialog):
         QtGui.QWidget.__init__(self, parent)
         
         self.parent = parent
+        
+        self.title = title
 
         self.datax = datax
         self.datay = datay
         
-        self.resize(400, 500)
+        self.resize(630, 500)
         self.setWindowTitle(title)
         
         pal = QtGui.QPalette()
         self.setAutoFillBackground(True)
         pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
         self.setPalette(pal) 
+                
+        
+
+        vbox = QtGui.QVBoxLayout()
+        
+        frame = QtGui.QFrame()
+        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        fbox = QtGui.QHBoxLayout()
+   
+        self.plotfig = Figure((6.0, 4.2))
+        self.PlotPanel = FigureCanvas(self.plotfig)
+        self.PlotPanel.setParent(self)
+        
+        fbox.addWidget(self.PlotPanel)
+        frame.setLayout(fbox)
+        vbox.addWidget(frame)
+        
+
+        hbox = QtGui.QHBoxLayout()
+        
+        button_save = QtGui.QPushButton('Save Spectrum')
+        button_save.clicked.connect(self.OnSave)
+        hbox.addWidget(button_save)        
+                
+        button_close = QtGui.QPushButton('Close')
+        button_close.clicked.connect(self.close)
+        hbox.addWidget(button_close)
+        
+        vbox.addLayout(hbox)
+
+        self.setLayout(vbox)
+
+        
+        self.draw_plot(datax,datay)
+        
+      
+#----------------------------------------------------------------------        
+    def draw_plot(self, datax, datay):
+        
+        
+        fig = self.plotfig
+        fig.clf()
+        fig.add_axes((0.15,0.15,0.75,0.75))
+        self.axes = fig.gca()
+        
+        
+        plot = self.axes.plot(datax,datay)
+        
+        self.axes.set_xlabel('Photon Energy [eV]')
+        self.axes.set_ylabel('I0 Flux')
+        
+
+        
+        self.PlotPanel.draw()
+        
+#----------------------------------------------------------------------
+    def OnSave(self, event):
+
+
+        try: 
+            wildcard = "CSV files (*.csv)"
+
+            filepath = QtGui.QFileDialog.getSaveFileName(self, 'Save plot as .csv (.csv)', '', wildcard)
+
+            filepath = str(filepath)
+            if filepath == '':
+                return
+        
+                            
+            QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))                 
+            self.Save(filepath)    
+            QtGui.QApplication.restoreOverrideCursor()    
+
+        except:
+ 
+            QtGui.QApplication.restoreOverrideCursor()
+            QtGui.QMessageBox.warning(self, 'Error', "Could not save .csv file.")
+                   
+        self.close()
+
+        
+        return
+
+#----------------------------------------------------------------------
+    def Save(self, filename):
+            
+        f = open(filename, 'w')
+        print>>f, '*********************  X-ray Absorption Data  ********************'
+        print>>f, '*'
+        print>>f, '* Formula: '
+        print>>f, '* Common name: ', self.title
+        print>>f, '* Edge: '
+        print>>f, '* Acquisition mode: '
+        print>>f, '* Source and purity: ' 
+        print>>f, '* Comments: Stack list ROI ""'
+        print>>f, '* Delta eV: '
+        print>>f, '* Min eV: '
+        print>>f, '* Max eV: '
+        print>>f, '* Y axis: '
+        print>>f, '* Contact person: '
+        print>>f, '* Write date: '
+        print>>f, '* Journal: '
+        print>>f, '* Authors: '
+        print>>f, '* Title: '
+        print>>f, '* Volume: '
+        print>>f, '* Issue number: '
+        print>>f, '* Year: '
+        print>>f, '* Pages: '
+        print>>f, '* Booktitle: '
+        print>>f, '* Editors: '
+        print>>f, '* Publisher: '
+        print>>f, '* Address: '
+        print>>f, '*--------------------------------------------------------------'
+        dim = self.datax.shape
+        n=dim[0]
+        for ie in range(n):
+            print>>f, '%.6f, %.6f' %(self.datax[ie], self.datay[ie])
+        
+        f.close()
+    
+        
 
 #---------------------------------------------------------------------- 
 class ColorTableFrame(QtGui.QDialog):
@@ -6050,13 +7557,121 @@ class ColorTableFrame(QtGui.QDialog):
         self.parent = parent
 
         
-        self.resize(400, 500)
+        self.resize(200, 430)
         self.setWindowTitle('Pick Color Table')
         
         pal = QtGui.QPalette()
         self.setAutoFillBackground(True)
         pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
-        self.setPalette(pal)                                                    
+        self.setPalette(pal)    
+        
+        self.colors= ["gray","jet","autumn","bone", "cool","copper", "flag","hot","hsv","pink",
+                      "prism","spring","summer","winter", "spectral"]
+        
+        vboxtop = QtGui.QVBoxLayout()
+        
+        
+               
+        sizer1 = QtGui.QGroupBox('Color Tables')
+        vbox = QtGui.QVBoxLayout()
+        
+        self.rb_grey = QtGui.QRadioButton(self.colors[0], self)
+        self.rb_jet  = QtGui.QRadioButton(self.colors[1], self)
+        self.rb_autumn = QtGui.QRadioButton(self.colors[2], self)
+        self.rb_bone = QtGui.QRadioButton(self.colors[3], self)
+        self.rb_cool = QtGui.QRadioButton(self.colors[4], self)
+        self.rb_copper = QtGui.QRadioButton(self.colors[5], self)
+        self.rb_flag = QtGui.QRadioButton(self.colors[6], self)
+        self.rb_hot = QtGui.QRadioButton(self.colors[7], self)
+        self.rb_hsv = QtGui.QRadioButton(self.colors[8], self)
+        self.rb_pink = QtGui.QRadioButton(self.colors[9], self)
+        self.rb_prism = QtGui.QRadioButton(self.colors[10], self)
+        self.rb_spring = QtGui.QRadioButton(self.colors[11], self)
+        self.rb_summer = QtGui.QRadioButton(self.colors[12], self)
+        self.rb_winter = QtGui.QRadioButton(self.colors[13], self)
+        self.rb_spectral = QtGui.QRadioButton(self.colors[14], self)
+        
+        
+        self.radios = [] 
+        
+        self.radios.append(self.rb_grey)
+        self.radios.append(self.rb_jet)
+        self.radios.append(self.rb_autumn)
+        self.radios.append(self.rb_bone)
+        self.radios.append(self.rb_cool)
+        self.radios.append(self.rb_copper)
+        self.radios.append(self.rb_flag)
+        self.radios.append(self.rb_hot)
+        self.radios.append(self.rb_hsv)
+        self.radios.append(self.rb_pink)
+        self.radios.append(self.rb_prism)
+        self.radios.append(self.rb_spring)
+        self.radios.append(self.rb_summer)
+        self.radios.append(self.rb_winter)
+        self.radios.append(self.rb_spectral)
+        
+        self.ct_dict = dict([(self.colors[x], self.radios[x]) for x in range(len(self.colors))])
+        
+
+        self.rb_grey.clicked.connect(self.OnColorTable)
+        self.rb_jet.clicked.connect(self.OnColorTable)
+        self.rb_autumn.clicked.connect(self.OnColorTable)
+        self.rb_bone.clicked.connect(self.OnColorTable)
+        self.rb_cool.clicked.connect(self.OnColorTable)
+        self.rb_copper.clicked.connect(self.OnColorTable)
+        self.rb_flag.clicked.connect(self.OnColorTable)
+        self.rb_hot.clicked.connect(self.OnColorTable)
+        self.rb_hsv.clicked.connect(self.OnColorTable)
+        self.rb_pink.clicked.connect(self.OnColorTable)
+        self.rb_prism.clicked.connect(self.OnColorTable)
+        self.rb_spring.clicked.connect(self.OnColorTable)
+        self.rb_summer.clicked.connect(self.OnColorTable)
+        self.rb_winter.clicked.connect(self.OnColorTable)
+        self.rb_spectral.clicked.connect(self.OnColorTable)
+        
+        vbox.addWidget(self.rb_grey)
+        vbox.addWidget(self.rb_jet)
+        vbox.addWidget(self.rb_autumn)
+        vbox.addWidget(self.rb_bone)
+        vbox.addWidget(self.rb_cool)
+        vbox.addWidget(self.rb_copper)
+        vbox.addWidget(self.rb_flag)
+        vbox.addWidget(self.rb_hot)
+        vbox.addWidget(self.rb_hsv)
+        vbox.addWidget(self.rb_pink)
+        vbox.addWidget(self.rb_prism)
+        vbox.addWidget(self.rb_spring)
+        vbox.addWidget(self.rb_summer)
+        vbox.addWidget(self.rb_winter)
+        vbox.addWidget(self.rb_spectral)
+
+        sizer1.setLayout(vbox)
+        vboxtop.addWidget(sizer1)
+
+        
+        button_close = QtGui.QPushButton('Close')
+        button_close.clicked.connect(self.close)
+        vboxtop.addWidget(button_close)
+        
+        self.setLayout(vboxtop)
+        
+        self.ct_dict[self.parent.page1.colortable].setChecked(True)
+        
+        
+#----------------------------------------------------------------------          
+    def OnColorTable(self, event):
+    
+        for radioButton in self.findChildren(QtGui.QRadioButton):
+            if radioButton.isChecked():
+                radioButtonText = radioButton.text()
+                break
+            
+
+        self.parent.page1.colortable = str(radioButtonText)
+        
+        self.parent.page1.loadImage()
+                
+                                                        
 
 """ ------------------------------------------------------------------------------------------------"""
 class PageLoadData(QtGui.QWidget):
@@ -6274,7 +7889,7 @@ class PageLoadData(QtGui.QWidget):
 
         fig = self.absimgfig
         fig.clf()
-        fig.add_axes((0.02,0.02,0.96,0.96))
+        fig.add_axes(((0.0,0.0,1.0,1.0)))
         axes = fig.gca()
         fig.patch.set_alpha(1.0)
          
@@ -6719,16 +8334,10 @@ class MainFrame(QtGui.QMainWindow):
         tabs.addTab(self.page5,"Key Energies")
     
         layout = QVBoxLayout()
-#         tempLayout = QHBoxLayout()
+
         layout.addWidget(tabs)
         self.setCentralWidget(tabs)
-#         rightLayout.addLayout(tempLayout)
-#         rightLayout.addWidget(QListView())
-#         
-#         layout.addLayout(leftLayout)
-#         layout.addLayout(rightLayout)
-        #self.setLayout(layout)
-        
+       
                               
         self.show()
 
@@ -6770,8 +8379,7 @@ class MainFrame(QtGui.QMainWindow):
         Browse for a stack file:
         """
 
-        if True:
-        #try:
+        try:
             if wildcard == False:
                 wildcard =  "HDF5 files (*.hdf5);;SDF files (*.hdr);;STK files (*.stk);;TXRM (*.txrm);;XRM (*.xrm);;TIF (*.tif)" 
 
@@ -6784,6 +8392,7 @@ class MainFrame(QtGui.QMainWindow):
             
             
             directory =  os.path.dirname(str(filepath))
+            self.page4.DefaultDir = directory
             self.page1.filename =  os.path.basename(str(filepath))
         
             QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
@@ -6894,16 +8503,16 @@ class MainFrame(QtGui.QMainWindow):
 
             QtGui.QApplication.restoreOverrideCursor()
                 
-#         except:
-#  
-#             self.common.stack_loaded = 0 
-#             self.common.i0_loaded = 0
-#             self.new_stack_refresh()
-#                                 
-#             QtGui.QApplication.restoreOverrideCursor()
-#             QtGui.QMessageBox.warning(self, 'Error', 'Image stack not loaded.')
-# 
-#             import sys; print sys.exc_info()
+        except:
+  
+            self.common.stack_loaded = 0 
+            self.common.i0_loaded = 0
+            self.new_stack_refresh()
+                                 
+            QtGui.QApplication.restoreOverrideCursor()
+            QtGui.QMessageBox.warning(self, 'Error', 'Image stack not loaded.')
+ 
+            import sys; print sys.exc_info()
                    
 
         self.refresh_widgets()
@@ -6915,8 +8524,7 @@ class MainFrame(QtGui.QMainWindow):
         Browse for .sm files
         """
         
-        if True:
-        #try:
+        try:
             directory = QtGui.QFileDialog.getExistingDirectory(self, "Choose a directory", '', QtGui.QFileDialog.ShowDirsOnly|QtGui.QFileDialog.ReadOnly )       
                                                         
         
@@ -6929,15 +8537,15 @@ class MainFrame(QtGui.QMainWindow):
             stackframe = StackListFrame(self, directory, self.common, self.stk, self.data_struct)
             stackframe.show()
              
-#         except:
-#             print 'Error could not build stack list.'
-#             self.common.stack_loaded = 0 
-#             self.common.i0_loaded = 0
-#             self.new_stack_refresh()
-#             self.refresh_widgets()
-#                                 
-#             QtGui.QMessageBox.warning(self,'Error',".sm files not loaded.")
-#             import sys; print sys.exc_info()
+        except:
+            print 'Error could not build stack list.'
+            self.common.stack_loaded = 0 
+            self.common.i0_loaded = 0
+            self.new_stack_refresh()
+            self.refresh_widgets()
+                                 
+            QtGui.QMessageBox.warning(self,'Error',".sm files not loaded.")
+            import sys; print sys.exc_info()
             
 #----------------------------------------------------------------------
     def onSaveAsH5(self, event):

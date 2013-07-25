@@ -409,6 +409,7 @@ class henke:
 #-----------------------------------------------------------------------------    
     def read(self, ielement = -1, all = True): 
         
+        
         # If we don't specifiy element return all energies 
         if ielement == -1 : 
             all = True
@@ -417,11 +418,12 @@ class henke:
         expected_pos = 0
         
         filename = 'henke.xdr'
-        try:
-            file = open(str(filename),'rb')
-        except:
-            print 'Could not open file ', filename
-            return -1
+        file = open(str(filename),'rb')
+#         try:
+#             file = open(str(filename),'rb')
+#         except:
+#             print 'Could not open file ', filename
+#             return -1
         
         if verbose:
             print 'File: ', filename   
@@ -532,6 +534,7 @@ class henke:
                                                 
         file.close()
         
+        
         return energies, f1, f2, n_extra, extra_energies, extra_f1, extra_f2
     
     
@@ -629,7 +632,7 @@ class henke:
         rho = 1.
         henke_energies, f1, f2, delta, beta, graze_mrad, reflect, inverse_mu, atwt, alpha = self.array(i_composition,rho) 
 
-        func_f2_array = scipy.interpolate.interp1d(henke_energies, f2, kind='cubic', bounds_error=False, fill_value=0.0) 
+        func_f2_array = scipy.interpolate.interp1d(henke_energies, f2,  bounds_error=False, fill_value=0.0) 
         f2_array = func_f2_array(stack.ev)
         
         # This is the scaling of f2_array as described in pca_gui_man.tex
