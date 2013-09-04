@@ -23,6 +23,7 @@ import scipy.interpolate
 import scipy.spatial
 import scipy.ndimage
 from scipy.cluster.vq import  kmeans2
+from scipy import optimize
 
 import scipy as sp
 mmult = sp.dot
@@ -30,6 +31,85 @@ mmult = sp.dot
 import warnings
 warnings.simplefilter('ignore', DeprecationWarning)
 
+
+
+#-----------------------------------------------------------------------------
+def erf(x):
+    # save the sign of x
+    sign = 1
+    if x < 0: 
+        sign = -1
+    x = abs(x)
+
+    # constants
+    a1 =  0.254829592
+    a2 = -0.284496736
+    a3 =  1.421413741
+    a4 = -1.453152027
+    a5 =  1.061405429
+    p  =  0.3275911
+
+    # A&S formula 7.1.26
+    t = 1.0/(1.0 + p*x)
+    y = 1.0 - (((((a5*t + a4)*t) + a3)*t + a2)*t + a1)*t*np.math.exp(-x*x)
+    return sign*y # erf(-x) = -erf(x)
+
+def stepfunc(p, x):
+    #JS Nexafs book - step function
+    # P - position of the inflection point
+    # H - step height
+    # G - FWHM width of the step
+    # E - independent variable, energy (x)
+    
+    P = p[0]
+    H = p[1]
+    G = p[2]
+    offset = p[3]
+    
+    c = 1.665
+    
+    y = H*(0.5+0.5*erf((x-P)/(G/c)))+offset
+
+    return y
+
+def gaussian(p, x):
+    
+    A = p[0]
+    mu = p[1]
+    sigma = p[2]
+    #offset = p[3]
+    
+    y = A * np.exp(-((x-mu)**2)/(2*sigma**2))#+offset
+    
+    return y
+
+def model(p, nsteps, npeaks, x):
+    
+    pg = nsteps*4
+    
+    istepfitparams = p[0:pg]
+    
+    y = np.zeros((x.size))
+       
+    for i in range(x.size):
+        y[i] = stepfunc(istepfitparams, x[i])
+
+    for i in range(npeaks):
+        pp = [p[pg+i*3],p[pg+1+i*3],p[pg+2+i*3]]
+        y = y + gaussian(pp,x)
+    
+    return y 
+
+def model_error(p, nsteps, npeaks, x, y):
+
+    err = np.zeros(x.size)
+#     for i in range(x.size):
+#         err[i] = (y[i]-model(p, x[i]))
+#     return err
+
+    err = y-model(p, nsteps, npeaks, x)
+    
+    return err
 
 
 #----------------------------------------------------------------------
@@ -45,6 +125,21 @@ class analyze:
         self.tspectrum_loaded = 0
         self.n_target_spectra = 0
         self.tspec_names = []
+        
+        self.xrayfitsp_loaded = 0
+        self.xrayfitspectra = 0
+        self.n_xrayfitsp = 0
+        self.xfspec_names = []
+        
+        self.istepfitparams = np.zeros((8))
+        self.igauss_fp_a = np.zeros((12))
+        self.igauss_fp_m = np.zeros((12))
+        self.igauss_fp_s = np.zeros((12)) 
+        self.stepfitparams = np.zeros((8))
+        self.gauss_fp_a = np.zeros((12))
+        self.gauss_fp_m = np.zeros((12))
+        self.gauss_fp_s = np.zeros((12)) 
+        
         
 #----------------------------------------------------------------------   
 # Calculate pca 
@@ -712,6 +807,126 @@ class analyze:
         return np.array(maxtab), np.array(mintab)
 
 
+
+#----------------------------------------------------------------------   
+    def load_xraypeakfit_spectrum(self, filename):
+
+        # Load spectrum from a file
+        spectrum_evdata = 0
+        spectrum_data = 0
+        spectrum_common_name = ' '
+
+        spectrum_evdata, spectrum_data, spectrum_common_name = self.stack.read_csv(filename)
+                                
+        if self.stack.n_ev > 0:
+            # Map this spectrum onto our energy range - interpolate to ev
+            ftspec = scipy.interpolate.interp1d(spectrum_evdata, spectrum_data, kind='cubic', bounds_error=False)      
+            xfit_spectrum = np.reshape(ftspec(self.stack.ev), (1,self.stack.n_ev))
+        else:
+            self.stack.ev = spectrum_evdata
+            self.stack.n_ev = len(self.stack.ev)
+            xfit_spectrum = np.reshape(spectrum_data, (1,self.stack.n_ev)) 
+        
+        #fix the edges if needed 
+        if self.stack.ev[0]<spectrum_evdata[0]:
+            indx = np.where(self.stack.ev<spectrum_evdata[0])
+            xfit_spectrum[0,indx] = spectrum_data[0]
+        if self.stack.ev[-1]>spectrum_evdata[-1]:
+            indx = np.where(self.stack.ev>spectrum_evdata[-1])
+            xfit_spectrum[0,indx] = spectrum_data[-1]
+            
+     
+        if self.xrayfitsp_loaded == 0:
+            self.xrayfitspectra = xfit_spectrum
+            self.xrayfitsp_loaded = 1
+            self.n_xrayfitsp = 1
+        else:
+            self.xrayfitspectra = np.vstack((self.xrayfitspectra,xfit_spectrum))
+            self.n_xrayfitsp += 1
+        self.xfspec_names.append(spectrum_common_name)
+        
+
+#----------------------------------------------------------------------   
+    def init_fit_params(self):
+        
+        
+        pmax,pmin = self.find_peaks(self.xrayfitspectra[0], 0.04, x = self.stack.ev)
+        
+        
+        if len(pmax) > 0:
+            peakengs = pmax[0][0]
+        else:
+            peakengs = [self.stack.ev[int(self.stack.nev/2)]]
+        
+        self.istepfitparams = [peakengs, 0.5, 10.0, 0.5, peakengs+10, 0.5, 10.0, 0.5]
+
+        
+        
+        for i in range(12):
+            self.igauss_fp_a[i] = 1.0
+            self.igauss_fp_m[i] = peakengs+i
+            self.igauss_fp_s[i] = 0.5 
+        
+           
+        
+        return self.istepfitparams, self.igauss_fp_a, self.igauss_fp_m, self.igauss_fp_s
+        
+
+#----------------------------------------------------------------------   
+    def fit_spectrum(self, i_spec, nsteps, npeaks):
+        
+        
+        xfit_spectrum = self.xrayfitspectra[i_spec]
+        
+        
+        p = []
+        self.nsteps = nsteps
+        self.npeaks = npeaks
+        
+        for i in range(nsteps*4):
+            p.append(self.istepfitparams[i])
+            
+        for i in range(npeaks):
+            p.append(self.igauss_fp_a[i])
+            p.append(self.igauss_fp_m[i])
+            p.append(self.igauss_fp_s[i])
+            
+        
+        p2, success = optimize.leastsq(model_error, p[:], args=(nsteps, npeaks, np.array(self.stack.ev), np.array(xfit_spectrum)))
+        
+        self.stepfitparams = np.zeros((8))
+        self.gauss_fp_a = np.zeros((12))
+        self.gauss_fp_m = np.zeros((12))
+        self.gauss_fp_s = np.zeros((12)) 
+        
+        self.stepfitparams = p2[0:8]
+        for i in range(npeaks):           
+            self.gauss_fp_a[i] = p2[nsteps*4+i*3]
+            self.gauss_fp_m[i] = p2[nsteps*4+1+i*3]
+            self.gauss_fp_s[i] = p2[nsteps*4+2+i*3]
+        
+#         y=np.zeros((self.stack.ev.size))
+#         for i in range(self.stack.ev.size):
+#             y[i] = model(p2, self.stack.ev[i])
+        
+        y = model(p2, nsteps, npeaks, self.stack.ev)
+        
+        separate_y = []
+        
+        for i in range(nsteps):
+            y1 = np.zeros((self.stack.ev.size))
+            istepfitparams = p2[4*i:4*i+4]
+            for i in range(self.stack.ev.size):
+                y1[i] = stepfunc(istepfitparams, self.stack.ev[i])
+            separate_y.append(y1)
+            
+        pg = nsteps*4
+        for i in range(npeaks):
+            pp = [p2[pg+i*3],p2[pg+1+i*3],p2[pg+2+i*3]]
+            y1 = gaussian(pp,self.stack.ev)
+            separate_y.append(y1)
+           
+        return y, separate_y
 
 
 #----------------------------------------------------------------------   

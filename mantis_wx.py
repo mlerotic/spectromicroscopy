@@ -8407,7 +8407,7 @@ class MainFrame(wx.Frame):
         nb.AddPage(self.page3, "Cluster Analysis")
         nb.AddPage(self.page4, "Spectral Analysis")
         # Only add NNMA pages if option "--nnma" is given in command line
-        options, extraParams = getopt.getopt(sys.argv[1:], '', ['nnma', 'ica', 'keyeng'])
+        options, extraParams = getopt.getopt(sys.argv[1:], '', ['wx', 'cl', 'nnma', 'ica', 'keyeng'])
         for opt, arg in options:
             if opt in '--nnma':
                 if verbose: print "Running with NNMA."
@@ -8426,12 +8426,17 @@ class MainFrame(wx.Frame):
                 self.page6 = PageICA(nb, self.common, self.data_struct, self.stk, self.anlz)
                 nb.AddPage(self.page6, "ICA")
                 
-            if opt in '--keyeng':
-                if verbose: print "Running with KeyEng."
-                self.page7 = PageKeyEng(nb, self.common, self.data_struct, self.stk, self.anlz)
-                nb.AddPage(self.page7, "Key Energies")
-
             
+#             if opt in '--keyeng':
+#                 if verbose: print "Running with KeyEng."
+#                 self.page7 = PageKeyEng(nb, self.common, self.data_struct, self.stk, self.anlz)
+#                 nb.AddPage(self.page7, "Key Energies")
+
+          
+
+        self.page7 = PageKeyEng(nb, self.common, self.data_struct, self.stk, self.anlz)
+        nb.AddPage(self.page7, "Key Energies")
+                            
                 
                 
         # finally, put the notebook in a sizer for the panel to manage

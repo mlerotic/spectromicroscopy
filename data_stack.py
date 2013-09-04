@@ -43,6 +43,8 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
         self.data_struct = data_struct
         
         self.i0_dwell = None 
+        
+        self.n_ev = 0
 
 #----------------------------------------------------------------------   
     def new_data(self):
