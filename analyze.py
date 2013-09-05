@@ -64,11 +64,10 @@ def stepfunc(p, x):
     P = p[0]
     H = p[1]
     G = p[2]
-    offset = p[3]
     
     c = 1.665
     
-    y = H*(0.5+0.5*erf((x-P)/(G/c)))+offset
+    y = H*(0.5+0.5*erf((x-P)/(G/c)))
 
     return y
 
@@ -85,24 +84,30 @@ def gaussian(p, x):
 
 def model(p, nsteps, npeaks, x):
     
-    pg = nsteps*4
+    offset = p[0]
     
-    istepfitparams = p[0:pg]
+    pg = nsteps*3+1
+    
+    istepfitparams = p[1:pg]
     
     y = np.zeros((x.size))
        
-    for i in range(x.size):
-        y[i] = stepfunc(istepfitparams, x[i])
+    if nsteps > 0:
+        for i in range(x.size):
+            y[i] = stepfunc(istepfitparams, x[i])
 
     for i in range(npeaks):
         pp = [p[pg+i*3],p[pg+1+i*3],p[pg+2+i*3]]
         y = y + gaussian(pp,x)
+        
+    y = y+offset
     
     return y 
 
+
 def model_error(p, nsteps, npeaks, x, y):
 
-    err = np.zeros(x.size)
+#    err = np.zeros(x.size)
 #     for i in range(x.size):
 #         err[i] = (y[i]-model(p, x[i]))
 #     return err
@@ -111,6 +116,23 @@ def model_error(p, nsteps, npeaks, x, y):
     
     return err
 
+
+#----------------------------------------------------------------------
+class Cfitparams:
+    def __init__(self):
+        self.ibase = 0.5
+        self.istepfitparams = np.zeros((8))
+        self.igauss_fp_a = np.zeros((12))
+        self.igauss_fp_m = np.zeros((12))
+        self.igauss_fp_s = np.zeros((12))
+        
+        self.base = 0.0
+        self.stepfitparams = np.zeros((8))
+        self.gauss_fp_a = np.zeros((12))
+        self.gauss_fp_m = np.zeros((12))
+        self.gauss_fp_s = np.zeros((12))
+        
+        
 
 #----------------------------------------------------------------------
 class analyze:
@@ -130,15 +152,8 @@ class analyze:
         self.xrayfitspectra = 0
         self.n_xrayfitsp = 0
         self.xfspec_names = []
-        
-        self.istepfitparams = np.zeros((8))
-        self.igauss_fp_a = np.zeros((12))
-        self.igauss_fp_m = np.zeros((12))
-        self.igauss_fp_s = np.zeros((12)) 
-        self.stepfitparams = np.zeros((8))
-        self.gauss_fp_a = np.zeros((12))
-        self.gauss_fp_m = np.zeros((12))
-        self.gauss_fp_s = np.zeros((12)) 
+        self.xfitpars = []
+
         
         
 #----------------------------------------------------------------------   
@@ -734,6 +749,7 @@ class analyze:
         return key_engs
 
 
+
 #-----------------------------------------------------------------------------
 #Peakfinder
     def find_peaks(self, v, delta, x = None):
@@ -760,28 +776,22 @@ class analyze:
         """
         maxtab = []
         mintab = []
-           
+        
         if x is None:
             x = np.arange(len(v))
-        
         v = np.asarray(v)
-        
         if len(v) != len(x):
             print 'Input vectors v and x must have same length'
             return -1
-        
         if not np.isscalar(delta):
             print 'Input argument delta must be a scalar'
             return -1
-        
         if delta <= 0:
             print 'Input argument delta must be positive'
-        
+            return -1
         mn, mx = np.Inf, -np.Inf
         mnpos, mxpos = np.NaN, np.NaN
-        
         lookformax = True
-        
         for i in np.arange(len(v)):
             this = v[i]
             if this > mx:
@@ -790,7 +800,6 @@ class analyze:
             if this < mn:
                 mn = this
                 mnpos = x[i]
-            
             if lookformax:
                 if this < mx-delta:
                     maxtab.append((mxpos, mx))
@@ -803,7 +812,7 @@ class analyze:
                     mx = this
                     mxpos = x[i]
                     lookformax = True
-    
+     
         return np.array(maxtab), np.array(mintab)
 
 
@@ -845,31 +854,66 @@ class analyze:
             self.n_xrayfitsp += 1
         self.xfspec_names.append(spectrum_common_name)
         
+        self.xfitpars.append(Cfitparams())
+        
+        
 
 #----------------------------------------------------------------------   
-    def init_fit_params(self):
-        
-        
-        pmax,pmin = self.find_peaks(self.xrayfitspectra[0], 0.04, x = self.stack.ev)
-        
-        
-        if len(pmax) > 0:
-            peakengs = pmax[0][0]
+#Load spectra from cluster analysis
+    def load_xraypeakfit_clusterspectrum(self, i_cluster):
+
+
+        xfit_spectrum = self.clusterspectra[i_cluster,:].copy()
+        spectrum_common_name = 'Cluster '+str(i_cluster+1)
+         
+     
+        if self.xrayfitsp_loaded == 0:
+            self.xrayfitspectra = xfit_spectrum.copy()
+            self.xrayfitsp_loaded = 1
+            self.n_xrayfitsp = 1
         else:
-            peakengs = [self.stack.ev[int(self.stack.nev/2)]]
+            self.xrayfitspectra = np.vstack((self.xrayfitspectra, xfit_spectrum))
+            self.n_xrayfitsp += 1
+            
+        self.xfspec_names.append(spectrum_common_name)
         
-        self.istepfitparams = [peakengs, 0.5, 10.0, 0.5, peakengs+10, 0.5, 10.0, 0.5]
+        self.xfitpars.append(Cfitparams())
+        
+        
+#----------------------------------------------------------------------   
+    def init_fit_params(self, index):
+        
+        
+        pmax,pmin = self.find_peaks(self.xrayfitspectra[index], 0.04, x = self.stack.ev)
+        
+        fp = self.xfitpars[index]
+        
+        
+        peakengs = []
+        if len(pmax) > 0:
+            for i in range(12):
+                if i < len(pmax):
+                    peakengs.append(pmax[i][0])
+                else:
+                    peakengs.append(0)
+        else:
+            delta = int(self.stack.nev/13)
+            for i in range(12):
+                peakengs.append(self.stack.ev[delta*i])
+        
+        fp.istepfitparams = [peakengs[0], 0.5, 10.0, peakengs[1], 0.5, 10.0]
 
         
-        
         for i in range(12):
-            self.igauss_fp_a[i] = 1.0
-            self.igauss_fp_m[i] = peakengs+i
-            self.igauss_fp_s[i] = 0.5 
+            fp.igauss_fp_a[i] = 1.0
+            fp.igauss_fp_m[i] = peakengs[i]
+            fp.igauss_fp_s[i] = 0.5 
+            
+            
+        fp.ibase = np.mean(self.xrayfitspectra[index][0:5])
         
-           
         
-        return self.istepfitparams, self.igauss_fp_a, self.igauss_fp_m, self.igauss_fp_s
+        return fp.ibase, fp.istepfitparams, fp.igauss_fp_a, fp.igauss_fp_m, fp.igauss_fp_s
         
 
 #----------------------------------------------------------------------   
@@ -877,50 +921,58 @@ class analyze:
         
         
         xfit_spectrum = self.xrayfitspectra[i_spec]
+        fp = self.xfitpars[i_spec]
         
         
         p = []
         self.nsteps = nsteps
         self.npeaks = npeaks
         
-        for i in range(nsteps*4):
-            p.append(self.istepfitparams[i])
+        p.append(fp.ibase)
+        
+        for i in range(nsteps*3):
+            p.append(fp.istepfitparams[i])
             
         for i in range(npeaks):
-            p.append(self.igauss_fp_a[i])
-            p.append(self.igauss_fp_m[i])
-            p.append(self.igauss_fp_s[i])
+            p.append(fp.igauss_fp_a[i])
+            p.append(fp.igauss_fp_m[i])
+            p.append(fp.igauss_fp_s[i])
             
         
-        p2, success = optimize.leastsq(model_error, p[:], args=(nsteps, npeaks, np.array(self.stack.ev), np.array(xfit_spectrum)))
+        p2, success = optimize.leastsq(model_error, p[:], args=(nsteps, npeaks, np.array(self.stack.ev).astype(np.float64), np.array(xfit_spectrum).astype(np.float64)))
         
-        self.stepfitparams = np.zeros((8))
-        self.gauss_fp_a = np.zeros((12))
-        self.gauss_fp_m = np.zeros((12))
-        self.gauss_fp_s = np.zeros((12)) 
+       
+        fp.stepfitparams = np.zeros((8))
+        fp.gauss_fp_a = np.zeros((12))
+        fp.gauss_fp_m = np.zeros((12))
+        fp.gauss_fp_s = np.zeros((12)) 
         
-        self.stepfitparams = p2[0:8]
+        fp.base = p2[0]
+        fp.stepfitparams[0:nsteps*3] = p2[1:nsteps*3+1]
         for i in range(npeaks):           
-            self.gauss_fp_a[i] = p2[nsteps*4+i*3]
-            self.gauss_fp_m[i] = p2[nsteps*4+1+i*3]
-            self.gauss_fp_s[i] = p2[nsteps*4+2+i*3]
+            fp.gauss_fp_a[i] = p2[nsteps*3+1+i*3]
+            fp.gauss_fp_m[i] = p2[nsteps*3+2+i*3]
+            fp.gauss_fp_s[i] = p2[nsteps*3+3+i*3]
         
-#         y=np.zeros((self.stack.ev.size))
-#         for i in range(self.stack.ev.size):
-#             y[i] = model(p2, self.stack.ev[i])
         
         y = model(p2, nsteps, npeaks, self.stack.ev)
         
         separate_y = []
         
+        #Add base
+        y1 = np.ones((self.stack.ev.size))*fp.base
+        separate_y.append(y1)
+        
+        #Add step
         for i in range(nsteps):
             y1 = np.zeros((self.stack.ev.size))
-            istepfitparams = p2[4*i:4*i+4]
+            istepfitparams = p2[3*i+1:3*i+4]
             for i in range(self.stack.ev.size):
                 y1[i] = stepfunc(istepfitparams, self.stack.ev[i])
             separate_y.append(y1)
             
-        pg = nsteps*4
+        #Add peaks
+        pg = nsteps*3+1
         for i in range(npeaks):
             pp = [p2[pg+i*3],p2[pg+1+i*3],p2[pg+2+i*3]]
             y1 = gaussian(pp,self.stack.ev)

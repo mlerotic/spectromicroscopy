@@ -90,14 +90,18 @@ class PageXrayPeakFitting(QtGui.QWidget):
         self.stk = stack       
         self.anlz = anlz
         
-        self.i_spec = 0
+        self.i_spec = 1
         
-        self.firstinit = 1
         
-        self.nsteps = 1
-        self.npeaks = 4
         
+        self.nsteps = []
+        self.npeaks = []
         self.spectrumfitted = []
+        self.initdone = []
+        self.firstinit = []
+        
+        self.fits = []
+        self.fits_sep = []
         
         
         vboxL = QtGui.QVBoxLayout()
@@ -126,7 +130,7 @@ class PageXrayPeakFitting(QtGui.QWidget):
         frame = QtGui.QFrame()
         frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
-        self.Specfig = Figure((PlotW, PlotH))
+        self.Specfig = Figure((PlotW*1.25, PlotH*1.25))
         self.SpectrumPanel = FigureCanvas(self.Specfig)
         fbox.addWidget(self.SpectrumPanel)
         frame.setLayout(fbox)
@@ -155,13 +159,13 @@ class PageXrayPeakFitting(QtGui.QWidget):
 
 
         self.button_addclspec = QtGui.QPushButton('Add Cluster Spectra')
-        #self.button_addclspec.clicked.connect( self.OnAddClusterSpectra)   
+        self.button_addclspec.clicked.connect( self.OnAddClusterSpectra)   
         self.button_addclspec.setEnabled(False)
         vbox3.addWidget(self.button_addclspec)
             
  
         self.button_save = QtGui.QPushButton('Save Images...')
-        #self.button_save.clicked.connect( self.OnSave)
+        self.button_save.clicked.connect( self.OnSave)
         self.button_save.setEnabled(False)
         vbox3.addWidget(self.button_save)
 
@@ -173,15 +177,7 @@ class PageXrayPeakFitting(QtGui.QWidget):
         sizer4 = QtGui.QGroupBox('Fit Settings')
         vbox4 = QtGui.QVBoxLayout()
                 
-        sb = QtGui.QGroupBox('Spectrum')
-        vbox41 = QtGui.QVBoxLayout()
-
-        self.textctrl_sp1 =  QtGui.QLabel(self)
-        vbox41.addWidget(self.textctrl_sp1)
-    
-        self.textctrl_sp1.setText('Common Name: ')
-        
-        
+           
         hbox41 = QtGui.QHBoxLayout()
         text1 = QtGui.QLabel(self)
         text1.setText('Number of steps')
@@ -189,11 +185,11 @@ class PageXrayPeakFitting(QtGui.QWidget):
         self.nstepsspin = QtGui.QSpinBox()
         self.nstepsspin.setMinimumWidth(85)
         self.nstepsspin.setRange(0,2)
-        self.nstepsspin.setValue(self.nsteps)
+        self.nstepsspin.setValue(0)
         self.nstepsspin.valueChanged[int].connect(self.OnNstepsspin)
         hbox41.addWidget(text1)
         hbox41.addWidget(self.nstepsspin)  
-        vbox41.addLayout(hbox41)
+        vbox4.addLayout(hbox41)
         
         hbox42 = QtGui.QHBoxLayout()
         text2 = QtGui.QLabel(self)
@@ -202,19 +198,21 @@ class PageXrayPeakFitting(QtGui.QWidget):
         self.ngaussspin = QtGui.QSpinBox()
         self.ngaussspin.setMinimumWidth(85)
         self.ngaussspin.setRange(0,12)
-        self.ngaussspin.setValue(self.npeaks)
+        self.ngaussspin.setValue(0)
         self.ngaussspin.valueChanged[int].connect(self.OnNgaussspin)
         hbox42.addWidget(text2)
         hbox42.addWidget(self.ngaussspin)  
-        vbox41.addLayout(hbox42)
+        vbox4.addLayout(hbox42)
+
         
-        
-        sb.setLayout(vbox41)
-        vbox4.addWidget(sb)
+        self.button_initfitparams = QtGui.QPushButton('Initialize Fit Parameters')
+        self.button_initfitparams.clicked.connect( self.OnInitFitParams)   
+        self.button_initfitparams.setEnabled(False)
+        vbox4.addWidget(self.button_initfitparams)
         
         self.button_fitspec = QtGui.QPushButton('Fit Spectrum')
         self.button_fitspec.clicked.connect( self.OnFitSpectrum)   
-        #self.button_fitspec.setEnabled(False)
+        self.button_fitspec.setEnabled(False)
         vbox4.addWidget(self.button_fitspec)
         
         sizer4.setLayout(vbox4)
@@ -223,31 +221,27 @@ class PageXrayPeakFitting(QtGui.QWidget):
         #panel 5
         sizer5 = QtGui.QGroupBox('Fit Parameters')
         vbox5 = QtGui.QVBoxLayout()
-                
-
-        fgs1 = QtGui.QGridLayout()
+            
         
-        textctrl =  QtGui.QLabel(self)
-        textctrl.setText('Steps')
-        fgs1.addWidget(textctrl, 0, 0)
-
-
-        textctrl =  QtGui.QLabel(self)
-        textctrl.setText('Gausian Peaks')  
-        fgs1.addWidget(textctrl, 1, 0)      
-        textctrl =  QtGui.QLabel(self)
+        self.tc_base = QtGui.QLabel(self)
+        vbox5.addWidget(self.tc_base)
+        self.tc_base.setText('Base:')
         
-
-        vbox5.addLayout(fgs1)
         
-        self.button_initfitparams = QtGui.QPushButton('Initialize Fit Parameters')
-        self.button_initfitparams.clicked.connect( self.OnInitFitParams)   
-        #self.button_initfitparams.setEnabled(False)
-        vbox5.addWidget(self.button_initfitparams)
+        self.tc_step = QtGui.QLabel(self)
+        vbox5.addWidget(self.tc_step)
+        self.tc_step.setText('Step Height:')
+
+        
+        self.tc_peaks = QtGui.QLabel(self)
+        vbox5.addWidget(self.tc_peaks)
+        self.tc_peaks.setText('Peak positions:')
+    
+        
         
         self.button_fitparams = QtGui.QPushButton('Fit Parameters Results')
         self.button_fitparams.clicked.connect( self.OnShowFitParams)   
-        #self.button_fitparams.setEnabled(False)
+        self.button_fitparams.setEnabled(False)
         vbox5.addWidget(self.button_fitparams)
         
         sizer5.setLayout(vbox5)
@@ -273,8 +267,8 @@ class PageXrayPeakFitting(QtGui.QWidget):
 #----------------------------------------------------------------------
     def OnSpecFromFile(self, event):
         
-        if True:
-        #try: 
+
+        try: 
             
             wildcard = "Spectrum files (*.csv)"
             
@@ -292,13 +286,65 @@ class PageXrayPeakFitting(QtGui.QWidget):
             QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))    
                                             
             self.anlz.load_xraypeakfit_spectrum(filename=filepath)
-#             self.com.spec_anl_calculated = 1
-#             
+
+            self.com.xpf_loaded = 1
+            self.spectrumfitted.append(0)
+            self.firstinit.append(1)
+            self.initdone.append(0)
+            self.nsteps.append(1)
+            self.npeaks.append(4)
+            self.fits.append(0)
+            self.fits_sep.append(0)
+            
             self.i_spec = self.anlz.n_xrayfitsp      
             self.slider_spec.setMaximum(self.anlz.n_xrayfitsp)
             self.slider_spec.setValue(self.i_spec)
+            self.nstepsspin.setValue(self.nsteps[self.i_spec-1])
+            self.ngaussspin.setValue(self.npeaks[self.i_spec-1])
             
-            self.spectrumfitted.append(0)
+            
+            self.loadSpectrum()
+            self.ShowSpectraList()
+                    
+            QtGui.QApplication.restoreOverrideCursor()
+            
+        except:
+            QtGui.QApplication.restoreOverrideCursor()  
+            QtGui.QMessageBox.warning(self, 'Error', 'Spectrum file not loaded.')
+                                   
+                                 
+        
+        self.window().refresh_widgets()
+        self.updatewidgets()
+
+#----------------------------------------------------------------------
+    def OnAddClusterSpectra(self, event):
+        
+        #try:
+        if True:
+
+            QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor)) 
+            
+
+            for i in range(self.anlz.nclusters):
+                self.anlz.load_xraypeakfit_clusterspectrum(i)
+
+                self.spectrumfitted.append(0)
+                self.firstinit.append(1)
+                self.initdone.append(0)
+                self.nsteps.append(1)
+                self.npeaks.append(4)
+                self.fits.append(0)
+                self.fits_sep.append(0)
+                
+                
+            self.com.xpf_loaded = 1
+            self.i_spec = self.anlz.n_xrayfitsp      
+            self.slider_spec.setMaximum(self.anlz.n_xrayfitsp)
+            self.slider_spec.setValue(self.i_spec)
+            self.nstepsspin.setValue(self.nsteps[self.i_spec-1])
+            self.ngaussspin.setValue(self.npeaks[self.i_spec-1])
+            
             
             self.loadSpectrum()
             self.ShowSpectraList()
@@ -307,12 +353,12 @@ class PageXrayPeakFitting(QtGui.QWidget):
             
 #         except:
 #             QtGui.QApplication.restoreOverrideCursor()  
-#             QtGui.QMessageBox.warning(self, 'Error', 'Spectrum file not loaded.')
+#             QtGui.QMessageBox.warning(self, 'Error', 'Cluster spectra not loaded.')
                                    
                                  
-        self.com.xpf_loaded = 1
+        
         self.window().refresh_widgets()
-
+        self.updatewidgets()
 
 #----------------------------------------------------------------------        
     def OnSScroll(self, value):
@@ -339,40 +385,141 @@ class PageXrayPeakFitting(QtGui.QWidget):
             self.loadSpectrum()
             self.slider_spec.setValue(self.i_spec)
 
+
 #----------------------------------------------------------------------
     def OnFitSpectrum(self, event):
         
         QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
         
-        self.fitted_spectrum, self.separate_peaks = self.anlz.fit_spectrum(self.i_spec-1, self.nsteps, self.npeaks)
+        fitted_spectrum, separate_peaks = self.anlz.fit_spectrum(self.i_spec-1, self.nsteps[self.i_spec-1], self.npeaks[self.i_spec-1])
+        
+        self.fits[self.i_spec-1] = fitted_spectrum
+        self.fits_sep[self.i_spec-1] = separate_peaks
         
         self.spectrumfitted[self.i_spec-1] = 1
         
         self.loadSpectrum()
         
         QtGui.QApplication.restoreOverrideCursor() 
+        self.updatewidgets()
         
 #----------------------------------------------------------------------
     def OnInitFitParams(self, event):
         
-        if self.firstinit == 1:
-            self.firstinit = 0
-            self.stepfitparams, self.gauss_fp_a, self.gauss_fp_m, self.gauss_fp_s = self.anlz.init_fit_params()
+        if self.firstinit[self.i_spec-1] == 1:
+            self.firstinit[self.i_spec-1] = 0
+            self.base, self.stepfitparams, self.gauss_fp_a, self.gauss_fp_m, self.gauss_fp_s = self.anlz.init_fit_params(self.i_spec-1)
         else:
-            self.stepfitparams = self.anlz.istepfitparams
-            self.gauss_fp_a = self.anlz.igauss_fp_a
-            self.gauss_fp_m = self.anlz.igauss_fp_m
-            self.gauss_fp_s = self.anlz.igauss_fp_s
+            self.base = self.anlz.xfitpars[self.i_spec-1].ibase
+            self.stepfitparams = self.anlz.xfitpars[self.i_spec-1].istepfitparams
+            self.gauss_fp_a = self.anlz.xfitpars[self.i_spec-1].igauss_fp_a
+            self.gauss_fp_m = self.anlz.xfitpars[self.i_spec-1].igauss_fp_m
+            self.gauss_fp_s = self.anlz.xfitpars[self.i_spec-1].igauss_fp_s
             
+
         fitparswin = FitParams(self.window(), 'Initialize Fit Parameters', 
-                               [self.stepfitparams, self.gauss_fp_a, self.gauss_fp_m, self.gauss_fp_s], 
+                               [self.base, self.stepfitparams, self.gauss_fp_a, self.gauss_fp_m, self.gauss_fp_s], 
                                False, True)
         fitparswin.show()
+        
 
+#----------------------------------------------------------------------
+    def OnSave(self, event):
+        
+        
+        #Save images      
+        wildcard = "Portable Network Graphics (*.png);;Adobe PDF Files (*.pdf);;"
+
+        fileName = QtGui.QFileDialog.getSaveFileName(self, 'Save Fit Plot', '', wildcard)
+
+        fileName = str(fileName)
+        if fileName == '':
+            return
+        
+        path, ext = os.path.splitext(fileName) 
+        ext = ext[1:].lower() 
+        
+       
+        if ext != 'png' and ext != 'pdf': 
+            error_message = ( 
+                  'Only the PNG and PDF image formats are supported.\n' 
+                 'A file extension of `png\' or `pdf\' must be used.') 
+
+            QtGui.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % error_message)
+            return 
+   
+   
+                          
+        try: 
+
+            matplotlib.rcParams['pdf.fonttype'] = 42
+            
+            fig = self.Specfig
+            fig.savefig(fileName)
+
+            
+        except IOError, e:
+            if e.strerror:
+                err = e.strerror 
+            else: 
+                err = e 
+   
+            
+            QtGui.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % err)
+            
+            
+        #Save text file with fit info
+        textfilepath = path+'_'+self.anlz.xfspec_names[self.i_spec-1]+'_fitinfo.txt'
+        f = open(textfilepath, 'w')
+        print>>f, '*********************  Fit Results  ********************'
+
+        print>>f, '\n'
+        print>>f, 'Base:\t\t'+'{0:04.3f}'.format(self.anlz.xfitpars[self.i_spec-1].base)
+
+        print>>f, '\n'
+        text = 'Step Inflection Point [eV]:\t' 
+        for i in range(self.nsteps[self.i_spec-1]):
+            text = text + '{0:04.3f}'.format(self.anlz.xfitpars[self.i_spec-1].stepfitparams[i*3]) + ',  '
+        print>>f, text
+        
+        text = 'Step Height:\t' 
+        for i in range(self.nsteps[self.i_spec-1]):
+            text = text + '{0:04.3f}'.format(self.anlz.xfitpars[self.i_spec-1].stepfitparams[i*3+1]) + ',  '
+        print>>f, text
+ 
+        text = 'Step FWHM:\t' 
+        for i in range(self.nsteps[self.i_spec-1]):
+            text = text + '{0:04.3f}'.format(self.anlz.xfitpars[self.i_spec-1].stepfitparams[i*3+2]) + ',  '
+        print>>f, text       
+        
+        print>>f, '\n'
+        text = 'Peak Positions:\t'
+        for i in range(self.npeaks[self.i_spec-1]):
+            text = text + '{0:04.3f}'.format(self.anlz.xfitpars[self.i_spec-1].gauss_fp_m[i]) + ',  '
+        print>>f, text
+
+        text = 'Peak Sigma:\t'
+        for i in range(self.npeaks[self.i_spec-1]):
+            text = text + '{0:04.3f}'.format(self.anlz.xfitpars[self.i_spec-1].gauss_fp_s[i]) + ',  '
+        print>>f, text
+        
+        text = 'Peak Amplitude:\t'
+        for i in range(self.npeaks[self.i_spec-1]):
+            text = text + '{0:04.3f}'.format(self.anlz.xfitpars[self.i_spec-1].gauss_fp_a[i]) + ',  '
+        print>>f, text        
+        
+        f.close()        
+            
+        return
+        
 #----------------------------------------------------------------------
     def OnShowFitParams(self, event):
         
-        fitparams = [self.anlz.stepfitparams, self.anlz.gauss_fp_a, self.anlz.gauss_fp_m, self.anlz.gauss_fp_s]
+        fitparams = [self.anlz.xfitpars[self.i_spec-1].base, 
+                     self.anlz.xfitpars[self.i_spec-1].stepfitparams, 
+                     self.anlz.xfitpars[self.i_spec-1].gauss_fp_a, 
+                     self.anlz.xfitpars[self.i_spec-1].gauss_fp_m, 
+                     self.anlz.xfitpars[self.i_spec-1].gauss_fp_s]
         
         fitparswin = FitParams(self.window(), 'Fit Parameters', fitparams, True, False)
         fitparswin.show()
@@ -380,12 +527,50 @@ class PageXrayPeakFitting(QtGui.QWidget):
 #----------------------------------------------------------------------        
     def OnNstepsspin(self, value):
         num = value
-        self.nsteps = num
+        self.nsteps[self.i_spec-1] = num
         
 #----------------------------------------------------------------------        
     def OnNgaussspin(self, value):
         num = value
-        self.npeaks = num
+        self.npeaks[self.i_spec-1] = num
+
+#----------------------------------------------------------------------
+    def updatewidgets(self):
+        
+        self.button_initfitparams.setEnabled(True)
+             
+        if self.initdone[self.i_spec-1] == 0:
+            self.button_fitspec.setEnabled(False)
+        else:
+            self.button_fitspec.setEnabled(True)
+        
+        if self.spectrumfitted[self.i_spec-1] == 1:
+            self.button_fitparams.setEnabled(True)
+            self.button_save.setEnabled(True)
+            
+            self.tc_base.setText('Base:\t\t'+'{0:04.3f}'.format(self.anlz.xfitpars[self.i_spec-1].base))
+            
+            text = 'Step Height:\t' 
+            for i in range(self.nsteps[self.i_spec-1]):
+                text = text + '{0:04.3f}'.format(self.anlz.xfitpars[self.i_spec-1].stepfitparams[i*3+1]) + ',  '
+            self.tc_step.setText(text)
+            
+            text = 'Peak positions:\t'
+            for i in range(self.npeaks[self.i_spec-1]):
+                text = text + '{0:04.3f}'.format(self.anlz.xfitpars[self.i_spec-1].gauss_fp_m[i]) + ',  '
+            self.tc_peaks.setText(text)
+            
+            
+        else:
+            self.button_fitparams.setEnabled(False)
+            self.button_save.setEnabled(False)
+            
+            self.tc_base.setText('Base:')
+            self.tc_step.setText('Step Height:')
+            self.tc_peaks.setText('Peak positions:')        
+
+
+        
                               
 #----------------------------------------------------------------------     
     def loadSpectrum(self):
@@ -402,10 +587,11 @@ class PageXrayPeakFitting(QtGui.QWidget):
 
         line1 = axes.plot(self.stk.ev,spectrum, color='black')
         
+
         if self.spectrumfitted[self.i_spec-1] == 1:
-            line2 = axes.plot(self.stk.ev,self.fitted_spectrum, color='red')
-            for i in range(len(self.separate_peaks)):
-                y = self.separate_peaks[i]
+            line2 = axes.plot(self.stk.ev,self.fits[self.i_spec-1], color='red')
+            for i in range(len(self.fits_sep[self.i_spec-1])):
+                y = self.fits_sep[self.i_spec-1][i]
                 line3 = axes.plot(self.stk.ev, y)
                         
         axes.set_xlabel('Photon Energy [eV]')
@@ -413,16 +599,17 @@ class PageXrayPeakFitting(QtGui.QWidget):
         
         self.SpectrumPanel.draw()
         
-        self.tc_spec.setText("Spectrum: " + 
+        
+        self.tc_spec.setText("X-ray Spectrum: " + 
                                self.anlz.xfspec_names[self.i_spec-1])
         
         
-        self.textctrl_sp1.setText('Common Name: '+ 
-                                    self.anlz.xfspec_names[self.i_spec-1]+'\n')
-        
+        self.nstepsspin.setValue(self.nsteps[self.i_spec-1])
+        self.ngaussspin.setValue(self.npeaks[self.i_spec-1])
         
 
         self.window().refresh_widgets()
+        self.updatewidgets()
             
 
 #----------------------------------------------------------------------           
@@ -434,14 +621,20 @@ class PageXrayPeakFitting(QtGui.QWidget):
             self.tc_speclist.addItem(self.anlz.xfspec_names[i])
 
 #----------------------------------------------------------------------
-    def SetInitFitParams(self, stepfitparams, gauss_fp_a, gauss_fp_m, gauss_fp_s):
+    def SetInitFitParams(self, base, stepfitparams, gauss_fp_a, gauss_fp_m, gauss_fp_s):
+        
+        self.anlz.ibase = base
+        
+        
         
         self.anlz.istepfitparams = stepfitparams
         self.anlz.igauss_fp_a = gauss_fp_a
         self.anlz.igauss_fp_m = gauss_fp_m
         self.anlz.igauss_fp_s = gauss_fp_s
+        
+        self.initdone[self.i_spec-1] = 1
+        self.updatewidgets()
             
-
 
 #---------------------------------------------------------------------- 
 class FitParams(QtGui.QDialog):
@@ -451,10 +644,11 @@ class FitParams(QtGui.QDialog):
         
         self.parent = parent
         
-        self.stepfitparams = fitparams[0]
-        self.gauss_fp_a = fitparams[1]
-        self.gauss_fp_m = fitparams[2]
-        self.gauss_fp_s = fitparams[3]
+        self.base = fitparams[0]
+        self.stepfitparams = fitparams[1]
+        self.gauss_fp_a = fitparams[2]
+        self.gauss_fp_m = fitparams[3]
+        self.gauss_fp_s = fitparams[4]
         
         self.init = initialization        
 
@@ -489,7 +683,7 @@ class FitParams(QtGui.QDialog):
         textctrl.setText('FWHM')  
         fgs1.addWidget(textctrl, 0, 3)   
         textctrl =  QtGui.QLabel(self)
-        textctrl.setText('Offset')  
+        textctrl.setText('Base')  
         fgs1.addWidget(textctrl, 0, 4)   
 
 
@@ -568,36 +762,31 @@ class FitParams(QtGui.QDialog):
         self.le_sf1.setText(str(self.stepfitparams[2]))
         fgs1.addWidget(self.le_sf1, 1, 3)
         
-        self.le_so1 = QtGui.QLineEdit(self)
-        self.le_so1.setInputMask('0000.00')
-        self.le_so1.setReadOnly(readonly)
-        self.le_so1.setText(str(self.stepfitparams[3]))
-        fgs1.addWidget(self.le_so1, 1, 4)
+        self.le_base = QtGui.QLineEdit(self)
+        self.le_base.setInputMask('0000.00')
+        self.le_base.setReadOnly(readonly)
+        self.le_base.setText(str(self.base))
+        fgs1.addWidget(self.le_base, 1, 4)
 
         
         self.le_sa2 = QtGui.QLineEdit(self)
         self.le_sa2.setInputMask('0000.00')
         self.le_sa2.setReadOnly(readonly)
-        self.le_sa2.setText(str(self.stepfitparams[4]))
+        self.le_sa2.setText(str(self.stepfitparams[3]))
         fgs1.addWidget(self.le_sa2, 2, 1)
 
         self.le_sp2 = QtGui.QLineEdit(self)
         self.le_sp2.setInputMask('0000.00')
         self.le_sp2.setReadOnly(readonly)
-        self.le_sp2.setText(str(self.stepfitparams[5]))
+        self.le_sp2.setText(str(self.stepfitparams[4]))
         fgs1.addWidget(self.le_sp2, 2, 2)
         
         self.le_sf2 = QtGui.QLineEdit(self)
         self.le_sf2.setInputMask('0000.00')
         self.le_sf2.setReadOnly(readonly)
-        self.le_sf2.setText(str(self.stepfitparams[6]))
+        self.le_sf2.setText(str(self.stepfitparams[5]))
         fgs1.addWidget(self.le_sf2, 2, 3)
         
-        self.le_so2 = QtGui.QLineEdit(self)
-        self.le_so2.setInputMask('0000.00')
-        self.le_so2.setReadOnly(readonly)
-        self.le_so2.setText(str(self.stepfitparams[7]))
-        fgs1.addWidget(self.le_so2, 2, 4)
                 
 
         self.le_amplitudes = []
@@ -813,8 +1002,18 @@ class FitParams(QtGui.QDialog):
 #----------------------------------------------------------------------
     def OnClose(self, event):
         
+        
         if self.init:
             
+            self.base = float(self.le_base.text())
+            
+            
+            self.stepfitparams[0] = float(self.le_sa1.text())
+            self.stepfitparams[1] = float(self.le_sp1.text())
+            self.stepfitparams[2] = float(self.le_sf1.text())
+            self.stepfitparams[3] = float(self.le_sa2.text())
+            self.stepfitparams[4] = float(self.le_sp2.text())
+            self.stepfitparams[5] = float(self.le_sf2.text())
             
             for i in range(12):
               
@@ -823,7 +1022,7 @@ class FitParams(QtGui.QDialog):
                 self.gauss_fp_s[i] = float(self.le_sigma[i].text())
             
             
-            self.parent.page6.SetInitFitParams(self.stepfitparams, self.gauss_fp_a, self.gauss_fp_m, self.gauss_fp_s)
+            self.parent.page6.SetInitFitParams(self.base, self.stepfitparams, self.gauss_fp_a, self.gauss_fp_m, self.gauss_fp_s)
         
         self.close()             
         
@@ -1512,8 +1711,8 @@ class PageSpectral(QtGui.QWidget):
 #----------------------------------------------------------------------
     def OnAddClusterSpectra(self, event):
 
-        #try:
-        if True: 
+        try:
+
             QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor)) 
             self.anlz.add_cluster_target_spectra()
             self.com.spec_anl_calculated = 1
@@ -1529,9 +1728,9 @@ class PageSpectral(QtGui.QWidget):
         
             QtGui.QApplication.restoreOverrideCursor()
             
-#        except:
-#            QtGui.QApplication.restoreOverrideCursor()  
-#            wx.MessageBox("Cluster spectra not loaded.")
+        except:
+            QtGui.QApplication.restoreOverrideCursor()  
+            QtGui.QMessageBox.warning(self, 'Error', 'Cluster spectra not loaded.')
  
                                                         
         self.window().refresh_widgets()
@@ -2676,7 +2875,7 @@ class PageCluster(QtGui.QWidget):
         #panel 1
         sizer1 = QtGui.QGroupBox('Cluster analysis')
         vbox1 = QtGui.QVBoxLayout()
-        
+       
         
         self.button_calcca = QtGui.QPushButton('Calculate Clusters')
         self.button_calcca.clicked.connect( self.OnCalcClusters)   
@@ -2744,7 +2943,7 @@ class PageCluster(QtGui.QWidget):
         
         
         sizer1.setLayout(vbox1)
-        
+       
                 
                  
         #panel 2        
@@ -2853,6 +3052,8 @@ class PageCluster(QtGui.QWidget):
         vboxtopL.addWidget(sizer5)
         
         gridsizertop = QtGui.QGridLayout()
+        gridsizertop.setContentsMargins(15,0,0,0)
+
         
         gridsizertop.addLayout(vboxtopL, 0, 0, QtCore .Qt. AlignLeft)
         gridsizertop.addLayout(vbox2, 1, 0, QtCore .Qt. AlignLeft)
@@ -3924,6 +4125,7 @@ class PagePCA(QtGui.QWidget):
                 
         #panel 2
         vbox2 = QtGui.QVBoxLayout()
+        vbox2.setContentsMargins(20,20,20,20)
         sizer2 = QtGui.QGroupBox('PCA')
         vbox21 = QtGui.QVBoxLayout()        
         
@@ -9465,7 +9667,13 @@ class MainFrame(QtGui.QMainWindow):
             self.page4.button_movespdown.setEnabled(True)
             self.page4.button_movespup.setEnabled(True)
             self.page4.button_save.setEnabled(True) 
-            self.page4.button_showrgb.setEnabled(True)        
+            self.page4.button_showrgb.setEnabled(True)    
+            
+        if self.page6 != None:
+            if self.common.cluster_calculated == 0:   
+                self.page6.button_addclspec.setEnabled(False)
+            else:
+                self.page6.button_addclspec.setEnabled(True)                
             
         if self.common.xpf_loaded == 1:
             self.page6.slider_spec.setEnabled(True)
