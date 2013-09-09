@@ -1291,12 +1291,8 @@ class PageKeyEng(QtGui.QWidget):
         fig.add_axes((0.15,0.15,0.75,0.75))
         axes = fig.gca()
         
-
         
         specplot = axes.plot(self.stk.ev,odtotal)
-#        for i in range(self.anlz.numsigpca):
-#            pcaspectrum = self.anlz.eigenvecs[:,i]
-#            specplot = axes.plot(self.stk.ev,pcaspectrum)
 
 
         for i in range(len(self.keyenergies)):
@@ -1802,7 +1798,7 @@ class PageSpectral(QtGui.QWidget):
         
         
         for i in range (self.anlz.n_target_spectra):
-            #Save spectra images
+            #Save spectra 
             tspectrum = self.anlz.target_spectra[i, :]
                         
         
@@ -1834,7 +1830,8 @@ class PageSpectral(QtGui.QWidget):
             
             if savecsv:
                 fileName_spec = self.SaveFileName+"_Tspectrum_" +str(i+1)+".csv"
-                self.stk.write_csv(fileName_spec, self.stk.ev, tspectrum)
+                cname = 'Tspectrum_' +str(i+1)
+                self.stk.write_csv(fileName_spec, self.stk.ev, tspectrum, cname = cname)
                 
 #----------------------------------------------------------------------
     def SaveMaps(self, png_pdf=1):            
@@ -3475,7 +3472,8 @@ class PageCluster(QtGui.QWidget):
                 for i in range (self.numclusters):
                     clusterspectrum = self.anlz.clusterspectra[i, ]
                     fileName_spec = self.SaveFileName+"_CAspectrum_" +str(i+1)+".csv"
-                    self.stk.write_csv(fileName_spec, self.anlz.stack.ev, clusterspectrum)
+                    cname = 'CAspectrum_' +str(i+1)
+                    self.stk.write_csv(fileName_spec, self.anlz.stack.ev, clusterspectrum, cname=cname)
                                                      
                 
             ext = 'pdf'
@@ -4399,7 +4397,8 @@ class PagePCA(QtGui.QWidget):
                 for i in range (self.numsigpca):
                     pcaspectrum = self.anlz.eigenvecs[:,i]
                     fileName_spec = self.SaveFileName+"_PCAspectrum_" +str(i+1)+".csv"
-                    self.stk.write_csv(fileName_spec, self.stk.ev, pcaspectrum)
+                    cname = "PCAspectrum_" +str(i+1)
+                    self.stk.write_csv(fileName_spec, self.stk.ev, pcaspectrum, cname = cname)
                     
                 
             ext = 'pdf'
@@ -5910,10 +5909,10 @@ class PageStack(QtGui.QWidget):
    
         try:
             if (self.com.i0_loaded == 1):
-                self.stk.write_csv(fileName, self.stk.ev, self.ROIspectrum)
+                self.stk.write_csv(fileName, self.stk.ev, self.ROIspectrum, cname='from ROI')
             else:
                 self.CalcROI_I0Spectrum()
-                self.stk.write_csv(fileName, self.stk.ev, self.ROIspectrum)
+                self.stk.write_csv(fileName, self.stk.ev, self.ROIspectrum, cname='from ROI')
                      
                 
         except IOError, e:
@@ -9295,7 +9294,7 @@ class MainFrame(QtGui.QMainWindow):
         tabs.addTab(self.page5,"Key Energies")
         
         # Only add "expert" pages if option "--key" is given in command line
-        options, extraParams = getopt.getopt(sys.argv[1:], '', ['nnma', 'xpf'])
+        options, extraParams = getopt.getopt(sys.argv[1:], '', ['wx', 'batch', 'nnma', 'xpf', 'ica', 'keyeng'])
         for opt, arg in options:
             if opt in '--xpf':
                 if verbose: print "Running with XrayPeakFitting tab."

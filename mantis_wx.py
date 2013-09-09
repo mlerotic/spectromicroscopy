@@ -1767,7 +1767,8 @@ class PageSpectral(wx.Panel):
             
             if savecsv:
                 fileName_spec = self.SaveFileName+"_Tspectrum_" +str(i+1)+".csv"
-                self.stk.write_csv(fileName_spec, self.stk.ev, tspectrum)
+                cname = 'Tspectrum_' +str(i+1)
+                self.stk.write_csv(fileName_spec, self.stk.ev, tspectrum, cname = cname)
 #----------------------------------------------------------------------
     def SaveMaps(self, png_pdf=1):            
             
@@ -3270,7 +3271,8 @@ class PageCluster(wx.Panel):
                 for i in range (self.numclusters):
                     clusterspectrum = self.anlz.clusterspectra[i, ]
                     fileName_spec = self.SaveFileName+"_CAspectrum_" +str(i+1)+".csv"
-                    self.stk.write_csv(fileName_spec, self.anlz.stack.ev, clusterspectrum)
+                    cname = 'CAspectrum_' +str(i+1)
+                    self.stk.write_csv(fileName_spec, self.anlz.stack.ev, clusterspectrum, cname=cname)
                                                      
                 
             ext = 'pdf'
@@ -4133,7 +4135,8 @@ class PagePCA(wx.Panel):
                 for i in range (self.numsigpca):
                     pcaspectrum = self.anlz.eigenvecs[:,i]
                     fileName_spec = self.SaveFileName+"_PCAspectrum_" +str(i+1)+".csv"
-                    self.stk.write_csv(fileName_spec, self.stk.ev, pcaspectrum)
+                    cname = "PCAspectrum_" +str(i+1)
+                    self.stk.write_csv(fileName_spec, self.stk.ev, pcaspectrum, cname = cname)
                     
                 
             ext = 'pdf'
@@ -5604,10 +5607,10 @@ class PageStack(wx.Panel):
    
         try:
             if (self.com.i0_loaded == 1):
-                self.stk.write_csv(fileName, self.stk.ev, self.ROIspectrum)
+                self.stk.write_csv(fileName, self.stk.ev, self.ROIspectrum, cname='from ROI')
             else:
                 self.CalcROI_I0Spectrum()
-                self.stk.write_csv(fileName, self.stk.ev, self.ROIspectrum)
+                self.stk.write_csv(fileName, self.stk.ev, self.ROIspectrum, cname='from ROI')
                      
                 
         except IOError, e:
@@ -8407,7 +8410,7 @@ class MainFrame(wx.Frame):
         nb.AddPage(self.page3, "Cluster Analysis")
         nb.AddPage(self.page4, "Spectral Analysis")
         # Only add NNMA pages if option "--nnma" is given in command line
-        options, extraParams = getopt.getopt(sys.argv[1:], '', ['wx', 'cl', 'nnma', 'ica', 'keyeng'])
+        options, extraParams = getopt.getopt(sys.argv[1:], '', ['wx', 'batch', 'nnma', 'xpf', 'ica', 'keyeng'])
         for opt, arg in options:
             if opt in '--nnma':
                 if verbose: print "Running with NNMA."

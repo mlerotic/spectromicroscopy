@@ -59,7 +59,7 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
         self.absdata = 0
 
         
-        self.i0data =0
+        self.i0data = 0
         self.evi0 = 0
         
         self.od = 0
@@ -424,12 +424,12 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
         return  
     
 #----------------------------------------------------------------------   
-    def write_csv(self, filename, evdata, data):
+    def write_csv(self, filename, evdata, data, cname = ''):
         f = open(filename, 'w')
         print>>f, '*********************  X-ray Absorption Data  ********************'
         print>>f, '*'
         print>>f, '* Formula: '
-        print>>f, '* Common name: '
+        print>>f, '* Common name: ', cname
         print>>f, '* Edge: '
         print>>f, '* Acquisition mode: '
         print>>f, '* Source and purity: ' 
