@@ -566,6 +566,7 @@ def batch_mode():
     wdir = ''
     outdir = 'MantisResults'
     filename = ''
+    save_hdf5 = 0
     i0_file = ''
     i0_histogram = 0
     run_pca = 0
@@ -598,6 +599,7 @@ def batch_mode():
                 elif tag == 'FILENAME' : filename  =  value.strip()
                 elif tag == 'I0_FILE' : i0_file  =  value.strip()
                 elif tag == 'I0_HISTOGRAM' : i0_histogram = int(value)
+                elif tag == 'SAVE_HDF5' : save_hdf5 = int(value)
                 elif tag == 'RUN_PCA' : run_pca = int(value)
                 elif tag == 'N_SPCA' : n_spca = int(value)
                 elif tag == 'RUN_CLUSTER_ANALYSIS' : run_ca = int(value)
@@ -703,7 +705,13 @@ def batch_mode():
     if datastruct.spectromicroscopy.normalization.white_spectrum is None:
         print 'Error: I0 not loaded'
         return
+    
+    if save_hdf5 == 1:
+        fnameh5 =  os.path.join(wdir,basename+'_MantisBatch.h5')
+        stk.write_h5(fnameh5, data_struct)  
+        print 'Saving data to HDF5 file:', fnameh5
         
+            
     pca_calculated = 0
     if run_pca == 1:
         print "Running PCA Analysis"
@@ -751,6 +759,10 @@ def batch_mode():
         print "Threshold for finding key energies:", kengs_thresh
         key_engs= anlz.calc_key_engs(kengs_thresh)
         save_keyeng(key_engs, outdir, filename, stk, anlz, save_png, save_pdf, save_svg)
+    
+    if (save_hdf5 == 1) and (pca_calculated == 1) :
+        fnameh5 =  os.path.join(wdir,basename+'_MantisBatch.h5')
+        stk.write_results_h5(fnameh5, data_struct, anlz)    
     
         
     print "Finished doing Mantis analysis"

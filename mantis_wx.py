@@ -8468,9 +8468,9 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.onOpenSL, openslTool)
         
         save_ico = wx.ArtProvider.GetBitmap(wx.ART_FILE_SAVE, wx.ART_TOOLBAR, (16,16))
-        saveTool = self.toolbar.AddSimpleTool(wx.ID_SAVE, save_ico, "Save analysis", "Save analysis")
+        saveTool = self.toolbar.AddSimpleTool(wx.ID_SAVE, save_ico, "Save results to .hdf5", "Save results to .hdf5")
         self.toolbar.EnableTool(wx.ID_SAVE, False)       
-        #self.Bind(wx.EVT_MENU, self.onBrowse, saveTool)     
+        self.Bind(wx.EVT_MENU, self.onSaveResultsToH5, saveTool)     
         
         saveas_ico = wx.ArtProvider.GetBitmap(wx.ART_FILE_SAVE_AS, wx.ART_TOOLBAR, (16,16))
         saveasTool = self.toolbar.AddSimpleTool(wx.ID_SAVEAS, saveas_ico, "Save as .hdf5", "Save as .hdf5")
@@ -8705,7 +8705,46 @@ class MainFrame(wx.Frame):
         self.refresh_widgets()
         
         return
-       
+ 
+#----------------------------------------------------------------------
+    def onSaveResultsToH5(self, event):
+        self.SaveResultsToH5()
+        
+        
+#----------------------------------------------------------------------
+    def SaveResultsToH5(self):
+
+        """
+        Browse for .hdf5 file
+        """
+
+        try: 
+            wildcard = "HDF5 files (*.hdf5)|*.hdf5"
+            dialog = wx.FileDialog(None, "Save as .hdf5", wildcard=wildcard,
+                                    style=wx.SAVE|wx.OVERWRITE_PROMPT)
+
+            if dialog.ShowModal() == wx.ID_OK:
+                filepath = dialog.GetPath()
+                self.page1.filename = dialog.GetFilename()
+                dir = dialog.GetDirectory()
+                
+                self.common.path = dir
+                self.common.filename = self.page1.filename
+
+            wx.BeginBusyCursor()                  
+            self.stk.write_results_h5(filepath, self.data_struct, self.anlz)    
+            wx.EndBusyCursor()      
+
+        except:
+
+            wx.EndBusyCursor()
+            wx.MessageBox("Could not save HDF5 file.")
+                   
+        dialog.Destroy()
+        self.refresh_widgets()
+        
+        return
+          
 #----------------------------------------------------------------------
     def onAbout(self, event):
         AboutFrame().Show()
@@ -8727,6 +8766,7 @@ class MainFrame(wx.Frame):
             self.page1.button_resetdisplay.Disable() 
             self.page1.button_despike.Disable()   
             self.page1.button_displaycolor.Disable()
+            self.toolbar.EnableTool(wx.ID_SAVE, False)
             self.toolbar.EnableTool(wx.ID_SAVEAS, False)
         else:
             self.page1.button_i0ffile.Enable()
@@ -8740,6 +8780,7 @@ class MainFrame(wx.Frame):
             self.page1.button_resetdisplay.Enable() 
             self.page1.button_despike.Enable() 
             self.page1.button_displaycolor.Enable()
+            self.toolbar.EnableTool(wx.ID_SAVE, True) 
             self.toolbar.EnableTool(wx.ID_SAVEAS, True)  
             
             

@@ -141,6 +141,7 @@ class analyze:
         self.stack = stkdata
         
         self.pca_calculated = 0
+        self.clusters_calculated = 0
         
        
         self.target_spectra = 0
@@ -399,6 +400,8 @@ class analyze:
         
         
         self.cluster_distances = self.sse
+        
+        self.clusters_calculated = 1
         
         return int(nclusters)
         

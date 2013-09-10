@@ -9340,7 +9340,7 @@ class MainFrame(QtGui.QMainWindow):
         self.actionSave.setObjectName('actionSave')
         self.actionSave.setIcon(QtGui.QIcon(os.path.join('images','media-floppy.png')))
         self.toolbar.addAction(self.actionSave)
-        self.actionSave.triggered.connect(self.onSaveAsH5)
+        self.actionSave.triggered.connect(self.onSaveResultsToH5)
         self.actionSave.setEnabled(False)
 
         self.actionInfo = QtGui.QAction(self)
@@ -9526,7 +9526,7 @@ class MainFrame(QtGui.QMainWindow):
 #----------------------------------------------------------------------
     def onSaveAsH5(self, event):
         self.SaveStackH5()
-        
+       
         
 #----------------------------------------------------------------------
     def SaveStackH5(self):
@@ -9568,7 +9568,51 @@ class MainFrame(QtGui.QMainWindow):
         self.refresh_widgets()
         
         return
-       
+
+#----------------------------------------------------------------------
+    def onSaveResultsToH5(self, event):
+        self.SaveResultsToH5()     
+        
+#----------------------------------------------------------------------
+    def SaveResultsToH5(self):
+
+        """
+        Browse for .hdf5 file
+        """
+
+        try:
+            wildcard = "HDF5 files (*.hdf5)"
+
+            filepath = QtGui.QFileDialog.getSaveFileName(self, 'Save as .hdf5', '', wildcard)
+
+            filepath = str(filepath)
+            if filepath == '':
+                return
+            
+            
+            directory =  os.path.dirname(str(filepath))
+            self.page1.filename =  os.path.basename(str(filepath))
+        
+            QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+            
+            self.common.path = directory
+            self.common.filename = self.page1.filename
+            
+                
+            self.stk.write_results_h5(filepath, self.data_struct, self.anlz)    
+            QtGui.QApplication.restoreOverrideCursor()
+
+        except:
+  
+            QtGui.QApplication.restoreOverrideCursor()
+             
+            QtGui.QMessageBox.warning(self, 'Error', 'Could not save HDF5 file.')
+                   
+
+        self.refresh_widgets()
+        
+        return
+                  
 #----------------------------------------------------------------------
     def onAbout(self):
 

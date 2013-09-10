@@ -21,8 +21,8 @@
 
 from __future__ import division
 
+import os
 import numpy as np
-import scipy as scy
 import h5py 
 
 import data_struct
@@ -33,6 +33,8 @@ verbose = 0
 class h5:
     def __init__(self):
         pass
+
+
     
 #----------------------------------------------------------------------
     def read_h5(self, filename, data_struct):
@@ -464,9 +466,9 @@ class h5:
         if data_struct.information.title is not None:
             ds = informationGrp.create_dataset('title', data = data_struct.information.title)
         if data_struct.information.comment is not None:
-            ds = informationGrp.create_dataset('comment', data = data_struct.information.comment)
+            ds = informationGrp.create_dataset('comment', data = str(data_struct.information.comment))
         if data_struct.information.file_creation_datetime is not None:
-            ds = informationGrp.create_dataset('file_creation_datetime', data = data_struct.information.file_creation_datetime)
+            ds = informationGrp.create_dataset('file_creation_datetime', data = str(data_struct.information.file_creation_datetime))
         
         # /ids
         idsGrp = informationGrp.create_group('ids')
@@ -755,8 +757,8 @@ class h5:
             ds = spectromicroscopyGrp.create_dataset('xshifts', data = data_struct.spectromicroscopy.xshifts)
         if data_struct.spectromicroscopy.yshifts is not None:
             ds = spectromicroscopyGrp.create_dataset('yshifts', data = data_struct.spectromicroscopy.yshifts)
-         
-   
+        if self.data_struct.spectromicroscopy.optical_density is not None:         
+            ds = spectromicroscopyGrp.create_dataset('optical_density', data = self.data_struct.spectromicroscopy.optical_density)
     
         # /spectromicroscopy/normalization
         normalizationGrp = spectromicroscopyGrp.create_group('normalization')
@@ -769,6 +771,9 @@ class h5:
                                                  data = data_struct.spectromicroscopy.normalization.white_spectrum_energy)
             if data_struct.spectromicroscopy.normalization.white_spectrum_energy_units is not None:
                 ds.attrs['units'] = data_struct.spectromicroscopy.normalization.white_spectrum_energy_units
+
+                    
+            
         else:
             del spectromicroscopyGrp['normalization']
     
@@ -777,3 +782,73 @@ class h5:
         f.close()
 
 
+#----------------------------------------------------------------------
+    def write_results_h5(self, filename, data_struct, anlz):
+        
+        test_file = 0
+        #Check if file exists
+        try:       
+            # Open HDF5 file
+            f = h5py.File(filename, 'r') 
+            test_file = 1
+            f.close()
+        except:
+            pass
+        #Try to save new hdf5 file
+        if test_file == 0:
+            try:
+                self.write_h5(filename, data_struct)
+            except:
+                print 'Error: Could not open nor create HDF5 file ', filename
+                return -1
+        
+
+        # Open HDF5 file
+        f = h5py.File(filename, 'r+') 
+        # Read basic definitions
+        ds = f['implements']
+        implements = ds[...]
+        
+        if 'Mantis' in f:
+            mantisGrp = f['Mantis']
+        else:
+            del f['implements']
+            implements = implements+':Mantis'
+            ds = f.create_dataset('implements', data = implements)
+            mantisGrp = f.create_group('Mantis')
+             
+            
+        if anlz.pca_calculated == 1:
+            if 'pca' in mantisGrp:
+                del mantisGrp['pca']
+                pcaGrp = mantisGrp.create_group('pca') 
+            else:
+                pcaGrp = mantisGrp.create_group('pca')  
+            ds_data = pcaGrp.create_dataset('pca_images', data = anlz.pcaimages)
+            ds_data = pcaGrp.create_dataset('pca_eigenvectors', data = anlz.eigenvecs)
+            ds_data = pcaGrp.create_dataset('pca_eigenvalues', data = anlz.eigenvals)
+                
+            
+        if anlz.clusters_calculated == 1:
+            if 'cluster_analysis' in mantisGrp:
+                del mantisGrp['cluster_analysis']
+                caGrp = mantisGrp.create_group('cluster_analysis') 
+            else:
+                caGrp = mantisGrp.create_group('cluster_analysis')  
+            ds_data = caGrp.create_dataset('cluster_indices', data = anlz.cluster_indices)
+            ds_data = caGrp.create_dataset('cluster_spectra', data = anlz.clusterspectra)
+            ds_data = caGrp.create_dataset('cluster_distances', data = anlz.cluster_distances)            
+            
+        
+        f.close()
+        
+        
+        return 0
+            
+            
+            
+            
+            
+            
+            
+        

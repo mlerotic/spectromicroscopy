@@ -114,6 +114,7 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
         
         if self.data_struct.spectromicroscopy.normalization.white_spectrum is not None:
             self.calculate_optical_density()
+            self.fill_h5_struct_normalization()
 
             
         self.scale_bar()
@@ -261,7 +262,6 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
         
         self.data_struct.spectromicroscopy.optical_density = self.od
         
-    
     
 #----------------------------------------------------------------------   
     def calc_histogram(self):
