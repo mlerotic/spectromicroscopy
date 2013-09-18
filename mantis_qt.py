@@ -109,15 +109,15 @@ class PageXrayPeakFitting(QtGui.QWidget):
         hboxT = QtGui.QHBoxLayout()
     
     
-        #panel 1
-        sizer1 = QtGui.QGroupBox('Loaded Spectra')
-        vbox1 = QtGui.QVBoxLayout()
- 
-        self.tc_speclist =  QListWidget()  
-        self.tc_speclist.itemClicked.connect(self.OnSpectraListClick)
-        #self.tc_speclist.doubleClicked.connect(self.OnEditSpectraListClick)      
-        vbox1.addWidget(self.tc_speclist)
-        sizer1.setLayout(vbox1)
+#         #panel 1
+#         sizer1 = QtGui.QGroupBox('Loaded Spectra')
+#         vbox1 = QtGui.QVBoxLayout()
+#  
+#         self.tc_speclist =  QListWidget()  
+#         self.tc_speclist.itemClicked.connect(self.OnSpectraListClick)
+#         #self.tc_speclist.doubleClicked.connect(self.OnEditSpectraListClick)      
+#         vbox1.addWidget(self.tc_speclist)
+#         sizer1.setLayout(vbox1)
         
         
         #panel 2
@@ -252,7 +252,7 @@ class PageXrayPeakFitting(QtGui.QWidget):
                         
         vboxL.addWidget(sizer3)
         vboxL.addWidget(sizer4)
-        vboxL.addWidget(sizer1)
+        #vboxL.addWidget(sizer1)
  
         hboxT.setContentsMargins(20,20,20,20)
    
@@ -304,7 +304,7 @@ class PageXrayPeakFitting(QtGui.QWidget):
             
             
             self.loadSpectrum()
-            self.ShowSpectraList()
+            #self.ShowSpectraList()
                     
             QtGui.QApplication.restoreOverrideCursor()
             
@@ -320,8 +320,8 @@ class PageXrayPeakFitting(QtGui.QWidget):
 #----------------------------------------------------------------------
     def OnAddClusterSpectra(self, event):
         
-        #try:
-        if True:
+        try:
+
 
             QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor)) 
             
@@ -347,13 +347,13 @@ class PageXrayPeakFitting(QtGui.QWidget):
             
             
             self.loadSpectrum()
-            self.ShowSpectraList()
+            #self.ShowSpectraList()
                     
             QtGui.QApplication.restoreOverrideCursor()
             
-#         except:
-#             QtGui.QApplication.restoreOverrideCursor()  
-#             QtGui.QMessageBox.warning(self, 'Error', 'Cluster spectra not loaded.')
+        except:
+            QtGui.QApplication.restoreOverrideCursor()  
+            QtGui.QMessageBox.warning(self, 'Error', 'Cluster spectra not loaded.')
                                    
                                  
         
@@ -367,7 +367,7 @@ class PageXrayPeakFitting(QtGui.QWidget):
         sel = value
         self.i_spec = sel
         
-        self.tc_speclist.setCurrentRow(self.i_spec-1) 
+        #self.tc_speclist.setCurrentRow(self.i_spec-1) 
         
 
         if self.anlz.n_xrayfitsp > 0:
@@ -1029,9 +1029,9 @@ class FitParams(QtGui.QDialog):
                             
                 
 """ ------------------------------------------------------------------------------------------------"""
-class PageKeyEng(QtGui.QWidget):
+class PagePeakID(QtGui.QWidget):
     def __init__(self, common, data_struct, stack, anlz):
-        super(PageKeyEng, self).__init__()
+        super(PagePeakID, self).__init__()
 
         self.initUI(common, data_struct, stack, anlz)
         
@@ -1044,24 +1044,29 @@ class PageKeyEng(QtGui.QWidget):
         self.stk = stack       
         self.anlz = anlz
         
-        self.selica = 1       
-        self.numica = 2
-        
+       
         
         pw = PlotW*0.8
         ph = PlotH*0.8
         
+                
+        self.peak_engs = [285.0, 286.5, 288.5, 289.5, 290.5]
+        self.peak_names = ['aromatic', 'phenolic', 'carboxyl', 'alkyl', 'carbonyl']
         
+        self.i_spectrum = 1
         self.i_eng = 0
-        self.keyengs_calculated = 0
-       
-         
+        
+        self.n_spectra = 0
+        
+        self.spectrum_loaded = 0
+        
           
         #panel 1        
         vbox1 = QtGui.QVBoxLayout()
                
         self.tc_1 = QtGui.QLabel(self)
-        self.tc_1.setText("Average Optical Density")    
+        self.tc_1.setText("X-ray Spectrum")    
+        hbox11 = QtGui.QHBoxLayout() 
         
         frame = QtGui.QFrame()
         frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
@@ -1072,48 +1077,44 @@ class PageKeyEng(QtGui.QWidget):
         self.KESpecPan.mpl_connect('button_press_event', self.OnPointSpectrum)
         fbox.addWidget(self.KESpecPan)
         frame.setLayout(fbox)
-            
+
+        self.slider_spec = QtGui.QScrollBar(QtCore.Qt.Vertical)
+        self.slider_spec.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.slider_spec.setEnabled(False)
+        self.slider_spec.valueChanged[int].connect(self.OnSScroll)
+        self.slider_spec.setRange(1, 5)
+                    
+        hbox11.addWidget(frame)
+        hbox11.addWidget(self.slider_spec)
+
+                            
         vbox1.addStretch(1)
         vbox1.addWidget(self.tc_1)        
-        vbox1.addWidget(frame)
+        vbox1.addLayout(hbox11)
         vbox1.addStretch(1)
  
+       
+        
                     
         #panel 2
-        sizer2 = QtGui.QGroupBox('Key Energies Analysis')
-        vbox2 = QtGui.QVBoxLayout()
-                
-        self.button_calckeng = QtGui.QPushButton('Find Key Energies')
-        self.button_calckeng.clicked.connect(self.OnCalcKeyEng)     
-        self.button_calckeng.setEnabled(False)  
-        vbox2.addWidget( self.button_calckeng) 
-        self.button_save = QtGui.QPushButton('Save Results...')
-        self.button_save.clicked.connect(self.OnSave)
+        sizer2 = QtGui.QGroupBox('Load Spectrum')
+        vbox2 = QtGui.QVBoxLayout()        
+         
+        self.button_loadtspec = QtGui.QPushButton('Load Spectrum')
+        self.button_loadtspec.clicked.connect(self.OnSpecFromFile)
+        vbox2.addWidget(self.button_loadtspec)
+
+
+        self.button_addclspec = QtGui.QPushButton('Add Cluster Spectra')
+        self.button_addclspec.clicked.connect( self.OnAddClusterSpectra)   
+        self.button_addclspec.setEnabled(False)
+        vbox2.addWidget(self.button_addclspec)
+            
+ 
+        self.button_save = QtGui.QPushButton('Save Images...')
+        self.button_save.clicked.connect( self.OnSave)
         self.button_save.setEnabled(False)
-        
-        
-        hbox21 = QtGui.QHBoxLayout()
-        text1 = QtGui.QLabel(self)
-        text1.setText("Threshold")
-        
-    
-        self.tc_keyengthresh = QtGui.QDoubleSpinBox()
-        self.tc_keyengthresh.setRange(0,5)
-        self.tc_keyengthresh.setValue(0.1) 
-        self.tc_keyengthresh.setSingleStep(0.1)   
-
-
-        hbox21.addWidget(text1)
-        hbox21.addWidget(self.tc_keyengthresh)    
-        
-        line = QtGui.QFrame()
-        line.setFrameShape(QtGui.QFrame.HLine)
-        line.setFrameShadow(QtGui.QFrame.Sunken) 
-              
-        vbox2.addLayout(hbox21)    
-        vbox2.addWidget(line)  
-        vbox2.addWidget( self.button_save)        
-        
+        vbox2.addWidget(self.button_save)
 
         sizer2.setLayout(vbox2)
 
@@ -1122,7 +1123,7 @@ class PageKeyEng(QtGui.QWidget):
         vbox3 = QtGui.QVBoxLayout()
     
         t1 = QtGui.QLabel(self)
-        t1.setText("Key Energies")       
+        t1.setText("Peak ID Energies")       
          
         self.lc_1 = QListWidget()   
         self.lc_1.itemClicked.connect(self.OnEngListClick)
@@ -1136,7 +1137,7 @@ class PageKeyEng(QtGui.QWidget):
         vbox4 = QtGui.QVBoxLayout()
          
         self.tc_imageeng = QtGui.QLabel(self)
-        self.tc_imageeng.setText("Image at key energy: ")
+        self.tc_imageeng.setText("Image at peak energy: ")
         vbox4.addWidget(self.tc_imageeng)
          
         hbox41 = QtGui.QHBoxLayout()
@@ -1155,7 +1156,7 @@ class PageKeyEng(QtGui.QWidget):
         self.slider_eng = QtGui.QScrollBar(QtCore.Qt.Vertical)
         self.slider_eng.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
-        self.slider_eng.setRange(0, 100)
+        self.slider_eng.setRange(0, len(self.peak_names)-1)
         hbox41.addWidget(self.slider_eng)
         hbox41.addStretch(1)
         vbox4.addLayout(hbox41)
@@ -1191,76 +1192,149 @@ class PageKeyEng(QtGui.QWidget):
 
 
         
-        
+        self.ShowPeakEngs()
+
+
 #----------------------------------------------------------------------
-    def OnCalcKeyEng(self, event):
+    def OnSpecFromFile(self, event):
         
 
-        QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
-        
-        threshold = self.tc_keyengthresh.value()
-  
-        self.keyenergies = []
-        
-        self.keyenergies = self.anlz.calc_key_engs(threshold)
-        
-        if len(self.keyenergies) > 0:        
-            self.keyengs_calculated = 1
-        
-            self.i_eng = 0
-            self.slider_eng.setRange(0,len(self.keyenergies)-1)
-            self.slider_eng.setValue(self.i_eng)
+        #try:
+        if True: 
+            
+            wildcard = "Spectrum files (*.csv)"
+            
+            filepath = QtGui.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', '', wildcard)
+            
 
-            self.ShowPlots()
-            self.ShowImage()
-            self.ShowKEngs()
+            filepath = str(filepath)
+            if filepath == '':
+                return
             
-            self.button_save.setEnabled(True)
-            
-        else:
-            self.ShowPlots()
-            fig = self.absimgfig
-            fig.clf()
-            self.AbsImagePanel.draw()               
-            self.lc_1.clear()
-            
-            self.button_save.setEnabled(False)
-            
-        QtGui.QApplication.restoreOverrideCursor() 
+            self.filename =  os.path.basename(str(filepath))
+            directory =  os.path.dirname(str(filepath))
+            self.DefaultDir = directory            
+                                                        
+            QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))    
+                                            
+            self.anlz.load_xraypeakfit_spectrum(filename=filepath)
 
+            self.com.xpf_loaded = 1
+            if self.window().page6 != None:
+                self.window().page6.spectrumfitted.append(0)
+                self.window().page6.firstinit.append(1)
+                self.window().page6.initdone.append(0)
+                self.window().page6.nsteps.append(1)
+                self.window().page6.npeaks.append(4)
+                self.window().page6.fits.append(0)
+                self.window().page6.fits_sep.append(0)
+                
+                self.window().page6.i_spec = self.anlz.n_xrayfitsp      
+                self.window().page6.slider_spec.setMaximum(self.anlz.n_xrayfitsp)
+                self.window().page6.slider_spec.setValue(self.window().page6.i_spec)
+                self.window().page6.nstepsspin.setValue(self.window().page6.nsteps[self.window().page6.i_spec-1])
+                self.window().page6.ngaussspin.setValue(self.window().page6.npeaks[self.window().page6.i_spec-1])                
+                self.window().page6.loadSpectrum()
+                self.window().page6.updatewidgets()
+
+            self.spectrum_loaded = 1
+            self.updatewidgets()
+            
+            
+            QtGui.QApplication.restoreOverrideCursor()
+            
+#         except:
+#             QtGui.QApplication.restoreOverrideCursor()  
+#             QtGui.QMessageBox.warning(self, 'Error', 'Spectrum file not loaded.')
+                                   
+                                 
         
+        self.window().refresh_widgets()
+        
+        self.slider_spec.setMaximum(self.n_spectra)
+        self.slider_spec.setEnabled(True)
+        
+        self.ShowODPlot()
+        
+
+#----------------------------------------------------------------------
+    def OnAddClusterSpectra(self, event):
+        
+        #try:
+        if True:
+
+            QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor)) 
+            
+
+            for i in range(self.anlz.nclusters):
+                self.anlz.load_xraypeakfit_clusterspectrum(i)
+
+                if self.window().page6 != None:
+                    self.window().page6.spectrumfitted.append(0)
+                    self.window().page6.firstinit.append(1)
+                    self.window().page6.initdone.append(0)
+                    self.window().page6.nsteps.append(1)
+                    self.window().page6.npeaks.append(4)
+                    self.window().page6.fits.append(0)
+                    self.window().page6.fits_sep.append(0)
+                
+                
+            self.spectrum_loaded = 1
+            
+            
+            self.com.xpf_loaded = 1
+            if self.window().page6 != None:
+                self.window().page6.i_spec = self.anlz.n_xrayfitsp      
+                self.window().page6.slider_spec.setMaximum(self.anlz.n_xrayfitsp)
+                self.window().page6.slider_spec.setValue(self.window().page6.i_spec)
+                self.window().page6.nstepsspin.setValue(self.window().page6.nsteps[self.window().page6.i_spec-1])
+                self.window().page6.ngaussspin.setValue(self.window().page6.npeaks[self.window().page6.i_spec-1])                
+                self.window().page6.loadSpectrum()
+                self.window().page6.updatewidgets()
+
+                    
+            QtGui.QApplication.restoreOverrideCursor()
+            
+#         except:
+#             QtGui.QApplication.restoreOverrideCursor()  
+#             QtGui.QMessageBox.warning(self, 'Error', 'Cluster spectra not loaded.')
+                                   
+                                 
+        
+        
+        self.window().refresh_widgets()
+        
+        self.updatewidgets()
+        
+        self.ShowODPlot()
+        self.ShowImage()
+
+#----------------------------------------------------------------------        
+    def OnSScroll(self, value):
+        
+        
+        sel = value
+        self.i_spectrum = sel
+                
+
+        self.ShowODPlot()
+        self.ShowImage()
+                           
 #----------------------------------------------------------------------            
     def OnScrollEng(self, value):
         self.i_eng = value
 
-        if self.keyengs_calculated == 1:
-            self.ShowImage()
-            self.ShowKEngs()
-            
-#----------------------------------------------------------------------            
-    def OnEngspinUp(self, event):
-        if (self.keyengs_calculated == 1) and (self.i_eng > 0):
-            self.i_eng = self.i_eng - 1
-            self.slider_eng.setValue(self.i_eng)
 
-            self.ShowImage()
-            self.ShowKEngs()
+        self.ShowImage()
+        self.ShowODPlot()
 
-            
-#----------------------------------------------------------------------            
-    def OnEngspinDown(self, event):
-        if (self.keyengs_calculated == 1) and (self.i_eng < len(self.keyenergies)-1):
-            self.i_eng = self.i_eng + 1
-            self.slider_eng.setValue(self.i_eng)
 
-            self.ShowImage()
-            self.ShowKEngs()
 
 #----------------------------------------------------------------------  
     def OnPointSpectrum(self, evt):
         x = evt.xdata
         
-        if (self.keyengs_calculated == 1):      
+        if (self.com.i0_loaded != 0) or (self.spectrum_loaded == 1):      
             if x < self.stk.ev[0]:
                 sel_ev = 0
             elif x > self.stk.ev[self.stk.n_ev-1]:
@@ -1270,33 +1344,49 @@ class PageKeyEng(QtGui.QWidget):
                 sel_ev = indx
                 
             
-            self.i_eng=(npy.abs(self.keyenergies-self.stk.ev[sel_ev])).argmin()                 
+            self.i_eng=(npy.abs(self.peak_engs-self.stk.ev[sel_ev])).argmin()                 
 
             self.ShowImage()
-            self.ShowKEngs()
+            self.ShowODPlot()
             
             self.slider_eng.setValue(self.i_eng)
                               
 #----------------------------------------------------------------------     
-    def ShowPlots(self):
+    def ShowODPlot(self):
 
-
-        odtotal = self.stk.od3d.sum(axis=0)   
-        odtotal = odtotal.sum(axis=0)/(self.stk.n_rows*self.stk.n_cols)      
-        odtotal /= odtotal.max()/0.7
-
+        if (self.spectrum_loaded == 0) and (self.com.i0_loaded == 0):
+            return
         
+        if (self.com.i0_loaded == 0):
+            spectrum = self.anlz.xrayfitspectra[self.i_spectrum-1, :]
+            self.tc_1.setText("X-ray Spectrum: " + 
+                           self.anlz.xfspec_names[self.i_spectrum-1])            
+        else:
+            if (self.i_spectrum == 1):
+                spectrum = self.stk.od3d.sum(axis=0)   
+                spectrum = spectrum.sum(axis=0)/(self.stk.n_rows*self.stk.n_cols)      
+            
+                self.tc_1.setText("X-ray Spectrum: Average OD")
+            else:
+                spectrum = self.anlz.xrayfitspectra[self.i_spectrum-2, :]
+                self.tc_1.setText("X-ray Spectrum: " + 
+                               self.anlz.xfspec_names[self.i_spectrum-2])                
+
+                
         fig = self.kespecfig
         fig.clf()
         fig.add_axes((0.15,0.15,0.75,0.75))
         axes = fig.gca()
         
         
-        specplot = axes.plot(self.stk.ev,odtotal)
+        specplot = axes.plot(self.stk.ev,spectrum)
 
+        for i in range(len(self.peak_engs)):
+            if (self.peak_engs[i]>self.stk.ev[0]) and (self.peak_engs[i]<self.stk.ev[-1]):
+                axes.axvline(x=self.peak_engs[i], color = 'g', alpha=0.5)
 
-        for i in range(len(self.keyenergies)):
-            axes.axvline(x=self.keyenergies[i], color = 'g', alpha=0.5)
+        if (self.peak_engs[self.i_eng]>self.stk.ev[0]) and (self.peak_engs[self.i_eng]<self.stk.ev[-1]):
+            axes.axvline(x=self.peak_engs[self.i_eng], color = 'g', alpha=1.0)                
                         
         axes.set_xlabel('Photon Energy [eV]')
         axes.set_ylabel('Optical Density')
@@ -1309,22 +1399,26 @@ class PageKeyEng(QtGui.QWidget):
                 
         self.i_eng = item
         
-        self.ShowKEngs()     
+        #self.ShowPeakEngs()     
         self.ShowImage()
-         
+        self.ShowODPlot()
+        
 #----------------------------------------------------------------------           
-    def ShowKEngs(self):    
+    def ShowPeakEngs(self):    
         
         self.lc_1.clear()
         
-        for i in range(len(self.keyenergies)):
-            self.lc_1.addItem('{0:08.2f}'.format(self.keyenergies[i]))
+        for i in range(len(self.peak_engs)):
+            self.lc_1.addItem('{0:8.2f}'.format(self.peak_engs[i])+'\t'+self.peak_names[i])
             
 
 #----------------------------------------------------------------------        
     def ShowImage(self):
         
-        iev=(npy.abs(self.stk.ev-self.keyenergies[self.i_eng])).argmin() 
+        if self.com.i0_loaded == 0:
+            return
+            
+        iev=(npy.abs(self.stk.ev-self.peak_engs[self.i_eng])).argmin() 
         image = self.stk.absdata[:,:,int(iev)].copy() 
 
         fig = self.absimgfig
@@ -1338,7 +1432,7 @@ class PageKeyEng(QtGui.QWidget):
         #Show Scale Bar
         startx = int(self.stk.n_rows*0.05)
         starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
-        um_string = '$\mu m$'
+        um_string = ' $\mathrm{\mu m}$'
         microns = '$'+self.stk.scale_bar_string+' $'+um_string
         axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center',
                   color = 'black', fontsize=14)
@@ -1351,8 +1445,30 @@ class PageKeyEng(QtGui.QWidget):
         axes.axis("off")      
         self.AbsImagePanel.draw()
         
-        self.tc_imageeng.setText('Image at key energy: {0:5.2f} eV'.format(float(self.stk.ev[iev])))
+        self.tc_imageeng.setText('Image at peak energy: {0:5.2f} eV'.format(float(self.stk.ev[iev])))
  
+        self.lc_1.setCurrentRow(self.i_eng) 
+
+#----------------------------------------------------------------------
+    def updatewidgets(self):
+
+        if self.spectrum_loaded:
+            self.n_spectra = self.anlz.n_xrayfitsp
+        else:
+            self.n_spectra = 0
+        
+        if self.com.i0_loaded == 1:
+            self.n_spectra += 1
+            
+        self.i_spectrum = self.n_spectra
+            
+        self.slider_spec.setMaximum(self.n_spectra)
+        self.slider_spec.setEnabled(True)
+        self.slider_spec.setValue(self.i_spectrum)
+        self.ShowODPlot()
+        self.ShowImage()        
+                
+        
 #----------------------------------------------------------------------
     def OnSave(self, event):
 
@@ -1397,15 +1513,7 @@ class PageKeyEng(QtGui.QWidget):
             
             QtGui.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % err)
             
-            
-        #Save text file with list of energies
-        textfilepath = path+'_keyenergies.csv'
-        f = open(textfilepath, 'w')
-        print>>f, '*********************  Key Energies  ********************'
-        for i in range(len(self.keyenergies)):
-            print>>f, '%.6f' %(self.keyenergies[i])
-        
-        f.close()        
+              
             
         return
           
@@ -1877,7 +1985,7 @@ class PageSpectral(QtGui.QWidget):
             bound = npy.max((npy.abs(min_val), npy.abs(max_val)))
         
             if self.show_scale_bar == 1:
-                um_string = '$\mu m$'
+                um_string = ' $\mathrm{\mu m}$'
                 microns = '$'+self.stk.scale_bar_string+' $'+um_string
                 axes.text(self.stk.scale_bar_pixels_x+10,self.stk.n_cols-9, microns, horizontalalignment='left', verticalalignment='center',
                               color = 'white', fontsize=14)
@@ -2082,7 +2190,7 @@ class PageSpectral(QtGui.QWidget):
         bound = npy.max((npy.abs(min_val), npy.abs(max_val)))
         
         if self.show_scale_bar == 1:
-            um_string = '$\mu m$'
+            um_string = ' $\mathrm{\mu m}$'
             microns = '$'+self.stk.scale_bar_string+' $'+um_string
             axes.text(self.stk.scale_bar_pixels_x+10,self.stk.n_cols-9, microns, horizontalalignment='left', verticalalignment='center',
                       color = 'white', fontsize=14)
@@ -5630,7 +5738,7 @@ class PageStack(QtGui.QWidget):
         if self.show_scale_bar == 1:
             startx = int(self.stk.n_rows*0.05)
             starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
-            um_string = '$\mu m$'
+            um_string = ' $\mathrm{\mu m}$'
             microns = '$'+self.stk.scale_bar_string+' $'+um_string
             axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center',
                       color = 'black', fontsize=14)
@@ -8100,7 +8208,7 @@ class SpectralROI(QtGui.QDialog):
         #Show Scale Bar
         startx = int(self.stack.n_rows*0.05)
         starty = self.stack.n_cols-int(self.stack.n_cols*0.05)-self.stack.scale_bar_pixels_y
-        um_string = '$\mu m$'
+        um_string = ' $\mathrm{\mu m}$'
         microns = '$'+self.stack.scale_bar_string+' $'+um_string
         axes.text(self.stack.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center',
                   color = 'white', fontsize=14)
@@ -8661,7 +8769,7 @@ class PageLoadData(QtGui.QWidget):
         self.button_hdf5.clicked.connect( self.OnLoadHDF5)
         vbox1.addWidget(self.button_hdf5)
         
-        self.button_sdf = QtGui.QPushButton('Load SDF Stack (*.hrd)')
+        self.button_sdf = QtGui.QPushButton('Load SDF Stack (*.hdr)')
         self.button_sdf.clicked.connect( self.OnLoadSDF)   
         vbox1.addWidget(self.button_sdf)
         
@@ -8859,7 +8967,7 @@ class PageLoadData(QtGui.QWidget):
             #Show Scale Bar
             startx = int(self.stk.n_rows*0.05)
             starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
-            um_string = '$\mu m$'
+            um_string = ' $\mathrm{\mu m}$'
             microns = '$'+self.stk.scale_bar_string+' $'+um_string
             axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center',
                       color = 'black', fontsize=14)
@@ -9272,7 +9380,7 @@ class MainFrame(QtGui.QMainWindow):
         ico = QtGui.QIcon(os.path.join('images','logo-2l-32.ico'))
         self.setWindowIcon(ico)  
         
-        tabs    = QtGui.QTabWidget()
+        tabs = QtGui.QTabWidget()
         
 
 
@@ -9283,15 +9391,23 @@ class MainFrame(QtGui.QMainWindow):
         self.page2 = PagePCA(self.common, self.data_struct, self.stk, self.anlz)
         self.page3 = PageCluster(self.common, self.data_struct, self.stk, self.anlz)
         self.page4 = PageSpectral(self.common, self.data_struct, self.stk, self.anlz)
-        self.page5 = PageKeyEng(self.common, self.data_struct, self.stk, self.anlz)
+        self.page5 = PagePeakID(self.common, self.data_struct, self.stk, self.anlz)
         self.page6 = None
         
         tabs.addTab(self.page0,"Load Data")
         tabs.addTab(self.page1,"Preprocess Data")
         tabs.addTab(self.page2,"PCA")
         tabs.addTab(self.page3,"Cluster Analysis")
-        tabs.addTab(self.page4,"Spectral Analysis")
-        tabs.addTab(self.page5,"Key Energies")
+        tabs.addTab(self.page4,"Spectral Maps")
+        tabs.addTab(self.page5,"Peak ID")
+        
+        tabs.tabBar().setTabTextColor(0, QtGui.QColor('green'))
+        tabs.tabBar().setTabTextColor(1, QtGui.QColor('green'))
+        tabs.tabBar().setTabTextColor(2, QtGui.QColor('red'))
+        tabs.tabBar().setTabTextColor(3, QtGui.QColor('red'))
+        tabs.tabBar().setTabTextColor(4, QtGui.QColor('red'))        
+        tabs.tabBar().setTabTextColor(5, QtGui.QColor('blue'))
+        
         
         # Only add "expert" pages if option "--key" is given in command line
         options, extraParams = getopt.getopt(sys.argv[1:], '', ['wx', 'batch', 'nnma', 'xpf', 'ica', 'keyeng'])
@@ -9299,7 +9415,8 @@ class MainFrame(QtGui.QMainWindow):
             if opt in '--xpf':
                 if verbose: print "Running with XrayPeakFitting tab."
                 self.page6 = PageXrayPeakFitting(self.common, self.data_struct, self.stk, self.anlz)
-                tabs.addTab(self.page6, "XrayPeakFitting")    
+                tabs.addTab(self.page6, "XrayPeakFitting")  
+                tabs.tabBar().setTabTextColor(6, QtGui.QColor('blue'))  
         
             if opt in '--nnma':
                 if verbose: print "Running with NNMA."
@@ -9355,7 +9472,8 @@ class MainFrame(QtGui.QMainWindow):
         Browse for a stack file:
         """
 
-        try:
+        if True:
+        #try:
             if wildcard == False:
                 wildcard =  "HDF5 files (*.hdf5);;SDF files (*.hdr);;STK files (*.stk);;TXRM (*.txrm);;XRM (*.xrm);;TIF (*.tif)" 
 
@@ -9476,19 +9594,20 @@ class MainFrame(QtGui.QMainWindow):
             
             self.page0.ShowInfo(self.page1.filename, directory)
             
+            self.page5.updatewidgets()
 
             QtGui.QApplication.restoreOverrideCursor()
-                
-        except:
-  
-            self.common.stack_loaded = 0 
-            self.common.i0_loaded = 0
-            self.new_stack_refresh()
-                                 
-            QtGui.QApplication.restoreOverrideCursor()
-            QtGui.QMessageBox.warning(self, 'Error', 'Image stack not loaded.')
- 
-            import sys; print sys.exc_info()
+#                 
+#         except:
+#   
+#             self.common.stack_loaded = 0 
+#             self.common.i0_loaded = 0
+#             self.new_stack_refresh()
+#                                  
+#             QtGui.QApplication.restoreOverrideCursor()
+#             QtGui.QMessageBox.warning(self, 'Error', 'Image stack not loaded.')
+#  
+#             import sys; print sys.exc_info()
                    
 
         self.refresh_widgets()
@@ -9663,6 +9782,7 @@ class MainFrame(QtGui.QMainWindow):
             self.page2.button_calcpca.setEnabled(False)
             self.page4.button_loadtspec.setEnabled(False)
             self.page4.button_addflat.setEnabled(False)
+            self.page5.button_save.setEnabled(False)
         else:
             self.page1.button_limitev.setEnabled(True)
             self.page1.button_subregion.setEnabled(True)
@@ -9672,6 +9792,7 @@ class MainFrame(QtGui.QMainWindow):
             self.page2.button_calcpca.setEnabled(True) 
             self.page4.button_loadtspec.setEnabled(True)
             self.page4.button_addflat.setEnabled(True)   
+            self.page5.button_save.setEnabled(True)
              
              
              
@@ -9680,24 +9801,24 @@ class MainFrame(QtGui.QMainWindow):
             self.page2.slidershow.setEnabled(False) 
             self.page3.button_calcca.setEnabled(False)
             self.page4.rb_fit.setEnabled(False)
-            self.page5.button_calckeng.setEnabled(False)
         else:
             self.page2.button_savepca.setEnabled(True)
             self.page2.slidershow.setEnabled(True)
             self.page3.button_calcca.setEnabled(True)  
-            self.page4.rb_fit.setEnabled(True)  
-            self.page5.button_calckeng.setEnabled(True)       
+            self.page4.rb_fit.setEnabled(True)       
              
         if self.common.cluster_calculated == 0:   
             self.page3.button_scatterplots.setEnabled(False)
             self.page3.button_savecluster.setEnabled(False)
             self.page3.slidershow.setEnabled(False)
             self.page4.button_addclspec.setEnabled(False)
+            self.page5.button_addclspec.setEnabled(False)
         else:
             self.page3.button_scatterplots.setEnabled(True)
             self.page3.button_savecluster.setEnabled(True)  
             self.page3.slidershow.setEnabled(True)
             self.page4.button_addclspec.setEnabled(True)
+            self.page5.button_addclspec.setEnabled(True)
              
         if self.common.spec_anl_calculated == 0:
             self.page4.button_removespec.setEnabled(False)
@@ -9718,10 +9839,10 @@ class MainFrame(QtGui.QMainWindow):
             else:
                 self.page6.button_addclspec.setEnabled(True)                
             
-        if self.common.xpf_loaded == 1:
-            self.page6.slider_spec.setEnabled(True)
-        else:
-            self.page6.slider_spec.setEnabled(False)
+            if self.common.xpf_loaded == 1:
+                self.page6.slider_spec.setEnabled(True)
+            else:
+                self.page6.slider_spec.setEnabled(False)
         
             
                    
@@ -9816,16 +9937,13 @@ class MainFrame(QtGui.QMainWindow):
         self.page4.ClearWidgets()
          
         #page 5
-        self.page5.button_calckeng.setEnabled(False)
         fig = self.page5.kespecfig
         fig.clf()
         self.page5.KESpecPan.draw()         
         fig = self.page5.absimgfig
         fig.clf()
         self.page5.AbsImagePanel.draw()   
-        self.page5.lc_1.clear()  
-        self.page5.keyenergies = []
-        self.page5.keyengs_calculated = 0    
+ 
         
         #page 6
         if self.page6 != None:

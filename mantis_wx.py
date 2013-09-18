@@ -385,7 +385,7 @@ class PageKeyEng(wx.Panel):
         #Show Scale Bar
         startx = int(self.stk.n_rows*0.05)
         starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
-        um_string = '$\mu m$'
+        um_string = ' $\mathrm{\mu m}$'
         microns = '$'+self.stk.scale_bar_string+' $'+um_string
         axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center',
                   color = 'black', fontsize=14)
@@ -1013,7 +1013,7 @@ class PageNNMAOptDensity(PageNNMA):
         if self.show_scale_bar == 1:
             startx = int(self.stk.n_rows*0.05)
             starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
-            um_string = '$\mu m$'
+            um_string = ' $\mathrm{\mu m}$'
             microns = '$'+self.stk.scale_bar_string+' $'+um_string
             axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center', color='black', fontsize=14)
             #Matplotlib has flipped scales so I'm using rows instead of cols!
@@ -1068,7 +1068,7 @@ class PageNNMAOptDensity(PageNNMA):
         if self.show_scale_bar == 1:
             startx = int(self.stk.n_rows*0.05)
             starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
-            um_string = '$\mu m$'
+            um_string = ' $\mathrm{\mu m}$'
             microns = '$'+self.stk.scale_bar_string+' $'+um_string
             axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center', color='black', fontsize=14)
             #Matplotlib has flipped scales so I'm using rows instead of cols!
@@ -1123,7 +1123,7 @@ class PageNNMAOptDensity(PageNNMA):
         if self.show_scale_bar == 1:
             startx = int(self.stk.n_rows*0.05)
             starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
-            um_string = '$\mu m$'
+            um_string = ' $\mathrm{\mu m}$'
             microns = '$'+self.stk.scale_bar_string+' $'+um_string
             axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center', color='black', fontsize=14)
             #Matplotlib has flipped scales so I'm using rows instead of cols!
@@ -1811,7 +1811,7 @@ class PageSpectral(wx.Panel):
             bound = npy.max((npy.abs(min_val), npy.abs(max_val)))
         
             if self.show_scale_bar == 1:
-                um_string = '$\mu m$'
+                um_string = ' $\mathrm{\mu m}$'
                 microns = '$'+self.stk.scale_bar_string+' $'+um_string
                 axes.text(self.stk.scale_bar_pixels_x+10,self.stk.n_cols-9, microns, horizontalalignment='left', verticalalignment='center',
                               color = 'white', fontsize=14)
@@ -2025,7 +2025,7 @@ class PageSpectral(wx.Panel):
         bound = npy.max((npy.abs(min_val), npy.abs(max_val)))
         
         if self.show_scale_bar == 1:
-            um_string = '$\mu m$'
+            um_string = ' $\mathrm{\mu m}$'
             microns = '$'+self.stk.scale_bar_string+' $'+um_string
             axes.text(self.stk.scale_bar_pixels_x+10,self.stk.n_cols-9, microns, horizontalalignment='left', verticalalignment='center',
                       color = 'white', fontsize=14)
@@ -4908,7 +4908,7 @@ class PageStack(wx.Panel):
         if self.show_scale_bar == 1:
             startx = int(self.stk.n_rows*0.05)
             starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
-            um_string = '$\mu m$'
+            um_string = ' $\mathrm{\mu m}$'
             microns = '$'+self.stk.scale_bar_string+' $'+um_string
             axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center',
                       color = 'black', fontsize=14)
@@ -7583,7 +7583,7 @@ class SpectralROI(wx.Frame):
         #Show Scale Bar
         startx = int(self.stack.n_rows*0.05)
         starty = self.stack.n_cols-int(self.stack.n_cols*0.05)-self.stack.scale_bar_pixels_y
-        um_string = '$\mu m$'
+        um_string = ' $\mathrm{\mu m}$'
         microns = '$'+self.stack.scale_bar_string+' $'+um_string
         axes.text(self.stack.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center',
                   color = 'black', fontsize=14)
@@ -8111,7 +8111,7 @@ class PageLoadData(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self.OnLoadHDF5, id=self.button_hdf5.GetId())
         vbox1.Add(self.button_hdf5, 0, wx.EXPAND)
         
-        self.button_sdf = wx.Button(panel1, -1, 'Load SDF Stack (*.hrd)')
+        self.button_sdf = wx.Button(panel1, -1, 'Load SDF Stack (*.hdr)')
         self.button_sdf.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnLoadSDF, id=self.button_sdf.GetId())   
         vbox1.Add(self.button_sdf, 0, wx.EXPAND)
@@ -8342,7 +8342,7 @@ class PageLoadData(wx.Panel):
             #Show Scale Bar
             startx = int(self.stk.n_rows*0.05)
             starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
-            um_string = '$\mu m$'
+            um_string = ' $\mathrm{\mu m}$'
             microns = '$'+self.stk.scale_bar_string+' $'+um_string
             axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center',
                       color = 'black', fontsize=14)

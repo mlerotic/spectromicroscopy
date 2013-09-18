@@ -729,6 +729,7 @@ class analyze:
 
 
 
+
 #-----------------------------------------------------------------------------
 # Find key energies by finding peaks and valleys in significant pca spectra
     def calc_key_engs(self, threshold):
@@ -818,7 +819,7 @@ class analyze:
      
         return np.array(maxtab), np.array(mintab)
 
-
+       
 
 #----------------------------------------------------------------------   
     def load_xraypeakfit_spectrum(self, filename):

@@ -296,7 +296,6 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
         
         self.fill_h5_struct_normalization()
         
-    
         return    
     
 #----------------------------------------------------------------------   
