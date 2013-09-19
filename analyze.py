@@ -24,6 +24,7 @@ import scipy.spatial
 import scipy.ndimage
 from scipy.cluster.vq import  kmeans2
 from scipy import optimize
+import scipy.signal
 
 import scipy as sp
 mmult = sp.dot
@@ -120,12 +121,7 @@ def model_error(p, nsteps, npeaks, x, y):
 #----------------------------------------------------------------------
 class Cfitparams:
     def __init__(self):
-        self.ibase = 0.5
-        self.istepfitparams = np.zeros((8))
-        self.igauss_fp_a = np.zeros((12))
-        self.igauss_fp_m = np.zeros((12))
-        self.igauss_fp_s = np.zeros((12))
-        
+       
         self.base = 0.0
         self.stepfitparams = np.zeros((8))
         self.gauss_fp_a = np.zeros((12))
@@ -860,7 +856,8 @@ class analyze:
         
         self.xfitpars.append(Cfitparams())
         
-        
+        #Find peaks:
+        self.init_fit_params(self.n_xrayfitsp-1)
 
 #----------------------------------------------------------------------   
 #Load spectra from cluster analysis
@@ -888,7 +885,7 @@ class analyze:
     def init_fit_params(self, index):
         
         
-        pmax,pmin = self.find_peaks(self.xrayfitspectra[index], 0.04, x = self.stack.ev)
+        pmax,pmin = self.find_peaks(self.xrayfitspectra[index], 0.03, x = self.stack.ev)
         
         fp = self.xfitpars[index]
         
@@ -905,20 +902,40 @@ class analyze:
             for i in range(12):
                 peakengs.append(self.stack.ev[delta*i])
         
-        fp.istepfitparams = [peakengs[0], 0.5, 10.0, peakengs[1], 0.5, 10.0]
+        fp.stepfitparams = [peakengs[0], 0.5, 3.0, peakengs[1], 0.5, 3.0]
 
         
         for i in range(12):
-            fp.igauss_fp_a[i] = 1.0
-            fp.igauss_fp_m[i] = peakengs[i]
-            fp.igauss_fp_s[i] = 0.5 
+            fp.gauss_fp_a[i] = 1.0
+            fp.gauss_fp_m[i] = peakengs[i]
+            fp.gauss_fp_s[i] = 0.5 
             
             
-        fp.ibase = np.mean(self.xrayfitspectra[index][0:5])
+        fp.base = np.mean(self.xrayfitspectra[index][0:5])
         
         
-        return fp.ibase, fp.istepfitparams, fp.igauss_fp_a, fp.igauss_fp_m, fp.igauss_fp_s
+        self.set_init_fit_params(index, fp.base, fp.stepfitparams, fp.gauss_fp_a, fp.gauss_fp_m, fp.gauss_fp_s)
         
+        return fp.base, fp.stepfitparams, fp.gauss_fp_a, fp.gauss_fp_m, fp.gauss_fp_s
+
+
+#----------------------------------------------------------------------   
+    def set_init_fit_params(self, index, base, stepfitparams, peak_a, peak_m, peak_s):
+        
+        
+        self.xfitpars[index].base = base
+        
+        
+        self.xfitpars[index].stepfitparams = stepfitparams
+
+        
+        for i in range(12):
+            self.xfitpars[index].gauss_fp_a[i] = peak_a[i]
+            self.xfitpars[index].gauss_fp_m[i] = peak_m[i]
+            self.xfitpars[index].gauss_fp_s[i] = peak_s[i]
+            
+            
+        return
 
 #----------------------------------------------------------------------   
     def fit_spectrum(self, i_spec, nsteps, npeaks):
@@ -932,19 +949,27 @@ class analyze:
         self.nsteps = nsteps
         self.npeaks = npeaks
         
-        p.append(fp.ibase)
+        p.append(fp.base)
         
         for i in range(nsteps*3):
-            p.append(fp.istepfitparams[i])
+            p.append(fp.stepfitparams[i])
             
         for i in range(npeaks):
-            p.append(fp.igauss_fp_a[i])
-            p.append(fp.igauss_fp_m[i])
-            p.append(fp.igauss_fp_s[i])
+            p.append(fp.gauss_fp_a[i])
+            p.append(fp.gauss_fp_m[i])
+            p.append(fp.gauss_fp_s[i])
             
         
-        p2, success = optimize.leastsq(model_error, p[:], args=(nsteps, npeaks, np.array(self.stack.ev).astype(np.float64), np.array(xfit_spectrum).astype(np.float64)))
+        #p2, success = optimize.leastsq(model_error, p[:], args=(nsteps, npeaks, np.array(self.stack.ev).astype(np.float64), np.array(xfit_spectrum).astype(np.float64)))
         
+        bounds=[]
+        for i in range(len(p)):
+            bmin = 0
+            bmax = None
+            bounds.append((bmin,bmax))
+                    
+                    
+        p2, success = leastsqbound(model_error, p[:], bounds, args=(nsteps, npeaks, np.array(self.stack.ev).astype(np.float64), np.array(xfit_spectrum).astype(np.float64)))
        
         fp.stepfitparams = np.zeros((8))
         fp.gauss_fp_a = np.zeros((12))
@@ -1643,4 +1668,173 @@ class analyze:
 
         return A, W
                 
-                      
+              
+              
+"""
+Constrained multivariate Levenberg-Marquardt optimization
+"""
+
+from scipy.optimize import leastsq
+
+def internal2external_grad(xi,bounds):
+    """ 
+    Calculate the internal to external gradiant
+    
+    Calculates the partial of external over internal
+    
+    """
+    
+    ge = np.empty_like(xi)
+
+    for i,(v,bound) in enumerate(zip(xi,bounds)):
+        
+        a = bound[0]    # minimum
+        b = bound[1]    # maximum
+
+        if a == None and b == None:    # No constraints
+            ge[i] = 1.0
+
+        elif b == None:      # only min
+            ge[i] = v/np.sqrt(v**2+1)
+
+        elif a == None:      # only max
+            ge[i] = -v/np.sqrt(v**2+1)
+
+        else:       # both min and max
+            ge[i] = (b-a)*np.cos(v)/2.
+
+    return ge
+
+def i2e_cov_x(xi,bounds,cov_x):
+
+    grad = internal2external_grad(xi,bounds)
+    grad =  np.atleast_2d(grad)
+    return np.dot(grad.T,grad)*cov_x
+
+
+def internal2external(xi,bounds):
+    """ Convert a series of internal variables to external variables"""
+    
+    xe = np.empty_like(xi)
+
+    for i,(v,bound) in enumerate(zip(xi,bounds)):
+        
+        a = bound[0]    # minimum
+        b = bound[1]    # maximum
+
+        if a == None and b == None:    # No constraints
+            xe[i] = v
+
+        elif b == None:      # only min
+            xe[i] = a-1.+np.sqrt(v**2.+1.)
+
+        elif a == None:      # only max
+            xe[i] = b+1.-np.sqrt(v**2.+1.)
+
+        else:       # both min and max
+            xe[i] = a+((b-a)/2.)*( np.sin(v)+1.)
+
+    return xe
+
+def external2internal(xe,bounds):
+    """ Convert a series of external variables to internal variables"""
+
+    xi = np.empty_like(xe)
+
+    for i,(v,bound) in enumerate(zip(xe,bounds)):
+        
+        a = bound[0]    # minimum
+        b = bound[1]    # maximum
+
+        if a == None and b == None: # No constraints
+            xi[i] = v
+
+        elif b == None:     # only min
+            xi[i] = np.sqrt( (v-a+1.)**2.-1 )
+
+        elif a == None:     # only max
+            xi[i] = np.sqrt( (b-v+1.)**2.-1 )
+
+        else:   # both min and max
+            xi[i] = np.arcsin( (2.*(v-a)/(b-a))-1.)
+
+    return xi
+
+def err(p,bounds,efunc,args):
+    
+    pe = internal2external(p,bounds)    # convert to external variables
+    return efunc(pe,*args)
+
+def calc_cov_x(infodic,p):
+    """
+    Calculate cov_x from fjac, ipvt and p as is done in leastsq
+    """
+
+    fjac = infodic['fjac']
+    ipvt = infodic['ipvt']
+    n = len(p)
+
+    # adapted from leastsq function in scipy/optimize/minpack.py
+    perm = np.take(np.eye(n),ipvt-1,0)
+    r = np.triu(np.transpose(fjac)[:n,:])
+    R = np.dot(r,perm)
+    #try:
+    cov_x = np.linalg.inv(np.dot(np.transpose(R),R))
+    #except LinAlgError:
+    #    cov_x = None
+    return cov_x
+
+
+def leastsqbound(func,x0,bounds,args=(),**kw):
+    """
+    Constrained multivariant Levenberg-Marquard optimization
+
+    Minimize the sum of squares of a given function using the 
+    Levenberg-Marquard algorithm. Contraints on parameters are inforced using 
+    variable transformations as described in the MINUIT User's Guide by
+    Fred James and Matthias Winkler.
+
+    Parameters:
+
+    * func      functions to call for optimization.
+    * x0        Starting estimate for the minimization.
+    * bounds    (min,max) pair for each element of x, defining the bounds on
+                that parameter.  Use None for one of min or max when there is
+                no bound in that direction.
+    * args      Any extra arguments to func are places in this tuple.
+
+    Returns: (x,{cov_x,infodict,mesg},ier)
+
+    Return is described in the scipy.optimize.leastsq function.  x and con_v  
+    are corrected to take into account the parameter transformation, infodic 
+    is not corrected.
+
+    Additional keyword arguments are passed directly to the 
+    scipy.optimize.leastsq algorithm. 
+
+    """
+    # check for full output
+    if "full_output" in kw and kw["full_output"]:
+        full=True
+    else:
+        full=False
+
+    # convert x0 to internal variables
+    i0 = external2internal(x0,bounds)
+
+    # perfrom unconstrained optimization using internal variables
+    r = leastsq(err,i0,args=(bounds,func,args),**kw)
+
+    # unpack return convert to external variables and return
+    if full:
+        xi,cov_xi,infodic,mesg,ier = r
+        xe = internal2external(xi,bounds)
+        cov_xe = i2e_cov_x(xi,bounds,cov_xi)
+        # XXX correct infodic 'fjac','ipvt', and 'qtf' 
+        return xe,cov_xe,infodic,mesg,ier 
+
+    else:
+        xi,ier = r
+        xe = internal2external(xi,bounds)
+        return xe,ier
+            

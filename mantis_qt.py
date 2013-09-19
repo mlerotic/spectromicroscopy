@@ -92,7 +92,11 @@ class PageXrayPeakFitting(QtGui.QWidget):
         
         self.i_spec = 1
         
-        
+        self.base = 0.0
+        self.stepfitparams = npy.zeros((6))
+        self.gauss_fp_a = npy.zeros((12))
+        self.gauss_fp_m = npy.zeros((12))
+        self.gauss_fp_s = npy.zeros((12))
         
         self.nsteps = []
         self.npeaks = []
@@ -103,21 +107,369 @@ class PageXrayPeakFitting(QtGui.QWidget):
         self.fits = []
         self.fits_sep = []
         
+        self.plotcolors = [(238/255.,42/255.,36/255.), (15/255.,135/255.,15/255.), (190/255.,0,190/255.), (0,0,190/255.),(190/255.,190/255.,0), (0,88/255.,0),
+                            (132/255.,132/255.,255/255.), (158/255.,79/255.,70/255.), (0,132/255.,150/255.), (150/255.,211/255.,79/255.),(247/255.,158/255.,220/255.), (211/255.,17/255.,255/255.)]
+         
+        self.peak_engs = [285.0, 286.5, 288.5, 289.5, 290.5]
+        self.peak_names = ['aromatic', 'phenolic', 'carboxyl', 'alkyl', 'carbonyl']       
         
         vboxL = QtGui.QVBoxLayout()
         vboxR = QtGui.QVBoxLayout()
         hboxT = QtGui.QHBoxLayout()
     
-    
-#         #panel 1
-#         sizer1 = QtGui.QGroupBox('Loaded Spectra')
-#         vbox1 = QtGui.QVBoxLayout()
-#  
-#         self.tc_speclist =  QListWidget()  
-#         self.tc_speclist.itemClicked.connect(self.OnSpectraListClick)
-#         #self.tc_speclist.doubleClicked.connect(self.OnEditSpectraListClick)      
-#         vbox1.addWidget(self.tc_speclist)
-#         sizer1.setLayout(vbox1)
+
+        #panel 
+        sizer = QtGui.QGroupBox('Fit Parameters')
+        vbox = QtGui.QVBoxLayout()
+                
+
+        fgs1 = QtGui.QGridLayout()
+        
+
+        textctrl =  QtGui.QLabel(self)
+        textctrl.setText('Position')  
+        fgs1.addWidget(textctrl, 0, 1)      
+        textctrl =  QtGui.QLabel(self)
+        textctrl.setText('Height')  
+        fgs1.addWidget(textctrl, 0, 2)   
+        textctrl =  QtGui.QLabel(self)
+        textctrl.setText('FWHM')  
+        fgs1.addWidget(textctrl, 0, 3)   
+        textctrl =  QtGui.QLabel(self)
+        textctrl.setText('Base')  
+        fgs1.addWidget(textctrl, 16, 0)   
+
+
+        textctrl =  QtGui.QLabel(self)
+        textctrl.setText('Step 1')
+        fgs1.addWidget(textctrl, 1, 0)
+        
+        textctrl =  QtGui.QLabel(self)
+        textctrl.setText('Step 2')
+        fgs1.addWidget(textctrl, 2, 0)
+
+        textctrl =  QtGui.QLabel(self)
+        textctrl.setText('Amplitude')  
+        fgs1.addWidget(textctrl, 3, 1)      
+        textctrl =  QtGui.QLabel(self)
+        textctrl.setText('Mu')  
+        fgs1.addWidget(textctrl, 3, 2)   
+        textctrl =  QtGui.QLabel(self)
+        textctrl.setText('Sigma')  
+        fgs1.addWidget(textctrl, 3, 3)   
+         
+
+        textctrl =  QtGui.QLabel(self)
+        textctrl.setText('Gauss 1')
+        fgs1.addWidget(textctrl, 4, 0)
+        textctrl =  QtGui.QLabel(self)
+        textctrl.setText('Gauss 2')
+        fgs1.addWidget(textctrl, 5, 0)
+        textctrl =  QtGui.QLabel(self)
+        textctrl.setText('Gauss 3')
+        fgs1.addWidget(textctrl, 6, 0)
+        textctrl =  QtGui.QLabel(self)
+        textctrl.setText('Gauss 4')
+        fgs1.addWidget(textctrl, 7, 0)        
+        textctrl =  QtGui.QLabel(self)
+        textctrl.setText('Gauss 5')
+        fgs1.addWidget(textctrl, 8, 0)
+        textctrl =  QtGui.QLabel(self)
+        textctrl.setText('Gauss 6')
+        fgs1.addWidget(textctrl, 9, 0)
+        textctrl =  QtGui.QLabel(self)
+        textctrl.setText('Gauss 7')
+        fgs1.addWidget(textctrl, 10, 0)                
+        textctrl =  QtGui.QLabel(self)
+        textctrl.setText('Gauss 8')
+        fgs1.addWidget(textctrl, 11, 0)    
+        textctrl =  QtGui.QLabel(self)
+        textctrl.setText('Gauss 9')
+        fgs1.addWidget(textctrl, 12, 0)
+        textctrl =  QtGui.QLabel(self)
+        textctrl.setText('Gauss 10')
+        fgs1.addWidget(textctrl, 13, 0)        
+        textctrl =  QtGui.QLabel(self)
+        textctrl.setText('Gauss 11')
+        fgs1.addWidget(textctrl, 14, 0)                    
+        textctrl =  QtGui.QLabel(self)
+        textctrl.setText('Gauss 12')
+        fgs1.addWidget(textctrl, 15, 0)
+        
+        
+        self.le_sa1 = QtGui.QLineEdit(self)
+        self.le_sa1.setInputMask('0000.00')
+        self.le_sa1.setMaximumWidth(55)
+        self.le_sa1.setText(str(self.stepfitparams[0]))
+        fgs1.addWidget(self.le_sa1, 1, 1)
+
+        self.le_sp1 = QtGui.QLineEdit(self)
+        self.le_sp1.setInputMask('0000.00')
+        self.le_sp1.setMaximumWidth(55)
+        self.le_sp1.setText(str(self.stepfitparams[1]))
+        fgs1.addWidget(self.le_sp1, 1, 2)
+        
+        self.le_sf1 = QtGui.QLineEdit(self)
+        self.le_sf1.setInputMask('0000.00')
+        self.le_sf1.setMaximumWidth(55)
+        self.le_sf1.setText(str(self.stepfitparams[2]))
+        fgs1.addWidget(self.le_sf1, 1, 3)
+        
+        self.le_base = QtGui.QLineEdit(self)
+        self.le_base.setInputMask('0000.00')
+        self.le_base.setMaximumWidth(55)
+        self.le_base.setText(str(self.base))
+        fgs1.addWidget(self.le_base, 16, 1)
+
+        
+        self.le_sa2 = QtGui.QLineEdit(self)
+        self.le_sa2.setInputMask('0000.00')
+        self.le_sa2.setMaximumWidth(55)
+        self.le_sa2.setText(str(self.stepfitparams[3]))
+        fgs1.addWidget(self.le_sa2, 2, 1)
+
+        self.le_sp2 = QtGui.QLineEdit(self)
+        self.le_sp2.setInputMask('0000.00')
+        self.le_sp2.setMaximumWidth(55)
+        self.le_sp2.setText(str(self.stepfitparams[4]))
+        fgs1.addWidget(self.le_sp2, 2, 2)
+        
+        self.le_sf2 = QtGui.QLineEdit(self)
+        self.le_sf2.setInputMask('0000.00')
+        self.le_sf2.setMaximumWidth(55)
+        self.le_sf2.setText(str(self.stepfitparams[5]))
+        fgs1.addWidget(self.le_sf2, 2, 3)
+        
+                
+
+        self.le_amplitudes = []
+        self.le_mu = []
+        self.le_sigma = []
+
+        self.le_ga1 = QtGui.QLineEdit(self)
+        self.le_ga1.setInputMask('0000.00')
+        self.le_ga1.setMaximumWidth(55)
+        fgs1.addWidget(self.le_ga1, 4, 1)
+        self.le_amplitudes.append(self.le_ga1)
+
+        self.le_gm1 = QtGui.QLineEdit(self)
+        self.le_gm1.setInputMask('0000.00')
+        self.le_gm1.setMaximumWidth(55)
+        fgs1.addWidget(self.le_gm1, 4, 2)
+        self.le_mu.append(self.le_gm1)
+        
+        self.le_gs1 = QtGui.QLineEdit(self)
+        self.le_gs1.setInputMask('0000.00')
+        self.le_gs1.setMaximumWidth(55)
+        fgs1.addWidget(self.le_gs1, 4, 3)
+        self.le_sigma.append(self.le_gs1)
+        
+        self.le_ga2 = QtGui.QLineEdit(self)
+        self.le_ga2.setInputMask('0000.00')
+        self.le_ga2.setMaximumWidth(55)
+        fgs1.addWidget(self.le_ga2, 5, 1)
+        self.le_amplitudes.append(self.le_ga2)
+
+        self.le_gm2 = QtGui.QLineEdit(self)
+        self.le_gm2.setInputMask('0000.00')
+        self.le_gm2.setMaximumWidth(55)
+        fgs1.addWidget(self.le_gm2, 5, 2)
+        self.le_mu.append(self.le_gm2)
+        
+        self.le_gs2 = QtGui.QLineEdit(self)
+        self.le_gs2.setInputMask('0000.00')
+        self.le_gs2.setMaximumWidth(55)
+        fgs1.addWidget(self.le_gs2, 5, 3)
+        self.le_sigma.append(self.le_gs2)
+        
+        self.le_ga3 = QtGui.QLineEdit(self)
+        self.le_ga3.setInputMask('0000.00')
+        self.le_ga3.setMaximumWidth(55)
+        fgs1.addWidget(self.le_ga3, 6, 1)
+        self.le_amplitudes.append(self.le_ga3)
+
+        self.le_gm3 = QtGui.QLineEdit(self)
+        self.le_gm3.setInputMask('0000.00')
+        self.le_gm3.setMaximumWidth(55)
+        fgs1.addWidget(self.le_gm3, 6, 2)
+        self.le_mu.append(self.le_gm3)
+        
+        self.le_gs3 = QtGui.QLineEdit(self)
+        self.le_gs3.setInputMask('0000.00')
+        self.le_gs3.setMaximumWidth(55)
+        fgs1.addWidget(self.le_gs3, 6, 3)
+        self.le_sigma.append(self.le_gs3)                                                
+
+        self.le_ga4 = QtGui.QLineEdit(self)
+        self.le_ga4.setInputMask('0000.00')
+        self.le_ga4.setMaximumWidth(55)
+        fgs1.addWidget(self.le_ga4, 7, 1)
+        self.le_amplitudes.append(self.le_ga4)
+
+        self.le_gm4 = QtGui.QLineEdit(self)
+        self.le_gm4.setInputMask('0000.00')
+        self.le_gm4.setMaximumWidth(55)
+        fgs1.addWidget(self.le_gm4, 7, 2)
+        self.le_mu.append(self.le_gm4)
+        
+        self.le_gs4 = QtGui.QLineEdit(self)
+        self.le_gs4.setInputMask('0000.00')
+        self.le_gs4.setMaximumWidth(55)
+        fgs1.addWidget(self.le_gs4, 7, 3)
+        self.le_sigma.append(self.le_gs4)
+        
+        self.le_ga5 = QtGui.QLineEdit(self)
+        self.le_ga5.setInputMask('0000.00')
+        self.le_ga5.setMaximumWidth(55)
+        fgs1.addWidget(self.le_ga5, 8, 1)
+        self.le_amplitudes.append(self.le_ga5)
+
+        self.le_gm5 = QtGui.QLineEdit(self)
+        self.le_gm5.setInputMask('0000.00')
+        self.le_gm5.setMaximumWidth(55)
+        fgs1.addWidget(self.le_gm5, 8, 2)
+        self.le_mu.append(self.le_gm5)
+        
+        self.le_gs5 = QtGui.QLineEdit(self)
+        self.le_gs5.setInputMask('0000.00')
+        self.le_gs5.setMaximumWidth(55)
+        fgs1.addWidget(self.le_gs5, 8, 3)
+        self.le_sigma.append(self.le_gs5)
+               
+        self.le_ga6 = QtGui.QLineEdit(self)
+        self.le_ga6.setInputMask('0000.00')
+        self.le_ga6.setMaximumWidth(55)
+        fgs1.addWidget(self.le_ga6, 9, 1)
+        self.le_amplitudes.append(self.le_ga6)
+
+        self.le_gm6 = QtGui.QLineEdit(self)
+        self.le_gm6.setInputMask('0000.00')
+        self.le_gm6.setMaximumWidth(55)
+        fgs1.addWidget(self.le_gm6, 9, 2)
+        self.le_mu.append(self.le_gm6)
+        
+        self.le_gs6 = QtGui.QLineEdit(self)
+        self.le_gs6.setInputMask('0000.00')
+        self.le_gs6.setMaximumWidth(55)
+        fgs1.addWidget(self.le_gs6, 9, 3)
+        self.le_sigma.append(self.le_gs6)
+ 
+        self.le_ga7 = QtGui.QLineEdit(self)
+        self.le_ga7.setInputMask('0000.00')
+        self.le_ga7.setMaximumWidth(55)
+        fgs1.addWidget(self.le_ga7, 10, 1)
+        self.le_amplitudes.append(self.le_ga7)
+
+        self.le_gm7 = QtGui.QLineEdit(self)
+        self.le_gm7.setInputMask('0000.00')
+        self.le_gm7.setMaximumWidth(55)
+        fgs1.addWidget(self.le_gm7, 10, 2)
+        self.le_mu.append(self.le_gm7)
+        
+        self.le_gs7 = QtGui.QLineEdit(self)
+        self.le_gs7.setInputMask('0000.00')
+        self.le_gs7.setMaximumWidth(55)
+        fgs1.addWidget(self.le_gs7, 10, 3)
+        self.le_sigma.append(self.le_gs7) 
+       
+        self.le_ga8 = QtGui.QLineEdit(self)
+        self.le_ga8.setInputMask('0000.00')
+        self.le_ga8.setMaximumWidth(55)
+        fgs1.addWidget(self.le_ga8, 11, 1)
+        self.le_amplitudes.append(self.le_ga8)
+
+        self.le_gm8 = QtGui.QLineEdit(self)
+        self.le_gm8.setInputMask('0000.00')
+        self.le_gm8.setMaximumWidth(55)
+        fgs1.addWidget(self.le_gm8, 11, 2)
+        self.le_mu.append(self.le_gm8)
+        
+        self.le_gs8 = QtGui.QLineEdit(self)
+        self.le_gs8.setInputMask('0000.00')
+        self.le_gs8.setMaximumWidth(55)
+        fgs1.addWidget(self.le_gs8, 11, 3)
+        self.le_sigma.append(self.le_gs8) 
+        
+        self.le_ga9 = QtGui.QLineEdit(self)
+        self.le_ga9.setInputMask('0000.00')
+        self.le_ga9.setMaximumWidth(55)
+        fgs1.addWidget(self.le_ga9, 12, 1)
+        self.le_amplitudes.append(self.le_ga9)
+
+        self.le_gm9 = QtGui.QLineEdit(self)
+        self.le_gm9.setInputMask('0000.00')
+        self.le_gm9.setMaximumWidth(55)
+        fgs1.addWidget(self.le_gm9, 12, 2)
+        self.le_mu.append(self.le_gm9)
+        
+        self.le_gs9 = QtGui.QLineEdit(self)
+        self.le_gs9.setInputMask('0000.00')
+        self.le_gs9.setMaximumWidth(55)
+        fgs1.addWidget(self.le_gs9, 12, 3)
+        self.le_sigma.append(self.le_gs9)     
+        
+        self.le_ga10 = QtGui.QLineEdit(self)
+        self.le_ga10.setInputMask('0000.00')
+        self.le_ga10.setMaximumWidth(55)
+        fgs1.addWidget(self.le_ga10, 13, 1)
+        self.le_amplitudes.append(self.le_ga10)
+
+        self.le_gm10 = QtGui.QLineEdit(self)
+        self.le_gm10.setInputMask('0000.00')
+        self.le_gm10.setMaximumWidth(55)
+        fgs1.addWidget(self.le_gm10, 13, 2)
+        self.le_mu.append(self.le_gm10)
+        
+        self.le_gs10 = QtGui.QLineEdit(self)
+        self.le_gs10.setInputMask('0000.00')
+        self.le_gs10.setMaximumWidth(55)
+        fgs1.addWidget(self.le_gs10, 13, 3)
+        self.le_sigma.append(self.le_gs10)
+
+        self.le_ga11 = QtGui.QLineEdit(self)
+        self.le_ga11.setInputMask('0000.00')
+        self.le_ga11.setMaximumWidth(55)
+        fgs1.addWidget(self.le_ga11, 14, 1)
+        self.le_amplitudes.append(self.le_ga11)
+
+        self.le_gm11 = QtGui.QLineEdit(self)
+        self.le_gm11.setInputMask('0000.00')
+        self.le_gm11.setMaximumWidth(55)
+        fgs1.addWidget(self.le_gm11, 14, 2)
+        self.le_mu.append(self.le_gm11)
+        
+        self.le_gs11 = QtGui.QLineEdit(self)
+        self.le_gs11.setInputMask('0000.00')
+        self.le_gs11.setMaximumWidth(55)
+        fgs1.addWidget(self.le_gs11, 14, 3)
+        self.le_sigma.append(self.le_gs11)
+               
+        self.le_ga12 = QtGui.QLineEdit(self)
+        self.le_ga12.setInputMask('0000.00')
+        self.le_ga12.setMaximumWidth(55)
+        fgs1.addWidget(self.le_ga12, 15, 1)
+        self.le_amplitudes.append(self.le_ga12)
+
+        self.le_gm12 = QtGui.QLineEdit(self)
+        self.le_gm12.setInputMask('0000.00')
+        self.le_gm12.setMaximumWidth(55)
+        fgs1.addWidget(self.le_gm12, 15, 2)
+        self.le_mu.append(self.le_gm12)
+        
+        self.le_gs12 = QtGui.QLineEdit(self)
+        self.le_gs12.setInputMask('0000.00')
+        self.le_gs12.setMaximumWidth(55)
+        fgs1.addWidget(self.le_gs12, 15, 3)
+        self.le_sigma.append(self.le_gs12)
+        
+        for i in range(12):            
+            self.le_amplitudes[i].setText(str(self.gauss_fp_a[i]))
+            self.le_mu[i].setText(str(self.gauss_fp_m[i]))
+            self.le_sigma[i].setText(str(self.gauss_fp_s[i]))
+                    
+        vbox.addLayout(fgs1)
+        sizer.setLayout(vbox)
+            
         
         
         #panel 2
@@ -205,10 +557,10 @@ class PageXrayPeakFitting(QtGui.QWidget):
         vbox4.addLayout(hbox42)
 
         
-        self.button_initfitparams = QtGui.QPushButton('Initialize Fit Parameters')
-        self.button_initfitparams.clicked.connect( self.OnInitFitParams)   
-        self.button_initfitparams.setEnabled(False)
-        vbox4.addWidget(self.button_initfitparams)
+#         self.button_initfitparams = QtGui.QPushButton('Initialize Fit Parameters')
+#         self.button_initfitparams.clicked.connect( self.OnInitFitParams)   
+#         self.button_initfitparams.setEnabled(False)
+#         vbox4.addWidget(self.button_initfitparams)
         
         self.button_fitspec = QtGui.QPushButton('Fit Spectrum')
         self.button_fitspec.clicked.connect( self.OnFitSpectrum)   
@@ -219,31 +571,17 @@ class PageXrayPeakFitting(QtGui.QWidget):
 
 
         #panel 5
-        sizer5 = QtGui.QGroupBox('Fit Parameters')
+        
+        sizer5 = QtGui.QGroupBox('Peak Positions [eV]')
         vbox5 = QtGui.QVBoxLayout()
+                   
+        self.tc_peakid = []
+        for i in range(12):
+            tc = QtGui.QLabel(self)
+            self.tc_peakid.append(tc)
+            vbox5.addWidget(tc)          
             
-        
-        self.tc_base = QtGui.QLabel(self)
-        vbox5.addWidget(self.tc_base)
-        self.tc_base.setText('Base:')
-        
-        
-        self.tc_step = QtGui.QLabel(self)
-        vbox5.addWidget(self.tc_step)
-        self.tc_step.setText('Step Height:')
-
-        
-        self.tc_peaks = QtGui.QLabel(self)
-        vbox5.addWidget(self.tc_peaks)
-        self.tc_peaks.setText('Peak positions:')
-    
-        
-        
-        self.button_fitparams = QtGui.QPushButton('Fit Parameters Results')
-        self.button_fitparams.clicked.connect( self.OnShowFitParams)   
-        self.button_fitparams.setEnabled(False)
-        vbox5.addWidget(self.button_fitparams)
-        
+        vbox5.addStretch(1)
         sizer5.setLayout(vbox5)
         
 
@@ -252,7 +590,7 @@ class PageXrayPeakFitting(QtGui.QWidget):
                         
         vboxL.addWidget(sizer3)
         vboxL.addWidget(sizer4)
-        #vboxL.addWidget(sizer1)
+        vboxL.addWidget(sizer)
  
         hboxT.setContentsMargins(20,20,20,20)
    
@@ -267,8 +605,8 @@ class PageXrayPeakFitting(QtGui.QWidget):
 #----------------------------------------------------------------------
     def OnSpecFromFile(self, event):
         
-
-        try: 
+        if True:
+        #try: 
             
             wildcard = "Spectrum files (*.csv)"
             
@@ -302,20 +640,19 @@ class PageXrayPeakFitting(QtGui.QWidget):
             self.nstepsspin.setValue(self.nsteps[self.i_spec-1])
             self.ngaussspin.setValue(self.npeaks[self.i_spec-1])
             
-            
             self.loadSpectrum()
-            #self.ShowSpectraList()
+            self.updatewidgets()
                     
             QtGui.QApplication.restoreOverrideCursor()
             
-        except:
-            QtGui.QApplication.restoreOverrideCursor()  
-            QtGui.QMessageBox.warning(self, 'Error', 'Spectrum file not loaded.')
+#         except:
+#             QtGui.QApplication.restoreOverrideCursor()  
+#             QtGui.QMessageBox.warning(self, 'Error', 'Spectrum file not loaded.')
                                    
                                  
         
         self.window().refresh_widgets()
-        self.updatewidgets()
+
 
 #----------------------------------------------------------------------
     def OnAddClusterSpectra(self, event):
@@ -372,6 +709,7 @@ class PageXrayPeakFitting(QtGui.QWidget):
 
         if self.anlz.n_xrayfitsp > 0:
             self.loadSpectrum()
+            self.ShowFitParams()
                
 
 #----------------------------------------------------------------------        
@@ -391,6 +729,8 @@ class PageXrayPeakFitting(QtGui.QWidget):
         
         QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
         
+        self.SetFitParams()
+        
         fitted_spectrum, separate_peaks = self.anlz.fit_spectrum(self.i_spec-1, self.nsteps[self.i_spec-1], self.npeaks[self.i_spec-1])
         
         self.fits[self.i_spec-1] = fitted_spectrum
@@ -403,25 +743,7 @@ class PageXrayPeakFitting(QtGui.QWidget):
         QtGui.QApplication.restoreOverrideCursor() 
         self.updatewidgets()
         
-#----------------------------------------------------------------------
-    def OnInitFitParams(self, event):
-        
-        if self.firstinit[self.i_spec-1] == 1:
-            self.firstinit[self.i_spec-1] = 0
-            self.base, self.stepfitparams, self.gauss_fp_a, self.gauss_fp_m, self.gauss_fp_s = self.anlz.init_fit_params(self.i_spec-1)
-        else:
-            self.base = self.anlz.xfitpars[self.i_spec-1].ibase
-            self.stepfitparams = self.anlz.xfitpars[self.i_spec-1].istepfitparams
-            self.gauss_fp_a = self.anlz.xfitpars[self.i_spec-1].igauss_fp_a
-            self.gauss_fp_m = self.anlz.xfitpars[self.i_spec-1].igauss_fp_m
-            self.gauss_fp_s = self.anlz.xfitpars[self.i_spec-1].igauss_fp_s
-            
-
-        fitparswin = FitParams(self.window(), 'Initialize Fit Parameters', 
-                               [self.base, self.stepfitparams, self.gauss_fp_a, self.gauss_fp_m, self.gauss_fp_s], 
-                               False, True)
-        fitparswin.show()
-        
+       
 
 #----------------------------------------------------------------------
     def OnSave(self, event):
@@ -536,40 +858,39 @@ class PageXrayPeakFitting(QtGui.QWidget):
 
 #----------------------------------------------------------------------
     def updatewidgets(self):
+    
+              
+        self.button_fitspec.setEnabled(True)
         
-        self.button_initfitparams.setEnabled(True)
-             
-        if self.initdone[self.i_spec-1] == 0:
-            self.button_fitspec.setEnabled(False)
-        else:
-            self.button_fitspec.setEnabled(True)
+        for i in range(12):
+            self.tc_peakid[i].setText('')  
+            
+        peaknames = []
+        for i in range(self.npeaks[self.i_spec-1]):
+            i_eng=(npy.abs(self.peak_engs-self.anlz.xfitpars[self.i_spec-1].gauss_fp_m[i])).argmin()  
+            diff =   npy.abs(self.peak_engs[i_eng]-self.anlz.xfitpars[self.i_spec-1].gauss_fp_m[i])
+            if npy.abs(diff) < 0.5:
+                peaknames.append(self.peak_names[i_eng] + '\t({0:01.1f})'.format(diff))
+            else:
+                peaknames.append('unknown')
+            
         
+                
         if self.spectrumfitted[self.i_spec-1] == 1:
-            self.button_fitparams.setEnabled(True)
             self.button_save.setEnabled(True)
             
-            self.tc_base.setText('Base:\t\t'+'{0:04.3f}'.format(self.anlz.xfitpars[self.i_spec-1].base))
             
-            text = 'Step Height:\t' 
-            for i in range(self.nsteps[self.i_spec-1]):
-                text = text + '{0:04.3f}'.format(self.anlz.xfitpars[self.i_spec-1].stepfitparams[i*3+1]) + ',  '
-            self.tc_step.setText(text)
-            
-            text = 'Peak positions:\t'
             for i in range(self.npeaks[self.i_spec-1]):
-                text = text + '{0:04.3f}'.format(self.anlz.xfitpars[self.i_spec-1].gauss_fp_m[i]) + ',  '
-            self.tc_peaks.setText(text)
-            
-            
+                text = '\t{0:04.3f}'.format(self.anlz.xfitpars[self.i_spec-1].gauss_fp_m[i])
+                self.tc_peakid[i].setText(text + '\t' + peaknames[i])
+                self.tc_peakid[i].setStyleSheet('color: rgb({0:}, {1}, {2})'.format(int(255*self.plotcolors[i][0]),
+                                                                                 int(255*self.plotcolors[i][1]), 
+                                                                                 int(255*self.plotcolors[i][2])))
         else:
-            self.button_fitparams.setEnabled(False)
             self.button_save.setEnabled(False)
-            
-            self.tc_base.setText('Base:')
-            self.tc_step.setText('Step Height:')
-            self.tc_peaks.setText('Peak positions:')        
+    
 
-
+        self.ShowFitParams()
         
                               
 #----------------------------------------------------------------------     
@@ -590,10 +911,22 @@ class PageXrayPeakFitting(QtGui.QWidget):
 
         if self.spectrumfitted[self.i_spec-1] == 1:
             line2 = axes.plot(self.stk.ev,self.fits[self.i_spec-1], color='red')
-            for i in range(len(self.fits_sep[self.i_spec-1])):
+            
+            y = self.fits_sep[self.i_spec-1][0]
+            line3 = axes.plot(self.stk.ev, y, color = 'blue')               
+            for i in range(1, 1+self.nsteps[self.i_spec-1]):
                 y = self.fits_sep[self.i_spec-1][i]
-                line3 = axes.plot(self.stk.ev, y)
-                        
+                line3 = axes.plot(self.stk.ev, y, color = 'green')                
+            for i in range(0, self.npeaks[self.i_spec-1]):
+                y = self.fits_sep[self.i_spec-1][i+self.nsteps[self.i_spec-1]+1]
+                line3 = axes.plot(self.stk.ev, y, color = self.plotcolors[i])
+                
+        lines = axes.get_lines()
+        self.colors = []
+        for i, line in enumerate(lines):
+            self.colors.append(line.get_color())
+                
+
         axes.set_xlabel('Photon Energy [eV]')
         axes.set_ylabel('Optical Density')
         
@@ -607,6 +940,8 @@ class PageXrayPeakFitting(QtGui.QWidget):
         self.nstepsspin.setValue(self.nsteps[self.i_spec-1])
         self.ngaussspin.setValue(self.npeaks[self.i_spec-1])
         
+        
+        
 
         self.window().refresh_widgets()
         self.updatewidgets()
@@ -619,22 +954,56 @@ class PageXrayPeakFitting(QtGui.QWidget):
         
         for i in range(self.anlz.n_xrayfitsp):
             self.tc_speclist.addItem(self.anlz.xfspec_names[i])
+            
+
+            
 
 #----------------------------------------------------------------------
-    def SetInitFitParams(self, base, stepfitparams, gauss_fp_a, gauss_fp_m, gauss_fp_s):
+    def SetFitParams(self):            
+
+        self.base = float(self.le_base.text())
         
-        self.anlz.ibase = base
         
+        self.stepfitparams[0] = float(self.le_sa1.text())
+        self.stepfitparams[1] = float(self.le_sp1.text())
+        self.stepfitparams[2] = float(self.le_sf1.text())
+        self.stepfitparams[3] = float(self.le_sa2.text())
+        self.stepfitparams[4] = float(self.le_sp2.text())
+        self.stepfitparams[5] = float(self.le_sf2.text())
         
-        
-        self.anlz.istepfitparams = stepfitparams
-        self.anlz.igauss_fp_a = gauss_fp_a
-        self.anlz.igauss_fp_m = gauss_fp_m
-        self.anlz.igauss_fp_s = gauss_fp_s
-        
-        self.initdone[self.i_spec-1] = 1
-        self.updatewidgets()
+        for i in range(12):
+          
+            self.gauss_fp_a[i] = float(self.le_amplitudes[i].text())
+            self.gauss_fp_m[i] = float(self.le_mu[i].text())
+            self.gauss_fp_s[i] = float(self.le_sigma[i].text())
             
+ 
+        self.anlz.set_init_fit_params(self.i_spec-1, self.base, self.stepfitparams, 
+                                       self.gauss_fp_a, self.gauss_fp_m, self.gauss_fp_s)
+        
+                
+
+#----------------------------------------------------------------------
+    def ShowFitParams(self):            
+
+        fp = self.anlz.xfitpars[self.i_spec-1]
+        self.le_base.setText(str(fp.base))
+        
+        self.le_sa1.setText(str(fp.stepfitparams[0]))
+        self.le_sp1.setText(str(fp.stepfitparams[1]))
+        self.le_sf1.setText(str(fp.stepfitparams[2]))
+        self.le_sa2.setText(str(fp.stepfitparams[3]))
+        self.le_sp2.setText(str(fp.stepfitparams[4]))
+        self.le_sf2.setText(str(fp.stepfitparams[5]))
+        
+        for i in range(12):
+            self.le_amplitudes[i].setText(str(fp.gauss_fp_a[i]))
+            self.le_mu[i].setText(str(fp.gauss_fp_m[i]))
+            self.le_sigma[i].setText(str(fp.gauss_fp_s[i]))
+
+              
+            
+                            
 
 #---------------------------------------------------------------------- 
 class FitParams(QtGui.QDialog):
@@ -9403,10 +9772,10 @@ class MainFrame(QtGui.QMainWindow):
         
         tabs.tabBar().setTabTextColor(0, QtGui.QColor('green'))
         tabs.tabBar().setTabTextColor(1, QtGui.QColor('green'))
-        tabs.tabBar().setTabTextColor(2, QtGui.QColor('red'))
-        tabs.tabBar().setTabTextColor(3, QtGui.QColor('red'))
-        tabs.tabBar().setTabTextColor(4, QtGui.QColor('red'))        
-        tabs.tabBar().setTabTextColor(5, QtGui.QColor('blue'))
+        tabs.tabBar().setTabTextColor(2, QtGui.QColor('darkRed'))
+        tabs.tabBar().setTabTextColor(3, QtGui.QColor('darkRed'))
+        tabs.tabBar().setTabTextColor(4, QtGui.QColor('darkRed'))        
+        tabs.tabBar().setTabTextColor(5, QtGui.QColor('purple'))
         
         
         # Only add "expert" pages if option "--key" is given in command line
@@ -9416,7 +9785,7 @@ class MainFrame(QtGui.QMainWindow):
                 if verbose: print "Running with XrayPeakFitting tab."
                 self.page6 = PageXrayPeakFitting(self.common, self.data_struct, self.stk, self.anlz)
                 tabs.addTab(self.page6, "XrayPeakFitting")  
-                tabs.tabBar().setTabTextColor(6, QtGui.QColor('blue'))  
+                tabs.tabBar().setTabTextColor(6, QtGui.QColor('purple'))  
         
             if opt in '--nnma':
                 if verbose: print "Running with NNMA."
