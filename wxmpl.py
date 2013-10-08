@@ -20,7 +20,7 @@ import os.path
 import weakref
 
 import matplotlib
-matplotlib.use('WXAgg')
+matplotlib.use('WXAgg', warn=False)
 import numpy as NumPy
 from matplotlib.axes import _process_plot_var_args
 from matplotlib.backend_bases import FigureCanvasBase
@@ -1125,7 +1125,7 @@ class PlotPanel(FigureCanvasWxAgg):
         # find the toplevel parent window and register an activation event
         # handler that is keyed to the id of this PlotPanel
         topwin = toplevel_parent_of_window(self)
-        topwin.Connect(-1, self.GetId(), wx.wxEVT_ACTIVATE, self.OnActivate)
+        topwin.Connect(-1, wx.ID_ANY, wx.wxEVT_ACTIVATE, self.OnActivate)
 
         wx.EVT_ERASE_BACKGROUND(self, self.OnEraseBackground)
         wx.EVT_WINDOW_DESTROY(self, self.OnDestroy)

@@ -8374,6 +8374,7 @@ class MainFrame(wx.Frame):
     def __init__(self, parent, id, title):
         wx.Frame.__init__(self, parent, id, title, size=(Winsizex, Winsizey))
         
+        
       
         ico = logos.getlogo_2l_32Icon()
         self.SetIcon(ico)
@@ -8463,7 +8464,8 @@ class MainFrame(wx.Frame):
         openTool = self.toolbar.AddSimpleTool(wx.ID_OPEN, open_ico, "Open stack .hdf5 or .stk", "Open stack .hdf5 or .stk")
         self.Bind(wx.EVT_MENU, self.onBrowse, openTool)
         
-        open_sl_ico = logos.getslBitmap()
+        open_sl_ico = wx.Image(os.path.join('images', 'open-sl.png'), wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+        #open_sl_ico = logos.getslBitmap()
         openslTool = self.toolbar.AddSimpleTool(101, open_sl_ico, "Open directory with file sequence", "Open direcory with file sequence")   
         self.Bind(wx.EVT_MENU, self.onOpenSL, openslTool)
         
@@ -9219,8 +9221,8 @@ class AboutFrame(wx.Frame):
     def __init__(self):
         wx.Frame.__init__(self, wx.GetApp().TopWindow, title = "About Mantis", size=(420, 700))
         
-        ico = logos.getlogo_2l_32Icon()
-        self.SetIcon(ico)
+        #ico = logos.getlogo_2l_32Icon()
+        #self.SetIcon(ico)
         
         
         self.com = wx.GetApp().TopWindow.common         
@@ -9235,8 +9237,9 @@ class AboutFrame(wx.Frame):
         panel = wx.Panel(self, -1)
         vbox = wx.BoxSizer(wx.VERTICAL)
         
-        img = logos.getMantis_logo_aboutImage()
-        self.imageCtrl = wx.StaticBitmap(panel, wx.ID_ANY, wx.BitmapFromImage(img))
+        img = wx.Image(os.path.join('images', 'Mantis_logo_about.png'), wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+        #img = logos.getMantis_logo_aboutImage()
+        self.imageCtrl = wx.StaticBitmap(panel, wx.ID_ANY, img)
  
         vbox.Add(self.imageCtrl, 0, wx.ALL, 2)
 
@@ -9304,20 +9307,22 @@ http://www.gnu.org/licenses/.''')
 def show_splash():
     # create, show and return the splash screen
     bitmap = logos.getMantis_logo_splashBitmap()
+    
     splash = wx.SplashScreen(bitmap, wx.SPLASH_CENTRE_ON_SCREEN|wx.SPLASH_NO_TIMEOUT, 3000, None, -1)
     splash.Show()
     return splash
 
+
 """ ------------------------------------------------------------------------------------------------"""
 def main():
     app = wx.App()
-    splash = show_splash()
+    #splash = show_splash()
    
-    time.sleep(1)
+    #time.sleep(1)
     frame = MainFrame(None, -1, 'Mantis')
     frame.Show()
 
-    splash.Destroy()
+    #splash.Destroy()
     app.MainLoop()
 
 if __name__ == '__main__':

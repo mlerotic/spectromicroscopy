@@ -40,7 +40,7 @@ class xrm:
         # Open OLE file:
         ole = OleFileIO(filename)
         
-        verbose = False
+        verbose = True
         
         if ole.exists('ImageInfo/ImagesTaken'):                  
             stream = ole.openstream('ImageInfo/ImagesTaken')
@@ -317,6 +317,7 @@ class xrm:
             version = struct.unpack('<f', data)
             if verbose: print "version = ", version[0]  
                            
+        analyst = ''
         if ole.exists('SampleInfo/Analyst'):
             stream = ole.openstream('SampleInfo/Analyst')
             data = stream.read()
@@ -324,6 +325,7 @@ class xrm:
             analyst = analyst[0]
             if verbose: print "SampleInfo/Analyst = %s" % analyst
                 
+        facility = ''
         if ole.exists('SampleInfo/Facility'):
             stream = ole.openstream('SampleInfo/Facility')
             data = stream.read()
@@ -331,6 +333,7 @@ class xrm:
             facility = facility[0]
             if verbose: print "SampleInfo/Facility = %s" % facility
                 
+        sample =''
         if ole.exists('SampleInfo/SampleID'):
             stream = ole.openstream('SampleInfo/SampleID')
             data = stream.read()
@@ -418,7 +421,8 @@ class xrm:
             datatype = int(datatype[0])
             if verbose: print "ImageInfo/DataType: %f " %  datatype  
          
-            
+        
+        if verbose: print 'Reading images - please wait...'
         self.absdata = np.empty((self.n_cols, self.n_rows, self.n_ev), dtype=np.float32)
         #Read the images - They are stored in ImageData1, ImageData2... Each
         #folder contains 100 images 1-100, 101-200...           
@@ -439,7 +443,8 @@ class xrm:
                     
             self.absdata[:,:,i-1] = np.reshape(imgdata, (self.n_cols, self.n_rows), order='F')
                 
-                
+        
+        if verbose: print 'Finished reading images'
         ole.close()
                 
         #Fill the data structure with data: 
@@ -524,14 +529,17 @@ class xrm:
             sample = sample[0]
             if verbose: print "SampleInfo/SampleID = %s" % sample
                 
-                
-        #This is an array of date+time stamps....
-        if ole.exists('ImageInfo/Date'):   
-            stream = ole.openstream('ImageInfo/Date')       
-            data = stream.read()
-            date = struct.unpack('<40s7200s', data)
-            date = date[0]
-            if verbose: print "ImageInfo/Date = %s" % date    
+        date = ''
+        try:
+            #This is an array of date+time stamps....
+            if ole.exists('ImageInfo/Date'):   
+                stream = ole.openstream('ImageInfo/Date')       
+                data = stream.read()
+                date = struct.unpack('<40s7200s', data)
+                date = date[0]
+                if verbose: print "ImageInfo/Date = %s" % date    
+        except:
+            pass
                 
         datasize = np.empty((3), dtype=np.int)
         if ole.exists('ImageInfo/NoOfImages'):                  
@@ -566,13 +574,24 @@ class xrm:
             angles = struct.unpack(struct_fmt, data)
             if verbose: print "ImageInfo/Angles: \n ",  angles  
                 
-        if ole.exists('ImageInfo/Energy'):                  
-            stream = ole.openstream('ImageInfo/Energy')
-            data = stream.read()
-            struct_fmt = "<{}f".format(nimgs)
-            eng = struct.unpack(struct_fmt, data)
-            if verbose: print "ImageInfo/Energy: \n ",  eng  
-            self.ev = np.array(eng)
+        try: 
+            if ole.exists('ImageInfo/Energy'):                  
+                stream = ole.openstream('ImageInfo/Energy')
+                data = stream.read()
+                struct_fmt = "<{}f".format(nimgs)
+                eng = struct.unpack(struct_fmt, data)
+                if verbose: print "ImageInfo/Energy: \n ",  eng  
+                self.ev = np.array(eng)
+        except:
+            if ole.exists('ImageInfo/Energy'):                  
+                stream = ole.openstream('ImageInfo/Energy')
+                data = stream.read()
+                nitems = len(data)/4
+                struct_fmt = "<{}f".format(nitems)
+                eng = struct.unpack(struct_fmt, data)
+                if verbose: print "ImageInfo/Energy: \n ",  eng  
+                self.ev = np.array(eng)
+                           
                 
         if ole.exists('ImageInfo/PixelSize'):                  
             stream = ole.openstream('ImageInfo/PixelSize')
