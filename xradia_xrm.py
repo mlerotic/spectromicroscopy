@@ -73,7 +73,8 @@ class xrm:
         if ole.exists('ImageInfo/Energy'):                  
             stream = ole.openstream('ImageInfo/Energy')
             data = stream.read()
-            struct_fmt = "<{}f".format(nimgs)
+            size = ole.get_size('ImageInfo/Energy')
+            struct_fmt = "<{}f".format(size/4)
             eV = struct.unpack(struct_fmt, data)
             if verbose: print "ImageInfo/Energy: \n ",  eV 
 
@@ -379,7 +380,8 @@ class xrm:
         if ole.exists('ImageInfo/Energy'):                  
             stream = ole.openstream('ImageInfo/Energy')
             data = stream.read()
-            struct_fmt = "<{}f".format(nimgs)
+            size = ole.get_size('ImageInfo/Energy')
+            struct_fmt = "<{}f".format(size/4)
             eng = struct.unpack(struct_fmt, data)
             if verbose: print "ImageInfo/Energy: \n ",  eng  
             self.ev = np.array(eng)
@@ -574,23 +576,16 @@ class xrm:
             angles = struct.unpack(struct_fmt, data)
             if verbose: print "ImageInfo/Angles: \n ",  angles  
                 
-        try: 
-            if ole.exists('ImageInfo/Energy'):                  
-                stream = ole.openstream('ImageInfo/Energy')
-                data = stream.read()
-                struct_fmt = "<{}f".format(nimgs)
-                eng = struct.unpack(struct_fmt, data)
-                if verbose: print "ImageInfo/Energy: \n ",  eng  
-                self.ev = np.array(eng)
-        except:
-            if ole.exists('ImageInfo/Energy'):                  
-                stream = ole.openstream('ImageInfo/Energy')
-                data = stream.read()
-                nitems = len(data)/4
-                struct_fmt = "<{}f".format(nitems)
-                eng = struct.unpack(struct_fmt, data)
-                if verbose: print "ImageInfo/Energy: \n ",  eng  
-                self.ev = np.array(eng)
+        
+        if ole.exists('ImageInfo/Energy'):                  
+            stream = ole.openstream('ImageInfo/Energy')
+            data = stream.read()
+            size = ole.get_size('ImageInfo/Energy')
+            struct_fmt = "<{}f".format(size/4)
+            eng = struct.unpack(struct_fmt, data)
+            if verbose: print "ImageInfo/Energy: \n ",  eng  
+            self.ev = np.array(eng)
+
                            
                 
         if ole.exists('ImageInfo/PixelSize'):                  
