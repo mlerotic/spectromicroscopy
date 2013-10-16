@@ -23,6 +23,7 @@ import wx.lib.masked.numctrl
 import matplotlib as mtplot 
 mtplot.interactive( True )
 mtplot.use( 'WXAgg', warn=False )
+mtplot.rcParams['svg.fonttype'] = 'none'
 
 import wxmpl
 import numpy as npy
@@ -8411,7 +8412,7 @@ class MainFrame(wx.Frame):
         nb.AddPage(self.page3, "Cluster Analysis")
         nb.AddPage(self.page4, "Spectral Analysis")
         # Only add NNMA pages if option "--nnma" is given in command line
-        options, extraParams = getopt.getopt(sys.argv[1:], '', ['wx', 'batch', 'nnma', 'xpf', 'ica', 'keyeng'])
+        options, extraParams = getopt.getopt(sys.argv[1:], '', ['wx', 'batch', 'nnma', 'ica', 'keyeng'])
         for opt, arg in options:
             if opt in '--nnma':
                 if verbose: print "Running with NNMA."

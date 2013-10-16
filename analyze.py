@@ -865,6 +865,7 @@ class analyze:
 
 
         xfit_spectrum = self.clusterspectra[i_cluster,:].copy()
+        xfit_spectrum = np.reshape(xfit_spectrum, (1,self.stack.n_ev)) 
         spectrum_common_name = 'Cluster '+str(i_cluster+1)
          
      
@@ -879,6 +880,9 @@ class analyze:
         self.xfspec_names.append(spectrum_common_name)
         
         self.xfitpars.append(Cfitparams())
+        
+        #Find peaks:
+        self.init_fit_params(self.n_xrayfitsp-1)
         
         
 #----------------------------------------------------------------------   
@@ -898,7 +902,7 @@ class analyze:
                 else:
                     peakengs.append(0)
         else:
-            delta = int(self.stack.nev/13)
+            delta = int(self.stack.n_ev/13)
             for i in range(12):
                 peakengs.append(self.stack.ev[delta*i])
         

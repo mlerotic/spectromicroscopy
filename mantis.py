@@ -779,7 +779,12 @@ def main():
     run_wx = 0
     run_cl = 0
     arguments = sys.argv[1:]
-    options, extraParams = getopt.getopt(arguments, '', ['wx', 'batch', 'nnma', 'xpf', 'ica', 'keyeng'])
+    try:
+        options, extraParams = getopt.getopt(arguments, '', ['wx', 'batch', 'nnma', 'ica', 'keyeng'])
+    except:
+        print 'Error - wrong command line option used. Available options are --wx, --batch and --nnma'
+        return
+    
     for opt, arg in options:
         if opt in '--wx':
             run_qt = 0

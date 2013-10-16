@@ -559,11 +559,11 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
             yc = shape[1]-2
             
         #Use peak fit to find the shifts 
-        xpts = xc+[-1,0,1]
+        xpts = [xc-1,xc,xc+1]
         ypts = fr[xpts,yc]     
         xf, fit = self.peak_fit(xpts, ypts)
 
-        xpts = yc+[-1,0,1]
+        xpts = [yc-1,yc,yc+1]
         ypts = fr[xc,xpts]     
         yf, fit = self.peak_fit(xpts, ypts)   
               

@@ -33,6 +33,7 @@ from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg as Naviga
 from matplotlib.figure import Figure
 from mpl_toolkits.axes_grid import make_axes_locatable
 matplotlib.interactive( True )
+matplotlib.rcParams['svg.fonttype'] = 'none'
 
 import data_struct
 import data_stack
@@ -515,18 +516,16 @@ class PageXrayPeakFitting(QtGui.QWidget):
          
         #panel 3
         sizer3 = QtGui.QGroupBox('Load Spectrum')
-        vbox3 = QtGui.QVBoxLayout()        
-         
-        self.button_loadtspec = QtGui.QPushButton('Load Spectrum')
-        self.button_loadtspec.clicked.connect(self.OnSpecFromFile)
-        vbox3.addWidget(self.button_loadtspec)
-
-
+        vbox3 = QtGui.QVBoxLayout()    
+        
         self.button_addclspec = QtGui.QPushButton('Add Cluster Spectra')
         self.button_addclspec.clicked.connect( self.OnAddClusterSpectra)   
         self.button_addclspec.setEnabled(False)
-        vbox3.addWidget(self.button_addclspec)
-            
+        vbox3.addWidget(self.button_addclspec)    
+         
+        self.button_loadtspec = QtGui.QPushButton('Load Spectrum')
+        self.button_loadtspec.clicked.connect(self.OnSpecFromFile)
+        vbox3.addWidget(self.button_loadtspec)            
  
         self.button_save = QtGui.QPushButton('Save Images...')
         self.button_save.clicked.connect( self.OnSave)
@@ -669,8 +668,8 @@ class PageXrayPeakFitting(QtGui.QWidget):
 #----------------------------------------------------------------------
     def OnAddClusterSpectra(self, event):
         
-        try:
-
+        #try:
+        if True:
 
             QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor)) 
             
@@ -700,9 +699,9 @@ class PageXrayPeakFitting(QtGui.QWidget):
                     
             QtGui.QApplication.restoreOverrideCursor()
             
-        except:
-            QtGui.QApplication.restoreOverrideCursor()  
-            QtGui.QMessageBox.warning(self, 'Error', 'Cluster spectra not loaded.')
+#         except:
+#             QtGui.QApplication.restoreOverrideCursor()  
+#             QtGui.QMessageBox.warning(self, 'Error', 'Cluster spectra not loaded.')
                                    
                                  
         
@@ -878,13 +877,14 @@ class PageXrayPeakFitting(QtGui.QWidget):
             self.tc_peakid[i].setText('')  
             
         peaknames = []
-        for i in range(self.npeaks[self.i_spec-1]):
-            i_eng=(npy.abs(self.peak_engs-self.anlz.xfitpars[self.i_spec-1].gauss_fp_m[i])).argmin()  
-            diff =   npy.abs(self.peak_engs[i_eng]-self.anlz.xfitpars[self.i_spec-1].gauss_fp_m[i])
-            if npy.abs(diff) < 0.5:
-                peaknames.append(self.peak_names[i_eng] + '\t({0:01.1f})'.format(diff))
-            else:
-                peaknames.append('unknown')
+        if len(self.npeaks) > 0:
+            for i in range(self.npeaks[self.i_spec-1]):
+                i_eng=(npy.abs(self.peak_engs-self.anlz.xfitpars[self.i_spec-1].gauss_fp_m[i])).argmin()  
+                diff =   npy.abs(self.peak_engs[i_eng]-self.anlz.xfitpars[self.i_spec-1].gauss_fp_m[i])
+                if npy.abs(diff) < 0.5:
+                    peaknames.append(self.peak_names[i_eng] + '\t({0:01.1f})'.format(diff))
+                else:
+                    peaknames.append('unknown')
             
         
                 
@@ -1479,17 +1479,17 @@ class PagePeakID(QtGui.QWidget):
                     
         #panel 2
         sizer2 = QtGui.QGroupBox('Load Spectrum')
-        vbox2 = QtGui.QVBoxLayout()        
-         
-        self.button_loadtspec = QtGui.QPushButton('Load Spectrum')
-        self.button_loadtspec.clicked.connect(self.OnSpecFromFile)
-        vbox2.addWidget(self.button_loadtspec)
-
-
+        vbox2 = QtGui.QVBoxLayout()     
+        
         self.button_addclspec = QtGui.QPushButton('Add Cluster Spectra')
         self.button_addclspec.clicked.connect( self.OnAddClusterSpectra)   
         self.button_addclspec.setEnabled(False)
         vbox2.addWidget(self.button_addclspec)
+           
+         
+        self.button_loadtspec = QtGui.QPushButton('Load Spectrum')
+        self.button_loadtspec.clicked.connect(self.OnSpecFromFile)
+        vbox2.addWidget(self.button_loadtspec)
             
  
         self.button_save = QtGui.QPushButton('Save Images...')
@@ -1994,7 +1994,12 @@ class PageSpectral(QtGui.QWidget):
         sizer3 = QtGui.QGroupBox('Target Spectrum')
         vbox3 = QtGui.QVBoxLayout()
         
-         
+
+        self.button_addclspec = QtGui.QPushButton('Add Cluster Spectra')
+        self.button_addclspec.setMinimumSize (180 , 0)
+        self.button_addclspec.clicked.connect( self.OnAddClusterSpectra)   
+        self.button_addclspec.setEnabled(False)
+        vbox3.addWidget(self.button_addclspec)         
         self.button_loadtspec = QtGui.QPushButton('Load Spectrum')
         self.button_loadtspec.clicked.connect(self.OnTSpecFromFile)
         self.button_loadtspec.setEnabled(False)
@@ -2003,10 +2008,7 @@ class PageSpectral(QtGui.QWidget):
         self.button_addflat.clicked.connect( self.OnFlatTSpec)
         self.button_addflat.setEnabled(False)
         vbox3.addWidget(self.button_addflat)
-        self.button_addclspec = QtGui.QPushButton('Add Cluster Spectra')
-        self.button_addclspec.clicked.connect( self.OnAddClusterSpectra)   
-        self.button_addclspec.setEnabled(False)
-        vbox3.addWidget(self.button_addclspec)
+
          
         self.button_showrgb = QtGui.QPushButton('Composite RGB image...')
         self.button_showrgb.clicked.connect( self.OnCompositeRGB)   
@@ -2062,7 +2064,7 @@ class PageSpectral(QtGui.QWidget):
         vbox42.addWidget(self.rb_fit)
 
 
-        self.add_scale_cb = QtGui.QCheckBox('Scale', self) 
+        self.add_scale_cb = QtGui.QCheckBox('Scalebar', self) 
         #self.add_scale_cb.toggle()
         self.add_scale_cb.stateChanged.connect(self.OnShowScale)
         vbox42.addWidget(self.add_scale_cb)
@@ -3479,7 +3481,7 @@ class PageCluster(QtGui.QWidget):
             
          
         text3 = QtGui.QLabel(self)
-        text3.setText('Cluster Distance Map')
+        text3.setText('Cluster Error Map')
         fgs.addWidget(text3, 0, 2, QtCore .Qt. AlignLeft)
         frame = QtGui.QFrame()
         frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
@@ -9146,23 +9148,23 @@ class PageLoadData(QtGui.QWidget):
         sizer1 = QtGui.QGroupBox('Load Data Stack')
         vbox1 = QtGui.QVBoxLayout()
         
-        self.button_hdf5 = QtGui.QPushButton('Load HDF5 Stack (*.hdf5)')
+        self.button_hdf5 = QtGui.QPushButton('  Load HDF5 DataExchange Stack (*.hdf5) - APS  ')
         self.button_hdf5.clicked.connect( self.OnLoadHDF5)
         vbox1.addWidget(self.button_hdf5)
         
-        self.button_sdf = QtGui.QPushButton('Load SDF Stack (*.hdr)')
+        self.button_sdf = QtGui.QPushButton('Load SDF Stack (*.hdr) - ALS, SLS, Bessy')
         self.button_sdf.clicked.connect( self.OnLoadSDF)   
         vbox1.addWidget(self.button_sdf)
         
-        self.button_stk = QtGui.QPushButton('Load STK Stack (*.stk)')
+        self.button_stk = QtGui.QPushButton('Load STK Stack (*.stk) - NSLS')
         self.button_stk.clicked.connect( self.OnLoadSTK)   
         vbox1.addWidget(self.button_stk)
         
-        self.button_xrm = QtGui.QPushButton('Load XRM Image (*.xrm)')
+        self.button_xrm = QtGui.QPushButton('Load XRM Image (*.xrm) - Xradia')
         self.button_xrm.clicked.connect( self.OnLoadXRM)
         vbox1.addWidget(self.button_xrm)
         
-        self.button_txrm = QtGui.QPushButton('Load TXRM Stack (*.txrm)')
+        self.button_txrm = QtGui.QPushButton('Load TXRM Stack (*.txrm) - Xradia')
         self.button_txrm.clicked.connect( self.OnLoadTXRM)
         vbox1.addWidget(self.button_txrm)    
         
@@ -9773,7 +9775,8 @@ class MainFrame(QtGui.QMainWindow):
         self.page3 = PageCluster(self.common, self.data_struct, self.stk, self.anlz)
         self.page4 = PageSpectral(self.common, self.data_struct, self.stk, self.anlz)
         self.page5 = PagePeakID(self.common, self.data_struct, self.stk, self.anlz)
-        self.page6 = None
+        self.page6 = PageXrayPeakFitting(self.common, self.data_struct, self.stk, self.anlz)
+
         
         tabs.addTab(self.page0,"Load Data")
         tabs.addTab(self.page1,"Preprocess Data")
@@ -9781,6 +9784,8 @@ class MainFrame(QtGui.QMainWindow):
         tabs.addTab(self.page3,"Cluster Analysis")
         tabs.addTab(self.page4,"Spectral Maps")
         tabs.addTab(self.page5,"Peak ID")
+        tabs.addTab(self.page6, "XrayPeakFitting")  
+        tabs.tabBar().setTabTextColor(6, QtGui.QColor('purple'))  
         
         tabs.tabBar().setTabTextColor(0, QtGui.QColor('green'))
         tabs.tabBar().setTabTextColor(1, QtGui.QColor('green'))
@@ -9791,14 +9796,13 @@ class MainFrame(QtGui.QMainWindow):
         
         
         # Only add "expert" pages if option "--key" is given in command line
-        options, extraParams = getopt.getopt(sys.argv[1:], '', ['wx', 'batch', 'nnma', 'xpf', 'ica', 'keyeng'])
-        for opt, arg in options:
-            if opt in '--xpf':
-                if verbose: print "Running with XrayPeakFitting tab."
-                self.page6 = PageXrayPeakFitting(self.common, self.data_struct, self.stk, self.anlz)
-                tabs.addTab(self.page6, "XrayPeakFitting")  
-                tabs.tabBar().setTabTextColor(6, QtGui.QColor('purple'))  
+        try:
+            options, extraParams = getopt.getopt(sys.argv[1:], '', ['wx', 'batch', 'nnma', 'ica', 'keyeng'])
+        except:
+            print 'Error - wrong command line option used. Available options are --wx, --batch and --nnma'
+            return
         
+        for opt, arg in options:        
             if opt in '--nnma':
                 if verbose: print "Running with NNMA."
                 self.page7 = PageNNMA(self.common, self.data_struct, self.stk, self.anlz)
