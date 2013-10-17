@@ -852,6 +852,9 @@ class analyze:
         else:
             self.xrayfitspectra = np.vstack((self.xrayfitspectra,xfit_spectrum))
             self.n_xrayfitsp += 1
+            
+        if spectrum_common_name == ' ':
+            spectrum_common_name = 'Spectrum %d' % (self.n_xrayfitsp)
         self.xfspec_names.append(spectrum_common_name)
         
         self.xfitpars.append(Cfitparams())
