@@ -193,8 +193,8 @@ class analyze:
         self.pcaimagebounds = np.zeros((self.stack.n_ev))
         
 
-        #try:
-        if True:
+        try:
+
             self.eigenvals, self.eigenvecs = np.linalg.eigh(covmatrix)
 
             #sort the eigenvals and eigenvecs       
@@ -243,8 +243,8 @@ class analyze:
             
 
                         
-#        except:
-#            print "pca not converging"
+        except:
+            print "pca not converging"
             
         self.pca_calculated = 1
         

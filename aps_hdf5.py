@@ -363,6 +363,12 @@ class h5:
                 data_struct.spectromicroscopy.positions = pos[...]
                 data_struct.spectromicroscopy.positions_units = pos.attrs['units']
                 data_struct.spectromicroscopy.positions_names = pos.attrs['names']
+                
+            if 'optical_density' in spectromicroscopyGrp:
+                od = spectromicroscopyGrp['optical_density']
+                self.data_struct.spectromicroscopy.optical_density = od[...]    
+            
+            
             
             if 'normalization' in spectromicroscopyGrp:
                 normGrp = spectromicroscopyGrp['normalization']
@@ -491,7 +497,7 @@ class h5:
         experimenterGrp = informationGrp.create_group('experimenter')
         have_exp = 0
         if data_struct.information.experimenter.name is not None:
-            ds = experimenterGrp.create_dataset('name', data = data_struct.information.experimenter.name)
+            ds = experimenterGrp.create_dataset('name', data = str(data_struct.information.experimenter.name))
             have_exp = 1
         if data_struct.information.experimenter.role is not None:
             ds = experimenterGrp.create_dataset('role', data = data_struct.information.experimenter.role)
@@ -519,7 +525,7 @@ class h5:
         sampleGrp = informationGrp.create_group('sample')
         have_samp = 0
         if  data_struct.information.sample.name is not None:
-            ds = sampleGrp.create_dataset('name', data = data_struct.information.sample.name)
+            ds = sampleGrp.create_dataset('name', data = str(data_struct.information.sample.name))
             have_samp = 1
         if  data_struct.information.sample.description is not None:
             ds = sampleGrp.create_dataset('description', data = data_struct.information.sample.description)
@@ -796,11 +802,11 @@ class h5:
             pass
         #Try to save new hdf5 file
         if test_file == 0:
-            try:
-                self.write_h5(filename, data_struct)
-            except:
-                print 'Error: Could not open nor create HDF5 file ', filename
-                return -1
+            #try:
+            self.write_h5(filename, data_struct)
+            #except:
+            #    print 'Error: Could not open nor create HDF5 file ', filename
+            #    return -1
         
 
         # Open HDF5 file

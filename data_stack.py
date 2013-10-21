@@ -88,6 +88,18 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
         self.calculate_optical_density()
         
         self.fill_h5_struct_normalization()
+        
+        
+#----------------------------------------------------------------------   
+    def read_xrm_ReferenceImages(self, filenames):
+
+        
+        self.calculate_optical_density_from_refimgs(filenames)
+        
+        self.fill_h5_struct_normalization()
+        
+        
+
 
 #---------------------------------------------------------------------- 
     def read_stk(self, filename):    
@@ -112,7 +124,19 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
         self.new_data()  
         aps_hdf5.h5.read_h5(self, filename, self.data_struct)
         
-        if self.data_struct.spectromicroscopy.normalization.white_spectrum is not None:
+        if self.data_struct.spectromicroscopy.optical_density is not None: 
+            #print 'reading optical density'
+            self.i0data = self.data_struct.spectromicroscopy.normalization.white_spectrum 
+            self.evi0 = self.data_struct.spectromicroscopy.normalization.white_spectrum_energy 
+        
+            self.od = self.data_struct.spectromicroscopy.optical_density
+            
+            self.od3d = self.od.copy()
+            
+        
+            self.od3d = np.reshape(self.od3d, (self.n_cols, self.n_rows, self.n_ev), order='F')
+                    
+        elif self.data_struct.spectromicroscopy.normalization.white_spectrum is not None:
             self.calculate_optical_density()
             self.fill_h5_struct_normalization()
 
@@ -351,6 +375,67 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
 
         return
     
+
+#----------------------------------------------------------------------   
+# Normalize the data: calculate optical density matrix D 
+    def calculate_optical_density_from_refimgs(self, files):
+
+        n_pixels = self.n_cols*self.n_rows
+        self.od = np.empty((self.n_cols, self.n_rows, self.n_ev))
+                
+        #zero out all negative values in the image stack
+        negative_indices = np.where(self.absdata <= 0)
+        if negative_indices:
+            self.absdata[negative_indices] = 0.01
+                           
+
+        #Load reference images
+        refimgs = np.empty((self.n_cols, self.n_rows, self.n_ev))
+        refimgs_ev = []
+        for i in range(len(files)):
+            ncols, nrows, iev, imgdata = xradia_xrm.xrm.read_xrm_fileinfo(self, files[i], readimgdata = True)
+            refimgs[:,:,i] = np.reshape(imgdata, (ncols, nrows), order='F')
+            refimgs_ev.append(iev)
+ 
+        #Check if the energies are consecutive, if they are not sort the data
+        consec = 0
+        for i in range(len(refimgs_ev) - 1):
+            if refimgs_ev[i] > refimgs_ev[i+1]:
+                consec = 1
+                break
+        if consec == 1:
+            sortind = np.argsort(refimgs_ev)
+            refimgs_ev = refimgs_ev[sortind]
+            refimgs = refimgs[:,:,refimgs_ev]
+        
+            
+        for i in range(self.n_ev):
+            if self.ev[i] != refimgs_ev[i]:
+                print 'Error, wrong reference image energy'
+                return
+            
+            self.od[:,:,i] = - np.log(self.absdata[:,:,i]/refimgs[:,:,i])
+        
+        #clean up the result
+        nan_indices = np.where(np.isfinite(self.od) == False)
+        if nan_indices:
+            self.od[nan_indices] = 0
+            
+        self.od3d = self.od.copy()
+        
+
+        #Optical density matrix is rearranged into n_pixelsxn_ev
+        self.od = np.reshape(self.od, (n_pixels, self.n_ev), order='F')
+        
+        
+        self.evi0 = refimgs_ev
+        self.i0data = np.ones((self.n_ev))
+        self.i0_dwell = self.data_dwell
+        
+
+        return    
+
+
 #----------------------------------------------------------------------   
     def scale_bar(self): 
            
@@ -619,7 +704,7 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
             
         cropped_stack = images[xleft:xright, ybottom:ytop, :]
         
-        return cropped_stack
+        return cropped_stack, xleft, xright, ybottom, ytop
 
 
 #----------------------------------------------------------------------   

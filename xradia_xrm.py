@@ -32,7 +32,7 @@ class xrm:
  
  
 #----------------------------------------------------------------------
-    def read_xrm_fileinfo(self, filename): 
+    def read_xrm_fileinfo(self, filename, readimgdata = False): 
         
         if not isOleFile(filename):
             print "File not valid OLE type."
@@ -40,7 +40,7 @@ class xrm:
         # Open OLE file:
         ole = OleFileIO(filename)
         
-        verbose = True
+        verbose = False
         
         if ole.exists('ImageInfo/ImagesTaken'):                  
             stream = ole.openstream('ImageInfo/ImagesTaken')
@@ -77,16 +77,53 @@ class xrm:
             struct_fmt = "<{}f".format(size/4)
             eV = struct.unpack(struct_fmt, data)
             if verbose: print "ImageInfo/Energy: \n ",  eV 
-
+            
+            
+            
+        if readimgdata == True:
+            
+            # 10 float; 5 uint16 (unsigned 16-bit (2-byte) integers)
+            if ole.exists('ImageInfo/DataType'):                  
+                stream = ole.openstream('ImageInfo/DataType')
+                data = stream.read()
+                struct_fmt = '<1I'
+                datatype = struct.unpack(struct_fmt, data)
+                datatype = int(datatype[0])
+                if verbose: print "ImageInfo/DataType: %f " %  datatype  
+            
+            npix = n_cols*n_rows
+            i = 1
+            img_string = "ImageData%i/Image%i" % (np.ceil(i/100.0), i)
+            stream = ole.openstream(img_string)
+            data = stream.read()
+            # 10 float; 5 uint16 (unsigned 16-bit (2-byte) integers)
+            if datatype == 10:
+                struct_fmt = "<{}f".format(npix)
+                imgdata = struct.unpack(npix)
+            elif datatype == 5:                   
+                struct_fmt = "<{}h".format(npix)
+                imgdata = struct.unpack(struct_fmt, data)
+            else:                            
+                print "Wrong data type"
+                return
+                         
+            
             
         #Energy saved in the file is too coarse - read it from the filename
+        filename = str(filename)
         str_list = filename[:-4].split('_')
         try: #look for 'eV' filed in the filename
+        #if True:
             for i in range(len(str_list)):
+                # In this case energy is stored like this: _0250.52eV_
                 if 'eV' in str_list[i]:
                     ind = str_list[i].find('eV')
                     this_ev = (str_list[i])[:ind]
-                    if this_ev.isdigit():
+                    if len(this_ev)>0:
+                        this_ev = float(this_ev)
+                    else:
+                        # In this case energy is stored like this: _0250.52_eV_
+                        this_ev = str_list[i-1].strip()
                         this_ev = float(this_ev)
                     if verbose: print "Successfully read energy value from file name.", this_ev
                     eV = this_ev
@@ -97,7 +134,10 @@ class xrm:
             
         ole.close()
             
-        return n_cols, n_rows, eV
+        if readimgdata == False:
+            return n_cols, n_rows, eV
+        else:
+            return n_cols, n_rows, eV, imgdata
 
         
 #----------------------------------------------------------------------    
@@ -235,16 +275,22 @@ class xrm:
             str_list = filename[:-4].split('_')
             try: #look for 'eV' filed in the filename
                 for i in range(len(str_list)):
+                    # In this case energy is stored like this: _0250.52eV_
                     if 'eV' in str_list[i]:
                         ind = str_list[i].find('eV')
                         this_ev = (str_list[i])[:ind]
-                        if this_ev.isdigit():
+                        if len(this_ev)>0:
+                            this_ev = float(this_ev)
+                        else:
+                            # In this case energy is stored like this: _0250.52_eV_
+                            this_ev = str_list[i-1]
                             this_ev = float(this_ev)
                         if verbose: print "Successfully read energy value from file name.", this_ev
                         eV = this_ev
                         break
             except:
-                print 'Using energy stored in the file.'   
+                eV = eV[0]
+                print 'Using energy stored in the file.', eV 
                     
             ev[j] = this_ev
             
@@ -265,8 +311,8 @@ class xrm:
         now = datetime.datetime.now()
         ds.information.file_creation_datetime = now.strftime("%Y-%m-%dT%H:%M")
 
-        ds.information.experimenter.name = analyst
-        ds.information.sample.name = sample
+        ds.information.experimenter.name = analyst.replace('\x00', '')
+        ds.information.sample.name = sample.replace('\x00', '')
         
         ds.exchange.data = absdata
         ds.exchange.data_signal = 1
@@ -390,7 +436,7 @@ class xrm:
         str_list = filename[:-4].split('_')
         try: #look for 'eV' filed in the filename
             ev_ind = str_list.index('eV')
-            if verbose:print 'Energy value from filename = ', str_list[ev_ind-1]
+            if verbose: print 'Energy value from filename = ', str_list[ev_ind-1]
             eng = float(str_list[ev_ind-1])
             self.ev = [eng]
         except:
@@ -531,17 +577,6 @@ class xrm:
             sample = sample[0]
             if verbose: print "SampleInfo/SampleID = %s" % sample
                 
-        date = ''
-        try:
-            #This is an array of date+time stamps....
-            if ole.exists('ImageInfo/Date'):   
-                stream = ole.openstream('ImageInfo/Date')       
-                data = stream.read()
-                date = struct.unpack('<40s7200s', data)
-                date = date[0]
-                if verbose: print "ImageInfo/Date = %s" % date    
-        except:
-            pass
                 
         datasize = np.empty((3), dtype=np.int)
         if ole.exists('ImageInfo/NoOfImages'):                  
@@ -552,6 +587,18 @@ class xrm:
             nimgs = nev[0]
             datasize[2] = np.int(nimgs)
             self.n_ev = datasize[2]
+            
+        date = ''
+        try:
+            #This is an array of date+time stamps....
+            if ole.exists('ImageInfo/Date'):   
+                stream = ole.openstream('ImageInfo/Date')       
+                data = stream.read()
+                dates = struct.unpack('<'+'17s23x'*nimgs, data)
+                date = dates[0]
+                if verbose: print "ImageInfo/Date = %s" % date    
+        except:
+            pass
                 
         if ole.exists('ImageInfo/ImageWidth'):                 
             stream = ole.openstream('ImageInfo/ImageWidth')

@@ -675,8 +675,7 @@ class PageXrayPeakFitting(QtGui.QWidget):
 #----------------------------------------------------------------------
     def OnSpecFromFile(self, event):
         
-        if True:
-        #try: 
+        try: 
             
             wildcard = "Spectrum files (*.csv)"
             
@@ -715,9 +714,9 @@ class PageXrayPeakFitting(QtGui.QWidget):
                     
             QtGui.QApplication.restoreOverrideCursor()
             
-#         except:
-#             QtGui.QApplication.restoreOverrideCursor()  
-#             QtGui.QMessageBox.warning(self, 'Error', 'Spectrum file not loaded.')
+        except:
+            QtGui.QApplication.restoreOverrideCursor()  
+            QtGui.QMessageBox.warning(self, 'Error', 'Spectrum file not loaded.')
                                    
                                  
         
@@ -727,8 +726,7 @@ class PageXrayPeakFitting(QtGui.QWidget):
 #----------------------------------------------------------------------
     def OnAddClusterSpectra(self, event):
         
-        #try:
-        if True:
+        try:
 
             QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor)) 
             
@@ -758,9 +756,9 @@ class PageXrayPeakFitting(QtGui.QWidget):
                     
             QtGui.QApplication.restoreOverrideCursor()
             
-#         except:
-#             QtGui.QApplication.restoreOverrideCursor()  
-#             QtGui.QMessageBox.warning(self, 'Error', 'Cluster spectra not loaded.')
+        except:
+            QtGui.QApplication.restoreOverrideCursor()  
+            QtGui.QMessageBox.warning(self, 'Error', 'Cluster spectra not loaded.')
                                    
                                  
         
@@ -1658,8 +1656,7 @@ class PagePeakID(QtGui.QWidget):
     def OnSpecFromFile(self, event):
         
 
-        #try:
-        if True: 
+        try:
             
             wildcard = "Spectrum files (*.csv)"
             
@@ -1702,9 +1699,9 @@ class PagePeakID(QtGui.QWidget):
             
             QtGui.QApplication.restoreOverrideCursor()
             
-#         except:
-#             QtGui.QApplication.restoreOverrideCursor()  
-#             QtGui.QMessageBox.warning(self, 'Error', 'Spectrum file not loaded.')
+        except:
+            QtGui.QApplication.restoreOverrideCursor()  
+            QtGui.QMessageBox.warning(self, 'Error', 'Spectrum file not loaded.')
                                    
                                  
         
@@ -1719,8 +1716,7 @@ class PagePeakID(QtGui.QWidget):
 #----------------------------------------------------------------------
     def OnAddClusterSpectra(self, event):
         
-        #try:
-        if True:
+        try:
 
             QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor)) 
             
@@ -1754,9 +1750,9 @@ class PagePeakID(QtGui.QWidget):
                     
             QtGui.QApplication.restoreOverrideCursor()
             
-#         except:
-#             QtGui.QApplication.restoreOverrideCursor()  
-#             QtGui.QMessageBox.warning(self, 'Error', 'Cluster spectra not loaded.')
+        except:
+            QtGui.QApplication.restoreOverrideCursor()  
+            QtGui.QMessageBox.warning(self, 'Error', 'Cluster spectra not loaded.')
                                    
                                  
         
@@ -3670,8 +3666,8 @@ class PageCluster(QtGui.QWidget):
         QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
         self.calcclusters = False  
         
-        if True:
-        #try: 
+
+        try: 
             self.CalcClusters()
             
             self.calcclusters = True
@@ -3687,9 +3683,9 @@ class PageCluster(QtGui.QWidget):
             self.com.cluster_calculated = 1       
             QtGui.QApplication.restoreOverrideCursor()
             
-#        except:
-#            self.com.cluster_calculated = 0
-#            QtGui.QApplication.restoreOverrideCursor()     
+        except:
+            self.com.cluster_calculated = 0
+            QtGui.QApplication.restoreOverrideCursor()     
             
         self.window().refresh_widgets()
             
@@ -5399,6 +5395,10 @@ class PageStack(QtGui.QWidget):
         self.button_showi0.setEnabled(False)
         vbox1.addWidget(self.button_showi0)
         
+        self.button_refimgs = QtGui.QPushButton('Load Reference Images')
+        self.button_refimgs.clicked.connect(self.OnRefImgs)
+        self.button_refimgs.setEnabled(False)
+        vbox1.addWidget(self.button_refimgs)        
         
         self.button_limitev = QtGui.QPushButton('Limit energy range...')
         self.button_limitev.clicked.connect( self.OnLimitEv)
@@ -5682,10 +5682,8 @@ class PageStack(QtGui.QWidget):
         
     def OnI0FFile(self, event):
 
-
-        if True:
             
-        #try:
+        try:
                        
             wildcard = "I0 CSV files (*.csv);; I0 files (*.xas);;SDF I0 files (*.hdr)"
             
@@ -5754,12 +5752,12 @@ class PageStack(QtGui.QWidget):
                 self.com.i0_loaded = 1
                 QtGui.QApplication.restoreOverrideCursor()
             
-#         except:
-#             QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))  
-#             self.com.i0_loaded = 0        
-#             QtGui.QApplication.restoreOverrideCursor()
-#             QtGui.QMessageBox.warning(self,'Error',"I0 file not loaded.")
-#             import sys; print sys.exc_info()
+        except:
+            QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))  
+            self.com.i0_loaded = 0        
+            QtGui.QApplication.restoreOverrideCursor()
+            QtGui.QMessageBox.warning(self,'Error',"I0 file not loaded.")
+            import sys; print sys.exc_info()
                        
                           
         self.window().refresh_widgets()
@@ -5792,6 +5790,50 @@ class PageStack(QtGui.QWidget):
 
         plot = PlotFrame(self, self.stk.evi0,self.stk.i0data)
         plot.show()
+        
+#----------------------------------------------------------------------    
+    def OnRefImgs(self, event):     
+
+        #Load .xrm reference images
+        try:
+        #if True:        
+            wildcard = "Reference images (*.xrm)"
+            
+            filepaths = QtGui.QFileDialog.getOpenFileNames(self, 'Select reference files', '', wildcard)
+            
+                        
+            #Check reference files
+            if len(filepaths) != self.stk.n_ev:
+                QtGui.QMessageBox.warning(self,'Error',"Wrong number of Reference image files.")
+                return
+
+            QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))                           
+            
+
+            self.stk.read_xrm_ReferenceImages(filepaths)
+            
+            x=self.stk.n_cols
+            y=self.stk.n_rows           
+            self.ix = x/2
+            self.iy = y/2
+                        
+            self.loadSpectrum(self.ix, self.iy)
+            self.loadImage()
+            self.com.i0_loaded = 1
+            QtGui.QApplication.restoreOverrideCursor()
+                          
+            
+        except:
+            QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))  
+            self.com.i0_loaded = 0        
+            QtGui.QApplication.restoreOverrideCursor()
+            QtGui.QMessageBox.warning(self,'Error',"Reference image file not loaded.")
+            import sys; print sys.exc_info()
+                       
+                          
+        self.window().refresh_widgets()
+
+        
  
 #----------------------------------------------------------------------    
     def OnSaveStack(self, event): 
@@ -7710,15 +7752,15 @@ class ImageRegistration(QtGui.QDialog):
 
         im = axes.imshow(image, cmap=matplotlib.cm.get_cmap('gray')) 
        
-        if self.man_align == 2:           
-            lx=matplotlib.lines.Line2D([self.man_yref-self.man_ys[self.iev],
-                                    self.man_yref-self.man_ys[self.iev]], 
-                                    [0,self.stack.n_cols],color='red')
-            ly=matplotlib.lines.Line2D([0,self.stack.n_rows], 
-                                   [self.man_xref-self.man_xs[self.iev],
-                                    self.man_xref-self.man_xs[self.iev]] ,color='red')
-            axes.add_line(lx)
-            axes.add_line(ly)
+#         if self.man_align == 2:           
+#             lx=matplotlib.lines.Line2D([self.man_yref-self.man_ys[self.iev],
+#                                     self.man_yref-self.man_ys[self.iev]], 
+#                                     [0,self.stack.n_cols],color='red')
+#             ly=matplotlib.lines.Line2D([0,self.stack.n_rows], 
+#                                    [self.man_xref-self.man_xs[self.iev],
+#                                     self.man_xref-self.man_xs[self.iev]] ,color='red')
+#             axes.add_line(lx)
+#             axes.add_line(ly)
             
         axes.axis("off") 
         self.AbsImagePanel.draw()
@@ -8000,7 +8042,7 @@ class ImageRegistration(QtGui.QDialog):
         
         QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
         
-        self.aligned_stack = self.stack.crop_registed_images(self.aligned_stack, 
+        self.aligned_stack, self.xleft, self.xright, self.ybottom, self.ytop, = self.stack.crop_registed_images(self.aligned_stack, 
                                                              self.xshifts,
                                                              self.yshifts)
         
@@ -8112,6 +8154,8 @@ class ImageRegistration(QtGui.QDialog):
                 
                 self.xshifts[i] = self.xshifts[i] + self.man_xs[i]
                 self.yshifts[i] = self.yshifts[i] + self.man_ys[i]
+                
+            
 
                 
             self.man_xs[i] = 0
@@ -8141,7 +8185,6 @@ class ImageRegistration(QtGui.QDialog):
         
         datadim = npy.int32(self.stack.absdata.shape)
         
-        
         self.stack.n_cols = datadim[0].copy()
         self.stack.n_rows =  datadim[1].copy()
         
@@ -8149,10 +8192,24 @@ class ImageRegistration(QtGui.QDialog):
         self.stack.yshifts = self.yshifts
                       
         if self.com.i0_loaded == 1:
-            self.stack.calculate_optical_density()
+            #Resize optical density
+            for i in range(self.stack.n_ev):
+                
+                img = self.stack.od3d[:,:,i]
+                shifted_img = self.stack.apply_image_registration(img, self.xshifts[i], self.yshifts[i])         
+                self.stack.od3d[:,:,i] = shifted_img
+                
+            self.stack.od3d = self.stack.od3d[self.xleft:self.xright, self.ybottom:self.ytop, :] 
+        
+            self.stack.od = self.stack.od3d.copy()
+            self.stack.od = npy.reshape(self.stack.od, (self.stack.n_cols*self.stack.n_rows, self.stack.n_ev), order='F')            
+
+        
 
         self.stack.data_struct.exchange.data = self.stack.absdata
         self.stack.data_struct.exchange.energy = self.stack.ev
+        
+        self.stack.data_struct.spectromicroscopy.optical_density = self.stack.od
         
         self.stack.data_struct.spectromicroscopy.xshifts = self.xshifts
         self.stack.data_struct.spectromicroscopy.yshifts = self.yshifts
@@ -9935,8 +9992,8 @@ class MainFrame(QtGui.QMainWindow):
         Browse for a stack file:
         """
 
-        if True:
         #try:
+        if True:
             if wildcard == False:
                 wildcard =  "HDF5 files (*.hdf5);;SDF files (*.hdr);;STK files (*.stk);;TXRM (*.txrm);;XRM (*.xrm);;TIF (*.tif)" 
 
@@ -10058,16 +10115,16 @@ class MainFrame(QtGui.QMainWindow):
             self.page5.updatewidgets()
 
             QtGui.QApplication.restoreOverrideCursor()
-#                 
+                 
 #         except:
-#   
+#    
 #             self.common.stack_loaded = 0 
 #             self.common.i0_loaded = 0
 #             self.new_stack_refresh()
-#                                  
+#                                   
 #             QtGui.QApplication.restoreOverrideCursor()
 #             QtGui.QMessageBox.warning(self, 'Error', 'Image stack not loaded.')
-#  
+#   
 #             import sys; print sys.exc_info()
                    
 
@@ -10080,7 +10137,8 @@ class MainFrame(QtGui.QMainWindow):
         Browse for .sm files
         """
         
-        try:
+        #try:
+        if True:
             directory = QtGui.QFileDialog.getExistingDirectory(self, "Choose a directory", '', QtGui.QFileDialog.ShowDirsOnly|QtGui.QFileDialog.ReadOnly )       
                                                         
         
@@ -10093,15 +10151,15 @@ class MainFrame(QtGui.QMainWindow):
             stackframe = StackListFrame(self, directory, self.common, self.stk, self.data_struct)
             stackframe.show()
              
-        except:
-            print 'Error could not build stack list.'
-            self.common.stack_loaded = 0 
-            self.common.i0_loaded = 0
-            self.new_stack_refresh()
-            self.refresh_widgets()
-                                 
-            QtGui.QMessageBox.warning(self,'Error',".sm files not loaded.")
-            import sys; print sys.exc_info()
+#         except:
+#             print 'Error could not build stack list.'
+#             self.common.stack_loaded = 0 
+#             self.common.i0_loaded = 0
+#             self.new_stack_refresh()
+#             self.refresh_widgets()
+#                                  
+#             QtGui.QMessageBox.warning(self,'Error',"Error could not build stack list")
+#             import sys; print sys.exc_info()
             
 #----------------------------------------------------------------------
     def onSaveAsH5(self, event):
@@ -10115,8 +10173,8 @@ class MainFrame(QtGui.QMainWindow):
         Browse for .hdf5 file
         """
 
-
         try:
+
             wildcard = "HDF5 files (*.hdf5)"
 
             filepath = QtGui.QFileDialog.getSaveFileName(self, 'Save as .hdf5', '', wildcard)
@@ -10139,9 +10197,9 @@ class MainFrame(QtGui.QMainWindow):
             QtGui.QApplication.restoreOverrideCursor()
 
         except:
- 
+   
             QtGui.QApplication.restoreOverrideCursor()
-            
+              
             QtGui.QMessageBox.warning(self, 'Error', 'Could not save HDF5 file.')
                    
 
@@ -10209,6 +10267,7 @@ class MainFrame(QtGui.QMainWindow):
         if self.common.stack_loaded == 0:
             self.page1.button_i0ffile.setEnabled(False)
             self.page1.button_i0histogram.setEnabled(False) 
+            self.page1.button_refimgs.setEnabled(False)
             self.page1.button_save.setEnabled(False) 
             self.page1.button_savestack.setEnabled(False)
             self.page1.button_align.setEnabled(False)
@@ -10222,6 +10281,7 @@ class MainFrame(QtGui.QMainWindow):
         else:
             self.page1.button_i0ffile.setEnabled(True)
             self.page1.button_i0histogram.setEnabled(True) 
+            self.page1.button_refimgs.setEnabled(True)
             self.page1.button_save.setEnabled(True) 
             self.page1.button_savestack.setEnabled(True)  
             self.page1.button_align.setEnabled(True)  
