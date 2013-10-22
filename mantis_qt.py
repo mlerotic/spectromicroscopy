@@ -6284,9 +6284,10 @@ class PageStack(QtGui.QWidget):
          
         self.SpectrumPanel.draw()
          
-        self.tc_spec.setText("Spectrum at pixel [" +str(ypos)+", " + str(xpos)+"] or position ["+
-                              str(self.stk.x_dist[xpos])+", "+ str(self.stk.y_dist[ypos])+ "]")
+#         self.tc_spec.setText("Spectrum at pixel [" +str(ypos)+", " + str(xpos)+"] or position ["+
+#                               str(self.stk.x_dist[xpos])+", "+ str(self.stk.y_dist[ypos])+ "]")
 
+        self.tc_spec.setText('Spectrum at pixel [{0}, {1}] or position [{2:5.2f}, {3:5.2f}]'.format(str(ypos),  str(xpos), self.stk.x_dist[xpos], self.stk.y_dist[ypos]))
 
 #----------------------------------------------------------------------
     def ResetDisplaySettings(self):
@@ -7444,6 +7445,8 @@ class ImageRegistration(QtGui.QDialog):
         self.AbsImagePanel = FigureCanvas(self.absimgfig)
         self.AbsImagePanel.setParent(self)
         self.AbsImagePanel.mpl_connect('button_press_event', self.OnPointCorrimage)
+        self.AbsImagePanel.setCursor(Qt.CrossCursor)
+
         
         fbox.addWidget(self.AbsImagePanel)
         frame.setLayout(fbox)
@@ -7461,7 +7464,16 @@ class ImageRegistration(QtGui.QDialog):
         vbox1.addWidget(self.tc_imageeng)        
         vbox1.addLayout(hbox11)
 
-             
+        self.tc_shift1 = QtGui.QLabel(self)
+        self.tc_shift2 = QtGui.QLabel(self)
+        vbox1.addWidget(self.tc_shift1)
+        vbox1.addWidget(self.tc_shift2)
+        vbox1.addStretch(1)
+        
+          
+        self.tc_shift1.setText('X shift: {0:5.2f} pixels'.format(self.yshifts[self.iev]))
+        self.tc_shift2.setText('Y shift: {0:5.2f} pixels'.format(self.xshifts[self.iev]))
+        
         
         #panel 2        
         vbox2 = QtGui.QVBoxLayout()
@@ -7577,15 +7589,6 @@ class ImageRegistration(QtGui.QDialog):
         vbox4.addLayout(hbox42)
         vbox4.addStretch(1)
           
-        self.tc_shift1 = QtGui.QLabel(self)
-        self.tc_shift2 = QtGui.QLabel(self)
-        vbox4.addWidget(self.tc_shift1)
-        vbox4.addWidget(self.tc_shift2)
-        vbox4.addStretch(1)
-          
-        self.tc_shift1.setText('X shift: {0:5.2f} pixels'.format(self.yshifts[self.iev]))
-        self.tc_shift2.setText('Y shift: {0:5.2f} pixels'.format(self.xshifts[self.iev]))
-          
   
         self.showcscor_cb = QtGui.QCheckBox('Show Cross-correlation', self) 
         self.showcscor_cb.stateChanged.connect(self.OnShowCCorr)
@@ -7608,6 +7611,7 @@ class ImageRegistration(QtGui.QDialog):
         self.refimgfig = Figure((3.0, 3.0))
         self.RefImagePanel = FigureCanvas(self.refimgfig)
         self.RefImagePanel.setParent(self)
+        self.RefImagePanel.setCursor(Qt.CrossCursor)
          
         fbox.addWidget(self.RefImagePanel)
         frame.setLayout(fbox)
@@ -7619,6 +7623,7 @@ class ImageRegistration(QtGui.QDialog):
          
         vbox5.addWidget(self.tc_refimg)        
         vbox5.addWidget(frame)
+        vbox5.addStretch(1)
  
          
          
@@ -7742,6 +7747,8 @@ class ImageRegistration(QtGui.QDialog):
     def ShowImage(self):
                
         image = self.aligned_stack[:,:,self.iev]
+        
+        #image = self.aligned_stack[0:200,0:200,self.iev]
             
             
         fig = self.absimgfig
@@ -7751,7 +7758,7 @@ class ImageRegistration(QtGui.QDialog):
              
 
         im = axes.imshow(image, cmap=matplotlib.cm.get_cmap('gray')) 
-       
+        axes.autoscale(False)
 #         if self.man_align == 2:           
 #             lx=matplotlib.lines.Line2D([self.man_yref-self.man_ys[self.iev],
 #                                     self.man_yref-self.man_ys[self.iev]], 
@@ -7762,18 +7769,20 @@ class ImageRegistration(QtGui.QDialog):
 #             axes.add_line(lx)
 #             axes.add_line(ly)
             
+            
+        
         axes.axis("off") 
         self.AbsImagePanel.draw()
         
         
         self.tc_imageeng.setText('Image at energy: {0:5.2f} eV'.format(float(self.stack.ev[self.iev])))
         
-        self.tc_shift1.setText('X shift: {0:5.2f} pixels\n'.format(self.yshifts[self.iev]))
+        self.tc_shift1.setText('X shift: {0:5.2f} pixels'.format(self.yshifts[self.iev]))
         self.tc_shift2.setText('Y shift: {0:5.2f} pixels'.format(self.xshifts[self.iev]))
 
         
         if (self.man_align == 2):                  
-            self.textctrl_ms1.setText('X manual shift:  {0:5.2f}  pixels\n'.format(self.man_ys[self.iev]))
+            self.textctrl_ms1.setText('X manual shift:  {0:5.2f}  pixels'.format(self.man_ys[self.iev]))
             self.textctrl_ms2.setText('Y manual shift:  {0:5.2f}  pixels'.format(self.man_xs[self.iev]))
             
 
@@ -7792,6 +7801,8 @@ class ImageRegistration(QtGui.QDialog):
         self.ref_image_index = self.iev
                
         self.ref_image = self.aligned_stack[:,:,self.iev].copy()
+        
+        #self.ref_image = self.aligned_stack[0:200,0:200,self.iev].copy()
         
         self.ShowRefImage()
         self.have_ref_image = 1
