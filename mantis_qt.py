@@ -3430,7 +3430,8 @@ class PageCluster(QtGui.QWidget):
         self.wo_1st_pca = 0
         self.sigma_split = 0
         self.showallspectra = 0
-        
+        self.pcscalingfactor = 0.0
+                
         self.MakeColorTable()             
          
         
@@ -3490,13 +3491,27 @@ class PageCluster(QtGui.QWidget):
         self.cb_splitclusters.stateChanged.connect(self.OnSplitClusters)
         hbox14.addWidget(self.cb_splitclusters)
         
+        vbox1.addLayout(hbox14) 
+                
+        hbox14a = QtGui.QHBoxLayout()
+        tc1 = QtGui.QLabel(self)
+        tc1.setText("PC scaling factor")  
+        hbox14a.addWidget(tc1)      
+        self.ntc_pcscaling = QtGui.QLineEdit(self)
+        self.ntc_pcscaling.setFixedWidth(65)
+        self.ntc_pcscaling.setValidator(QtGui.QDoubleValidator(0, 99999, 2, self))
+        self.ntc_pcscaling.setAlignment(QtCore.Qt.AlignRight)         
         
+        self.ntc_pcscaling.setText(str(self.pcscalingfactor))
+        hbox14a.addWidget(self.ntc_pcscaling) 
+        hbox14a.addStretch(1)
+        vbox1.addLayout(hbox14a) 
+
         line = QtGui.QFrame()
         line.setFrameShape(QtGui.QFrame.HLine)
         line.setFrameShadow(QtGui.QFrame.Sunken) 
         
-        
-        vbox1.addLayout(hbox14) 
+
         vbox1.addStretch(1)
         vbox1.addWidget(line) 
         vbox1.addStretch(1)     
@@ -3608,16 +3623,18 @@ class PageCluster(QtGui.QWidget):
         
         
         vboxtop = QtGui.QVBoxLayout()
-        
+        hboxtopL = QtGui.QHBoxLayout()
         vboxtopL = QtGui.QVBoxLayout()
         vboxtopL.addWidget(sizer1)
         vboxtopL.addWidget(sizer5)
+        hboxtopL.addLayout(vboxtopL)
+        hboxtopL.addStretch(1)
         
         gridsizertop = QtGui.QGridLayout()
         gridsizertop.setContentsMargins(15,0,0,0)
 
         
-        gridsizertop.addLayout(vboxtopL, 0, 0, QtCore .Qt. AlignLeft)
+        gridsizertop.addLayout(hboxtopL, 0, 0, QtCore .Qt. AlignLeft)
         gridsizertop.addLayout(vbox2, 1, 0, QtCore .Qt. AlignLeft)
         
         gridsizertop.addLayout(vbox3, 0, 1, QtCore .Qt. AlignLeft)
@@ -3635,11 +3652,14 @@ class PageCluster(QtGui.QWidget):
         colors_i = npy.linspace(0,self.maxclcolors,self.maxclcolors+1)
 
        
-        self.colors=['#0000FF','#FF0000','#DFE32D','#36F200','#B366FF',
-                '#FF470A','#33FFFF','#006600','#CCCC99','#993300',
+#         self.colors=['#0000FF','#FF0000','#DFE32D','#36F200','#B366FF',
+#                 '#FF470A','#33FFFF','#006600','#CCCC99','#993300',
+#                 '#000000']
+
+        self.colors=['#007FFF','#ED2024','#98CC31','#861F78','#D98619',
+                '#6FDBDB','#5C3F32','#FF6EC7','#CCCC99','#993300',
                 '#000000']
-
-
+        
         
         self.clusterclrmap1=matplotlib.colors.LinearSegmentedColormap.from_list('clustercm',self.colors)
      
@@ -3648,10 +3668,14 @@ class PageCluster(QtGui.QWidget):
         colors_i = npy.linspace(0,self.maxclcolors+2,self.maxclcolors+3)
         
         #use black color for clusters > maxclcolors, the other 2 colors are for background      
-        colors2=['#0000FF','#FF0000','#DFE32D','#36F200','#B366FF',
-                '#FF470A','#33FFFF','#006600','#CCCC99','#993300',
+#         colors2=['#0000FF','#FF0000','#DFE32D','#36F200','#B366FF',
+#                 '#FF470A','#33FFFF','#006600','#CCCC99','#993300',
+#                 '#000000','#FFFFFF','#EEEEEE']
+
+        colors2=['#007FFF','#ED2024','#98CC31','#861F78','#D98619',
+                '#6FDBDB','#5C3F32','#FF6EC7','#CCCC99','#993300',
                 '#000000','#FFFFFF','#EEEEEE']
-        
+                
         self.clusterclrmap2=matplotlib.colors.LinearSegmentedColormap.from_list('clustercm2',colors2)
      
         self.bnorm2 = matplotlib.colors.BoundaryNorm(colors_i, self.clusterclrmap2.N)
@@ -3667,7 +3691,17 @@ class PageCluster(QtGui.QWidget):
         self.calcclusters = False  
         
 
-        try: 
+        #try: 
+        if True:
+            
+            value = self.ntc_pcscaling.text()
+            #try:
+            self.pcscalingfactor = float(value)
+#             except:
+#                 self.pcscalingfactor = 0.0
+#                 self.ntc_pcscaling.setText('0.0')
+                
+            
             self.CalcClusters()
             
             self.calcclusters = True
@@ -3683,9 +3717,9 @@ class PageCluster(QtGui.QWidget):
             self.com.cluster_calculated = 1       
             QtGui.QApplication.restoreOverrideCursor()
             
-        except:
-            self.com.cluster_calculated = 0
-            QtGui.QApplication.restoreOverrideCursor()     
+#         except:
+#             self.com.cluster_calculated = 0
+#             QtGui.QApplication.restoreOverrideCursor()     
             
         self.window().refresh_widgets()
             
@@ -3754,7 +3788,12 @@ class PageCluster(QtGui.QWidget):
                        
 #----------------------------------------------------------------------
     def CalcClusters(self):
-        nclusters = self.anlz.calculate_clusters(self.init_nclusters, self.wo_1st_pca, self.sigma_split)
+        
+        nclusters = self.anlz.calculate_clusters(self.init_nclusters, 
+                                                 self.wo_1st_pca, 
+                                                 self.sigma_split, 
+                                                 pcscalingfactor = self.pcscalingfactor)
+        #nclusters = self.anlz.calculate_clusters_kmeansangle(self.init_nclusters, self.wo_1st_pca, self.sigma_split)
         self.numclusters = nclusters
         self.ntc_clusters_found.setText(str(self.numclusters))
     
@@ -4724,6 +4763,13 @@ class PagePCA(QtGui.QWidget):
         hbox22.addWidget(self.vartc)
 
         vbox21.addLayout(hbox22)      
+
+        self.button_movepcup = QtGui.QPushButton('Move PC up')
+        self.button_movepcup.clicked.connect( self.OnMovePCUP)     
+        self.button_movepcup.setEnabled(False)   
+        vbox21.addWidget(self.button_movepcup)
+                
+        
         sizer2.setLayout(vbox21)
         vbox2.addStretch(1)
         vbox2.addWidget(sizer2)
@@ -4827,7 +4873,22 @@ class PagePCA(QtGui.QWidget):
             var = self.anlz.variance[:self.numsigpca].sum()
             self.vartc.setText(str(var.round(decimals=2)*100)+'%')
                  
-       
+
+#----------------------------------------------------------------------        
+    def OnMovePCUP(self):       
+        
+        thiscomponent = self.selpca-1
+        
+        if thiscomponent == 0:
+            return
+        
+        self.anlz.move_pc_up(thiscomponent)
+ 
+        self.selpca = self.selpca-1
+        self.loadPCAImage()
+        self.loadPCASpectrum()
+        self.showEvals()
+                   
         
 #----------------------------------------------------------------------
     def CalcPCA(self):
@@ -10331,11 +10392,13 @@ class MainFrame(QtGui.QMainWindow):
         if self.common.pca_calculated == 0:      
             self.page2.button_savepca.setEnabled(False)
             self.page2.slidershow.setEnabled(False) 
+            self.page2.button_movepcup.setEnabled(False)
             self.page3.button_calcca.setEnabled(False)
             self.page4.rb_fit.setEnabled(False)
         else:
             self.page2.button_savepca.setEnabled(True)
             self.page2.slidershow.setEnabled(True)
+            self.page2.button_movepcup.setEnabled(True)
             self.page3.button_calcca.setEnabled(True)  
             self.page4.rb_fit.setEnabled(True)       
              
