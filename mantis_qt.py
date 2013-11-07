@@ -4129,14 +4129,14 @@ class PageCluster(QtGui.QWidget):
                 fig.add_axes((0.15,0.15,0.75,0.75))
                 axes = fig.gca()                
                 
-                for i in range (self.numclusters):
+                for i in range(1, self.numclusters+1):
                    
                     clusterspectrum = self.anlz.clusterspectra[i-1, ]/npy.amax(self.anlz.clusterspectra[i-1, ])
 
                     if i >= self.maxclcolors:
                         clcolor = self.colors[self.maxclcolors-1]
                     else:
-                        clcolor = self.colors[i]
+                        clcolor = self.colors[i-1]
         
                     specplot = axes.plot(self.anlz.stack.ev,clusterspectrum, color = clcolor)
         
@@ -4194,14 +4194,14 @@ class PageCluster(QtGui.QWidget):
                 fig.add_axes((0.15,0.15,0.75,0.75))
                 axes = fig.gca()                
                 
-                for i in range (self.numclusters):
+                for i in range(1, self.numclusters+1):
                    
                     clusterspectrum = self.anlz.clusterspectra[i-1, ]/npy.amax(self.anlz.clusterspectra[i-1, ])
 
                     if i >= self.maxclcolors:
                         clcolor = self.colors[self.maxclcolors-1]
                     else:
-                        clcolor = self.colors[i]
+                        clcolor = self.colors[i-1]
         
                     specplot = axes.plot(self.anlz.stack.ev,clusterspectrum, color = clcolor)
         
