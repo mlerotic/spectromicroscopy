@@ -818,7 +818,7 @@ class PageXrayPeakFitting(QtGui.QWidget):
         
         
         #Save images      
-        wildcard = "Portable Network Graphics (*.png);;Adobe PDF Files (*.pdf);;"
+        wildcard = "Portable Network Graphics (*.png);;Adobe PDF Files (*.pdf);; SVG (*.svg)"
 
         fileName = QtGui.QFileDialog.getSaveFileName(self, 'Save Fit Plot', '', wildcard)
 
@@ -830,9 +830,9 @@ class PageXrayPeakFitting(QtGui.QWidget):
         ext = ext[1:].lower() 
         
        
-        if ext != 'png' and ext != 'pdf': 
+        if ext != 'png' and ext != 'pdf' and ext != 'svg': 
             error_message = ( 
-                  'Only the PNG and PDF image formats are supported.\n' 
+                  'Only the PNG, PDF and SVG image formats are supported.\n' 
                  'A file extension of `png\' or `pdf\' must be used.') 
 
             QtGui.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % error_message)
@@ -991,16 +991,17 @@ class PageXrayPeakFitting(QtGui.QWidget):
         
 
         if self.spectrumfitted[self.i_spec-1] == 1:
-            line2 = axes.plot(self.stk.ev,self.fits[self.i_spec-1], color='red')
-            
-            y = self.fits_sep[self.i_spec-1][0]
-            line3 = axes.plot(self.stk.ev, y, color = 'blue')               
+     
+            offset = self.fits_sep[self.i_spec-1][0]
+            line3 = axes.plot(self.stk.ev, offset, color = 'blue')               
             for i in range(1, 1+self.nsteps[self.i_spec-1]):
-                y = self.fits_sep[self.i_spec-1][i]
+                y = self.fits_sep[self.i_spec-1][i]+offset
                 line3 = axes.plot(self.stk.ev, y, color = 'green')                
             for i in range(0, self.npeaks[self.i_spec-1]):
-                y = self.fits_sep[self.i_spec-1][i+self.nsteps[self.i_spec-1]+1]
+                y = self.fits_sep[self.i_spec-1][i+self.nsteps[self.i_spec-1]+1]+offset
                 line3 = axes.plot(self.stk.ev, y, color = self.plotcolors[i])
+                
+            line2 = axes.plot(self.stk.ev,self.fits[self.i_spec-1], color='red')
                 
         lines = axes.get_lines()
         self.colors = []
@@ -2208,7 +2209,7 @@ class PageSpectral(QtGui.QWidget):
 
         try: 
             
-            wildcard = "Spectrum files (*.csv)"
+            wildcard = "Spectrum files (*.csv);;Spectrum files (*.xas);;"
             
             filepath = QtGui.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', '', wildcard, self.DefaultDir)
             
@@ -2393,10 +2394,49 @@ class PageSpectral(QtGui.QWidget):
             fileName_spec = self.SaveFileName+"_Tspectrum_" +str(i+1)+"."+ext
             fig.savefig(fileName_spec)    
             
+            
             if savecsv:
                 fileName_spec = self.SaveFileName+"_Tspectrum_" +str(i+1)+".csv"
                 cname = 'Tspectrum_' +str(i+1)
                 self.stk.write_csv(fileName_spec, self.stk.ev, tspectrum, cname = cname)
+                
+               
+                
+        #Save combined:
+ 
+        fig = matplotlib.figure.Figure(figsize =(PlotW, PlotH))
+        canvas = FigureCanvas(fig)
+        fig.clf()
+        fig.add_axes((0.15,0.15,0.75,0.75))
+        axes = fig.gca()
+        
+        for i in range (self.anlz.n_target_spectra):
+            #Save spectra 
+            tspectrum = self.anlz.target_spectra[i, :]
+            
+            line1 = axes.plot(self.stk.ev,tspectrum, color='black', label = 'Raw data')
+            
+            if self.com.pca_calculated == 1: 
+                tspectrumfit = self.anlz.target_pcafit_spectra[i, :]
+                diff = npy.abs(tspectrum-tspectrumfit)
+                line2 = axes.plot(self.stk.ev,tspectrumfit, color='green', label = 'Fit')
+                line3 = axes.plot(self.stk.ev,diff, color='grey', label = 'Abs(Raw-Fit)')
+            
+        fontP = matplotlib.font_manager.FontProperties()
+        fontP.set_size('small')
+   
+        axes.legend(loc=4, prop = fontP)
+                    
+        axes.set_xlabel('Photon Energy [eV]')
+        axes.set_ylabel('Optical Density')
+
+        fileName_spec = self.SaveFileName+"_Tspectra_composite"+"."+ext
+        fig.savefig(fileName_spec)    
+            
+            
+
+                        
+        
                 
 #----------------------------------------------------------------------
     def SaveMaps(self, png_pdf=1):            
@@ -2666,6 +2706,11 @@ class PageSpectral(QtGui.QWidget):
         
 #----------------------------------------------------------------------     
     def loadTSpectrum(self):
+        
+        
+        if self.anlz.tspectrum_loaded == 0:
+            return
+        
 
         tspectrum = self.anlz.target_spectra[self.i_tspec-1, :]
                  
@@ -6325,6 +6370,7 @@ class PageStack(QtGui.QWidget):
         fig.clf()
         fig.add_axes((0.15,0.15,0.75,0.75))
         axes = fig.gca()
+        
          
         if self.com.i0_loaded == 1:
             self.spectrum = self.stk.od3d[xpos,ypos, :]
@@ -10068,7 +10114,7 @@ class MainFrame(QtGui.QMainWindow):
         #try:
         if True:
             if wildcard == False:
-                wildcard =  "HDF5 files (*.hdf5);;SDF files (*.hdr);;STK files (*.stk);;TXRM (*.txrm);;XRM (*.xrm);;TIF (*.tif)" 
+                wildcard =  "HDF5 files (*.hdf5);;SDF files (*.hdr);;STK files (*.stk);;TXRM (*.txrm);;XRM (*.xrm);;TIF (*.tif);;FTIR (*.dpt)" 
 
             filepath = QtGui.QFileDialog.getOpenFileName(self, 'Open file', '', wildcard)
             
@@ -10098,7 +10144,7 @@ class MainFrame(QtGui.QMainWindow):
                 self.stk.read_sdf(filepath)        
                            
             
-            if extension == '.stk':            
+            elif extension == '.stk':            
                 if self.common.stack_loaded == 1:
                     self.new_stack_refresh()  
                     self.stk.new_data()
@@ -10108,7 +10154,7 @@ class MainFrame(QtGui.QMainWindow):
                 
 
                 
-            if extension == '.hdf5':
+            elif extension == '.hdf5':
                 if self.common.stack_loaded == 1:
                     self.new_stack_refresh()  
                     self.stk.new_data()
@@ -10118,7 +10164,7 @@ class MainFrame(QtGui.QMainWindow):
                 self.stk.read_h5(filepath)
 
                 
-            if extension == '.txrm':            
+            elif extension == '.txrm':            
                 if self.common.stack_loaded == 1:
                     self.new_stack_refresh()  
                     self.stk.new_data()
@@ -10128,7 +10174,7 @@ class MainFrame(QtGui.QMainWindow):
                 self.stk.read_txrm(filepath)        
                 
                               
-            if extension == '.xrm':              
+            elif extension == '.xrm':              
                 if self.common.stack_loaded == 1:
                     self.new_stack_refresh()  
                     self.stk.new_data()
@@ -10137,7 +10183,7 @@ class MainFrame(QtGui.QMainWindow):
                          
                 self.stk.read_xrm(filepath)        
                 
-            if extension == '.tif':              
+            elif extension == '.tif':              
                 if self.common.stack_loaded == 1:
                     self.new_stack_refresh()  
                     self.stk.new_data()
@@ -10147,6 +10193,16 @@ class MainFrame(QtGui.QMainWindow):
                 self.stk.read_tiff(filepath)    
                 self.page1.show_scale_bar = 0
                 self.page1.add_scale_cb.SetValue(False)
+                
+            elif extension == '.dpt':              
+                if self.common.stack_loaded == 1:
+                    self.new_stack_refresh()  
+                    self.stk.new_data()
+                    self.anlz.delete_data()  
+                         
+                self.stk.read_dpt(filepath)  
+                self.common.i0_loaded = 1
+                            
 
 
             #Update widgets 
@@ -10458,6 +10514,7 @@ class MainFrame(QtGui.QMainWindow):
         self.common.xpf_loaded = 0
         
         self.refresh_widgets()
+        
                
         
         #page 1

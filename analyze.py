@@ -18,6 +18,7 @@
 
 from __future__ import division
 
+import os
 import numpy as np
 import scipy.interpolate
 import scipy.spatial
@@ -773,7 +774,13 @@ class analyze:
         spectrum_data = 0
         spectrum_common_name = ' '
         if flat == False:
-            spectrum_evdata, spectrum_data, spectrum_common_name = self.stack.read_csv(filename)
+            
+            fn =  os.path.basename(str(filename))                                      
+            basename, extension = os.path.splitext(fn)      
+            if extension == '.csv':
+                spectrum_evdata, spectrum_data, spectrum_common_name = self.stack.read_csv(filename)
+            elif extension == '.xas':
+                spectrum_evdata, spectrum_data, spectrum_common_name = self.stack.read_xas(filename)
                                     
             # Map this spectrum onto our energy range - interpolate to ev
             ftspec = scipy.interpolate.interp1d(spectrum_evdata, spectrum_data, kind='cubic', bounds_error=False)      
@@ -839,7 +846,8 @@ class analyze:
             self.fit_target_spectra()
             self.calc_svd_maps()  
         else:
-            self.target_spectra = 0
+            self.target_spectra = []
+            self.tspec_names = []
             self.tspectrum_loaded = 0
             self.n_target_spectra = 0
             

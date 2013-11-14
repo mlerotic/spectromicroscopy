@@ -68,7 +68,12 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
         self.xshifts = 0
         self.yshifts = 0
         
+
+        self.data_struct.spectromicroscopy.normalization.white_spectrum = None
+        self.data_struct.spectromicroscopy.normalization.white_spectrum_energy = None
+        self.data_struct.spectromicroscopy.normalization.white_spectrum_energy_units = None
         
+        self.data_struct.spectromicroscopy.optical_density = None      
            
 #----------------------------------------------------------------------   
     def read_stk_i0(self, filename, extension):
@@ -250,7 +255,103 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
          
         self.scale_bar()
         
+
+#---------------------------------------------------------------------- 
+    def read_dpt(self, filename):    
+        self.new_data()  
         
+        n_rows = 12
+        n_cols = 11 
+        
+        imgstack = np.zeros((n_rows,n_cols))
+        
+
+        f = open(str(filename),'r')
+        
+        elist = []   
+    
+        for line in f:
+            if line.startswith("*"):
+                pass
+            else:
+                x = line.split(',')
+                e = float (x[0]) 
+                x = x[1:]
+                data = []
+                for i in range(len(x)):
+                    data.append(float(x[i]))
+                elist.append(e)
+                data = np.array(data)
+                data = np.reshape(data, (n_rows, n_cols), order='F')
+                imgstack = np.dstack((imgstack, data))
+                
+                
+        imgstack = imgstack[:,:,1:]
+                
+        f.close()
+        
+        
+            
+        self.n_cols = imgstack.shape[0]
+        self.n_rows = imgstack.shape[1]
+        self.n_ev = imgstack.shape[2]
+        
+        
+        pixelsize = 1
+        #Since we do not have a scanning microscope we fill the x_dist and y_dist from pixel_size
+        self.x_dist = np.arange(np.float(self.n_cols))*pixelsize
+        self.y_dist = np.arange(np.float(self.n_rows))*pixelsize
+
+                
+        self.ev = np.array(elist)
+
+        msec = np.ones((self.n_ev))
+         
+        self.data_dwell = msec
+                       
+        self.absdata = imgstack
+                
+        #Check if the energies are consecutive, if they are not sort the data
+        sort = 0
+        for i in range(self.n_ev - 1):
+            if self.ev[i] > self.ev[i+1]:
+                sort = 1
+                break
+        if sort == 1:
+            sortind = np.argsort(self.ev)
+            self.ev = self.ev[sortind]
+            self.absdata = self.absdata[:,:,sortind]
+
+        
+        self.original_n_cols = imgstack.shape[0]
+        self.original_n_rows = imgstack.shape[1]
+        self.original_n_ev = imgstack.shape[2]
+        self.original_ev = self.ev.copy()
+        self.original_absdata = self.absdata.copy()
+
+       
+        self.fill_h5_struct_from_stk()
+         
+        self.scale_bar()
+        
+        
+        #Fix the normalization
+        self.evi0 = self.ev.copy()
+        self.i0data = np.ones(self.n_ev)
+        
+        self.i0_dwell = self.data_dwell
+   
+        
+        self.fill_h5_struct_normalization()
+        
+        #Optical density does not have to be calculated - use raw data
+        
+        self.od3d = self.absdata.copy()
+        
+        self.od = np.reshape(self.od3d, (n_rows*n_cols, self.n_ev), order='F')
+        
+        
+                
 #---------------------------------------------------------------------- 
     def fill_h5_struct_from_stk(self):   
         
@@ -439,9 +540,13 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
 #----------------------------------------------------------------------   
     def scale_bar(self): 
            
-        x_start = np.amin(self.x_dist)
-        x_stop = np.amax(self.x_dist)
+        x_start = np.amin(self.y_dist)
+        x_stop = np.amax(self.y_dist)
+        
+        onepixsize = np.abs(self.y_dist[1]-self.y_dist[0])
+                
         bar_microns = 0.2*np.abs(x_stop-x_start)
+        
         
         if bar_microns >= 10.:
             bar_microns = 10.*int(0.5+0.1*int(0.5+bar_microns))
@@ -458,7 +563,7 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
             
         self.scale_bar_string = bar_string
 
-        #Matplotlib has flipped scales so I'm using rows instead of cols!
+
         self.scale_bar_pixels_x = int(0.5+float(self.n_rows)*
                        float(bar_microns)/float(abs(x_stop-x_start)))
         
@@ -466,8 +571,7 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
         
         if self.scale_bar_pixels_y < 2:
                 self.scale_bar_pixels_y = 2
-                       
-
+                
              
              
     

@@ -41,8 +41,10 @@ class x1astk:
         self.x_dist = np.fromfile(f, np.float32, self.n_cols)
         self.x_dist.byteswap(True)   
         
+        
         self.y_dist = np.fromfile(f, np.float32, self.n_rows)
         self.y_dist.byteswap(True)     
+        
 
         self.ev = np.fromfile(f, np.float32, self.n_ev)
         self.ev.byteswap(True)   
