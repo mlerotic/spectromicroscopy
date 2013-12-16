@@ -20,6 +20,7 @@ import os
 import getopt
 import numpy as np
 import matplotlib
+matplotlib.rcParams['backend.qt4'] = 'PyQt4'
 from mpl_toolkits.axes_grid import make_axes_locatable
 
 import data_struct

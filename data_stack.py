@@ -260,8 +260,8 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
     def read_dpt(self, filename):    
         self.new_data()  
         
-        n_rows = 12
-        n_cols = 11 
+        n_rows = 11
+        n_cols = 8 
         
         imgstack = np.zeros((n_rows,n_cols))
         
