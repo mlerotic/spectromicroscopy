@@ -2040,7 +2040,7 @@ class PageSpectral(QtGui.QWidget):
         vbox2 = QtGui.QVBoxLayout()
          
         self.tc_tspec = QtGui.QLabel(self)
-        self.tc_tspec.setText("Target Spectrum: ")
+        self.tc_tspec.setText("Target Spectra: ")
         hbox11 = QtGui.QHBoxLayout()       
          
         frame = QtGui.QFrame()
