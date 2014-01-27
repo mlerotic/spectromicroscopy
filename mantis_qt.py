@@ -2369,7 +2369,7 @@ class PageSpectral(QtGui.QWidget):
             tspectrum = self.anlz.target_spectra[i, :]
                         
         
-            fig = matplotlib.figure.Figure(figsize =(PlotW, PlotH))
+            fig = matplotlib.figure.Figure(figsize =(PlotW*1.21, PlotH*0.48))
             canvas = FigureCanvas(fig)
             fig.clf()
             fig.add_axes((0.15,0.15,0.75,0.75))
@@ -3702,6 +3702,10 @@ class PageCluster(QtGui.QWidget):
 #                 '#FF470A','#33FFFF','#006600','#CCCC99','#993300',
 #                 '#000000']
 
+#         self.colors=['#D98619','#ED2024','#98CC31','#861F78','#007FFF',
+#                 '#6FDBDB','#5C3F32','#FF6EC7','#CCCC99','#993300',
+#                 '#000000']
+        
         self.colors=['#007FFF','#ED2024','#98CC31','#861F78','#D98619',
                 '#6FDBDB','#5C3F32','#FF6EC7','#CCCC99','#993300',
                 '#000000']
@@ -3718,6 +3722,10 @@ class PageCluster(QtGui.QWidget):
 #                 '#FF470A','#33FFFF','#006600','#CCCC99','#993300',
 #                 '#000000','#FFFFFF','#EEEEEE']
 
+#         colors2=['#D98619','#ED2024','#98CC31','#861F78','#007FFF',
+#                 '#6FDBDB','#5C3F32','#FF6EC7','#CCCC99','#993300',
+#                 '#000000','#FFFFFF','#EEEEEE']
+        
         colors2=['#007FFF','#ED2024','#98CC31','#861F78','#D98619',
                 '#6FDBDB','#5C3F32','#FF6EC7','#CCCC99','#993300',
                 '#000000','#FFFFFF','#EEEEEE']
@@ -9423,7 +9431,7 @@ class PageLoadData(QtGui.QWidget):
         self.button_txrm.clicked.connect( self.OnLoadTXRM)
         vbox1.addWidget(self.button_txrm)    
         
-        self.button_tif = QtGui.QPushButton( 'Load TIF Stack (*.tif)')
+        self.button_tif = QtGui.QPushButton( 'Load Multi-Page TIF Stack (*.tif)')
         self.button_tif.clicked.connect( self.OnLoadTIF)
         vbox1.addWidget(self.button_tif)      
 
@@ -10193,7 +10201,7 @@ class MainFrame(QtGui.QMainWindow):
                          
                 self.stk.read_tiff(filepath)    
                 self.page1.show_scale_bar = 0
-                self.page1.add_scale_cb.SetValue(False)
+                self.page1.add_scale_cb.setChecked(False)
                 
             elif extension == '.dpt':              
                 if self.common.stack_loaded == 1:
