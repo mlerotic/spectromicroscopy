@@ -425,10 +425,26 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
 #----------------------------------------------------------------------   
     def UsePreNormalizedData(self):
     
-        i0evdata = self.ev.copy()
-        i0data1s = np.ones(self.n_ev)
+        self.evi0 = self.ev.copy()
+        self.i0data = np.ones(self.n_ev)
         
-        self.set_i0(i0data1s, i0evdata)
+        self.i0_dwell = self.data_dwell
+        
+        self.od = np.empty((self.n_cols, self.n_rows, self.n_ev))
+        for i in range(self.n_ev):
+            self.od[:,:,i] = self.absdata[:,:,i]
+        
+           
+        self.od3d = self.od.copy()
+        
+        n_pixels = self.n_cols*self.n_rows
+        #Optical density matrix is rearranged into n_pixelsxn_ev
+        self.od = np.reshape(self.od, (n_pixels, self.n_ev), order='F')
+        
+        self.fill_h5_struct_normalization()
+        
+        return
+        
     
 #----------------------------------------------------------------------   
     def set_i0(self, i0data, evdata):
