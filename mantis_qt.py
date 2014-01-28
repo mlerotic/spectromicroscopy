@@ -244,7 +244,7 @@ class PageXrayPeakFitting(QtGui.QWidget):
         fgs1.addWidget(self.le_sf1, 1, 3)
         
         self.le_base = QtGui.QLineEdit(self)
-        self.le_base.setValidator(QtGui.QDoubleValidator(0, 99999, 2, self))
+        self.le_base.setValidator(QtGui.QDoubleValidator(-99999, 99999, 2, self))
         self.le_base.setAlignment(QtCore.Qt.AlignRight)
         self.le_base.setMaximumWidth(65)
         self.le_base.setText(str(self.base))
@@ -5511,6 +5511,11 @@ class PageStack(QtGui.QWidget):
         self.button_showi0.setEnabled(False)
         vbox1.addWidget(self.button_showi0)
         
+        self.button_prenorm = QtGui.QPushButton('Use pre-normalized data')
+        self.button_prenorm.clicked.connect( self.OnPreNormalizedData)   
+        self.button_prenorm.setEnabled(False)
+        vbox1.addWidget(self.button_prenorm)
+        
         self.button_refimgs = QtGui.QPushButton('Load Reference Images')
         self.button_refimgs.clicked.connect(self.OnRefImgs)
         self.button_refimgs.setEnabled(False)
@@ -5906,6 +5911,16 @@ class PageStack(QtGui.QWidget):
 
         plot = PlotFrame(self, self.stk.evi0,self.stk.i0data)
         plot.show()
+        
+#----------------------------------------------------------------------    
+    def OnPreNormalizedData(self, event):     
+
+        self.stk.UsePreNormalizedData()
+        
+        self.loadSpectrum(self.ix, self.iy)
+        self.loadImage()
+        self.com.i0_loaded = 1
+        self.window().refresh_widgets()
         
 #----------------------------------------------------------------------    
     def OnRefImgs(self, event):     
@@ -10405,6 +10420,7 @@ class MainFrame(QtGui.QMainWindow):
         if self.common.stack_loaded == 0:
             self.page1.button_i0ffile.setEnabled(False)
             self.page1.button_i0histogram.setEnabled(False) 
+            self.page1.button_prenorm.setEnabled(False)
             self.page1.button_refimgs.setEnabled(False)
             self.page1.button_save.setEnabled(False) 
             self.page1.button_savestack.setEnabled(False)
@@ -10419,6 +10435,7 @@ class MainFrame(QtGui.QMainWindow):
         else:
             self.page1.button_i0ffile.setEnabled(True)
             self.page1.button_i0histogram.setEnabled(True) 
+            self.page1.button_prenorm.setEnabled(True)
             self.page1.button_refimgs.setEnabled(True)
             self.page1.button_save.setEnabled(True) 
             self.page1.button_savestack.setEnabled(True)  

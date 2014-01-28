@@ -1191,11 +1191,13 @@ class analyze:
         #p2, success = optimize.leastsq(model_error, p[:], args=(nsteps, npeaks, np.array(self.stack.ev).astype(np.float64), np.array(xfit_spectrum).astype(np.float64)))
         
         bounds=[]
-        for i in range(len(p)):
+        #base can be a negative number
+        bounds.append((fp.base-0.5,fp.base+0.5))
+        for i in range(1,len(p)):
             bmin = 0
             bmax = None
             bounds.append((bmin,bmax))
-                    
+          
                     
         p2, success = leastsqbound(model_error, p[:], bounds, args=(nsteps, npeaks, np.array(self.stack.ev).astype(np.float64), np.array(xfit_spectrum).astype(np.float64)))
        

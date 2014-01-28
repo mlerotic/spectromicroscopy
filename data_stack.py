@@ -103,8 +103,7 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
         
         self.fill_h5_struct_normalization()
         
-        
-
+              
 
 #---------------------------------------------------------------------- 
     def read_stk(self, filename):    
@@ -422,6 +421,14 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
         self.fill_h5_struct_normalization()
         
         return    
+    
+#----------------------------------------------------------------------   
+    def UsePreNormalizedData(self):
+    
+        i0evdata = self.ev.copy()
+        i0data1s = np.ones(self.n_ev)
+        
+        self.set_i0(i0data1s, i0evdata)
     
 #----------------------------------------------------------------------   
     def set_i0(self, i0data, evdata):
