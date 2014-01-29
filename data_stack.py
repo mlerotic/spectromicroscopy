@@ -137,7 +137,6 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
             
             self.od3d = self.od.copy()
             
-        
             self.od3d = np.reshape(self.od3d, (self.n_cols, self.n_rows, self.n_ev), order='F')
                     
         elif self.data_struct.spectromicroscopy.normalization.white_spectrum is not None:

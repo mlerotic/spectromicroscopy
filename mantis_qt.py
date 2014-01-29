@@ -7252,6 +7252,8 @@ class LimitEv(QtGui.QDialog):
             self.stack.od = npy.reshape(self.stack.od, (self.stack.n_rows*self.stack.n_cols, self.stack.n_ev), order='F')
         
         self.stack.fill_h5_struct_from_stk()
+        if self.com.i0_loaded == 1: 
+            self.stack.fill_h5_struct_normalization()
         
         #Fix the slider on Page 1! 
         self.parent.page1.slider_eng.setRange(0,self.stack.n_ev-1)

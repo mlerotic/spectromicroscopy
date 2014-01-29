@@ -388,7 +388,7 @@ class h5:
 
         # Close
         f.close()
-        
+
         self.absdata = data_struct.exchange.data
         
         datadim = np.int32(self.absdata.shape)
@@ -845,7 +845,17 @@ class h5:
             ds_data = caGrp.create_dataset('cluster_spectra', data = anlz.clusterspectra)
             ds_data = caGrp.create_dataset('cluster_distances', data = anlz.cluster_distances)            
             
-        
+        if anlz.tspectrum_loaded == 1:
+            if 'spectral_maps' in mantisGrp:
+                del mantisGrp['spectral_maps']
+                caGrp = mantisGrp.create_group('spectral_maps') 
+            else:
+                caGrp = mantisGrp.create_group('spectral_maps')  
+            ds_data = caGrp.create_dataset('raw_maps', data = anlz.target_svd_maps)
+            ds_data = caGrp.create_dataset('fitted_maps', data = anlz.target_pcafit_maps)
+            ds_data = caGrp.create_dataset('raw_spectra', data = anlz.target_spectra)  
+            ds_data = caGrp.create_dataset('fitted_spectra', data = anlz.target_pcafit_spectra)     
+                    
         f.close()
         
         
