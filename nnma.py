@@ -1,469 +1,409 @@
-'''
-Created on Oct 14, 2011
-@author: Rachel Mak
-'''
-
+import h5py
 import numpy as np
-import scipy as sp
-import sys, time
-from pylab import *
-import csv
+import scipy.interpolate
+import scipy.integrate
+import matplotlib
+matplotlib.use('Agg')  # used to save plots without needing X display
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+from mpl_toolkits.mplot3d import Axes3D
+import time
 
-verbose = False
+matplotlib.rcParams['pdf.fonttype'] = 42
 
-#----------------------------------------------------------------------
-# All NNMA algorithms share the same following template (i.e., initialization, iteration)
-#----------------------------------------------------------------------
-class NNMATemplate():
+#*************************************************************************************************
+# Read in HDF5 file and extract transmission data, energy, white spectrum
+#*************************************************************************************************
+f = h5py.File("/home/rmak/scratch/testSparse/sperm/spermAligned2WithI0LimE.hdf5", 'r')
 
-  def initFactors(self, D, kComponents, muInit=None, tInit=None):
-    if verbose: print("Inside initFactors()")
-    nEnergies, nPixels = D.shape
-    if verbose: print("nEnergies = ", nEnergies)
-    if verbose: print("nPixels = ", nPixels)
-    # if no initial matrices are given, generate ones with random numbers
-    if muInit is None:
-      muInit = np.random.rand(nEnergies, kComponents)
-      #mu = np.ones((nEnergies, kComponents), np.float)
-    if tInit is None:
-      tInit = np.random.rand(kComponents, nPixels)
-      #t = np.ones((kComponents, nPixels), np.float)
-    if verbose: print("initial muInit = ", muInit)
-    if verbose: print("initial tInit = ", tInit)
-    if verbose: print("self.stepsizeT = ", self.stepsizeT)
-    return muInit, tInit
+if "exchange" in f:
+  exchangeGrp = f["exchange"]
+  transmData = (exchangeGrp["data"])[...]  # reading transmission data from file
+  print("transmData.shape = ", transmData.shape)
+  energies = (exchangeGrp["energy"])[...]
 
-  # Method __call__ is where the actual NNMA iteration takes place
-  def __call__(self, D, energies, kNNMA, maxIters, mu0=None, verbose=True):
-    if verbose: print("In NNMATemplate.__call__()")
-    mu, t = self.initFactors(D, kNNMA, muInit=mu0)
-    #mu, t = self.initFactors(D, kNNMA, muInit=muCluster)		# give option to seed initial spectra with cluster spectra
-    normD = np.linalg.norm(D)
-    if verbose: print("norm(D) = ", normD)
-    eps = 1e-3	# tolerance level for iterations
-    maxCount = maxIters	# max number of iterations
-    if verbose: print("maxCount = ", maxCount)
-    count = 0		# counter for number of iterations
-    objOld = 1e99	# diff between previous and current iterations (initially set to some large number)
+if "spectromicroscopy" in f:
+  spectrGrp = f["spectromicroscopy"]
+  if "normalization" in spectrGrp:
+    normGrp = spectrGrp["normalization"]
+    whiteSpect = (normGrp["white_spectrum"])[...]  # reading I_0 data from file
+    whiteSpectE = (normGrp["white_spectrum_energy"])[...]
 
-    nEnergies, nPixels = D.shape
-    muAllIterations = np.zeros([kNNMA, nEnergies, maxCount]) 	# array to store mu at each iteration
-    costFunction = np.zeros([maxCount, 2])	# array to store [|D-D'|, delta|D-D'|]
-
-    while True:
-
-      if verbose: print("count = ", count)
-      for k in range(kNNMA):
-	muAllIterations[k, :, count] = mu[:, k]		# store current reconstruction of mu
-
-      # Save mu at each iteration to compile into movie
-      self.saveMuImage(energies, mu, count)
-
-      muUpdated, tUpdated, distUpdated = self.update(mu, t, D)	# <----- where NNMA updates take place
-      if np.any(np.isnan(muUpdated)) or np.any(np.isinf(muUpdated)) or \
-	 np.any(np.isnan(tUpdated)) or np.any(np.isinf(tUpdated)):
-	if verbose:  print "RESTART"
-	mu, t = self.initFactors(D, kNNMA, muInit=m0)
-	count = 0
-      #count += 1
-      if verbose: print("dist = ", distUpdated)
-      obj = distUpdated / normD 	# normalize cost function by dividing by its norm
-      if verbose: print("obj = ", obj)
-      deltaObj = obj - objOld
-      if verbose: print("deltaObj = ", deltaObj)
-      if deltaObj > 0:		# if cost function increased, try decreasing stepsize
-        if verbose: print("deltObj > 0")
-        if verbose: print("self.stepsizeT = ", self.stepsizeT)
-        self.stepsizeT = self.stepsizeT / 2
-        if self.stepsizeT < 1e-12:
-          if verbose: print("Algorithm has converged; stepsize = ", self.stepsizeT)
-          break
-      else:
-        if deltaObj > -1e-6:	# if cost function decreased too slowly, increase stepsize
-	  if verbose: print("Increasing self.stepsizeT")
-	  self.stepsizeT = self.stepsizeT * 1.5
-	  if verbose: print("self.stepsizeT = ", self.stepsizeT)
-        count += 1
-        mu = muUpdated
-        t = tUpdated
-        costFunction[count-1, 0] = obj
-        costFunction[count-1, 1] = deltaObj 
-        objOld = obj
-
-      if (count >= maxCount) and (-eps < deltaObj <= eps):
-	if verbose: print("count = ", count)
-	if verbose: print("(eps, deltaObj) = ", eps, deltaObj)
-	break
-      elif (count >= maxCount):
-	if verbose: print("Finished specified number of iterations, but deltaObj < eps not satisfied.")
-	break
-      elif (self.stepsizeT < 1e-12):
-        if verbose: print("Stepsize is too small, breaking...")
-        break
-
-      #objFunctionWriter = csv.writer(open(dir + 'objFunction.csv', 'wb'), delimiter=',')
-      #objFunctionWriter.writerow([obj, deltaObj])
+f.close()
 
 
-    #if verbose: print("mu = ", mu)
-    #if verbose: print("t = ", t)
+#*************************************************************************************************
+# Some data pre-processing
+#*************************************************************************************************
+nEnergies = len(energies)
+nCols = transmData.shape[0]  # x dimension of image
+nRows = transmData.shape[1]  # y dimension of image
+nPixels = nRows * nCols 
+D = np.zeros((nEnergies, nPixels))
 
-    # Plot convergence of mu spectra
-    figure(4)
-    for k in range(kNNMA):
-      subplot(kNNMA+1, 1, k+1)
-      imshow(muAllIterations[k, :, :], cmap=cm.gist_rainbow)
-    subplot(kNNMA+1, 1, kNNMA+1) 	# on last subplot, show cost function
-    plot(arange(0, maxCount, 1), costFunction[:, 0], 'b')
-    xlabel('Iteration number')
-    ylabel('Cost function |D - D\'|')
-    np.savetxt("costFunction.txt", costFunction)
+# Check for negative values in transmission data; if found, set to small value
+negTransmInd = np.where(transmData <= 0)
+if negTransmInd: transmData[negTransmInd] = 0.01
 
-    # Calculate and plot power spectra for mu (to quantify how smooth the mu's are)
-    figure(5)
-    muPower = np.zeros([nEnergies, kNNMA])
-    for k in range(kNNMA):
-      muPower[:,k] = np.power(np.abs(sp.fft(mu[:,k])), 2)	# need normalization?  Divide by nEnergies?
-      subplot(kNNMA, 1, k)
-      plot(muPower[:,k], 'r')
-    
-    DRecon = np.dot(mu, t)
+# Interpolate I0 energy measurements to transmission data energies
+energiesI0 = energies.copy()
+funcI0Interp = (scipy.interpolate.interp1d(whiteSpectE, whiteSpect, kind="cubic",
+         bounds_error=False, fill_value=0.0))
+I0 = funcI0Interp(energiesI0)
 
-    # Save results of reconstructed mu and t into a csv file
-    #dirName = "/home/rmak/scratch/"
-    #muWriter = csv.writer(open(dirName + 'mu.csv', 'wb'), delimiter=',')
-    #for i in range(nEnergies):
-    #  muWriter.writerow([energies[i], mu[i, :]])
-    #tWriter = csv.writer(open(dir + 't.csv', 'wb'), delimiter=',')
-    #  tWriter.writerow(t[row,:])
+# Flatten 3D data into 2D, then convert transmission to optical density
+for n in range(nEnergies):
+  D[n, :] = transmData[:, :, n].flatten()  # does it matter if we use data[:, :, n].T (transpose)) instead?
+  D[n, :] = -np.log(D[n, :] / I0[n])  
 
-    np.savetxt('mu.txt', mu) 
-
-    if verbose: print("End of NNMATemplate.__call__()")
-    return mu, t, DRecon
-
-#----------------------------------------------------------------------
-class factorizedNNMA(NNMATemplate):
-
-  def __init__(self, muUpdate, tUpdate, dist):
-    if verbose: print("In factorizedNNMA.__init__()")
-    self.muUpdate = muUpdate
-    self.tUpdate = tUpdate
-    self.dist = dist
-    self.stepsizeT = 0.1	# t stepsize for gradient descent
-
-  def update(self, mu, t, D):
-    if verbose: print("Inside update() in factorizedNNMA")
-    muUpdated = self.muUpdate(mu, t, D)
-    tUpdated = self.tUpdate(muUpdated, t, D, stepsizeT=self.stepsizeT)
-    dist = self.dist(D, muUpdated, tUpdated)
-    return muUpdated, tUpdated, dist
-
-  # save mu reconstruction at each iteration so we can compile it into a movie
-  def saveMuImage(self, energies, muRecon, count):
-    if verbose: print("In saveMuImage()")
-    kComp = muRecon.shape[1]
-
-    for k in range(kComp):
-      plot(energies, muRecon[:, k], 'b')
-      xlabel('Energy (eV)')
-      ylabel(r'$\mu$' + str(k + 1))
-      fileName = "mu" + str(k + 1) + "_" + ("%04d.png" % count)
-      savefig("/home/rmak/scratch/movieImages/" + fileName)
-      clf()
+# Zero out NaN and negative values in optical density matrix
+nanInd = np.where(np.isfinite(D) == False)
+if nanInd: D[nanInd] = 0.
+negInd = np.where(D < 0)
+if negInd: D[negInd] = 0.
+print("len(negInd) = ", len(negInd[0]))
+print("DMin = ", np.amin(D))
+print("DMax = ", np.amax(D))
 
 
-#----------------------------------------------------------------------
-class nnma(factorizedNNMA):
+#*************************************************************************************************
+# NNMA calculations
+#*************************************************************************************************
+# Initialize mu, t
+kNNMA = 5   # estimate for number of spectral components
+lambdaMu = 0.
+lambdaMuCluster = 0.	 # regularization param for smoothness
+lambdaT = 0.
 
-  def __init__(self, stkdata, data_struct, pcaAnalz):
+#muInit = np.genfromtxt("/home/rmak/scratch/appendixNNMATests/clusterSpectraSperm.txt")
+#tInit = np.genfromtxt("/home/rmak/scratch/appendixNNMATests/tLetters.txt")
+muInit = np.random.rand(nEnergies, kNNMA)
+tInit = np.random.rand(kNNMA, nPixels)
+#tInitColSum = np.sum(tInit, axis=0)
+#for p in range(nPixels):
+#  tInit[:, p] = tInit[:, p] / tInitColSum[p]
 
-    self.stack = stkdata
-    self.data_struct = data_struct
-    self.PCAAnalz = pcaAnalz
-    self.kNNMA = 5	# set some default guess value for number of chemical components
-    self.maxIters = 100	# number of NNMA iterations
-    self.algoNNMA = "Basic"	# set default NNMA algorithm
-    self.initMatrices = 'Random'
+muCluster = np.genfromtxt("/home/rmak/scratch/appendixNNMATests/clusterSpectraSperm.txt")
+# Integrate each cluster spectrum for use in scaling later
+muClusterNorm = np.zeros(kNNMA)
+for k in range(kNNMA):
+  muClusterNorm[k] =  scipy.integrate.trapz(muCluster[:, k], x=energies)
 
-    self.kPCA = 3	# number of principal components from PCA <-- set this as GUI button?
-    self.sparsenessT = 0.8      # sparseness of t matrix, in [0, 1], 0 being most sparse
+countMax = 10000
+count = 0
+costFnOld = 1e99  # set some large number for initial cost function
+# Array to keep track of cost fn as well as change in cost fn
+costFnArray = np.zeros((countMax+1, 4))
 
-    self.NNMA = factorizedNNMA(self.muMultUpdate, self.tMultUpdate, self.frobDist)	# Basic NNMA multiplicative update with Frobenius distance measure
-    self.NNMASparse = factorizedNNMA(self.muMultUpdate, self.tSparseUpdate, self.frobDist)
-    #self.NNMASparse.stepsizeT = 0.1
-    #if verbose: print("self.NNMASparse.stepsizeT = ", self.NNMASparse.stepsizeT)
+mu = muInit
+t = tInit
 
-#----------------------------------------------------------------------
-# Some functions for use in NNMA algorithms   
+dJSmoothdMu = 0.
+JSmooth = 0.
 
-# Note: In Python, * and / are element-wise operations.
-#	For matrix multiplication, use numpy.dot 
-#----------------------------------------------------------------------
-# Basic multiplicative update for mu
-#----------------------------------------------------------------------
-  def muMultUpdate(self, mu, t, D, **param):
-    if verbose: print("In nnma.muMultUpdate()")
-    #if verbose: print("mu before update = ", mu)
-    updateFactor = np.dot(D, t.T) / ( np.dot(mu, np.dot(t, t.T)) + 1e-9 )
-    muUpdated = mu * updateFactor
-    #if verbose: print("muUpdated = ", muUpdated)
-    #if verbose: print("t = ", t)
-    return muUpdated 
+#########################################################################################################
+# Function to calculate smoothness cost JSmooth,
+# given by sum of second derivatives of mu wrt E
+#########################################################################################################
+def calc_JSmooth(E, mu):
+  N = len(E)  # no. of energies
+  energyInd = np.arange(0, N, 1)
+  d2mudE2Sq = np.zeros(mu.shape)
 
-#----------------------------------------------------------------------
-# Basic multiplicative update for t
-#----------------------------------------------------------------------
-  def tMultUpdate(self, mu, t, D, **param):
-    #updateFactor = np.dot(mu.T, D) / ( np.dot(mu.T, np.dot(mu, t)) + 1e-9 )
-    updateFactor = np.dot(D.T, mu).T / ( np.dot(np.dot(mu.T, mu), t) + 1e-9 )
-    tUpdated = t * updateFactor
-    return tUpdated
+  for n in energyInd:
+   if n == 0:
+     d2mudE2Sq[0, :] = 4 * ( mu[0, :]**2 / ((E[1]-E[0])**2*(E[2]-E[0])**2) 
+     				+ mu[1, :]**2 / ((E[2]-E[1])**2*(E[1]-E[0])**2)
+				+ mu[2, :]**2 / ((E[2]-E[1])**2*(E[2]-E[0])**2)
+				- 2*mu[0, :]*mu[1, :] / ((E[2]-E[1])*(E[1]-E[0])**2*(E[2]-E[0]))
+				+ 2*mu[0, :]*mu[2, :] / ((E[2]-E[1])*(E[1]-E[0])*(E[2]-E[0])**2)
+				- 2*mu[1, :]*mu[2, :] / ((E[2]-E[1])**2*(E[1]-E[0])*(E[2]-E[0])) )
+   elif n == (N - 1):
+     d2mudE2Sq[N-1, :] = 4 * ( mu[N-1, :]**2 / ((E[N-1]-E[N-2])**2*(E[N-1]-E[N-3])**2) 
+     				+ mu[N-2, :]**2 / ((E[N-1]-E[N-2])**2*(E[N-2]-E[N-3])**2)
+				+ mu[N-3, :]**2 / ((E[N-2]-E[N-3])**2*(E[N-1]-E[N-3])**2)
+				- 2*mu[N-1, :]*mu[N-2, :] / ((E[N-1]-E[N-2])**2*(E[N-2]-E[N-3])*(E[N-1]-E[N-3]))
+				+ 2*mu[N-1, :]*mu[N-3, :] / ((E[N-1]-E[N-2])*(E[N-2]-E[N-3])*(E[N-1]-E[N-3])**2)
+				- 2*mu[N-2, :]*mu[N-3, :] / ((E[N-1]-E[N-2])*(E[N-2]-E[N-3])**2*(E[N-1]-E[N-3])) )
+   else:
+     d2mudE2Sq[n, :] = 4 * ( mu[n+1, :]**2 / ((E[n+1]-E[n])**2*(E[n+1]-E[n-1])**2) 
+     				+ mu[n, :]**2 / ((E[n+1]-E[n])**2*(E[n]-E[n-1])**2)
+				+ mu[n-1, :]**2 / ((E[n]-E[n-1])**2*(E[n+1]-E[n-1])**2)
+				- 2*mu[n+1, :]*mu[n, :] / ((E[n+1]-E[n])**2*(E[n]-E[n-1])*(E[n+1]-E[n-1]))
+				+ 2*mu[n+1, :]*mu[n-1, :] / ((E[n+1]-E[n])*(E[n]-E[n-1])*(E[n+1]-E[n-1])**2)
+				- 2*mu[n, :]*mu[n-1, :] / ((E[n+1]-E[n])*(E[n]-E[n-1])**2*(E[n+1]-E[n-1])) )
+     
+   JSmooth = np.sum(d2mudE2Sq)
+   return JSmooth
 
-#----------------------------------------------------------------------
-# Frobenius distance metric
-#----------------------------------------------------------------------
-  def frobDist(self, D, mu, t):
-    dist = np.linalg.norm(D - np.dot(mu, t))
-    return dist
-
-#----------------------------------------------------------------------
-# Projection operator to enforce sparseness, from Hoyer (2004)
-# x is the vector we wish to project onto non-negative space with specified constraints
-# L1 and L2 norms are set to achieve desired sparseness (and non-negativity)
-#----------------------------------------------------------------------
-  def sparsenessProjector(self, x, L1, L2):
-    if verbose: print("In sparsenessProjector()")
-    N = len(x)
-    if verbose: print("N = ", N)
-    if verbose: print("x.shape = ", x.shape)
-    x = x.reshape(N, 1)
-    # Start by projecting point to sum constraint hyperplane
-    s = x + (L1 - np.sum(x)) / N
-    if verbose: print("s = ", s)
-    zeroCoeff = []	# initially, no elements are assumed to be zero
-    iters = 0
-    while True:
-      if verbose: print("Inside sparsenessProjector while True loop")
-      if len(zeroCoeff) == N:
-        if verbose: print("Reached maximal iterations to find s")
-        break
-      midPoint = np.ones((N, 1), float) * L1 / (N - len(zeroCoeff))
-      if verbose: print("midPoint = ", midPoint)
-      midPoint[zeroCoeff] = 0
-      if verbose: print("midPoint = ", midPoint)
-      w = s - midPoint
-      a = np.sum(np.power(w, 2)) + 0j
-      b = 2 * np.dot(w.T, midPoint)
-      c = np.sum(np.power(midPoint, 2)) - L2
-      if verbose: print("a = ", a)
-      if verbose: print("b = ", b)
-      if verbose: print("c = ", c)
-      alpha = (-b + (np.sqrt(np.power(b, 2) - 4 * a * c)).real) / (2 * a)	# solve quadratic eqn to find alpha such that s satisfies L2 norm constraint
-      s = alpha * w + midPoint		# <--- is it alpha*w + s (as in Hoyer's Matlab code), or alpha*w + midPoint (as in Hoyer's paper)???
-      if verbose: print("s = ", s)
-
-      if verbose: print("alpha = ", alpha)
-      if (alpha > 0) == False or np.isnan(alpha):	# alpha should be > 0
-        if verbose: print("breaking...; iters = ", iters)
-        break
-
-      elif np.all(s >= 0):		# if all elements of v are +ve, solution is found
-        iters = iters + 1
-        if verbose: print("All s >= 0; iters = ", iters)
-        break
-
-      else:	# if some elements are -ve, then set them to zero and iterate again to find soln
-        if verbose: print("In else statement")
-        iters = iters + 1
-        zeroCoeff = np.where(s <= 0)[0]
-        s[zeroCoeff] = 0
-        sumTemp = np.sum(s)
-        s = s + (L1 - sumTemp) / (N - len(zeroCoeff))
-        s[zeroCoeff] = 0
-
-    if (np.abs(s.imag)).max() > 1e-10:
-      if verbose: print("Error: imaginary values in v!")
-
-    if verbose: print("About to return s")
-    return s
-
-
-#----------------------------------------------------------------------
-# Updates with sparseness constraints
-# sparsenessT - sparseness of t in [0, 1]
-# L1 and L2 norms set to achieve desired sparseness set by self.sparsenessT 
-#----------------------------------------------------------------------
-  def tSparseUpdate(self, mu, t, D, stepsizeT, L1=1., L2=1.):
-
-    if verbose: print("In tSparseUpdate()")
-    if verbose: print("stepsizeT = ", stepsizeT)
-
-    # First take a step in direction of negative gradient
-    tUpdated = t - stepsizeT * np.dot(mu.T, (np.dot(mu, t) - D))
-    if verbose: print("t = ", t)
-    if verbose: print("mu = ", mu)
-    if verbose: print("tUpdated = ", tUpdated)
-
-    # Now project onto constraint space that satisfies desired sparseness
-    L2 = 1.0	# rows of t normalized to L2
-    nPixels = D.shape[1]
-    L1 = (np.sqrt(nPixels) - (np.sqrt(nPixels) - 1) * self.sparsenessT) * L2
-    #L1 = (np.sqrt(nPixels) - (np.sqrt(nPixels) - 1) * self.sparsenessT)
-    if verbose: print("L1 = ", L1)
-    for i in range(self.kNNMA):
-      if verbose: print("i = ", i)
-      tUpdated[i, :] = (self.sparsenessProjector(tUpdated[i, :].T, L1, L2)).T
-
-    if verbose: print("tUpdated.shape = ", tUpdated.shape)
-    if verbose: print("t = ", t)
-    if verbose: print("norms are: ")
-    for i in range(self.kNNMA):
-      if verbose: print(np.linalg.norm(t[i,:]))
-
-    return tUpdated
-
-#----------------------------------------------------------------------
-# Run the NNMA analysis
-#----------------------------------------------------------------------
-  def calcNNMA(self, algoName, kComponents=5, verbose=1):
-
-    if verbose: print("Doing nnma.calcNNMA:")
-    if verbose: print("kComponents = ", self.kNNMA)
-    if verbose: print("maxIters = ", self.maxIters)
-    if verbose: print("sparsenessT = ", self.sparsenessT)
-
-    self.nEnergies = self.stack.n_ev
-    self.nCols = self.stack.n_cols
-    self.nRows = self.stack.n_rows
-    self.nPixels = self.nCols * self.nRows
-    self.energies = self.stack.ev.copy()
-
-## -----------------------------------------------------------------------------------------------
-#
-#    # Here we're going to test using OD with a subset of original data
-#    #self.kPCA = self.PCAAnalz.numsigpca 	# use num significant components calculated from PCA, instead of inputting manually as above
-#    #if verbose: print("self.PCAAnalz.numsigpca = ", self.PCAAnalz.numsigpca)
-#    self.PCAEigenvecsSubset = self.PCAAnalz.eigenvecs[:, 0:self.kPCA]
-#    if verbose: print("self.PCAEigenvecsSubset.shape = ", self.PCAEigenvecsSubset.shape)
-#    self.PCAImagesSubset = self.PCAAnalz.pcaimages2D[0:self.kPCA, :]
-#    if verbose: print("self.PCAImagesSubset.shape = ", self.PCAImagesSubset.shape)
-#    self.ODSubset = np.dot(self.PCAEigenvecsSubset, self.PCAImagesSubset)
-#    if verbose: print("self.ODSubset.shape = ", self.ODSubset.shape)
-#    D = self.ODSubset
-#    self.OD = D.reshape(self.nEnergies, self.nRows, self.nCols)
-#
-## ----------------------------------------------------------------------------------------------
-
-    self.OD = self.stack.absdata.copy()	# absdata in HDF5 file actually  holds transmission data (not absorption!)
-    self.i0 = self.stack.i0data
-    self.ODTemp = np.zeros((self.nEnergies, self.nRows, self.nCols))
-    if verbose: print("self.ODTemp.shape = ", self.ODTemp.shape)
-    if verbose: print("self.OD.shape = ", self.OD.shape)
-    for i in range(self.nEnergies):		# transpose so that OD is in C-order: energy is leftmost (slowest-changing) index
-      self.ODTemp[i, :, :] = self.OD[:, :, i].T
-      #self.ODTemp[i, :, :] = self.OD[:, :, i]
-      self.ODTemp[i, :, :] = -np.log(self.ODTemp[i, :, :] / self.i0[i])	# do this if absdata is actually transmission
-    neg = np.where(self.ODTemp < 0.)	# find where OD is negative
-    self.ODTemp[neg] = 0.		# and set to zero
-    if verbose: print("neg = ", neg)
-    self.OD = self.ODTemp
-    if verbose: print("self.OD.shape = ", self.OD.shape)
-    self.ODRecon = np.zeros((self.nEnergies, self.nCols * self.nRows), dtype=float)	# initialize matrix which holds reconstructed OD
-    self.ODError = np.zeros((self.nEnergies, self.nCols * self.nRows), dtype=float)	# initialize matrix which holds difference between experimental and reconstructed OD
-    self.mu = np.zeros((self.nEnergies, kComponents), dtype=float)
-    self.t = np.zeros((kComponents, self.nPixels), dtype=float)
-
-    # Rearrange 3D OD matrix into 2D
-    D = np.zeros((self.nEnergies, self.nPixels), float)
-    for i in range(self.nEnergies):
-      D[i, :] = self.OD[i, :, :].flatten()
-
-    if (self.kNNMA < 1) or (self.kNNMA > self.nEnergies) or (self.kNNMA > self.nPixels):
-      raise ValueError, "Number of components is invalid."
-	
-    #self.findRoutine(algoName)
-   
-    # Determine what to use for initial matrix mu
-    if self.initMatrices == 'Random':
-      muInit = None
-    elif self.initMatrices == 'Cluster':
-      muInit = self.PCAAnalz.clusterspectra.T
- 
-    if verbose: print "run %12s" % algoName
-    sys.stdout.flush()
-    startTime = time.time()
-    if verbose: print("startTime = ", startTime)
-
-    #self.mu, self.t, DRecon = self.NNMA(D, self.energies, self.kNNMA, self.maxIters)	# calculate NNMA here by invoking the NNMATemplate.__call__ function
-    self.mu, self.t, DRecon = self.NNMASparse(D, self.energies, self.kNNMA, self.maxIters, mu0=muInit)	# calculate NNMA here by invoking the NNMATemplate.__call__ function
-
-    endTime = time.time()
-    timeTaken = endTime - startTime
-    if verbose: print("Time taken = ", timeTaken)
-
-    tNorm = np.linalg.norm(self.t[0,:])
-    if verbose: print("tNorm first row = ", tNorm)
-    tNorm = np.linalg.norm(self.t[kComponents-1,:])
-    if verbose: print("tNorm last row = ", tNorm)
-
-    self.ODRecon = DRecon.reshape(self.nEnergies, self.nRows, self.nCols)
-    figure(0) 
-    image = self.ODRecon[0, :, :]
-    imshow(image)
-
-    DError = np.abs(DRecon - D) / (D + 1e-9) * 100
-    np.savetxt("D.txt", D)
-    np.savetxt("DRecon.txt", DRecon)
-    #np.savetxt("DError.txt", DError)
-    np.savetxt("energies.txt", self.energies)
-    self.ODError = DError.reshape(self.nEnergies, self.nRows, self.nCols)
-    image = self.ODError[0, :, :]
-    figure(1)
-    imshow(image)
-
-    mu0 = self.mu[:, 0]
-    figure(2)
-    plot(self.energies, self.mu, 'b')
-    show()
-
-    muImage = self.mu.T		# transpose mu matrix so that energy is displayed on x axis
-    figure(3)
-    maxEnergyIndex = self.nEnergies - 1
-    maxMuIndex = kComponents - 1
-    imshow(muImage, cmap=cm.gray, interpolation='nearest', extent=[0, maxEnergyIndex, 0, maxMuIndex]) 
-    colorbar()
-
-#----------------------------------------------------------------------
-# Match up algorithm name with routine name
-#----------------------------------------------------------------------
-  def findRoutine(self, algoName):
-    if algoName == "Basic":
-      if verbose: print("Inside if clause")
-      if verbose: print("algoName = ", algoName)
-      self.NNMA.update("Updated string; inside findRoutine()")
-    elif algoName == "Smooth":
-      if verbose: print("algoName = ", algoName)
-    elif algoName == "Sparse":
-      if verbose: print("algoName = ", algoName)
+#########################################################################################################
+# Function to calculate derivative of JSmooth wrt mu;
+# used in multiplicative update algorithm.
+#########################################################################################################
+def calc_dJSmoothdMu(E, mu):
+  N = len(E)  # no. of energies
+  energyInd = np.arange(0, N, 1)
+  dJSmoothdMu = np.zeros(mu.shape)
+  for n in energyInd:
+    if n == 0:
+      dJSmoothdMu[0, :] = (16 * ( mu[0,:] / ((E[1]-E[0])**2*(E[2]-E[0])**2)
+      		- mu[1,:] / ((E[2]-E[1])*(E[1]-E[0])**2*(E[2]-E[0]))
+		+ mu[2,:] / ((E[2]-E[1])*(E[1]-E[0])*(E[2]-E[0])**2) ) )
+    elif n == 1:
+      dJSmoothdMu[1, :] = (8 * (mu[0,:] * -2 / ((E[2]-E[1])*(E[1]-E[0])**2*(E[2]-E[0]))
+      		+ mu[1,:] * ( 2 / ((E[2]-E[1])**2*(E[1]-E[0])**2) + 1/((E[2]-E[1])**2*(E[3]-E[1])**2) )
+		+ mu[2,:] * ( -2/((E[2]-E[1])**2*(E[1]-E[0])*(E[2]-E[0])) + -1/((E[3]-E[2])*(E[2]-E[1])**2*(E[3]-E[1])) )
+		+ mu[3,:] * 1 / ((E[3]-E[2])*(E[2]-E[1])*(E[3]-E[1])**2) ) )
+    elif n == 2:
+      dJSmoothdMu[2, :] = (8 * (mu[0,:] * 2 / ((E[2]-E[1])*(E[1]-E[0])*(E[2]-E[0])**2)
+      		+ mu[1,:] * ( -2 / ((E[2]-E[1])**2*(E[1]-E[0])*(E[2]-E[0])) + -1/((E[3]-E[2])*(E[2]-E[1])**2*(E[3]-E[1])) )  
+		+ mu[2,:] * ( 2 / ((E[2]-E[1])**2*(E[2]-E[0])**2) + 1/((E[3]-E[2])**2*(E[2]-E[1])**2) + 1/((E[3]-E[2])**2*(E[4]-E[2])**2) )
+		+ mu[3, :] * (-1 / ((E[3]-E[2])**2*(E[2]-E[1])*(E[3]-E[1])) + -1/((E[4]-E[3])*(E[3]-E[2])**2*(E[4]-E[2])) )
+		+ mu[4,:] * 1 / ((E[4]-E[3])*(E[3]-E[2])*(E[4]-E[2])**2) ) )
+    elif n == (N - 3):
+      dJSmoothdMu[n, :] = (8 * ( mu[N-5,:] * 1 / ((E[N-3]-E[N-4])*(E[N-4]-E[N-5])*(E[N-3]-E[N-5])**2)
+      		+ mu[N-4,:] * ( -1/((E[N-3]-E[N-4])**2*(E[N-4]-E[N-5])*(E[N-3]-E[N-5])) + -1/((E[N-2]-E[N-3])*(E[N-3]-E[N-4])**2*(E[N-2]-E[N-4])) )
+		+ mu[N-3,:] * ( 1/((E[N-3]-E[N-4])**2*(E[N-3]-E[N-5])**2) + 1/((E[N-2]-E[N-3])**2*(E[N-3]-E[N-4])**2) + 2/((E[N-2]-E[N-3])**2*(E[N-1]-E[N-3])**2) )
+		+ mu[N-2, :] * (-1 / ((E[N-2]-E[N-3])**2*(E[N-3]-E[N-4])*(E[N-2]-E[N-4])) + -2/((E[N-1]-E[N-2])*(E[N-2]-E[N-3])**2*(E[N-1]-E[N-3])) )
+		+ mu[N-1,:] * 2 / ((E[N-1]-E[N-2])*(E[N-2]-E[N-3])*(E[N-1]-E[N-3])**2) ) )
+    elif n == (N - 2):
+      dJSmoothdMu[n, :] = (8 * ( mu[N-4,:] * 1 / ((E[N-2]-E[N-3])*(E[N-3]-E[N-4])*(E[N-2]-E[N-4])**2)
+      		+ mu[N-3,:] * ( -1 / ((E[N-2]-E[N-3])**2*(E[N-3]-E[N-4])*(E[N-2]-E[N-4])) + -2/((E[N-1]-E[N-2])*(E[N-2]-E[N-3])**2*(E[N-1]-E[N-3])) )
+		+ mu[N-2,:] * ( 1/((E[N-2]-E[N-3])**2*(E[N-2]-E[N-4])**2) + 2/((E[N-1]-E[N-2])**2*(E[N-2]-E[N-3])**2) )
+		+ mu[N-1,:] * -2 / ((E[N-1]-E[N-2])**2*(E[N-2]-E[N-3])*(E[N-1]-E[N-3])) ) )
+    elif n == (N - 1):
+      dJSmoothdMu[n, :] = (16 * ( mu[N-3,:] / ((E[N-1]-E[N-2])*(E[N-2]-E[N-3])*(E[N-1]-E[N-3])**2)
+      		- mu[N-2,:] / ((E[N-1]-E[N-2])**2*(E[N-2]-E[N-3])*(E[N-1]-E[N-3]))
+		+ mu[N-1,:] / ((E[N-1]-E[N-2])**2*(E[N-1]-E[N-3])**2) ) )
     else:
-      if verbose: print("No matching NNMA routine found for ", algoName)
+      dJSmoothdMu[n, :] = (8 * ( mu[n-2,:] / ((E[n]-E[n-1])*(E[n-1]-E[n-2])*(E[n]-E[n-2])**2) 
+      		+ mu[n-1,:] * ( -1/((E[n+1]-E[n])*(E[n]-E[n-1])**2*(E[n+1]-E[n-1])) + -1/((E[n]-E[n-1])**2*(E[n-1]-E[n-2])*(E[n]-E[n-2])) ) 
+      		+ mu[n,:] * ( 1/((E[n+1]-E[n])**2*(E[n]-E[n-1])**2) + 1/((E[n]-E[n-1])**2*(E[n]-E[n-2])**2) + 1/((E[n+1]-E[n])**2*(E[n+2]-E[n])**2) ) 
+      		+ mu[n+1,:] * ( -1/((E[n+1]-E[n])**2*(E[n]-E[n-1])*(E[n+1]-E[n-1])) + -1/((E[n+2]-E[n+1])*(E[n+1]-E[n])**2*(E[n+2]-E[n])) ) 
+      		+ mu[n+2,:] / ((E[n+2]-E[n+1])*(E[n+1]-E[n])*(E[n+2]-E[n])**2) ) )
 
-    if verbose: print("End of findRoutine()")
+  print("dJSmoothdMu = ", dJSmoothdMu)
+  return dJSmoothdMu
 
-#----------------------------------------------------------------------
-  def printTest(self):
- 
-      print("self.stack.n_ev = ", self.stack.n_ev)
-      print("self.stack.ev = ", self.stack.ev)
-      print("self.stack.n_cols = ", self.stack.n_cols)
-      print("self.stack.n_rows = ", self.stack.n_rows)
 
-      if self.data_struct.spectromicroscopy.normalization.white_spectrum is not None:
-	print("self.stack.i0data = ", self.stack.i0data)
-      else:
-	print("No i0data")
+#########################################################################################################
+# Compute current DRecon and cost function
+DRecon = np.dot(muInit, tInit)
+if lambdaMu > 0.:
+  JSmooth = calc_JSmooth(energies, muInit)
+muDiff = muInit - muCluster
+costFnNew = ( 0.5 * (np.linalg.norm(D - DRecon))**2 + (lambdaMu * JSmooth) + 
+	(lambdaT * np.sum(np.sum(np.abs(tInit)))) + lambdaMuCluster * (np.linalg.norm(muDiff))**2 )
+costFnChange = costFnNew - costFnOld  # should be negative (decreasing cost fn)
+costFnArray[0, 0] = costFnNew
+costFnArray[0, 1] = costFnChange
+costFnArray[0, 2] = 0.5 * (np.linalg.norm(D - DRecon))**2
+costFnArray[0, 3] = lambdaT * np.sum(np.sum(np.abs(tInit)))
+costFnOld = costFnNew
 
-      print("self.stack.absdata.shape = ", self.stack.absdata.shape)
+## Save each iteration of mu for plotting
+#colours = ['b', 'r', 'g', 'k', 'c', 'm', 'y']    # colours for plotting
+#plt.figure(100)
+#for k in range(kNNMA):
+#  plt.clf()
+#  plt.plot(energies, muInit[:, k], color=colours[k], linewidth=5.)
+#  #plt.savefig("mu%s_0.pdf" %k, format='pdf')
+#  plt.savefig("mu%s_0.png" %k, format='png')
 
-#----------------------------------------------------------------------
+# Update mu, t -- regularizing 1-norm of t to penalize non-sparseness, 
+# and regularizing each column of t to sum to 1 (stochasticity)
+startTime = time.time()
+#while ( (count < countMax) and (costFnChange < 0) ):
+while ((count < countMax) and (costFnChange < 1e-3)):
+  count = count + 1
+  print("count = ", count)
+
+  tUpdateFactor = np.dot(mu.T, D) / ( np.dot(mu.T, np.dot(mu, t)) + lambdaT + 1e-9 )
+  tUpdated = t * tUpdateFactor
+
+  if lambdaMu > 0.:
+    dJSmoothdMu = calc_dJSmoothdMu(energies, mu)
+  
+  negDJInd = np.where(dJSmoothdMu < 0)
+  if negDJInd:
+    print("len(negDJInd[0] = ", len(negDJInd[0]))
+    #print("dJSmoothdMu[negDJInd] = ", dJSmoothdMu[negDJInd])
+  
+  # Calculate difference between current mu and muCluster
+  muDiff = mu - muCluster
+  
+  muUpdateFactor = np.dot(D, tUpdated.T) / ( np.dot(mu, np.dot(tUpdated, tUpdated.T)) 
+   			+ lambdaMu * dJSmoothdMu + lambdaMuCluster * 2 * muDiff + 1e-9 )
+  #muUpdateFactor = np.dot(D, tUpdated.T) / (np.dot(mu, np.dot(tUpdated, tUpdated.T)) + 1e-9)
+  muUpdated = mu * muUpdateFactor
+
+  mu = muUpdated
+  t = tUpdated
+  
+  negTInd = np.where(t < 0)
+  if negTInd:
+    print("len(negTInd[0]) = ", len(negTInd[0]))
+    print("t[negTInd] = ", t[negTInd])
+    t[negTInd] = 0.
+  
+  norm = True
+  if norm == True:
+  #  # Normalize each column of t
+  #  tColSum = np.sum(t, axis=0)
+  #  for p in range(nPixels):
+  #    t[:, p] = t[:, p] / tColSum[p]
+    
+    ## Normalize integral under each mu
+    #for k in range(kNNMA):
+    #  muNorm = scipy.integrate.trapz(mu[:, k], x=energies)
+    #  mu[:, k] = mu[:, k] / muNorm
+
+    # Scale integral under each mu to same as cluster spectra
+    for k in range(kNNMA):
+      muNorm = scipy.integrate.trapz(mu[:, k], x=energies)
+      mu[:, k] = (mu[:, k] / muNorm) * muClusterNorm[k]
+    
+    ## Normalize each column of mu
+    #muColSum = np.sum(mu, axis=0)
+    #for k in range(kNNMA):
+    #  mu[:, k] = mu[:, k] / muColSum[k]
+
+
+  ## Initialize scaling matrix
+  #muScaling = np.eye(kNNMA, kNNMA)
+  ##indLow = np.where(energies < 291.99)[0][-1]
+  ##indHigh = np.where(energies < 292.0)[0][-1]
+  #ind = np.where(energies < 292.0)[0][-1]
+  #for k in range(kNNMA):
+  #  #avg = np.mean(mu[indLow:indHigh, k])
+  #  avg = mu[ind, k]
+  #  muScaling[k, k] = 1. / avg
+  ##for k in range(kNNMA):
+  ##  muScaling[k, k] = 1. / refMax
+  #print("muScaling = ", muScaling)
+  #mu = np.dot(mu, muScaling)
+  ## Need to multiply t by inverse(muScaling) to preserve cost function
+  #t = np.dot(np.linalg.inv(muScaling), t)
+
+  DRecon = np.dot(mu, t)
+  negDInd = np.where(DRecon < 0)
+  if negDInd:
+    print("len(negDInd[0]) = ", len(negDInd[0]))
+  
+  if lambdaMu > 0.:
+    JSmooth = calc_JSmooth(energies, mu)
+
+  costFnNew = ( 0.5 * (np.linalg.norm(D - DRecon))**2 + (lambdaMu * JSmooth) 
+  		+ (lambdaT * np.sum(np.sum(np.abs(t))))
+  		+ lambdaMuCluster * (np.linalg.norm(muDiff))**2 )
+  costFnChange = costFnNew - costFnOld
+  print("costFnNew = ", costFnNew)
+  print("costFnChange = ", costFnChange)
+  costFnArray[count, 0] = costFnNew
+  costFnArray[count, 1] = costFnChange
+  costFnArray[count, 2] = 0.5 * (np.linalg.norm(D - DRecon))**2  # only basic cost fn
+  costFnArray[count, 3] = lambdaT * np.sum(np.sum(np.abs(t)))    # only sparse part of cost fn
+  costFnOld = costFnNew
+
+  #if np.mod(count, 50) == 0:
+  #  for k in range(kNNMA):
+  #    plt.clf()
+  #    plt.figure(100)
+  #    plt.plot(energies, mu[:, k], color=colours[k], linewidth=5.)
+  #    plt.savefig("mu%s_%s.png" %(k, count), format='png')
+
+endTime = time.time()
+timeTaken = endTime - startTime
+print("Time taken = ", timeTaken)
+
+# Save cost function to file
+fileName = "costFn_sparse1Norm_k" + str(kNNMA) + "_it" + str(countMax) + ".txt"
+np.savetxt(fileName, costFnArray)
+fileName = "mu.txt"
+np.savetxt(fileName, mu)
+fileName = "t.txt"
+np.savetxt(fileName, t)
+
+# Print out some column norms for t, check to see how close they are to 1
+for i in range(5):
+  tColSum = np.sum(t[:, i])
+  print("t col %s sum = %s" % (i, tColSum))
+for i in range(5):
+  tColSum = np.sum(t[:, -i-1])
+  print("t col %s sum = %s" % (-i-1, tColSum))
+
+for i in range(5):
+  tColSum = np.sum(tInit[:, i])
+  print("tInit col %s sum = %s" % (i, tColSum))
+for i in range(5):
+  tColSum = np.sum(tInit[:, -i-1])
+  print("tInit col %s sum = %s" % (-i-1, tColSum))
+
+# Print out some column norms for mu, check to see how close they are to 1
+for i in range(kNNMA):
+  muNorm = scipy.integrate.trapz(mu[:, i], x=energies)
+  print("mu col %s norm = %s" % (i, muNorm))
+
+for i in range(kNNMA):
+  muNorm = scipy.integrate.trapz(mu[:, i], x=energies)
+  print("muInit col %s norm = %s" % (i, muNorm))
+
+#*************************************************************************************************
+# Plot cost functions, spectra, thickness maps, etc.
+#*************************************************************************************************
+# Plot cost function
+plt.figure(0)
+plt.plot(np.arange(1, countMax+1, 1), costFnArray[1:countMax+1, 0], 'b', linewidth=3.)
+ax = plt.gca()
+plt.setp(ax.get_xticklabels(), fontsize=16, fontweight="bold")
+plt.setp(ax.get_yticklabels(), fontsize=16, fontweight="bold")
+ax.set_xlabel("Iteration number", fontsize=18, fontweight="bold")
+ax.set_ylabel("Cost function", fontsize=18, fontweight="bold")
+plt.savefig("costFn.pdf", format="pdf")
+
+# Plot reconstructed spectra
+colours = ['k', 'r', 'b', 'g', 'c', 'm', 'y', 'k', 'k', 'k']
+for k in range(kNNMA):
+  plt.figure(1 + k)
+  plt.plot(energies, mu[:, k], color=colours[k], linewidth=3.)
+  plt.title(r"$\mu_{%s}$" % str(k + 1), fontsize=18, fontweight="bold")
+  ax = plt.gca()
+  plt.setp(ax.get_xticklabels(), fontsize=16, fontweight="bold")
+  plt.setp(ax.get_yticklabels(), fontsize=16, fontweight="bold")
+  ax.set_xlabel(r"Energy (eV)", fontsize=18, fontweight="bold")
+  ax.set_ylabel(r"Absorption $\mu$ (au)", fontsize=18, fontweight="bold")
+  fileName = "mu" + str(k+1) + ".pdf"
+  plt.savefig(fileName, format="pdf")
+
+## Visualize sparseness of t
+#fig = plt.figure(num=100, figsize=(16, 9))
+#ax = Axes3D(fig)
+#colours = ['r', 'g', 'b', 'y', 'c', 'm', 'k', 'k' 'k', 'k']
+#x = np.arange(kNNMA) + 1
+#P = np.arange(nPixels) + 1
+#ind = np.arange(0, len(P), 1)
+#for i in range(kNNMA):
+#  tComp = t[i, ind]
+#  ax.bar(P[ind], tComp, zs=x[i], zdir='y', color=colours[i], edgecolor=colours[i], alpha=0.8)
+#ax.set_xlabel("P")
+#ax.set_ylabel("k")
+#ax.set_zlabel("t")
+#ax.set_title(r"$\bf{t}$, $\lambda = %s$, iters = $%s$" % (lambdaT, countMax))
+#plt.savefig("tVisual.pdf", format="pdf")
+
+# Plot thickness maps
+t = t.reshape(kNNMA, nCols, nRows)
+for k in range(kNNMA):
+  plt.figure(1 + kNNMA + k)
+  plt.imshow(t[k, :, :], cmap=cm.gray)
+  #plt.colorbar()
+  plt.title(r"$\bf{t_{%s}}$" % str(k + 1), fontsize=18, fontweight="bold")
+  ax = plt.gca()
+  plt.setp(ax.get_xticklabels(), fontsize=16, fontweight="bold")
+  plt.setp(ax.get_yticklabels(), fontsize=16, fontweight="bold")
+  ax.set_xlabel("x", fontsize=18, fontweight="bold")
+  ax.set_ylabel("y", fontsize=18, fontweight="bold")
+  fileName = "t" + str(k+1) + ".pdf"
+  plt.savefig(fileName, format="pdf")
+
+plt.show()
