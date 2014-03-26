@@ -88,6 +88,256 @@ class PageNNMA(QtGui.QWidget):
         self.anlz = anlz
         
         
+        #panel 1
+        sizer1 = QtGui.QGroupBox('NNMA analysis')
+        hbox1 = QtGui.QHBoxLayout()
+        vbox1 = QtGui.QVBoxLayout()
+       
+        vbox1.addStretch(1) 
+        self.button_calcnnma = QtGui.QPushButton('Calculate NNMA')
+        #self.button_calcca.clicked.connect( self.OnCalcClusters)   
+        self.button_calcnnma.setEnabled(False)
+        vbox1.addWidget(self.button_calcnnma)
+        self.button_mucluster = QtGui.QPushButton('Load initial cluster spectra...')
+        #self.button_mucluster.clicked.connect( self.OnShowScatterplots)
+        self.button_mucluster.setEnabled(False)
+        self.button_mufile = QtGui.QPushButton('Load initial standard spectra...')
+        #self.button_mucfile.clicked.connect( self.OnShowScatterplots)
+        self.button_mufile.setEnabled(False)   
+        self.button_murand = QtGui.QPushButton('Load initial random spectra...')
+        #self.button_mucmurand.clicked.connect( self.OnShowScatterplots)
+        self.button_murand.setEnabled(False)          
+        self.button_savecluster = QtGui.QPushButton('Save NNMA Results...')
+        #self.button_savecluster.clicked.connect( self.OnSave)
+        self.button_savecluster.setEnabled(False)
+        vbox1.addWidget(self.button_savecluster)
+        
+        vbox1.addStretch(1)
+        
+        
+        sizer11 = QtGui.QGroupBox('NNMA settings')
+        vbox11 = QtGui.QVBoxLayout()
+                
+        hbox11 = QtGui.QHBoxLayout()
+        text1 = QtGui.QLabel(self)
+        text1.setText('Number of components k')
+        hbox11.addWidget(text1)
+        self.ncompspin = QtGui.QSpinBox()
+        self.ncompspin.setRange(2,20)
+        #self.ncompspin.setValue(self.init_nclusters)
+        #self.ncompspin.valueChanged[int].connect(self.OnNClusterspin)
+        hbox11.addWidget(text1)
+        hbox11.addWidget(self.ncompspin)  
+        
+        vbox11.addLayout(hbox11) 
+        
+        line = QtGui.QFrame()
+        line.setFrameShape(QtGui.QFrame.HLine)
+        line.setFrameShadow(QtGui.QFrame.Sunken) 
+        vbox11.addStretch(1)
+        vbox11.addWidget(line) 
+        vbox11.addStretch(1)    
+        
+        text1 = QtGui.QLabel(self)
+        text1.setText('Regularization parameters')
+        vbox11.addWidget(text1)   
+        
+        hbox15a = QtGui.QHBoxLayout()
+        tc1 = QtGui.QLabel(self)
+        tc1.setText("\tSpectra similarity")  
+        hbox15a.addWidget(tc1)      
+        self.ntc_lamsim = QtGui.QLineEdit(self)
+        self.ntc_lamsim.setFixedWidth(65)
+        self.ntc_lamsim.setValidator(QtGui.QDoubleValidator(0, 99999, 2, self))
+        self.ntc_lamsim.setAlignment(QtCore.Qt.AlignRight)         
+        hbox15a.addStretch(1)
+        #self.ntc_lamsim.setText(str(self.pcscalingfactor))
+        hbox15a.addWidget(self.ntc_lamsim) 
+        
+        vbox11.addLayout(hbox15a) 
+        
+        hbox15b = QtGui.QHBoxLayout()
+        tc1 = QtGui.QLabel(self)
+        tc1.setText("\tSpectra smoothness")  
+        hbox15b.addWidget(tc1)      
+        self.ntc_lamsmooth = QtGui.QLineEdit(self)
+        self.ntc_lamsmooth.setFixedWidth(65)
+        self.ntc_lamsmooth.setValidator(QtGui.QDoubleValidator(0, 99999, 2, self))
+        self.ntc_lamsmooth.setAlignment(QtCore.Qt.AlignRight)         
+        hbox15b.addStretch(1)
+        #self.ntc_lamsmooth.setText(str(self.pcscalingfactor))
+        hbox15b.addWidget(self.ntc_lamsmooth) 
+        
+        vbox11.addLayout(hbox15b) 
+        
+        hbox15c = QtGui.QHBoxLayout()
+        tc1 = QtGui.QLabel(self)
+        tc1.setText("\tSparseness")  
+        hbox15c.addWidget(tc1)      
+        self.ntc_lamspar = QtGui.QLineEdit(self)
+        self.ntc_lamspar.setFixedWidth(65)
+        self.ntc_lamspar.setValidator(QtGui.QDoubleValidator(0, 99999, 2, self))
+        self.ntc_lamspar.setAlignment(QtCore.Qt.AlignRight)         
+        hbox15c.addStretch(1)
+        #self.ntc_lamspar.setText(str(self.pcscalingfactor))
+        hbox15c.addWidget(self.ntc_lamspar) 
+        
+        vbox11.addLayout(hbox15c) 
+        
+        line = QtGui.QFrame()
+        line.setFrameShape(QtGui.QFrame.HLine)
+        line.setFrameShadow(QtGui.QFrame.Sunken) 
+        vbox11.addStretch(1)
+        vbox11.addWidget(line) 
+        vbox11.addStretch(1)           
+         
+        hbox12 = QtGui.QHBoxLayout()
+        text1 = QtGui.QLabel(self)
+        text1.setText('Number of iterations')
+        hbox12.addWidget(text1)
+        self.niterations = QtGui.QSpinBox()
+        self.niterations.setRange(10,1000)
+        #self.niterations.setValue(self.init_nclusters)
+        #self.niterations.valueChanged[int].connect(self.OnNClusterspin)
+        hbox12.addWidget(text1)
+        hbox12.addWidget(self.niterations)  
+  
+        vbox11.addLayout(hbox12) 
+          
+                
+        hbox14a = QtGui.QHBoxLayout()
+        tc1 = QtGui.QLabel(self)
+        tc1.setText("Delta Error Threshold")  
+        hbox14a.addWidget(tc1)      
+        self.ntc_dthresh = QtGui.QLineEdit(self)
+        self.ntc_dthresh.setFixedWidth(65)
+        self.ntc_dthresh.setValidator(QtGui.QDoubleValidator(0, 99999, 2, self))
+        self.ntc_dthresh.setAlignment(QtCore.Qt.AlignRight)         
+        hbox14a.addStretch(1)
+        #self.ntc_dthresh.setText(str(self.pcscalingfactor))
+        hbox14a.addWidget(self.ntc_dthresh) 
+        
+        vbox11.addLayout(hbox14a) 
+        sizer11.setLayout(vbox11)
+
+        line = QtGui.QFrame()
+        line.setFrameShape(QtGui.QFrame.HLine)
+        line.setFrameShadow(QtGui.QFrame.Sunken) 
+        
+
+        vbox1.addStretch(1)
+        vbox1.addWidget(line) 
+        vbox1.addStretch(1)     
+        vbox1.addWidget(self.button_mucluster)
+        vbox1.addWidget(self.button_mufile)
+        vbox1.addWidget(self.button_murand)
+
+        
+        hbox1.addLayout(vbox1)
+        hbox1.addWidget(sizer11)
+        
+        sizer1.setLayout(hbox1)
+       
+       
+        #panel 2       
+        vbox2 = QtGui.QVBoxLayout()
+        
+        self.tc_NNMAcomp = QtGui.QLabel(self)
+        self.tc_NNMAcomp.setText("NNMA thickness map ")
+        vbox2.addWidget(self.tc_NNMAcomp)
+        
+        hbox21 = QtGui.QHBoxLayout()
+
+        frame = QtGui.QFrame()
+        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        fbox = QtGui.QHBoxLayout()
+        self.nnmaimgfig = Figure((PlotH*1.10, PlotH))
+        self.NNMAImagePan = FigureCanvas(self.nnmaimgfig)
+        self.NNMAImagePan.setParent(self) 
+        
+        fbox.addWidget(self.NNMAImagePan)
+        frame.setLayout(fbox)
+        hbox21.addWidget(frame)                        
+            
+        self.slidershow = QtGui.QScrollBar(QtCore.Qt.Vertical)
+        self.slidershow.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.slidershow.setRange(1,20)
+        self.slidershow.setEnabled(False)          
+        #self.slidershow.valueChanged[int].connect(self.OnPCAScroll)
+
+        
+        hbox21.addWidget(self.slidershow)
+
+        vbox2.addLayout(hbox21)
+        
+        
+        #panel 3
+        vbox3 = QtGui.QVBoxLayout()
+    
+        self.text_nnmaspec = QtGui.QLabel(self)
+        self.text_nnmaspec.setText("NNMA spectrum ") 
+        vbox3.addWidget(self.text_nnmaspec)
+                        
+        frame = QtGui.QFrame()
+        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        fbox = QtGui.QHBoxLayout()
+
+        self.nnmaspecfig = Figure((PlotW, PlotH))
+        self.NNMASpecPan = FigureCanvas(self.nnmaspecfig)
+        self.NNMASpecPan.setParent(self)
+       
+        fbox.addWidget(self.NNMASpecPan)
+        frame.setLayout(fbox)
+        vbox3.addWidget(frame)   
+        
+        
+        #panel 4
+        vbox4 = QtGui.QVBoxLayout()  
+         
+        text4 = QtGui.QLabel(self)
+        text4.setText("Cost function")        
+        vbox4.addWidget(text4)
+
+        frame = QtGui.QFrame()
+        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        fbox = QtGui.QHBoxLayout()
+       
+        self.costffig = Figure((PlotW*0.7, PlotH*0.7))
+        self.CostFPan = FigureCanvas(self.costffig)
+        self.CostFPan.setParent(self)
+        #self.CostFPan.mpl_connect('button_press_event', self.OnPointEvalsImage)
+         
+        fbox.addWidget(self.CostFPan)
+        frame.setLayout(fbox)
+        vbox4.addWidget(frame)       
+         
+        
+       
+        vboxtop = QtGui.QVBoxLayout()
+        hboxtopL = QtGui.QHBoxLayout()
+        vboxtopL = QtGui.QVBoxLayout()
+        vboxtopL.addWidget(sizer1)
+        #vboxtopL.addWidget(sizer5)
+        hboxtopL.addLayout(vboxtopL)
+        hboxtopL.addStretch(1)
+        
+        gridsizertop = QtGui.QGridLayout()
+        gridsizertop.setContentsMargins(15,0,0,0)
+
+        
+        gridsizertop.addLayout(hboxtopL, 0, 0, QtCore .Qt. AlignLeft)
+        gridsizertop.addLayout(vbox4, 0, 1, QtCore .Qt. AlignLeft)
+        
+        gridsizertop.addLayout(vbox3, 1, 0, QtCore .Qt. AlignCenter)
+        gridsizertop.addLayout(vbox2, 1, 1, QtCore .Qt. AlignLeft)
+        
+        vboxtop.addStretch(1)
+        vboxtop.addLayout(gridsizertop)
+        vboxtop.addStretch(1)
+        self.setLayout(vboxtop)
+       
+        
+        
 """ ------------------------------------------------------------------------------------------------"""
 class PageXrayPeakFitting(QtGui.QWidget):
     def __init__(self, common, data_struct, stack, anlz):
@@ -10637,6 +10887,7 @@ class MainFrame(QtGui.QMainWindow):
 """ ------------------------------------------------------------------------------------------------"""
                         
 def main():
+    
     
     app = QtGui.QApplication(sys.argv)
     frame = MainFrame()

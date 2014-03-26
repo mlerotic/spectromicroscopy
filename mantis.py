@@ -26,7 +26,7 @@ from mpl_toolkits.axes_grid import make_axes_locatable
 import data_struct
 import data_stack
 import analyze
-import nnma
+#import nnma
 import henke
 
 PlotH = 4.0
@@ -781,7 +781,7 @@ def main():
     run_cl = 0
     arguments = sys.argv[1:]
     try:
-        options, extraParams = getopt.getopt(arguments, '', ['wx', 'batch', 'nnma', 'ica', 'keyeng'])
+        options, extraParams = getopt.getopt(arguments, '', ['wx', 'batch', 'nnma'])
     except:
         print 'Error - wrong command line option used. Available options are --wx, --batch and --nnma'
         return
@@ -792,7 +792,7 @@ def main():
             run_wx = 1
         if opt in '--batch':
             run_qt = 0
-            run_cl = 1         
+            run_cl = 1   
                
             
     if run_qt == 1:
