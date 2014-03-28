@@ -122,11 +122,11 @@ class PageNNMA(QtGui.QWidget):
         text1 = QtGui.QLabel(self)
         text1.setText('Number of components k')
         hbox11.addWidget(text1)
+        hbox11.addStretch(1)
         self.ncompspin = QtGui.QSpinBox()
         self.ncompspin.setRange(2,20)
         #self.ncompspin.setValue(self.init_nclusters)
         #self.ncompspin.valueChanged[int].connect(self.OnNClusterspin)
-        hbox11.addWidget(text1)
         hbox11.addWidget(self.ncompspin)  
         
         vbox11.addLayout(hbox11) 
@@ -195,12 +195,12 @@ class PageNNMA(QtGui.QWidget):
         text1 = QtGui.QLabel(self)
         text1.setText('Number of iterations')
         hbox12.addWidget(text1)
-        self.niterations = QtGui.QSpinBox()
-        self.niterations.setRange(10,1000)
-        #self.niterations.setValue(self.init_nclusters)
-        #self.niterations.valueChanged[int].connect(self.OnNClusterspin)
-        hbox12.addWidget(text1)
-        hbox12.addWidget(self.niterations)  
+        hbox12.addStretch(1)
+        self.ntc_niterations = QtGui.QLineEdit(self)
+        self.ntc_niterations.setFixedWidth(65)
+        self.ntc_niterations.setValidator(QtGui.QDoubleValidator(0, 99999, 2, self))
+        self.ntc_niterations.setAlignment(QtCore.Qt.AlignRight)   
+        hbox12.addWidget(self.ntc_niterations)  
   
         vbox11.addLayout(hbox12) 
           
@@ -310,6 +310,55 @@ class PageNNMA(QtGui.QWidget):
         fbox.addWidget(self.CostFPan)
         frame.setLayout(fbox)
         vbox4.addWidget(frame)       
+        
+
+        #panel 5
+        sizer5 = QtGui.QGroupBox('Display')
+        vbox5 = QtGui.QVBoxLayout()         
+         
+        hbox51 = QtGui.QHBoxLayout()
+        self.cb_inputsp = QtGui.QCheckBox('Overlay input spectra', self)
+        #self.cb_inputsp.stateChanged.connect(self.OnShowallspectra)
+        hbox51.addWidget(self.cb_inputsp)
+        vbox5.addLayout(hbox51)         
+        
+        hbox52 = QtGui.QHBoxLayout()
+        self.cb_showallsp = QtGui.QCheckBox('Show all spectra', self)
+        #self.cb_showallsp.stateChanged.connect(self.OnShowallspectra)
+        hbox52.addWidget(self.cb_showallsp)
+        vbox5.addLayout(hbox52)        
+        
+        line = QtGui.QFrame()
+        line.setFrameShape(QtGui.QFrame.HLine)
+        line.setFrameShadow(QtGui.QFrame.Sunken) 
+        
+        vbox5.addWidget(line)     
+        
+        hbox52 = QtGui.QHBoxLayout()
+        self.cb_totalcost = QtGui.QCheckBox('Total cost', self)
+        #self.cb_totalcost.stateChanged.connect(self.OnShowallspectra)
+        hbox52.addWidget(self.cb_totalcost)
+        vbox5.addLayout(hbox52)  
+        
+        hbox53 = QtGui.QHBoxLayout()
+        self.cb_simlcost = QtGui.QCheckBox('Similarity cost', self)
+        #self.cb_simlcost.stateChanged.connect(self.OnShowallspectra)
+        hbox53.addWidget(self.cb_simlcost)
+        vbox5.addLayout(hbox53)  
+        
+        hbox54 = QtGui.QHBoxLayout()
+        self.cb_smoothcost = QtGui.QCheckBox('Smoothness cost', self)
+        #self.cb_smoothcost.stateChanged.connect(self.OnShowallspectra)
+        hbox54.addWidget(self.cb_smoothcost)
+        vbox5.addLayout(hbox54)  
+
+        hbox54 = QtGui.QHBoxLayout()
+        self.cb_sparcost = QtGui.QCheckBox('Sparsness cost', self)
+        #self.cb_sparcost.stateChanged.connect(self.OnShowallspectra)
+        hbox54.addWidget(self.cb_sparcost)
+        vbox5.addLayout(hbox54)  
+        
+        sizer5.setLayout(vbox5)
          
         
        
@@ -317,8 +366,8 @@ class PageNNMA(QtGui.QWidget):
         hboxtopL = QtGui.QHBoxLayout()
         vboxtopL = QtGui.QVBoxLayout()
         vboxtopL.addWidget(sizer1)
-        #vboxtopL.addWidget(sizer5)
         hboxtopL.addLayout(vboxtopL)
+        hboxtopL.addWidget(sizer5)
         hboxtopL.addStretch(1)
         
         gridsizertop = QtGui.QGridLayout()
