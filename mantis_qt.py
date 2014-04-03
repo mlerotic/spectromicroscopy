@@ -39,7 +39,7 @@ matplotlib.rcParams['svg.fonttype'] = 'none'
 import data_struct
 import data_stack
 import analyze
-#import nnma
+import nnma
 import henke
 
 
@@ -73,19 +73,20 @@ class common:
 
 """ ------------------------------------------------------------------------------------------------"""
 class PageNNMA(QtGui.QWidget):
-    def __init__(self, common, data_struct, stack, anlz):
+    def __init__(self, common, data_struct, stack, anlz, nnma):
         super(PageNNMA, self).__init__()
 
-        self.initUI(common, data_struct, stack, anlz)
+        self.initUI(common, data_struct, stack, anlz, nnma)
         
 #----------------------------------------------------------------------          
-    def initUI(self, common, data_struct, stack, anlz): 
+    def initUI(self, common, data_struct, stack, anlz, nnma): 
         
         
         self.com = common 
         self.data_struct = data_struct
         self.stk = stack       
         self.anlz = anlz
+        self.nnma = nnma
         
         
         #panel 1
@@ -95,8 +96,8 @@ class PageNNMA(QtGui.QWidget):
        
         vbox1.addStretch(1) 
         self.button_calcnnma = QtGui.QPushButton('Calculate NNMA')
-        #self.button_calcca.clicked.connect( self.OnCalcClusters)   
-        self.button_calcnnma.setEnabled(False)
+        self.button_calcnnma.clicked.connect( self.OnCalcNNMA)   
+        self.button_calcnnma.setEnabled(True)
         vbox1.addWidget(self.button_calcnnma)
         self.button_mucluster = QtGui.QPushButton('Load initial cluster spectra...')
         #self.button_mucluster.clicked.connect( self.OnShowScatterplots)
@@ -385,7 +386,9 @@ class PageNNMA(QtGui.QWidget):
         vboxtop.addStretch(1)
         self.setLayout(vboxtop)
        
-        
+#----------------------------------------------------------------------          
+    def OnCalcNNMA(self, event):
+      self.nnma.calcNNMA() 
         
 """ ------------------------------------------------------------------------------------------------"""
 class PageXrayPeakFitting(QtGui.QWidget):
@@ -10329,7 +10332,7 @@ class MainFrame(QtGui.QMainWindow):
         self.data_struct = data_struct.h5()
         self.stk = data_stack.data(self.data_struct)
         self.anlz = analyze.analyze(self.stk)
-        #self.nnma = nnma.nnma(self.stk, self.data_struct, self.anlz)
+        self.nnma = nnma.nnma(self.stk)
         self.common = common()
                
 
@@ -10384,7 +10387,7 @@ class MainFrame(QtGui.QMainWindow):
         for opt, arg in options:        
             if opt in '--nnma':
                 if verbose: print "Running with NNMA."
-                self.page7 = PageNNMA(self.common, self.data_struct, self.stk, self.anlz)
+                self.page7 = PageNNMA(self.common, self.data_struct, self.stk, self.anlz, self.nnma)
                 tabs.addTab(self.page7, "NNMA Analysis")
 
             
