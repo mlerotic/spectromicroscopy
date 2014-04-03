@@ -437,7 +437,7 @@ class h5:
         
         if verbose == 1: 
             print  'filename ', filename
-            print 'File creation date ', data_struct.file_creation_datetime
+            #print 'File creation date ', data_struct.file_creation_datetime
             print 'Data array shape: ', self.absdata.shape
             print 'n columns ', self.n_cols
             print 'n_rows ', self.n_rows
@@ -445,7 +445,7 @@ class h5:
             print 'ev array ', self.ev
             print 'x dist ', self.x_dist
             print 'y_dist ', self.y_dist
-            print 'type ', type 
+            #print 'type ', type 
             #print 'i0 data ', self.i0data
             #print 'evi0 ', self.evi0
         
