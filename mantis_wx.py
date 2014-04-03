@@ -19,9 +19,11 @@
 from __future__ import division
 import wx
 import wx.lib.intctrl
+import wx.lib.masked.numctrl
 import matplotlib as mtplot 
 mtplot.interactive( True )
 mtplot.use( 'WXAgg', warn=False )
+mtplot.rcParams['svg.fonttype'] = 'none'
 
 import wxmpl
 import numpy as npy
@@ -36,16 +38,20 @@ import data_stack
 import analyze
 import logos
 import nnma
-
+import henke
 
 
 Winsizex = 1000
 Winsizey = 740
 
+ImgDpi = 40
+
 PlotH = 3.46
 PlotW = PlotH*1.61803
 
+verbose = False
 
+defaultDir = ''
 
 #----------------------------------------------------------------------
 class common:
@@ -57,12 +63,678 @@ class common:
         self.pca_calculated = 0
         self.cluster_calculated = 0
         self.spec_anl_calculated = 0
+        self.ica_calculated = 0
         
         self.path = ''
         self.filename = ''
 
         self.font = wx.SystemSettings_GetFont(wx.SYS_DEFAULT_GUI_FONT)
 
+
+""" ------------------------------------------------------------------------------------------------"""
+class PageKeyEng(wx.Panel):
+    def __init__(self, parent, common, data_struct, stack, anlz):
+        wx.Panel.__init__(self, parent)
+        
+        self.SetBackgroundColour("White")
+        
+        self.com = common 
+        self.data_struct = data_struct
+        self.stk = stack       
+        self.anlz = anlz
+        
+        self.selica = 1       
+        self.numica = 2
+        
+        
+        pw = PlotW*0.8
+        ph = PlotH*0.8
+        
+          
+        self.fontsize = self.com.fontsize
+        
+        self.i_eng = 0
+        self.keyengs_calculated = 0
+       
+
+          
+        #panel 1        
+        panel1 = wx.Panel(self, -1)
+        vbox1 = wx.BoxSizer(wx.VERTICAL)
+        
+        self.tc_1 = wx.TextCtrl(panel1, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.tc_1.SetFont(self.com.font)
+        self.tc_1.SetValue("Average Optical Density")        
+   
+        i1panel = wx.Panel(panel1, -1, style = wx.SUNKEN_BORDER)
+        self.KESpecPan = wxmpl.PlotPanel(i1panel, -1, size =(pw, ph), cursor=False, crosshairs=False, location=False, zoom=False)
+        wxmpl.EVT_POINT(i1panel, self.KESpecPan.GetId(), self.OnPointSpectrum)
+        
+        vbox1.Add(self.tc_1, 1, wx.EXPAND )        
+        vbox1.Add(i1panel, 0)
+
+        panel1.SetSizer(vbox1)
+        
+        
+                
+        #panel 2
+        panel2 = wx.Panel(self, -1)
+        vbox2 = wx.BoxSizer(wx.VERTICAL)
+                
+        sizer1 = wx.StaticBoxSizer(wx.StaticBox(panel2, -1, 'Key Energies Analysis'), wx.VERTICAL)
+        self.button_calckeng = wx.Button(panel2, -1, 'Find Key Energies', (90, 10))
+        self.button_calckeng.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.OnCalcKeyEng, id=self.button_calckeng.GetId())     
+        self.button_calckeng.Disable()   
+        sizer1.Add(self.button_calckeng, 0, wx.EXPAND|wx.LEFT|wx.RIGHT, 5)
+        self.button_save = wx.Button(panel2, -1, 'Save Results...', (90, 10))
+        self.button_save.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.OnSave, id=self.button_save.GetId())
+        self.button_save.Disable()
+        
+        
+        hbox21 = wx.BoxSizer(wx.HORIZONTAL)
+        text1 = wx.StaticText(panel2, label="Threshold")
+        self.tc_keyengthresh = wx.lib.masked.numctrl.NumCtrl(panel2, -1, 
+                                              value = float(0.1),  
+                                              integerWidth = 5,
+                                              fractionWidth = 2, min = 0, max = 5,
+                                              limited = False)
+
+        hbox21.Add(text1, 0, wx.TOP, 20)
+        hbox21.Add((10,0))
+        hbox21.Add(self.tc_keyengthresh, 0, wx.TOP, 15)            
+        sizer1.Add(hbox21, 0, wx.EXPAND|wx.LEFT|wx.RIGHT, 5)    
+              
+        sizer1.Add((0,10))        
+        sizer1.Add(wx.StaticLine(panel2), 0, wx.ALL|wx.EXPAND, 5)        
+        sizer1.Add((0,10))  
+        
+        sizer1.Add(self.button_save, 0, wx.EXPAND|wx.LEFT|wx.RIGHT, 5)        
+        
+        vbox2.Add(sizer1,0)
+
+        panel2.SetSizer(vbox2)
+
+
+        #panel 3
+        panel3 = wx.Panel(self, -1)
+        vbox3 = wx.BoxSizer(wx.VERTICAL)
+   
+        t1 = wx.StaticText(panel3, label="Key Energies")
+
+        
+        
+        self.lc_1 = wx.ListCtrl(panel3, -1, size = (200, 390), style = wx.LC_REPORT|wx.LC_NO_HEADER)
+        self.lc_1.InsertColumn(0, 'KEng')
+        self.lc_1.SetColumnWidth(0, 160)  
+        
+        vbox3.Add(t1, 0)
+        vbox3.Add(self.lc_1, 0,  wx.EXPAND)
+        panel3.SetSizer(vbox3)
+            
+        self.Bind(wx.EVT_LIST_ITEM_SELECTED , self.OnEngListClick, self.lc_1)   
+        
+        #panel 4     
+        panel4 = wx.Panel(self, -1)
+        vbox4 = wx.BoxSizer(wx.VERTICAL)
+        
+        self.tc_imageeng = wx.TextCtrl(panel4, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE, size=(160,-1))
+        self.tc_imageeng.SetFont(self.com.font)
+        self.tc_imageeng.SetValue("Image at key energy: ")
+        
+        hbox41 = wx.BoxSizer(wx.HORIZONTAL)
+   
+        i1panel = wx.Panel(panel4, -1, style = wx.SUNKEN_BORDER)
+        self.AbsImagePanel = wxmpl.PlotPanel(i1panel, -1, size =(PlotH*.8, PlotH*.8), cursor=False, crosshairs=False, location=False, zoom=False)
+        
+        vbox41 = wx.BoxSizer(wx.VERTICAL)
+        self.slider_eng = wx.Slider(panel4, -1, self.i_eng, 0, 100, style=wx.SL_LEFT|wx.SL_VERTICAL)        
+        self.slider_eng.SetFocus()
+        self.Bind(wx.EVT_SCROLL, self.OnScrollEng, self.slider_eng)
+
+        self.engspin = wx.SpinButton(panel4, -1, size = ((8,-1)), style=wx.SP_ARROW_KEYS)
+        self.Bind(wx.EVT_SPIN_UP, self.OnEngspinUp, self.engspin)
+        self.Bind(wx.EVT_SPIN_DOWN, self.OnEngspinDown, self.engspin)
+        
+
+        hbox41.Add(i1panel, 0)
+        vbox41.Add((0,3))
+        vbox41.Add(self.slider_eng, 1,  wx.EXPAND) 
+        vbox41.Add(self.engspin, 0,  wx.EXPAND)         
+        hbox41.Add(vbox41, 0,  wx.EXPAND) 
+        
+        vbox4.Add(self.tc_imageeng, 0)        
+        vbox4.Add(hbox41, 0)
+
+        panel4.SetSizer(vbox4)
+        
+
+        vboxtop1 = wx.BoxSizer(wx.VERTICAL)
+                     
+        vboxtop1.Add((0,40))
+        vboxtop1.Add(panel2, 0, wx.LEFT, 40)
+        vboxtop1.Add((0,40))
+        vboxtop1.Add(panel3, 0, wx.LEFT, 40)
+         
+        vboxtop2 = wx.BoxSizer(wx.VERTICAL)          
+        vboxtop2.Add((0,20))
+        vboxtop2.Add(panel1, 0, wx.LEFT, 40)
+        vboxtop2.Add((0,20))
+        vboxtop2.Add(panel4, 0, wx.LEFT, 40)
+                
+        hboxtop = wx.BoxSizer(wx.HORIZONTAL)        
+        hboxtop.Add(vboxtop1)
+        hboxtop.Add((20,0))
+        hboxtop.Add(vboxtop2)
+        
+        
+        self.SetSizer(hboxtop) 
+        
+        
+#----------------------------------------------------------------------
+    def OnCalcKeyEng(self, event):
+        
+
+        wx.BeginBusyCursor()
+        
+        threshold = self.tc_keyengthresh.GetValue()
+  
+        self.keyenergies = []
+        
+        self.keyenergies = self.anlz.calc_key_engs(threshold)
+        
+        if len(self.keyenergies) > 0:        
+            self.keyengs_calculated = 1
+        
+            self.i_eng = 0
+            self.slider_eng.SetRange(0,len(self.keyenergies)-1)
+            self.slider_eng.SetValue(self.i_eng)
+
+            self.ShowPlots()
+            self.ShowImage()
+            self.ShowKEngs()
+            
+            self.button_save.Enable()
+            
+        else:
+            self.ShowPlots()
+            fig = self.AbsImagePanel.get_figure()
+            fig.clf()
+            self.AbsImagePanel.draw()               
+            self.lc_1.DeleteAllItems()
+            
+            self.button_save.Disable()
+            
+        wx.EndBusyCursor() 
+
+        
+#----------------------------------------------------------------------            
+    def OnScrollEng(self, event):
+        self.i_eng = event.GetInt()
+
+        if self.keyengs_calculated == 1:
+            self.ShowImage()
+            self.ShowKEngs()
+            
+#----------------------------------------------------------------------            
+    def OnEngspinUp(self, event):
+        if (self.keyengs_calculated == 1) and (self.i_eng > 0):
+            self.i_eng = self.i_eng - 1
+            self.slider_eng.SetValue(self.i_eng)
+
+            self.ShowImage()
+            self.ShowKEngs()
+
+            
+#----------------------------------------------------------------------            
+    def OnEngspinDown(self, event):
+        if (self.keyengs_calculated == 1) and (self.i_eng < len(self.keyenergies)-1):
+            self.i_eng = self.i_eng + 1
+            self.slider_eng.SetValue(self.i_eng)
+
+            self.ShowImage()
+            self.ShowKEngs()
+
+#----------------------------------------------------------------------  
+    def OnPointSpectrum(self, evt):
+        x = evt.xdata
+        y = evt.ydata
+        
+        if (self.keyengs_calculated == 1):      
+            if x < self.stk.ev[0]:
+                sel_ev = 0
+            elif x > self.stk.ev[self.stk.n_ev-1]:
+                sel_ev = self.stk.n_ev-1
+            else:
+                indx = npy.abs(self.stk.ev - x).argmin()
+                sel_ev = indx
+                
+            
+            self.i_eng=(npy.abs(self.keyenergies-self.stk.ev[sel_ev])).argmin()                 
+
+            self.ShowImage()
+            self.ShowKEngs()
+            
+            self.slider_eng.SetValue(self.i_eng)
+                              
+#----------------------------------------------------------------------     
+    def ShowPlots(self):
+
+
+        odtotal = self.stk.od3d.sum(axis=0)   
+        odtotal = odtotal.sum(axis=0)/(self.stk.n_rows*self.stk.n_cols)      
+        odtotal /= odtotal.max()/0.7
+
+        
+        fig = self.KESpecPan.get_figure()
+        fig.clf()
+        fig.add_axes((0.15,0.15,0.75,0.75))
+        axes = fig.gca()
+        
+        mtplot.rcParams['font.size'] = self.fontsize
+        
+        specplot = axes.plot(self.stk.ev,odtotal)
+#        for i in range(self.anlz.numsigpca):
+#            pcaspectrum = self.anlz.eigenvecs[:,i]
+#            specplot = axes.plot(self.stk.ev,pcaspectrum)
+
+
+        for i in range(len(self.keyenergies)):
+            axes.axvline(x=self.keyenergies[i], color = 'g', alpha=0.5)
+                        
+        axes.set_xlabel('Photon Energy [eV]')
+        axes.set_ylabel('Optical Density')
+        
+        self.KESpecPan.draw()
+
+#----------------------------------------------------------------------        
+    def OnEngListClick(self, event):
+        
+                
+        self.i_eng = event.m_itemIndex
+        
+        event.Skip()
+        
+        self.ShowKEngs()     
+        self.ShowImage()
+         
+#----------------------------------------------------------------------           
+    def ShowKEngs(self):    
+        
+        self.lc_1.DeleteAllItems()
+        
+        for i in range(len(self.keyenergies)):
+            self.lc_1.InsertStringItem(i,'{0:08.2f}'.format(self.keyenergies[i]))
+            
+        self.lc_1.SetItemBackgroundColour(self.i_eng, 'light blue')
+
+#----------------------------------------------------------------------        
+    def ShowImage(self):
+        
+        iev=(npy.abs(self.stk.ev-self.keyenergies[self.i_eng])).argmin() 
+        image = self.stk.absdata[:,:,int(iev)].copy() 
+
+        fig = self.AbsImagePanel.get_figure()
+        fig.clf()
+        fig.add_axes((0.02,0.02,0.96,0.96))
+        axes = fig.gca()
+        fig.patch.set_alpha(1.0)
+        
+        im = axes.imshow(image, cmap=mtplot.cm.get_cmap("gray")) 
+        
+        #Show Scale Bar
+        startx = int(self.stk.n_rows*0.05)
+        starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
+        um_string = ' $\mathrm{\mu m}$'
+        microns = '$'+self.stk.scale_bar_string+' $'+um_string
+        axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center',
+                  color = 'black', fontsize=14)
+        #Matplotlib has flipped scales so I'm using rows instead of cols!
+        p = mtplot.patches.Rectangle((startx,starty), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
+                               color = 'black', fill = True)
+        axes.add_patch(p)
+            
+       
+        axes.axis("off")      
+        self.AbsImagePanel.draw()
+        
+        self.tc_imageeng.SetValue('Image at key energy: {0:5.2f} eV'.format(float(self.stk.ev[iev])))
+ 
+#----------------------------------------------------------------------
+    def OnSave(self, event):
+
+
+        #Save images
+                       
+        fileName = wx.FileSelector('Save OD Plot with Key Energies', default_extension='png', 
+                                   wildcard=('Portable Network Graphics (*.png)|*.png|' 
+                                             + 'Adobe PDF Files (*.pdf)|*.pdf|All files (*.*)|*.*'), 
+                                              parent=self, flags=wx.SAVE|wx.OVERWRITE_PROMPT) 
+   
+        if not fileName: 
+            return 
+
+        path, ext = os.path.splitext(fileName) 
+        ext = ext[1:].lower() 
+       
+        if ext != 'png' and ext != 'pdf': 
+            error_message = ( 
+                  'Only the PNG and PDF image formats are supported.\n' 
+                 'A file extension of `png\' or `pdf\' must be used.') 
+            wx.MessageBox(error_message, 'Error - Could not save file.', 
+                  parent=self, style=wx.OK|wx.ICON_ERROR) 
+            return 
+   
+        try: 
+
+            mtplot.rcParams['pdf.fonttype'] = 42
+            
+            fig = self.KESpecPan.get_figure()
+            fig.savefig(fileName)
+
+            
+        except IOError, e:
+            if e.strerror:
+                err = e.strerror 
+            else: 
+                err = e 
+   
+            wx.MessageBox('Could not save file: %s' % err, 'Error', 
+                          parent=self, style=wx.OK|wx.ICON_ERROR) 
+            
+            
+        #Save text file with list of energies
+        textfilepath = path+'_keyenergies.csv'
+        file = open(textfilepath, 'w')
+        print>>file, '*********************  Key Energies  ********************'
+        for i in range(len(self.keyenergies)):
+            print>>file, '%.6f' %(self.keyenergies[i])
+        
+        file.close()        
+            
+        return
+          
+ 
+""" ------------------------------------------------------------------------------------------------"""
+class PageICA(wx.Panel):
+    def __init__(self, parent, common, data_struct, stack, anlz):
+        wx.Panel.__init__(self, parent)
+        
+        self.SetBackgroundColour("White")
+        
+        self.com = common 
+        self.data_struct = data_struct
+        self.stk = stack       
+        self.anlz = anlz
+        
+        self.selica = 1       
+        self.numica = 2
+        
+        
+        pw = PlotW*0.97
+        ph = PlotH*0.97
+        
+          
+        self.fontsize = self.com.fontsize
+        
+
+          
+        #panel 1        
+        panel1 = wx.Panel(self, -1)
+        vbox1 = wx.BoxSizer(wx.VERTICAL)
+        
+        self.tc_ICAsp = wx.TextCtrl(panel1, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.tc_ICAsp.SetFont(self.com.font)
+        self.tc_ICAsp.SetValue("ICA spectrum ")
+        
+        hbox11 = wx.BoxSizer(wx.HORIZONTAL)
+   
+        i1panel = wx.Panel(panel1, -1, style = wx.SUNKEN_BORDER)
+        self.ICASpecPan = wxmpl.PlotPanel(i1panel, -1, size =(pw, ph), cursor=False, crosshairs=False, location=False, zoom=False)
+               
+        vbox11 = wx.BoxSizer(wx.VERTICAL)               
+        self.slidershow = wx.Slider(panel1, -1, self.selica, 1, 20, style=wx.SL_LEFT|wx.SL_VERTICAL)
+        #self.slidershow.Disable()          
+        self.slidershow.SetFocus()
+        self.Bind(wx.EVT_SCROLL, self.OnICAScroll, self.slidershow)
+        
+
+        self.icaspin = wx.SpinButton(panel1, -1, size = ((8,-1)), style=wx.SP_ARROW_KEYS)
+        self.Bind(wx.EVT_SPIN_UP, self.OnICASpinUp, self.icaspin)
+        self.Bind(wx.EVT_SPIN_DOWN, self.OnICASpinDown, self.icaspin)
+        
+        hbox11.Add(i1panel, 0)
+        vbox11.Add((0,3))
+        vbox11.Add(self.slidershow, 1,  wx.EXPAND) 
+        vbox11.Add(self.icaspin, 0,  wx.EXPAND)         
+        hbox11.Add(vbox11, 0,  wx.EXPAND) 
+
+        
+        vbox1.Add(self.tc_ICAsp, 1, wx.EXPAND )        
+        vbox1.Add(hbox11, 0)
+
+        panel1.SetSizer(vbox1)
+        
+        
+                
+        #panel 2
+        panel2 = wx.Panel(self, -1)
+        vbox2 = wx.BoxSizer(wx.VERTICAL)
+                
+        sizer1 = wx.StaticBoxSizer(wx.StaticBox(panel2, -1, 'Independent Component Analysis'), wx.VERTICAL)
+        self.button_calcica = wx.Button(panel2, -1, 'Calculate ICA', (80, 10))
+        self.button_calcica.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.OnCalcICA, id=self.button_calcica.GetId())     
+        #self.button_calcica.Disable()   
+        sizer1.Add(self.button_calcica, 0, wx.EXPAND|wx.LEFT|wx.RIGHT, 20)
+        self.button_saveica = wx.Button(panel2, -1, 'Save ICA Results...', (80, 10))
+        self.button_saveica.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.OnSave, id=self.button_saveica.GetId())
+        self.button_saveica.Disable()
+        sizer1.Add(self.button_saveica, 0, wx.EXPAND|wx.LEFT|wx.RIGHT, 20)
+        
+#        hbox21 = wx.BoxSizer(wx.HORIZONTAL)
+#        text1 = wx.StaticText(panel2, -1, 'Number of independent components',  style=wx.ALIGN_LEFT)
+#        text1.SetFont(self.com.font)
+#        self.nicaspin = wx.SpinCtrl(panel2, -1, '',  size= (60, -1), style=wx.ALIGN_LEFT)
+#        self.nicaspin.SetRange(1,20)
+#        #self.Bind(wx.EVT_SPINCTRL, self.OnNPCAspin, self.nicaspin)
+#        hbox21.Add(text1, 0, wx.TOP, 20)
+#        hbox21.Add((10,0))
+#        hbox21.Add(self.nicaspin, 0, wx.TOP, 15)            
+#        sizer1.Add(hbox21, 0, wx.EXPAND)    
+              
+        
+        vbox2.Add(sizer1,0)
+
+        panel2.SetSizer(vbox2)
+
+      
+        
+#        #panel 4
+#        panel4 = wx.Panel(self, -1)
+#             
+#        i4panel = wx.Panel(panel4, -1, style = wx.SUNKEN_BORDER)
+#        self.ICAEvalsPan = wxmpl.PlotPanel(i4panel, -1, size =(pw, ph*0.75), cursor=False, crosshairs=False, location=False, zoom=False)
+#        #wxmpl.EVT_POINT(i4panel, self.ICAEvalsPan.GetId(), self.OnPointEvalsImage)   
+#        
+#        vbox4 = wx.BoxSizer(wx.VERTICAL)
+#        text4 = wx.TextCtrl(panel4, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+#        text4.SetFont(self.com.font)
+#        text4.SetValue("ICA eigenvalues ??")        
+#        vbox4.Add(text4, 0)
+#        vbox4.Add(i4panel, 0)
+#        
+#        panel4.SetSizer(vbox4)      
+        
+
+        vboxtop = wx.BoxSizer(wx.VERTICAL)
+        
+#        gridtop = wx.FlexGridSizer(1, 2, vgap=10, hgap=20)
+#        gridtop.Add(panel2, 0, wx.LEFT|wx.TOP, 20)
+#        gridtop.Add(panel4, 0, wx.ALIGN_LEFT)
+              
+        vboxtop.Add((0,40))
+        vboxtop.Add(panel2, 0, wx.LEFT, 40)
+        vboxtop.Add((0,40))
+        vboxtop.Add(panel1, 0, wx.LEFT, 40)
+         
+        
+        self.SetSizer(vboxtop) 
+        
+        
+#----------------------------------------------------------------------
+    def OnCalcICA(self, event):
+        
+        #self.anlz.calculate_fastica(self.stk.od, 4)
+        
+        try:
+            import mdp
+        except:
+            print 'ERROR: Could not find MDP library.'
+            return
+            
+        if self.com.cluster_calculated == 0:
+            print 'ERROR: Calculate cluster spectra before ICA.'
+            return
+
+        wx.BeginBusyCursor()
+        self.calcica = 0   
+        self.selpca = 1   
+        self.slidershow.SetValue(self.selpca)
+ 
+        #Use cluster spectra
+        X = self.anlz.clusterspectra.T
+        
+        scrollmax = npy.min([self.anlz.clusterspectra.shape[0], 20])
+        self.slidershow.SetMax(scrollmax)        
+        
+        try:
+
+            #ica = mdp.nodes.FastICANode( verbose=True)
+            ica = mdp.nodes.CuBICANode(limit=0.0001, verbose=True)
+            ica.train(X)
+            comp = ica.execute(X)
+        
+            self.icasig = comp        
+            self.recica = npy.dot(comp,ica.get_recmatrix())        
+              
+            self.com.ica_calculated = 1
+            self.showICASpectrum()
+            wx.EndBusyCursor() 
+            self.button_saveica.Enable()
+        except:
+            self.com.ica_calculated = 0
+            wx.EndBusyCursor()
+            wx.MessageBox("ICA not calculated.")
+        
+        wx.GetApp().TopWindow.refresh_widgets()
+
+                 
+#----------------------------------------------------------------------        
+    def OnICAScroll(self, event):
+        self.sel = event.GetInt()
+        self.selica = self.sel
+        if self.com.ica_calculated == 1:
+            self.showICASpectrum()       
+ 
+#----------------------------------------------------------------------            
+    def OnICASpinUp(self, event):
+        if (self.com.ica_calculated == 1) and (self.selica > 1):
+            self.selica = self.selica - 1
+            self.slidershow.SetValue(self.selica)
+
+            self.showICASpectrum() 
+
+            
+#----------------------------------------------------------------------            
+    def OnICASpinDown(self, event):
+        if (self.com.ica_calculated == 1) and (self.selica < self.icasig.shape[1]-1):
+            self.selica = self.selica + 1
+            self.slidershow.SetValue(self.selica) 
+            
+            self.showICASpectrum() 
+            
+#----------------------------------------------------------------------
+    def OnSave(self, event):
+
+
+        try: 
+            wildcard = "PNG files (*.png)|*.png"
+            dialog = wx.FileDialog(None, "Save as .png", wildcard=wildcard,
+                                    style=wx.SAVE|wx.OVERWRITE_PROMPT)
+
+            if dialog.ShowModal() == wx.ID_OK:
+                filepath = dialog.GetPath()
+                
+                dialog.Destroy()
+                            
+            wx.BeginBusyCursor()   
+                           
+            from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+            mtplot.rcParams['pdf.fonttype'] = 42
+            
+            ext = 'png'
+            suffix = "." + ext    
+            
+            for i in range(self.icasig.shape[1]):
+            
+                icaspectrum = self.icasig[:, i]
+                fig = mtplot.figure.Figure(figsize =(PlotW, PlotH))
+                canvas = FigureCanvas(fig)
+                fig.add_axes((0.15,0.15,0.75,0.75))
+                axes = fig.gca()
+                mtplot.rcParams['font.size'] = self.fontsize
+                specplot = axes.plot(self.stk.ev, icaspectrum)    
+                axes.set_xlabel('Photon Energy [eV]')
+                axes.set_ylabel('Optical Density')
+            
+                fileName_spec = filepath+"_ICAspectrum_" +str(i+1)+"."+ext
+                fig.savefig(fileName_spec)  
+             
+            wx.EndBusyCursor()      
+
+        except:
+
+            wx.EndBusyCursor()
+            wx.MessageBox("Could not save .png file.")
+                   
+        
+        return
+                   
+#----------------------------------------------------------------------
+    def CalcICA(self):
+        pass
+
+        
+
+#----------------------------------------------------------------------     
+    def showICASpectrum(self):
+
+        if self.com.ica_calculated == 0:
+            return
+        
+        self.icaspectrum = self.icasig[:, self.selica-1]
+        #self.icaspectrum = self.recica[:, self.selica-1]
+        
+            
+        
+        fig = self.ICASpecPan.get_figure()
+        fig.clf()
+        fig.add_axes((0.15,0.15,0.75,0.75))
+        axes = fig.gca()
+        
+        mtplot.rcParams['font.size'] = self.fontsize
+
+        specplot = axes.plot(self.stk.ev,self.icaspectrum)
+                        
+        axes.set_xlabel('Photon Energy [eV]')
+        axes.set_ylabel('Optical Density')
+        
+        self.ICASpecPan.draw()
+ 
+ 
 
 """ ------------------------------------------------------------------------------------------------"""
 class PageNNMA(wx.Panel):
@@ -79,392 +751,389 @@ class PageNNMA(wx.Panel):
         self.fontsize = self.com.fontsize        
         self.iev = 0
         #self.calcnnma = False
+        
 
 # ------------------------------------------------------------------------------------------------
 # Subclass of PageNNMA to display optical density results
 # ------------------------------------------------------------------------------------------------
 class PageNNMAOptDensity(PageNNMA):
 
-        def __init__(self, parent, common, data_struct, stack, nnma):
+    def __init__(self, parent, common, data_struct, stack, nnma):
 
-            PageNNMA.__init__(self, parent, common, data_struct, stack, nnma)
+        PageNNMA.__init__(self, parent, common, data_struct, stack, nnma)
 
-	    self.data_struct = data_struct
-	    self.stk = stack
-	    self.com = common
-	    self.nnma = nnma
-	    self.kNNMA = self.nnma.kNNMA	# number of chemical components to look for in NNMA
-	    self.fontsize = self.com.fontsize        
-	    self.iev = 0
+        self.data_struct = data_struct
+        self.stk = stack
+        self.com = common
+        self.nnma = nnma
+        self.kNNMA = self.nnma.kNNMA	# number of chemical components to look for in NNMA
+        self.fontsize = self.com.fontsize        
+        self.iev = 0
+        
+        # Panel 1: For users to enter NNMA parameters/settings -------------------------------------
+        
+        panel1 = wx.Panel(self, -1)
+        sizer1 = wx.StaticBoxSizer(wx.StaticBox(panel1, -1, 'NNMA parameters'), wx.VERTICAL)
+        
+        # A spinner to allow users to set number of NNMA components
+        hbox11 = wx.BoxSizer(wx.HORIZONTAL)
+        text11 = wx.StaticText(panel1, -1, 'Number of chemical components: ', style=wx.ALIGN_LEFT)
+        text11.SetFont(self.com.font)
+        self.kNNMASpin = wx.SpinCtrl(panel1, -1, '',  size=(60, -1), style=wx.ALIGN_LEFT)
+        self.kNNMASpin.SetRange(1,100)
+        self.kNNMASpin.SetValue(5)
+        self.Bind(wx.EVT_SPINCTRL, self.onkNNMASpin, self.kNNMASpin)
+        if verbose: print("self.kNNMASpin.GetId() = ", self.kNNMASpin.GetId())
+        hbox11.Add(text11, 0, wx.TOP, 20)
+        hbox11.Add((10,0))
+        hbox11.Add(self.kNNMASpin, 0, wx.TOP, 15)            
+        sizer1.Add(hbox11, 0, wx.EXPAND)
 
-	    # Panel 1: For users to enter NNMA parameters/settings -------------------------------------
-	    
-	    panel1 = wx.Panel(self, -1)
-	    sizer1 = wx.StaticBoxSizer(wx.StaticBox(panel1, -1, 'NNMA parameters'), wx.VERTICAL)
-	    
-	    # A spinner to allow users to set number of NNMA components
-	    hbox11 = wx.BoxSizer(wx.HORIZONTAL)
-	    text11 = wx.StaticText(panel1, -1, 'Number of chemical components: ', style=wx.ALIGN_LEFT)
-	    text11.SetFont(self.com.font)
-	    self.kNNMASpin = wx.SpinCtrl(panel1, -1, '',  size=(60, -1), style=wx.ALIGN_LEFT)
-	    self.kNNMASpin.SetRange(1,100)
-	    self.kNNMASpin.SetValue(5)
-	    self.Bind(wx.EVT_SPINCTRL, self.onkNNMASpin, self.kNNMASpin)
-	    print("self.kNNMASpin.GetId() = ", self.kNNMASpin.GetId())
-	    hbox11.Add(text11, 0, wx.TOP, 20)
-	    hbox11.Add((10,0))
-	    hbox11.Add(self.kNNMASpin, 0, wx.TOP, 15)            
-	    sizer1.Add(hbox11, 0, wx.EXPAND)
+        # A text field to allow users to set number of NNMA iterations
+        hbox12 = wx.BoxSizer(wx.HORIZONTAL)
+        text12 = wx.StaticText(panel1, -1, 'Number of iterations: ', style=wx.ALIGN_LEFT)
+        text12.SetFont(self.com.font)
+        self.itersCtrl = wx.TextCtrl(panel1, -1, style=wx.ALIGN_LEFT)
+        self.itersCtrl.SetValue('100')
+        hbox12.Add(text12, 1, wx.TOP, 15)
+        hbox12.Add((10, 0))
+        hbox12.Add(self.itersCtrl, 1, wx.TOP, 15)
+        sizer1.Add((0, 10))
+        sizer1.Add(hbox12, 0, wx.EXPAND)
 
-            # A text field to allow users to set number of NNMA iterations
-            hbox12 = wx.BoxSizer(wx.HORIZONTAL)
-            text12 = wx.StaticText(panel1, -1, 'Number of iterations: ', style=wx.ALIGN_LEFT)
-            text12.SetFont(self.com.font)
-            self.itersCtrl = wx.TextCtrl(panel1, -1, style=wx.ALIGN_LEFT)
-            self.itersCtrl.SetValue('100')
-            hbox12.Add(text12, 1, wx.TOP, 15)
-            hbox12.Add((10, 0))
-            hbox12.Add(self.itersCtrl, 1, wx.TOP, 15)
-            sizer1.Add((0, 10))
-            sizer1.Add(hbox12, 0, wx.EXPAND)
+        # ComboBox to display available NNMA algorithms
+        algoNNMA = ['Basic', 'Smoothness', 'Sparsity']
+        self.comboBoxAlgoNNMA = wx.ComboBox(panel1, -1, choices=algoNNMA, style=wx.CB_READONLY)
+        self.comboBoxAlgoNNMA.SetValue(algoNNMA[0])
+        self.Bind(wx.EVT_COMBOBOX, self.onSelectComboBoxAlgoNNMA, id=self.comboBoxAlgoNNMA.GetId())
+        text12 = wx.StaticText(panel1, -1, 'NNMA algorithm: ', style=wx.ALIGN_LEFT)
+        text12.SetFont(self.com.font)
+        hbox12 = wx.BoxSizer(wx.HORIZONTAL)
+        hbox12.Add(text12, 0, wx.TOP, 20)
+        hbox12.Add((10, 0))
+        sizer1.Add(hbox12, 0, wx.EXPAND)
+        sizer1.Add(self.comboBoxAlgoNNMA, 0, wx.EXPAND)
 
-	    # ComboBox to display available NNMA algorithms
-	    algoNNMA = ['Basic', 'Smoothness', 'Sparsity']
-	    self.comboBoxAlgoNNMA = wx.ComboBox(panel1, -1, choices=algoNNMA, style=wx.CB_READONLY)
-	    self.comboBoxAlgoNNMA.SetValue(algoNNMA[0])
-	    self.Bind(wx.EVT_COMBOBOX, self.onSelectComboBoxAlgoNNMA, id=self.comboBoxAlgoNNMA.GetId())
-	    text12 = wx.StaticText(panel1, -1, 'NNMA algorithm: ', style=wx.ALIGN_LEFT)
-	    text12.SetFont(self.com.font)
-	    hbox12 = wx.BoxSizer(wx.HORIZONTAL)
-	    hbox12.Add(text12, 0, wx.TOP, 20)
-	    hbox12.Add((10, 0))
-	    sizer1.Add(hbox12, 0, wx.EXPAND)
-	    sizer1.Add(self.comboBoxAlgoNNMA, 0, wx.EXPAND)
+        # A text field to allow users to set sparseness of t matrix
+        hbox13 = wx.BoxSizer(wx.HORIZONTAL)
+        text13 = wx.StaticText(panel1, -1, 'Sparseness (0 to 1): ', style=wx.ALIGN_LEFT)
+        text13.SetFont(self.com.font)
+        self.sparsenessCtrl = wx.TextCtrl(panel1, -1, style=wx.ALIGN_LEFT)
+        self.sparsenessCtrl.SetValue('0.5')
+        hbox13.Add(text13, 1, wx.TOP, 15)
+        hbox13.Add((10, 0))
+        hbox13.Add(self.sparsenessCtrl, 1, wx.TOP, 15)
+        sizer1.Add((0, 10))
+        sizer1.Add(hbox13, 0, wx.EXPAND)
 
-            # A text field to allow users to set sparseness of t matrix
-            hbox13 = wx.BoxSizer(wx.HORIZONTAL)
-            text13 = wx.StaticText(panel1, -1, 'Sparseness (0 to 1): ', style=wx.ALIGN_LEFT)
-            text13.SetFont(self.com.font)
-            self.sparsenessCtrl = wx.TextCtrl(panel1, -1, style=wx.ALIGN_LEFT)
-            self.sparsenessCtrl.SetValue('0.5')
-            hbox13.Add(text13, 1, wx.TOP, 15)
-            hbox13.Add((10, 0))
-            hbox13.Add(self.sparsenessCtrl, 1, wx.TOP, 15)
-            sizer1.Add((0, 10))
-            sizer1.Add(hbox13, 0, wx.EXPAND)
+        # ComboBox for choosing initial matrices
+        initMatricesNNMA = ['Random', 'Cluster']
+        self.comboBoxInitMatricesNNMA = wx.ComboBox(panel1, -1, choices=initMatricesNNMA, style=wx.CB_READONLY)
+        self.comboBoxInitMatricesNNMA.SetValue(initMatricesNNMA[0])
+        self.Bind(wx.EVT_COMBOBOX, self.onSelectComboBoxInitMatricesNNMA, id=self.comboBoxInitMatricesNNMA.GetId())
+        text14 = wx.StaticText(panel1, -1, 'Initial matrices: ', style=wx.ALIGN_LEFT)
+        text14.SetFont(self.com.font)
+        hbox14 = wx.BoxSizer(wx.HORIZONTAL)
+        hbox14.Add(text14, 0, wx.TOP, 20)
+        hbox14.Add((10, 0))
+        sizer1.Add(hbox14, 0, wx.EXPAND)
+        sizer1.Add(self.comboBoxInitMatricesNNMA, 0, wx.EXPAND)
+        
+        # Button to calculate NNMA
+        self.button_calcNNMA = wx.Button(panel1, -1, 'Calculate NNMA', (10, 10))
+        self.button_calcNNMA.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.onCalcNNMA, id=self.button_calcNNMA.GetId())
+        #self.button_calcNNMA.Disable()
+        sizer1.Add((0, 10))
+        sizer1.Add(self.button_calcNNMA, 0, wx.EXPAND)
 
-	    # ComboBox for choosing initial matrices
-	    initMatricesNNMA = ['Random', 'Cluster']
-	    self.comboBoxInitMatricesNNMA = wx.ComboBox(panel1, -1, choices=initMatricesNNMA, style=wx.CB_READONLY)
-	    self.comboBoxInitMatricesNNMA.SetValue(initMatricesNNMA[0])
-	    self.Bind(wx.EVT_COMBOBOX, self.onSelectComboBoxInitMatricesNNMA, id=self.comboBoxInitMatricesNNMA.GetId())
-	    text14 = wx.StaticText(panel1, -1, 'Initial matrices: ', style=wx.ALIGN_LEFT)
-	    text14.SetFont(self.com.font)
-	    hbox14 = wx.BoxSizer(wx.HORIZONTAL)
-	    hbox14.Add(text14, 0, wx.TOP, 20)
-	    hbox14.Add((10, 0))
-	    sizer1.Add(hbox14, 0, wx.EXPAND)
-	    sizer1.Add(self.comboBoxInitMatricesNNMA, 0, wx.EXPAND)
+        # Button for testing
+        self.button_test = wx.Button(panel1, -1, 'Print test', (10, 10))
+        self.button_test.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.OnTestButton, id=self.button_test.GetId())
+        sizer1.Add(self.button_test, 0, wx.EXPAND)
+        
+        panel1.SetSizer(sizer1)
+        
+        # Panel 2: Display optical density reconstruction results 
+        panel2 = wx.Panel(self, -1)
+        sizer21 = wx.StaticBoxSizer(wx.StaticBox(panel2, -1, 'Optical density'), wx.VERTICAL)
+        
+        scaleFactorW = 0.6		# factor to scale plot width
+        scaleFactorH = 0.7		# factor to scale plot height
+        
+        # hbox21 contains the original and reconstructed optical density
+        hbox21 = wx.BoxSizer(wx.HORIZONTAL)
+        vbox21 = wx.BoxSizer(wx.VERTICAL)
+        self.ODPanel = wxmpl.PlotPanel(panel2, -1, size=(PlotW*scaleFactorW, PlotH*scaleFactorH), cursor=False, crosshairs=False, location=False, zoom=False)
+        textOD = wx.TextCtrl(panel2, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE, size=(100, 20))
+        textOD.SetFont(self.com.font)
+        textOD.SetValue("Original")
+        vbox21.Add(textOD, 0, wx.EXPAND)
+        vbox21.Add(self.ODPanel, 0, wx.TOP)
+        vbox22 = wx.BoxSizer(wx.VERTICAL)
+        self.ODReconPanel = wxmpl.PlotPanel(panel2, -1, size=(PlotW*scaleFactorW, PlotH*scaleFactorH), cursor=False, crosshairs=False, location=False, zoom=False)
+        textODRecon = wx.TextCtrl(panel2, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        textODRecon.SetFont(self.com.font)
+        textODRecon.SetValue('Reconstructed')
+        vbox22.Add(textODRecon, 0, wx.EXPAND)
+        vbox22.Add(self.ODReconPanel, 0, wx.TOP)
+        hbox21.Add(vbox21)
+        hbox21.Add(vbox22)
+        
+        # vbox23 contains the difference between original and reconstructed optical density
+        vbox23 = wx.BoxSizer(wx.VERTICAL)
+        self.ODErrorPanel = wxmpl.PlotPanel(panel2, -1, size=(PlotW*scaleFactorW, PlotH*scaleFactorH), cursor=False, crosshairs=False, location=False, zoom=False)
+        textODError = wx.TextCtrl(panel2, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        textODError.SetFont(self.com.font)
+        textODError.SetValue("% Difference")
+        vbox23.Add(textODError, 0, wx.EXPAND)
+        vbox23.Add(self.ODErrorPanel, 0, wx.TOP)
+        
+        flexGridSizer = wx.FlexGridSizer(2, 1, vgap=10, hgap=20)
+        flexGridSizer.Add(hbox21)
+        #flexGridSizer.Add((0, 20))
+        flexGridSizer.Add(vbox23)
+        panel2.SetSizer(flexGridSizer)
+        
+        sizer21.Add(panel2)
+        
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
+        hbox.Add(panel1, 0)
+        hbox.Add(panel2, 0)
+        self.SetSizer(hbox)
 
-	    # Button to calculate NNMA
-	    self.button_calcNNMA = wx.Button(panel1, -1, 'Calculate NNMA', (10, 10))
-	    self.button_calcNNMA.SetFont(self.com.font)
-	    self.Bind(wx.EVT_BUTTON, self.onCalcNNMA, id=self.button_calcNNMA.GetId())
-	    #self.button_calcNNMA.Disable()
-            sizer1.Add((0, 10))
-	    sizer1.Add(self.button_calcNNMA, 0, wx.EXPAND)
+#----------------------------------------------------------------------
+    def OnTestButton(self, event):
 
-	    # Button for testing
-	    #self.button_test = wx.Button(panel1, -1, 'Print test', (10, 10))
-	    #self.button_test.SetFont(self.com.font)
-	    #self.Bind(wx.EVT_BUTTON, self.OnTestButton, id=self.button_test.GetId())
-	    #sizer1.Add(self.button_test, 0, wx.EXPAND)
+        self.nnma.printTest()
 
-	    panel1.SetSizer(sizer1)
+#----------------------------------------------------------------------
+    def onkNNMASpin(self, event):
+        
+        self.nnma.kNNMA = event.GetInt()
+        if verbose: print("nnma.kNNMA = ", self.nnma.kNNMA)
 
-	    # Panel 2: Display optical density reconstruction results 
-	    panel2 = wx.Panel(self, -1)
-	    sizer21 = wx.StaticBoxSizer(wx.StaticBox(panel2, -1, 'Optical density'), wx.VERTICAL)
+#----------------------------------------------------------------------
+    def onSelectComboBoxAlgoNNMA(self, event):
 
-            scaleFactorW = 0.6		# factor to scale plot width
-            scaleFactorH = 0.7		# factor to scale plot height
+        self.nnma.algoNNMA = event.GetString()
+        if verbose: print("nnma.algoNNMA = ", self.nnma.algoNNMA)
 
-            # hbox21 contains the original and reconstructed optical density
-            hbox21 = wx.BoxSizer(wx.HORIZONTAL)
-            vbox21 = wx.BoxSizer(wx.VERTICAL)
-	    self.ODPanel = wxmpl.PlotPanel(panel2, -1, size=(PlotW*scaleFactorW, PlotH*scaleFactorH), cursor=False, crosshairs=False, location=False, zoom=False)
-            textOD = wx.TextCtrl(panel2, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE, size=(100, 20))
-            textOD.SetFont(self.com.font)
-            textOD.SetValue("Original")
-            vbox21.Add(textOD, 0, wx.EXPAND)
-            vbox21.Add(self.ODPanel, 0, wx.TOP)
-            # add slider for scrolling through the stack
-            self.sliderODEnergy = wx.Slider(panel2, -1, self.iev, 0, 100, style=wx.SL_LEFT)
-            self.sliderODEnergy.SetFocus()
-            self.Bind(wx.EVT_SCROLL, self.onScrollODEnergy, self.sliderODEnergy)
+#----------------------------------------------------------------------
+    def onSelectComboBoxInitMatricesNNMA(self, event):
 
-            vbox22 = wx.BoxSizer(wx.VERTICAL)
-	    self.ODReconPanel = wxmpl.PlotPanel(panel2, -1, size=(PlotW*scaleFactorW, PlotH*scaleFactorH), cursor=False, crosshairs=False, location=False, zoom=False)
-            textODRecon = wx.TextCtrl(panel2, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
-            textODRecon.SetFont(self.com.font)
-            textODRecon.SetValue('Reconstructed')
-            vbox22.Add(textODRecon, 0, wx.EXPAND)
-            vbox22.Add(self.ODReconPanel, 0, wx.TOP)
-            hbox21.Add(vbox21)
-            hbox21.Add(vbox22)
+        self.nnma.initMatrices = event.GetString()
+        if verbose: print("nnma.initMatrices = ", self.nnma.initMatrices)
 
-            # vbox23 contains the difference between original and reconstructed optical density
-            vbox23 = wx.BoxSizer(wx.VERTICAL)
-	    self.ODErrorPanel = wxmpl.PlotPanel(panel2, -1, size=(PlotW*scaleFactorW, PlotH*scaleFactorH), cursor=False, crosshairs=False, location=False, zoom=False)
-            textODError = wx.TextCtrl(panel2, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
-            textODError.SetFont(self.com.font)
-            textODError.SetValue("% Difference")
-            vbox23.Add(textODError, 0, wx.EXPAND)
-            vbox23.Add(self.ODErrorPanel, 0, wx.TOP)
-            
-            flexGridSizer = wx.FlexGridSizer(2, 1, vgap=10, hgap=20)
-            flexGridSizer.Add(hbox21)
-            #flexGridSizer.Add((0, 20))
-            flexGridSizer.Add(vbox23)
-            panel2.SetSizer(flexGridSizer)
+#----------------------------------------------------------------------
+    def onScrollEnergy(self, event):
 
-            sizer21.Add(panel2)
+        self.iev = event.GetInt()
+        if self.com.stack_loaded == 1:
+            self.loadODImage()
 
-            hbox = wx.BoxSizer(wx.HORIZONTAL)
-            hbox.Add(panel1, 0)
-            hbox.Add(panel2, 0)
-            self.SetSizer(hbox)
+#----------------------------------------------------------------------
+    def calcNNMA(self):
 
-    #----------------------------------------------------------------------
-	def OnTestButton(self, event):
-
-	    self.nnma.printTest()
-
-    #----------------------------------------------------------------------
-	def onkNNMASpin(self, event):
-
-	  self.nnma.kNNMA = event.GetInt()
-	  print("nnma.kNNMA = ", self.nnma.kNNMA)
-
-    #----------------------------------------------------------------------
-	def onSelectComboBoxAlgoNNMA(self, event):
-
-	  self.nnma.algoNNMA = event.GetString()
-	  print("nnma.algoNNMA = ", self.nnma.algoNNMA)
-
-    #----------------------------------------------------------------------
-	def onSelectComboBoxInitMatricesNNMA(self, event):
-
-	  self.nnma.initMatrices = event.GetString()
-	  print("nnma.initMatrices = ", self.nnma.initMatrices)
-
-    #----------------------------------------------------------------------
-	def onScrollODEnergy(self, event):
-
-	  self.iev = event.GetInt()
-	  if self.com.stack_loaded == 1:
-	    self.loadODImage()
-
-    #----------------------------------------------------------------------
-	def calcNNMA(self):
-	 
-	  self.kNNMA = self.nnma.kNNMA
-	  self.algoNNMA = self.nnma.algoNNMA
-          try:
+        self.kNNMA = self.nnma.kNNMA
+        self.algoNNMA = self.nnma.algoNNMA
+        try:
             self.nnma.maxIters = int(self.itersCtrl.GetValue())
-          except:
+        except:
             wx.MessageBox("Please enter valid number of iterations.")
-          try:
+        try:
             self.nnma.sparsenessT = float(self.sparsenessCtrl.GetValue())
-          except:
+        except:
             wx.MessageBox("Please enter sparseness parameter between 0 and 1.")
-	  self.nnma.calcNNMA(self.algoNNMA, kComponents=self.kNNMA)
+        self.nnma.calcNNMA(self.algoNNMA, kComponents=self.kNNMA)
 
-    #----------------------------------------------------------------------
-	def onCalcNNMA(self, event):
+#----------------------------------------------------------------------
+    def onCalcNNMA(self, event):
 
-	  wx.BeginBusyCursor()
-          PageNNMA.calcnnma = False		# boolean for whether NNMA has been calculated
+        wx.BeginBusyCursor()
+        PageNNMA.calcnnma = False
+        #self.calcnnma = False		# boolean for whether NNMA has been calculated
 
-	  try:
-	    self.calcNNMA()
+        try:
+            self.calcNNMA()
+            #self.calcnnma = True
             PageNNMA.calcnnma = True
-	    self.loadODImage()
-	    self.loadODReconImage()
-	    self.loadODErrorImage()
-	    wx.EndBusyCursor()
+            self.loadODImage()
+            self.loadODReconImage()
+            self.loadODErrorImage()
+            wx.EndBusyCursor()
 
-	  except:
-	    wx.EndBusyCursor()
-	    wx.MessageBox("NNMA not calculated.")
+        except:
+            wx.EndBusyCursor()
+            wx.MessageBox("NNMA not calculated.")
 
-	  #wx.GetApp().TopWindow.refresh_widgets() 	# <-- Is this necessary??
+        #wx.GetApp().TopWindow.refresh_widgets() 	# <-- Is this necessary??
 
-    #----------------------------------------------------------------------
-	def loadODImage(self):
+#----------------------------------------------------------------------
+    def loadODImage(self):
 
-	  self.show_colorbar = 1
-	  self.show_scale_bar = 0
+        self.show_colorbar = 1
+        self.show_scale_bar = 0
+        
+        image = self.nnma.OD[self.iev, :, :] 
 
-	  #image = self.nnma.OD[self.iev, :, :] 
-          image = self.stk.absdata[:,:,int(self.iev)].copy() 
-			
-	  fig = self.ODPanel.get_figure()
-	  fig.clf()
-	  
-	  if self.show_colorbar == 0:
-	      fig.add_axes([0.15, 0.15, 0.8, 0.8])
-	      axes = fig.gca()
-	  else:
-	      axes = fig.gca()
-	      divider = make_axes_locatable(axes)
-	      axcb = divider.new_horizontal(size="3%", pad=0.03)  
-	      fig.add_axes(axcb)
-	      axes.set_position([0.15, 0.15, 0.8, 0.8]) 	# <-- Is this necessary?
+        fig = self.ODPanel.get_figure()
+        fig.clf()
+        
+        if self.show_colorbar == 0:
+            fig.add_axes([0.15, 0.15, 0.8, 0.8])
+            axes = fig.gca()
+        else:
+            axes = fig.gca()
+            divider = make_axes_locatable(axes)
+            axcb = divider.new_horizontal(size="3%", pad=0.03)  
+            fig.add_axes(axcb)
+            axes.set_position([0.15, 0.15, 0.8, 0.8]) 	# <-- Is this necessary?
+        
+        fig.patch.set_alpha(1.0) 	# set figure transparency
+        
+        self.defaultdisplay = 0
+        self.colortable = "gray"
+        if self.defaultdisplay == 1.0:
+            im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable)) 
+        else:
+            imgmax = npy.amax(image)
+            imgmin = npy.amin(image)
+            if (imgmin < 0.0):
+                image = (image-imgmin)/(imgmax-imgmin)
+                imgmax = 1.0
+                imgmin = 0.0
+            self.brightness_min = 0.0
+            self.brightness_max = 1.0
+            im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable), vmin=(imgmin+imgmax*self.brightness_min),vmax=imgmax*self.brightness_max)
+        
+        if self.show_colorbar == 1:
+            cbar = axes.figure.colorbar(im, orientation='vertical', cax=axcb) 
+        
+        if self.show_scale_bar == 1:
+            startx = int(self.stk.n_rows*0.05)
+            starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
+            um_string = ' $\mathrm{\mu m}$'
+            microns = '$'+self.stk.scale_bar_string+' $'+um_string
+            axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center', color='black', fontsize=14)
+            #Matplotlib has flipped scales so I'm using rows instead of cols!
+            p = mtplot.patches.Rectangle((startx,starty), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y, color = 'black', fill = True)
+            axes.add_patch(p)
+        
+        self.ODPanel.draw()
+        
+        #self.tc_imageeng.SetValue("Image at energy: {0:5.2f} eV".format(float(self.stk.ev[self.iev])))
+ 
+#----------------------------------------------------------------------
+    def loadODReconImage(self):
 
-	  fig.patch.set_alpha(1.0) 	# set figure transparency
-	  
-	  self.defaultdisplay = 0
-	  self.colortable = "gray"
-	  if self.defaultdisplay == 1.0:
-	      im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable)) 
-	  else:
-	      imgmax = npy.amax(image)
-	      imgmin = npy.amin(image)
-	      if (imgmin < 0.0):
-		  image = (image-imgmin)/(imgmax-imgmin)
-		  imgmax = 1.0
-		  imgmin = 0.0
-	      self.brightness_min = 0.0
-	      self.brightness_max = 1.0
-	      im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable), vmin=(imgmin+imgmax*self.brightness_min),vmax=imgmax*self.brightness_max)
+        self.show_colorbar = 1
+        self.show_scale_bar = 0
+        
+        image = self.nnma.ODRecon[self.iev, :, :] 	# <--- C-style row/col major issue: transpose()?
 
-	  if self.show_colorbar == 1:
-	      cbar = axes.figure.colorbar(im, orientation='vertical', cax=axcb) 
-	  
-	  if self.show_scale_bar == 1:
-	      startx = int(self.stk.n_rows*0.05)
-	      starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
-	      um_string = '$\mu m$'
-	      microns = '$'+self.stk.scale_bar_string+' $'+um_string
-	      axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center', color='black', fontsize=14)
-	      #Matplotlib has flipped scales so I'm using rows instead of cols!
-	      p = mtplot.patches.Rectangle((startx,starty), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y, color = 'black', fill = True)
-	      axes.add_patch(p)
-	  
-	  self.ODPanel.draw()
-	  
-	  #self.tc_imageeng.SetValue("Image at energy: {0:5.2f} eV".format(float(self.stk.ev[self.iev])))
-	  
-    #----------------------------------------------------------------------
-	def loadODReconImage(self):
+        fig = self.ODReconPanel.get_figure()
+        fig.clf()
+        
+        if self.show_colorbar == 0:
+            fig.add_axes([0.15, 0.15, 0.8, 0.8])
+            axes = fig.gca()
+        else:
+            axes = fig.gca()
+            divider = make_axes_locatable(axes)
+            axcb = divider.new_horizontal(size="3%", pad=0.03)  
+            fig.add_axes(axcb)
+            axes.set_position([0.15, 0.15, 0.8, 0.8])
+        
+        fig.patch.set_alpha(1.0) 	# set figure transparency
+        
+        self.defaultdisplay = 0
+        self.colortable = "gray"
+        if self.defaultdisplay == 1.0:
+            im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable)) 
+        else:
+            imgmax = npy.amax(image)
+            imgmin = npy.amin(image)
+            if (imgmin < 0.0):
+                image = (image-imgmin)/(imgmax-imgmin)
+                imgmax = 1.0
+                imgmin = 0.0
+            self.brightness_min = 0.0
+            self.brightness_max = 1.0
+            im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable), vmin=(imgmin+imgmax*self.brightness_min),vmax=imgmax*self.brightness_max)
+        
+        if self.show_colorbar == 1:
+            cbar = axes.figure.colorbar(im, orientation='vertical', cax=axcb) 
+        
+        if self.show_scale_bar == 1:
+            startx = int(self.stk.n_rows*0.05)
+            starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
+            um_string = ' $\mathrm{\mu m}$'
+            microns = '$'+self.stk.scale_bar_string+' $'+um_string
+            axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center', color='black', fontsize=14)
+            #Matplotlib has flipped scales so I'm using rows instead of cols!
+            p = mtplot.patches.Rectangle((startx,starty), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y, color = 'black', fill = True)
+            axes.add_patch(p)
+        
+        self.ODReconPanel.draw()
+        
+        #self.tc_imageeng.SetValue("Image at energy: {0:5.2f} eV".format(float(self.stk.ev[self.iev])))
 
-	  self.show_colorbar = 1
-	  self.show_scale_bar = 0
+#----------------------------------------------------------------------
+    def loadODErrorImage(self):
 
-	  image = self.nnma.ODRecon[self.iev, :, :] 	# <--- C-style row/col major issue: transpose()?
-			
-	  fig = self.ODReconPanel.get_figure()
-	  fig.clf()
-	  
-	  if self.show_colorbar == 0:
-	      fig.add_axes([0.15, 0.15, 0.8, 0.8])
-	      axes = fig.gca()
-	  else:
-	      axes = fig.gca()
-	      divider = make_axes_locatable(axes)
-	      axcb = divider.new_horizontal(size="3%", pad=0.03)  
-	      fig.add_axes(axcb)
-	      axes.set_position([0.15, 0.15, 0.8, 0.8])
+        self.show_colorbar = 1
+        self.show_scale_bar = 0
+        
+        image = self.nnma.ODError[self.iev, :, :] 
 
-	  fig.patch.set_alpha(1.0) 	# set figure transparency
-	  
-	  self.defaultdisplay = 0
-	  self.colortable = "gray"
-	  if self.defaultdisplay == 1.0:
-	      im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable)) 
-	  else:
-	      imgmax = npy.amax(image)
-	      imgmin = npy.amin(image)
-	      if (imgmin < 0.0):
-		  image = (image-imgmin)/(imgmax-imgmin)
-		  imgmax = 1.0
-		  imgmin = 0.0
-	      self.brightness_min = 0.0
-	      self.brightness_max = 1.0
-	      im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable), vmin=(imgmin+imgmax*self.brightness_min),vmax=imgmax*self.brightness_max)
-
-	  if self.show_colorbar == 1:
-	      cbar = axes.figure.colorbar(im, orientation='vertical', cax=axcb) 
-	  
-	  if self.show_scale_bar == 1:
-	      startx = int(self.stk.n_rows*0.05)
-	      starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
-	      um_string = '$\mu m$'
-	      microns = '$'+self.stk.scale_bar_string+' $'+um_string
-	      axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center', color='black', fontsize=14)
-	      #Matplotlib has flipped scales so I'm using rows instead of cols!
-	      p = mtplot.patches.Rectangle((startx,starty), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y, color = 'black', fill = True)
-	      axes.add_patch(p)
-	  
-	  self.ODReconPanel.draw()
-	  
-	  #self.tc_imageeng.SetValue("Image at energy: {0:5.2f} eV".format(float(self.stk.ev[self.iev])))
-	  
-    #----------------------------------------------------------------------
-	def loadODErrorImage(self):
-
-	  self.show_colorbar = 1
-	  self.show_scale_bar = 0
-
-	  image = self.nnma.ODError[self.iev, :, :] 
-			
-	  fig = self.ODErrorPanel.get_figure()
-	  fig.clf()
-	  
-	  if self.show_colorbar == 0:
-	      fig.add_axes([0.15, 0.15, 0.8, 0.8])
-	      axes = fig.gca()
-	  else:
-	      axes = fig.gca()
-	      divider = make_axes_locatable(axes)
-	      axcb = divider.new_horizontal(size="3%", pad=0.03)  
-	      fig.add_axes(axcb)
-	      axes.set_position([0.15, 0.15, 0.8, 0.8])
-
-	  fig.patch.set_alpha(1.0) 	# set figure transparency
-	  
-	  self.defaultdisplay = 0
-	  self.colortable = "gray"
-	  if self.defaultdisplay == 1.0:
-	      im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable)) 
-	  else:
-	      imgmax = npy.amax(image)
-	      imgmin = npy.amin(image)
-	      if (imgmin < 0.0):
-		  image = (image-imgmin)/(imgmax-imgmin)
-		  imgmax = 1.0
-		  imgmin = 0.0
-	      self.brightness_min = 0.0
-	      self.brightness_max = 1.0
-	      im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable), vmin=(imgmin+imgmax*self.brightness_min),vmax=imgmax*self.brightness_max)
-
-	  if self.show_colorbar == 1:
-	      cbar = axes.figure.colorbar(im, orientation='vertical', cax=axcb) 
-	  
-	  if self.show_scale_bar == 1:
-	      startx = int(self.stk.n_rows*0.05)
-	      starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
-	      um_string = '$\mu m$'
-	      microns = '$'+self.stk.scale_bar_string+' $'+um_string
-	      axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center', color='black', fontsize=14)
-	      #Matplotlib has flipped scales so I'm using rows instead of cols!
-	      p = mtplot.patches.Rectangle((startx,starty), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y, color = 'black', fill = True)
-	      axes.add_patch(p)
-	  
-	  self.ODErrorPanel.draw()
-	  
-	  #self.tc_imageeng.SetValue("Image at energy: {0:5.2f} eV".format(float(self.stk.ev[self.iev])))
+        fig = self.ODErrorPanel.get_figure()
+        fig.clf()
+        
+        if self.show_colorbar == 0:
+            fig.add_axes([0.15, 0.15, 0.8, 0.8])
+            axes = fig.gca()
+        else:
+            axes = fig.gca()
+            divider = make_axes_locatable(axes)
+            axcb = divider.new_horizontal(size="3%", pad=0.03)  
+            fig.add_axes(axcb)
+            axes.set_position([0.15, 0.15, 0.8, 0.8])
+        
+        fig.patch.set_alpha(1.0) 	# set figure transparency
+        
+        self.defaultdisplay = 0
+        self.colortable = "gray"
+        if self.defaultdisplay == 1.0:
+            im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable)) 
+        else:
+            imgmax = npy.amax(image)
+            imgmin = npy.amin(image)
+            if (imgmin < 0.0):
+                image = (image-imgmin)/(imgmax-imgmin)
+                imgmax = 1.0
+                imgmin = 0.0
+            self.brightness_min = 0.0
+            self.brightness_max = 1.0
+            im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable), vmin=(imgmin+imgmax*self.brightness_min),vmax=imgmax*self.brightness_max)
+        
+        if self.show_colorbar == 1:
+            cbar = axes.figure.colorbar(im, orientation='vertical', cax=axcb) 
+        
+        if self.show_scale_bar == 1:
+            startx = int(self.stk.n_rows*0.05)
+            starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
+            um_string = ' $\mathrm{\mu m}$'
+            microns = '$'+self.stk.scale_bar_string+' $'+um_string
+            axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center', color='black', fontsize=14)
+            #Matplotlib has flipped scales so I'm using rows instead of cols!
+            p = mtplot.patches.Rectangle((startx,starty), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y, color = 'black', fill = True)
+            axes.add_patch(p)
+        
+        self.ODErrorPanel.draw()
+        
+        #self.tc_imageeng.SetValue("Image at energy: {0:5.2f} eV".format(float(self.stk.ev[self.iev])))
 
 
 # ------------------------------------------------------------------------------------------------
@@ -472,184 +1141,184 @@ class PageNNMAOptDensity(PageNNMA):
 # ------------------------------------------------------------------------------------------------
 class PageNNMASpectra(PageNNMA):
 
-        def __init__(self, parent, common, data_struct, stack, nnma):
+    def __init__(self, parent, common, data_struct, stack, nnma):
 
-            #wx.Panel.__init__(self, parent)
-            PageNNMA.__init__(self, parent, common, data_struct, stack, nnma)
+        #wx.Panel.__init__(self, parent)
+        PageNNMA.__init__(self, parent, common, data_struct, stack, nnma)
             
-	    self.data_struct = data_struct
-	    self.stk = stack
-	    self.com = common
-	    self.nnma = nnma
-	    self.kNNMA = self.nnma.kNNMA	# number of chemical components to look for in NNMA
-	    self.fontsize = self.com.fontsize        
-	    self.iev = 0
+        self.data_struct = data_struct
+        self.stk = stack
+        self.com = common
+        self.nnma = nnma
+        self.kNNMA = self.nnma.kNNMA	# number of chemical components to look for in NNMA
+        self.fontsize = self.com.fontsize        
+        self.iev = 0 
 
-            # Panel 2: Display results for reconstructed absorption spectra
-            panel2 = wx.Panel(self, -1)
-            sizer21 = wx.StaticBoxSizer(wx.StaticBox(panel2, -1, 'Absorption spectra'), wx.VERTICAL)
+        # Panel 2: Display results for reconstructed absorption spectra
+        panel2 = wx.Panel(self, -1)
+        sizer21 = wx.StaticBoxSizer(wx.StaticBox(panel2, -1, 'Absorption spectra'), wx.VERTICAL)
 
-            vbox21 = wx.BoxSizer(wx.VERTICAL)
-            scaleFactorW = 0.9
-            scaleFactorH = 0.8
-            self.NNMASpectraImagePanel = wxmpl.PlotPanel(panel2, -1, size=(PlotW*scaleFactorW, PlotH*scaleFactorH), cursor=False, crosshairs=False, location=False, zoom=False)
-            wxmpl.EVT_POINT(panel2, self.NNMASpectraImagePanel.GetId(), self.onPointNNMASpectraImage)
-            vbox21.Add(self.NNMASpectraImagePanel, 0, wx.TOP)
-            sizer21.Add(vbox21)
+        vbox21 = wx.BoxSizer(wx.VERTICAL)
+        scaleFactorW = 0.9
+        scaleFactorH = 0.8
+        self.NNMASpectraImagePanel = wxmpl.PlotPanel(panel2, -1, size=(PlotW*scaleFactorW, PlotH*scaleFactorH), cursor=False, crosshairs=False, location=False, zoom=False)
+        wxmpl.EVT_POINT(panel2, self.NNMASpectraImagePanel.GetId(), self.onPointNNMASpectraImage)
+        vbox21.Add(self.NNMASpectraImagePanel, 0, wx.TOP)
+        sizer21.Add(vbox21)
 
-            vbox22 = wx.BoxSizer(wx.VERTICAL)
-            scaleFactorW = 0.9
-            scaleFactorH = 0.8
-            self.NNMASpectraPanel = wxmpl.PlotPanel(panel2, -1, size=(PlotW*scaleFactorW, PlotH*scaleFactorH), cursor=False, crosshairs=False, location=False, zoom=False)
-            vbox22.Add(self.NNMASpectraPanel, 0, wx.TOP)
-            vbox22.Add((0, 10))
-            sizer21.Add(vbox22)
+        vbox22 = wx.BoxSizer(wx.VERTICAL)
+        scaleFactorW = 0.9
+        scaleFactorH = 0.8
+        self.NNMASpectraPanel = wxmpl.PlotPanel(panel2, -1, size=(PlotW*scaleFactorW, PlotH*scaleFactorH), cursor=False, crosshairs=False, location=False, zoom=False)
+        vbox22.Add(self.NNMASpectraPanel, 0, wx.TOP)
+        vbox22.Add((0, 10))
+        sizer21.Add(vbox22)
 
-	    # Button to display NNMA spectra
-	    self.button_showNNMASpectra = wx.Button(panel2, -1, 'Show spectra', (10, 10))
-	    self.button_showNNMASpectra.SetFont(self.com.font)
-	    self.Bind(wx.EVT_BUTTON, self.onShowNNMASpectra, id=self.button_showNNMASpectra.GetId())
-	    #self.button_calcNNMA.Disable()
-	    sizer21.Add(self.button_showNNMASpectra, 0, wx.EXPAND)
+        # Button to display NNMA spectra
+        self.button_showNNMASpectra = wx.Button(panel2, -1, 'Show spectra', (10, 10))
+        self.button_showNNMASpectra.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.onShowNNMASpectra, id=self.button_showNNMASpectra.GetId())
+        #self.button_calcNNMA.Disable()
+        sizer21.Add(self.button_showNNMASpectra, 0, wx.EXPAND)
+        
+        # Button to clear displayed NNMA spectra
+        self.button_clearNNMASpectra = wx.Button(panel2, -1, 'Clear spectra', (10, 10))
+        self.button_clearNNMASpectra.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.onClearNNMASpectra, id=self.button_clearNNMASpectra.GetId())
+        #self.button_calcNNMA.Disable()
+        sizer21.Add(self.button_clearNNMASpectra, 0, wx.EXPAND)
+        
+        panel2.SetSizer(sizer21)
+        
+        vboxtop = wx.BoxSizer(wx.VERTICAL)
+        gridtop = wx.FlexGridSizer(1, 0, vgap=10, hgap=20)
+        gridtop.Add(panel2, 0)
+        vboxtop.Add((0, 10))
+        vboxtop.Add(gridtop, 0, wx.LEFT, 20)
+        self.SetSizer(gridtop) 
 
-	    # Button to clear displayed NNMA spectra
-	    self.button_clearNNMASpectra = wx.Button(panel2, -1, 'Clear spectra', (10, 10))
-	    self.button_clearNNMASpectra.SetFont(self.com.font)
-	    self.Bind(wx.EVT_BUTTON, self.onClearNNMASpectra, id=self.button_clearNNMASpectra.GetId())
-	    #self.button_calcNNMA.Disable()
-	    sizer21.Add(self.button_clearNNMASpectra, 0, wx.EXPAND)
 
-            panel2.SetSizer(sizer21)
+#----------------------------------------------------------------------
+    def onShowNNMASpectra(self, event):
 
-	    vboxtop = wx.BoxSizer(wx.VERTICAL)
-	    gridtop = wx.FlexGridSizer(1, 0, vgap=10, hgap=20)
-	    gridtop.Add(panel2, 0)
-	    vboxtop.Add((0, 10))
-	    vboxtop.Add(gridtop, 0, wx.LEFT, 20)
-	    self.SetSizer(gridtop) 
-
-
-    #----------------------------------------------------------------------
-	def onShowNNMASpectra(self, event):
-
-	  wx.BeginBusyCursor()
-         
-          try:
+        wx.BeginBusyCursor()
+        
+        try:
             if PageNNMA.calcnnma == True:	# if NNMA already calculated, then just load the spectra
-              print("PageNNMA.calcnnma == True")
-              self.loadNNMASpectraImage()
-              wx.EndBusyCursor()
-          except:
+                if verbose: print("PageNNMA.calcnnma == True")
+                self.loadNNMASpectraImage()
+                wx.EndBusyCursor()
+        except:
             try:
-	      PageNNMA.calcnnma = False
-	      self.calcNNMA()
-              print("Successfully calculated self.calcNNMA()")
-	      PageNNMA.calcnnma = True
-	      self.loadNNMASpectraImage()
-	      wx.EndBusyCursor()
+                PageNNMA.calcnnma = False
+                self.calcNNMA()
+                if verbose: print("Successfully calculated self.calcNNMA()")
+                PageNNMA.calcnnma = True
+                self.loadNNMASpectraImage()
+                wx.EndBusyCursor()
             except:
-              wx.EndBusyCursor()
-              wx.MessageBox("NNMA not calculated.")
-            
-	  #wx.GetApp().TopWindow.refresh_widgets() 	# <-- Is this necessary??
+                wx.EndBusyCursor()
+                wx.MessageBox("NNMA not calculated.")
+          
+        #wx.GetApp().TopWindow.refresh_widgets() 	# <-- Is this necessary??
 
-    #----------------------------------------------------------------------
-	def calcNNMA(self):
-	 
-	  self.kNNMA = self.nnma.kNNMA
-	  self.algoNNMA = self.nnma.algoNNMA
-          try:
+#----------------------------------------------------------------------
+    def calcNNMA(self):
+
+        self.kNNMA = self.nnma.kNNMA
+        self.algoNNMA = self.nnma.algoNNMA
+        try:
             self.nnma.maxIters = int(self.itersCtrl.GetValue())
-          except:
+        except:
             wx.MessageBox("Please enter valid number of iterations.")
-	  self.nnma.calcNNMA(self.algoNNMA, kComponents=self.kNNMA)
+        self.nnma.calcNNMA(self.algoNNMA, kComponents=self.kNNMA)
 
-    #----------------------------------------------------------------------
-        def onPointNNMASpectraImage(self, evt):
-          print("Inside onPointNNMASpectraImage()")
-          x = evt.xdata
-          y = evt.ydata
-          print("x = ", x)
-          print("y = ", y)
-          energyIndex = npy.floor(x)
-          muIndex = npy.floor(y)
-          print("energyIndex = ", energyIndex)
-          print("muIndex = ", muIndex)
-          if self.calcnnma == True:
+#----------------------------------------------------------------------
+    def onPointNNMASpectraImage(self, evt):
+        if verbose: print("Inside onPointNNMASpectraImage()")
+        x = evt.xdata
+        y = evt.ydata
+        if verbose: print("x = ", x)
+        if verbose: print("y = ", y)
+        energyIndex = npy.floor(x)
+        muIndex = npy.floor(y)
+        if verbose: print("energyIndex = ", energyIndex)
+        if verbose: print("muIndex = ", muIndex)
+        if self.calcnnma == True:
             self.loadNNMASpectra(muIndex)
 
-    #----------------------------------------------------------------------
-	def loadNNMASpectraImage(self):
+#----------------------------------------------------------------------
+    def loadNNMASpectraImage(self):
           
-          self.defaultdisplay = 1.0
-          self.show_colorbar = 1
-          self.show_scale_bar = 0
-          self.colortable = 'gist_rainbow'
+        self.defaultdisplay = 1.0
+        self.show_colorbar = 1
+        self.show_scale_bar = 0
+        self.colortable = 'gist_rainbow'
  
-	  if self.defaultdisplay == 1.0:
+        if self.defaultdisplay == 1.0:
             image = self.nnma.mu.T		# pointer to data (not a copy); transposed so (normalized) energy is along horizontal axis
-	  else:   
-	      # Adjustment to the data display setting has been made so make a copy
-	    image = self.nnma.mu.T.copy()
-		  
-	  fig = self.NNMASpectraImagePanel.get_figure()
-	  fig.clf()
-	
-	  if self.show_colorbar == 0:
-	    fig.add_axes((0.15, 0.15, 0.75, 0.75))
-	    axes = fig.gca()
-	  else:
-	    axes = fig.gca()
-	    divider = make_axes_locatable(axes)
-	    axcb = divider.new_horizontal(size="3%", pad=0.03)  
-	    fig.add_axes(axcb)
-	    axes.set_position([0.15, 0.15, 0.75, 0.75])
-	  
-          axes.set_xlabel("Energy index")
-          axes.set_ylabel("NNMA component number") 
-	  fig.patch.set_alpha(1.0)
-	 
-          maxEnergyIndex = self.stk.n_ev
-          maxMuIndex = self.nnma.kNNMA 
-	  if self.defaultdisplay == 1.0:
-	    im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable), interpolation='nearest', extent=[0, maxEnergyIndex, maxMuIndex, 0], aspect='auto')
-	  else:
-	    imgmax = npy.amax(image)
-	    imgmin = npy.amin(image)
-	    image = (image-imgmin)/(imgmax-imgmin)
-	    imgmax = 1.0
-	    imgmin = 0.0
+        else:   
+            # Adjustment to the data display setting has been made so make a copy
+            image = self.nnma.mu.T.copy()
+
+        fig = self.NNMASpectraImagePanel.get_figure()
+        fig.clf()
+
+        if self.show_colorbar == 0:
+            fig.add_axes((0.15, 0.15, 0.75, 0.75))
+            axes = fig.gca()
+        else:
+            axes = fig.gca()
+            divider = make_axes_locatable(axes)
+            axcb = divider.new_horizontal(size="3%", pad=0.03)  
+            fig.add_axes(axcb)
+            axes.set_position([0.15, 0.15, 0.75, 0.75])
+
+        axes.set_xlabel("Energy index")
+        axes.set_ylabel("NNMA component number") 
+        fig.patch.set_alpha(1.0)
+
+        maxEnergyIndex = self.stk.n_ev
+        maxMuIndex = self.nnma.kNNMA 
+        if self.defaultdisplay == 1.0:
+            im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable), interpolation='nearest', extent=[0, maxEnergyIndex, maxMuIndex, 0], aspect='auto')
+        else:
+            imgmax = npy.amax(image)
+            imgmin = npy.amin(image)
+            image = (image-imgmin)/(imgmax-imgmin)
+            imgmax = 1.0
+            imgmin = 0.0
             self.brightness_min = 0.0
             self.brightness_max = 1.0
-	    im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable), 
-            	 vmin=(imgmin+imgmax*self.brightness_min),vmax=imgmax*self.brightness_max, interpolation='nearest', extent=[0, maxEnergyIndex, maxMuIndex, 0], aspect='auto')
-	      
-          if self.show_colorbar == 1:
-	    cbar = axes.figure.colorbar(im, orientation='vertical', cax=axcb) 
+            im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable), 
+                	 vmin=(imgmin+imgmax*self.brightness_min),vmax=imgmax*self.brightness_max, interpolation='nearest', extent=[0, maxEnergyIndex, maxMuIndex, 0], aspect='auto')
+              
+        if self.show_colorbar == 1:
+            cbar = axes.figure.colorbar(im, orientation='vertical', cax=axcb) 
 
-	  self.NNMASpectraImagePanel.draw()
+        self.NNMASpectraImagePanel.draw()
 
-          print("Done loadNNMASpectraImage()")
+        if verbose: print("Done loadNNMASpectraImage()")
   
-  #----------------------------------------------------------------------         
-        def loadNNMASpectra(self, muIndex):
+#----------------------------------------------------------------------         
+    def loadNNMASpectra(self, muIndex):
 
-          fig = self.NNMASpectraPanel.get_figure()
-          axes = fig.add_axes([0.15, 0.15, 0.75, 0.75])
-          axes.plot(self.stk.ev, self.nnma.mu[:, muIndex])
-          axes.set_xlabel("Energy (eV)")
-          axes.set_ylabel("Absorption")
-	  self.NNMASpectraPanel.draw()
+        fig = self.NNMASpectraPanel.get_figure()
+        axes = fig.add_axes([0.15, 0.15, 0.75, 0.75])
+        axes.plot(self.stk.ev, self.nnma.mu[:, muIndex])
+        axes.set_xlabel("Energy (eV)")
+        axes.set_ylabel("Absorption")
+        self.NNMASpectraPanel.draw()
 
-  #----------------------------------------------------------------------         
-        def onClearNNMASpectra(self, evt):
+#----------------------------------------------------------------------         
+    def onClearNNMASpectra(self, evt):
 
-          fig = self.NNMASpectraPanel.get_figure()
-          axes = fig.gca()
-          axes.cla()
-          self.NNMASpectraPanel.draw()
+        fig = self.NNMASpectraPanel.get_figure()
+        axes = fig.gca()
+        axes.cla()
+        self.NNMASpectraPanel.draw()
 
-  #----------------------------------------------------------------------         
+       
  
 
 # ------------------------------------------------------------------------------------------------
@@ -657,11 +1326,12 @@ class PageNNMASpectra(PageNNMA):
 # ------------------------------------------------------------------------------------------------
 class PageNNMAThickness(PageNNMA):
 
-        def __init__(self, parent, common, data_struct, stack, nnma):
+    def __init__(self, parent, common, data_struct, stack, nnma):
 
-            #wx.Panel.__init__(self, parent)
-            PageNNMA.__init__(self, parent, common, data_struct, stack, nnma)
+        #wx.Panel.__init__(self, parent)
+        PageNNMA.__init__(self, parent, common, data_struct, stack, nnma)
         
+
 
 """ ------------------------------------------------------------------------------------------------"""
 class PageSpectral(wx.Panel):
@@ -674,7 +1344,7 @@ class PageSpectral(wx.Panel):
         self.anlz = anlz
         
         self.i_tspec = 1
-        self.showraw = False
+        self.showraw = True
         self.show_scale_bar = 0
         
         self.SetBackgroundColour("White")
@@ -688,7 +1358,8 @@ class PageSpectral(wx.Panel):
         #panel 1        
         panel1 = wx.Panel(self, -1)
         vbox1 = wx.BoxSizer(wx.VERTICAL)
-        
+        panel1.SetBackgroundColour("White")      
+  
         self.tc_spmap = wx.TextCtrl(panel1, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         self.tc_spmap.SetFont(self.com.font)
         self.tc_spmap.SetValue("Spectrum composition map")
@@ -706,6 +1377,7 @@ class PageSpectral(wx.Panel):
         #panel 2
         panel2 = wx.Panel(self, -1)
         vbox2 = wx.BoxSizer(wx.VERTICAL)
+        panel2.SetBackgroundColour("White")
         
         self.tc_tspec = wx.TextCtrl(panel2, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         self.tc_tspec.SetFont(self.com.font)
@@ -715,7 +1387,7 @@ class PageSpectral(wx.Panel):
         i2panel = wx.Panel(panel2, -1, style = wx.SUNKEN_BORDER)
         self.TSpectrumPanel = wxmpl.PlotPanel(i2panel, -1, size=(PlotW, PlotH), cursor=False, crosshairs=False, location=False, zoom=False)
 
-        self.slider_tspec = wx.Slider(panel2, -1, 1, 1, 5, style=wx.SL_LEFT )        
+        self.slider_tspec = wx.Slider(panel2, -1, 1, 1, 5, style=wx.SL_LEFT|wx.SL_VERTICAL )        
         self.slider_tspec.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnTSScroll, self.slider_tspec)
         
@@ -810,7 +1482,7 @@ class PageSpectral(wx.Panel):
         self.rb_fit.SetFont(self.com.font)
         self.Bind(wx.EVT_RADIOBUTTON, self.OnRBRawFit, id=self.rb_raw.GetId())
         self.Bind(wx.EVT_RADIOBUTTON, self.OnRBRawFit, id=self.rb_fit.GetId())
-        self.rb_fit.SetValue(True)
+        self.rb_raw.SetValue(True)
 
         self.add_scale_cb = wx.CheckBox(panel4, -1, '  Scale')
         self.add_scale_cb.SetFont(self.com.font)
@@ -900,8 +1572,8 @@ class PageSpectral(wx.Panel):
         hboxB.Add(panel1, 0, wx.BOTTOM | wx.TOP, 9)
         hboxT.Add((10,0)) 
                
-        hboxT.Add(panel3, 1, wx.LEFT | wx.RIGHT | wx.TOP | wx.EXPAND, 9)
-        hboxT.Add(panel4, 3, wx.LEFT | wx.RIGHT |wx.TOP | wx.EXPAND, 9)
+        hboxT.Add(panel3, 0, wx.LEFT | wx.RIGHT | wx.TOP | wx.EXPAND, 9)
+        hboxT.Add(panel4, 2.5, wx.LEFT | wx.RIGHT |wx.TOP | wx.EXPAND, 9)
         hboxT.Add(panel5, 1, wx.LEFT | wx.RIGHT |wx.TOP | wx.EXPAND, 9)
 
         vbox.Add(hboxT, 0, wx.ALL, 5)
@@ -918,9 +1590,11 @@ class PageSpectral(wx.Panel):
     def OnTSpecFromFile(self, event):
         
 
-        try: 
+        #try: 
+        if True:
             wildcard = "Spectrum files (*.csv)|*.csv"
             dialog = wx.FileDialog(None, "Choose Spectrum file",
+                                   defaultDir = defaultDir,
                                    style=wx.OPEN)
             dialog.SetWildcard(wildcard)
             if dialog.ShowModal() == wx.ID_OK:
@@ -942,9 +1616,9 @@ class PageSpectral(wx.Panel):
                     
             wx.EndBusyCursor()
             
-        except:
-            wx.EndBusyCursor()  
-            wx.MessageBox("Spectrum file not loaded.")
+#         except:
+#             wx.EndBusyCursor()  
+#             wx.MessageBox("Spectrum file not loaded.")
                                    
         dialog.Destroy()
                                  
@@ -1063,10 +1737,7 @@ class PageSpectral(wx.Panel):
         for i in range (self.anlz.n_target_spectra):
             #Save spectra images
             tspectrum = self.anlz.target_spectra[i, :]
-            tspectrumfit = self.anlz.target_pcafit_spectra[i, :]
-            
-            diff = npy.abs(tspectrum-tspectrumfit)
-            
+                        
         
             fig = mtplot.figure.Figure(figsize =(PlotW, PlotH))
             canvas = FigureCanvas(fig)
@@ -1077,9 +1748,12 @@ class PageSpectral(wx.Panel):
             mtplot.rcParams['font.size'] = self.fontsize
 
             line1 = axes.plot(self.stk.ev,tspectrum, color='black', label = 'Raw data')
-            line2 = axes.plot(self.stk.ev,tspectrumfit, color='green', label = 'Fit')
-        
-            line3 = axes.plot(self.stk.ev,diff, color='grey', label = 'Abs(Raw-Fit)')
+            
+            if self.com.pca_calculated == 1: 
+                tspectrumfit = self.anlz.target_pcafit_spectra[i, :]
+                diff = npy.abs(tspectrum-tspectrumfit)
+                line2 = axes.plot(self.stk.ev,tspectrumfit, color='green', label = 'Fit')
+                line3 = axes.plot(self.stk.ev,diff, color='grey', label = 'Abs(Raw-Fit)')
             
             fontP = mtplot.font_manager.FontProperties()
             fontP.set_size('small')
@@ -1094,7 +1768,8 @@ class PageSpectral(wx.Panel):
             
             if savecsv:
                 fileName_spec = self.SaveFileName+"_Tspectrum_" +str(i+1)+".csv"
-                self.stk.write_csv(fileName_spec, self.stk.ev, tspectrumfit)
+                cname = 'Tspectrum_' +str(i+1)
+                self.stk.write_csv(fileName_spec, self.stk.ev, tspectrum, cname = cname)
 #----------------------------------------------------------------------
     def SaveMaps(self, png_pdf=1):            
             
@@ -1137,7 +1812,7 @@ class PageSpectral(wx.Panel):
             bound = npy.max((npy.abs(min_val), npy.abs(max_val)))
         
             if self.show_scale_bar == 1:
-                um_string = '$\mu m$'
+                um_string = ' $\mathrm{\mu m}$'
                 microns = '$'+self.stk.scale_bar_string+' $'+um_string
                 axes.text(self.stk.scale_bar_pixels_x+10,self.stk.n_cols-9, microns, horizontalalignment='left', verticalalignment='center',
                               color = 'white', fontsize=14)
@@ -1153,7 +1828,7 @@ class PageSpectral(wx.Panel):
                 
                    
             fileName_img = self.SaveFileName+"_TSmap_" +str(i+1)+"."+ext               
-            fig.savefig(fileName_img)
+            fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
             
 #----------------------------------------------------------------------        
     def OnEditSpectraListClick(self, event):
@@ -1271,6 +1946,7 @@ class PageSpectral(wx.Panel):
         
 #----------------------------------------------------------------------           
     def ClearWidgets(self):
+        
         fig = self.MapPanel.get_figure()
         fig.clf()
         self.MapPanel.draw()
@@ -1284,8 +1960,8 @@ class PageSpectral(wx.Panel):
         
         self.com.spec_anl_calculated = 0
         self.i_tspec = 1
-        self.showraw = False
-        self.rb_fit.SetValue(True)
+        self.showraw = True
+        self.rb_raw.SetValue(True)
         
         self.slider_tspec.SetValue(self.i_tspec)
         
@@ -1350,7 +2026,7 @@ class PageSpectral(wx.Panel):
         bound = npy.max((npy.abs(min_val), npy.abs(max_val)))
         
         if self.show_scale_bar == 1:
-            um_string = '$\mu m$'
+            um_string = ' $\mathrm{\mu m}$'
             microns = '$'+self.stk.scale_bar_string+' $'+um_string
             axes.text(self.stk.scale_bar_pixels_x+10,self.stk.n_cols-9, microns, horizontalalignment='left', verticalalignment='center',
                       color = 'white', fontsize=14)
@@ -1371,11 +2047,7 @@ class PageSpectral(wx.Panel):
     def loadTSpectrum(self):
 
         tspectrum = self.anlz.target_spectra[self.i_tspec-1, :]
-        
-        tspectrumfit = self.anlz.target_pcafit_spectra[self.i_tspec-1, :]
-        
-        diff = npy.abs(tspectrum-tspectrumfit)
-            
+                 
         
         fig = self.TSpectrumPanel.get_figure()
         fig.clf()
@@ -1385,9 +2057,13 @@ class PageSpectral(wx.Panel):
         mtplot.rcParams['font.size'] = self.fontsize
 
         line1 = axes.plot(self.stk.ev,tspectrum, color='black', label = 'Raw data')
-        line2 = axes.plot(self.stk.ev,tspectrumfit, color='green', label = 'Fit')
+
+        if self.com.pca_calculated == 1:       
+            tspectrumfit = self.anlz.target_pcafit_spectra[self.i_tspec-1, :]  
+            diff = npy.abs(tspectrum-tspectrumfit)      
+            line2 = axes.plot(self.stk.ev,tspectrumfit, color='green', label = 'Fit')
         
-        line3 = axes.plot(self.stk.ev,diff, color='grey', label = 'Abs(Raw-Fit)')
+            line3 = axes.plot(self.stk.ev,diff, color='grey', label = 'Abs(Raw-Fit)')
         
 
         fontP = mtplot.font_manager.FontProperties()
@@ -1407,9 +2083,10 @@ class PageSpectral(wx.Panel):
         
         self.textctrl_sp.AppendText('Common Name: '+ 
                                     self.anlz.tspec_names[self.i_tspec-1]+'\n')
-        self.textctrl_sp.AppendText('RMS Error: '+ str('{0:7.5f}').format(self.anlz.target_rms[self.i_tspec-1]))
-        
-        self.ShowFitWeights()
+        if self.com.pca_calculated == 1:       
+            self.textctrl_sp.AppendText('RMS Error: '+ str('{0:7.5f}').format(self.anlz.target_rms[self.i_tspec-1]))
+            
+            self.ShowFitWeights()
         
         
 #---------------------------------------------------------------------- 
@@ -1887,7 +2564,7 @@ class ShowCompositeRBGmap(wx.Frame):
 
                             
         fig = self.RGBImagePanel.get_figure()
-        fig.savefig(SaveFileName)
+        fig.savefig(SaveFileName, bbox_inches='tight', pad_inches = 0.0)
                 
    
 
@@ -2093,8 +2770,10 @@ class PageCluster(wx.Panel):
         
         
         self.selcluster = 1
-        self.numclusters = 5
+        self.numclusters = 0
+        self.init_nclusters = 5
         self.wo_1st_pca = 0
+        self.sigma_split = 0
         
         self.MakeColorTable()             
         self.fontsize = self.com.fontsize
@@ -2120,15 +2799,26 @@ class PageCluster(wx.Panel):
         hbox11 = wx.BoxSizer(wx.HORIZONTAL)
         text1 = wx.StaticText(panel1, -1, 'Number of clusters',  style=wx.ALIGN_LEFT)
         text1.SetFont(self.com.font)
-        self.nclusterspin = wx.SpinCtrl(panel1, -1, '',  size= (60, -1), style=wx.ALIGN_LEFT)
+        self.nclusterspin = wx.SpinCtrl(panel1, -1, '',  size= (70, -1), style=wx.ALIGN_LEFT)
         self.nclusterspin.SetRange(2,20)
-        self.nclusterspin.SetValue(self.numclusters)
+        self.nclusterspin.SetValue(self.init_nclusters)
         self.Bind(wx.EVT_SPINCTRL, self.OnNClusterspin, self.nclusterspin)
         hbox11.Add((20,0))
         hbox11.Add(text1, 0, wx.TOP, 20)
         hbox11.Add((10,0))
         hbox11.Add(self.nclusterspin, 0, wx.TOP, 15)  
-        hbox11.Add((20,0))       
+        hbox11.Add((20,0))    
+        
+        hbox11a = wx.BoxSizer(wx.HORIZONTAL)
+        hbox11a.Add((20,0))
+        text1a = wx.StaticText(panel1, label="Number of clusters found")
+        self.ntc_clusters_found = wx.lib.intctrl.IntCtrl( panel1, size=( 45, -1 ), 
+                                                     style = wx.TE_CENTRE|wx.TE_READONLY, 
+                                                     value = self.numclusters)
+
+        hbox11a.Add(text1a, 0, wx.TOP, 10)
+        hbox11a.Add((5,0))
+        hbox11a.Add(self.ntc_clusters_found, 0, wx.TOP, 5)   
             
         
         hbox12 = wx.BoxSizer(wx.HORIZONTAL)
@@ -2136,22 +2826,31 @@ class PageCluster(wx.Panel):
         self.remove1stpcacb = wx.CheckBox(panel1, -1, 'Reduce thickness effects')
         self.remove1stpcacb.SetFont(self.com.font)
         self.Bind(wx.EVT_CHECKBOX, self.OnRemove1stpca, self.remove1stpcacb)
-        hbox12.Add(self.remove1stpcacb, 0, wx.EXPAND|wx.TOP, 15)
+        hbox12.Add(self.remove1stpcacb, 0, wx.EXPAND|wx.TOP, 10)
         hbox12.Add((20,0))
-        
+
+        hbox13 = wx.BoxSizer(wx.HORIZONTAL)
+        hbox13.Add((20,0))
+        self.cb_splitclusters = wx.CheckBox(panel1, -1, 'Divide clusters with large Sigma')
+        self.cb_splitclusters.SetFont(self.com.font)
+        self.Bind(wx.EVT_CHECKBOX, self.OnSplitClusters, self.cb_splitclusters)
+        hbox13.Add(self.cb_splitclusters, 0, wx.EXPAND, 15)
+        hbox13.Add((20,0))        
         
         sizer1.Add((0,10)) 
         sizer1.Add(self.button_calcca, 0, wx.EXPAND|wx.LEFT|wx.RIGHT, 20)
         sizer1.Add(hbox11, 0, wx.EXPAND)
+        sizer1.Add(hbox11a, 0, wx.EXPAND)
         sizer1.Add(hbox12, 0, wx.EXPAND)
-        
-        sizer1.Add((0,10))        
+        sizer1.Add(hbox13, 0, wx.EXPAND|wx.TOP, 3)
+                
+        sizer1.Add((0,5))        
         sizer1.Add(wx.StaticLine(panel1), 0, wx.ALL|wx.EXPAND, 5)        
-        sizer1.Add((0,10)) 
+        sizer1.Add((0,5)) 
       
         sizer1.Add(self.button_scatterplots, 0, wx.EXPAND|wx.LEFT|wx.RIGHT, 20)
         sizer1.Add(self.button_savecluster, 0, wx.EXPAND|wx.LEFT|wx.RIGHT, 20)       
-        sizer1.Add((0,10))
+        sizer1.Add((0,5))
          
         panel1.SetSizer(sizer1)
         
@@ -2177,17 +2876,17 @@ class PageCluster(wx.Panel):
         #panel 3 
         panel3 = wx.Panel(self, -1)
         vbox3 = wx.BoxSizer(wx.VERTICAL)
-        
+        panel3.SetBackgroundColour("White")  
         fgs = wx.FlexGridSizer(2, 3, 0, 0)
         
-        self.tc_cluster = wx.TextCtrl(panel3, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.tc_cluster = wx.TextCtrl(panel3, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE, size=(250,-1))
         self.tc_cluster.SetValue("Cluster ")
         self.tc_cluster.SetFont(self.com.font)
 
         i3panel = wx.Panel(panel3, -1, style = wx.SUNKEN_BORDER)
         self.ClusterIndvImagePan = wxmpl.PlotPanel(i3panel, -1, size =(PlotH*0.73, PlotH*0.73), cursor=False, crosshairs=False, location=False, zoom=False)
     
-        self.slidershow = wx.Slider(panel3, -1, self.selcluster, 1, 20, style=wx.SL_LEFT)   
+        self.slidershow = wx.Slider(panel3, -1, self.selcluster, 1, 20, style=wx.SL_LEFT|wx.SL_VERTICAL)   
         self.slidershow.Disable()    
         self.slidershow.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnClusterScroll, self.slidershow)
@@ -2258,9 +2957,10 @@ class PageCluster(wx.Panel):
         wx.BeginBusyCursor()
         self.calcclusters = False  
         
-
-        try: 
+        if True:
+        #try: 
             self.CalcClusters()
+            
             self.calcclusters = True
             
             self.selcluster = 1
@@ -2274,16 +2974,16 @@ class PageCluster(wx.Panel):
             self.com.cluster_calculated = 1       
             wx.EndBusyCursor() 
             
-        except:
-            self.com.cluster_calculated = 0
-            wx.EndBusyCursor()      
+#        except:
+#            self.com.cluster_calculated = 0
+#            wx.EndBusyCursor()      
             
         wx.GetApp().TopWindow.refresh_widgets()
             
 #----------------------------------------------------------------------        
     def OnNClusterspin(self, event):
         num = event.GetInt()
-        self.numclusters = num
+        self.init_nclusters = num
                        
  
 #----------------------------------------------------------------------        
@@ -2341,7 +3041,10 @@ class PageCluster(wx.Panel):
                        
 #----------------------------------------------------------------------
     def CalcClusters(self):
-        self.anlz.calculate_clusters_kmeans(self.numclusters, self.wo_1st_pca)
+        nclusters = self.anlz.calculate_clusters(self.init_nclusters, self.wo_1st_pca, self.sigma_split)
+        self.numclusters = nclusters
+        self.ntc_clusters_found.SetValue(self.numclusters)
+    
         
         
         
@@ -2435,10 +3138,18 @@ class PageCluster(wx.Panel):
         fig.add_axes((0.02,0.02,0.96,0.96))
         axes = fig.gca()
         
+#         divider = make_axes_locatable(axes)
+#         axcb = divider.new_horizontal(size="3%", pad=0.03)  
+#         fig.add_axes(axcb)  
+#         axes.set_position([0.03,0.03,0.8,0.94])
+               
         mtplot.rcParams['font.size'] = self.fontsize
         
         
         im = axes.imshow(mapimage, cmap=mtplot.cm.get_cmap('gray'))
+        
+        #cbar = axes.figure.colorbar(im, orientation='vertical',cax=axcb) 
+        
         axes.axis("off")
        
         self.ClusterDistMapPan.draw()
@@ -2449,7 +3160,11 @@ class PageCluster(wx.Panel):
             self.wo_1st_pca = 1
         else: self.wo_1st_pca = 0
 
-        
+#----------------------------------------------------------------------           
+    def OnSplitClusters(self, event):
+        if self.cb_splitclusters.GetValue():
+            self.sigma_split = 1
+        else: self.sigma_split = 0        
         
 #----------------------------------------------------------------------    
     def OnSave(self, event):     
@@ -2465,32 +3180,49 @@ class PageCluster(wx.Panel):
              scatt_png = True, scatt_pdf = False): 
         
         self.SaveFileName = os.path.join(path,filename)
+        
+        from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas    
+        mtplot.rcParams['pdf.fonttype'] = 42
    
         try: 
-            mtplot.rcParams['pdf.fonttype'] = 42
             
             if img_png:
                 ext = 'png'
                 suffix = "." + ext
             
-                fileName_evals = self.SaveFileName+"_CAcimg."+ext          
-            
-                fig = self.ClusterImagePan.get_figure()
-                fig.savefig(fileName_evals)
+                fig = mtplot.figure.Figure(figsize = (float(self.stk.n_rows)/10, float(self.stk.n_cols)/10))
+                canvas = FigureCanvas(fig)
+                fig.clf()
+                fig.add_axes((0.0,0.0,1.0,1.0))
+                axes = fig.gca()      
+                mtplot.rcParams['font.size'] = self.fontsize        
+        
+                im = axes.imshow(self.clusterimage, cmap=self.clusterclrmap1, norm=self.bnorm1)
+                axes.axis("off")
+                
+                fileName_caimg = self.SaveFileName+"_CAcimg."+ext       
+                fig.savefig(fileName_caimg, dpi=ImgDpi, pad_inches = 0.0)
                 
             
             if img_pdf:
                 ext = 'pdf'
                 suffix = "." + ext
             
-                fileName_evals = self.SaveFileName+"_CAcimg."+ext          
-            
-                fig = self.ClusterImagePan.get_figure()
-                fig.savefig(fileName_evals)
+                fig = mtplot.figure.Figure(figsize = (float(self.stk.n_rows)/30, float(self.stk.n_cols)/30))
+                canvas = FigureCanvas(fig)
+                fig.clf()
+                fig.add_axes((0.0,0.0,1.0,1.0))
+                axes = fig.gca()      
+                mtplot.rcParams['font.size'] = self.fontsize        
+        
+                im = axes.imshow(self.clusterimage, cmap=self.clusterclrmap1, norm=self.bnorm1)
+                axes.axis("off")
+                
+                fileName_caimg = self.SaveFileName+"_CAcimg."+ext       
+                fig.savefig(fileName_caimg, dpi=300, pad_inches = 0.0)
                             
             
-            from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas    
-            mtplot.rcParams['pdf.fonttype'] = 42
+
                   
             ext = 'png'
             suffix = "." + ext
@@ -2503,16 +3235,16 @@ class PageCluster(wx.Panel):
                     colorcl = min(i,9)
                     indvclusterimage[ind] = colorcl
 
-                    fig = mtplot.figure.Figure(figsize =(PlotH, PlotH))
+                    fig = mtplot.figure.Figure(figsize =(float(self.stk.n_rows)/10, float(self.stk.n_cols)/10))
                     canvas = FigureCanvas(fig)
-                    fig.add_axes((0.02,0.02,0.96,0.96))
+                    fig.add_axes((0.0,0.0,1.0,1.0))
                     axes = fig.gca()      
                     mtplot.rcParams['font.size'] = self.fontsize        
                     im = axes.imshow(indvclusterimage, cmap=self.clusterclrmap2, norm=self.bnorm2)
                     axes.axis("off")
                    
                     fileName_img = self.SaveFileName+"_CAimg_" +str(i+1)+"."+ext               
-                    fig.savefig(fileName_img)
+                    fig.savefig(fileName_img, dpi=ImgDpi, pad_inches = 0.0)
                 
             if spec_png:
                 for i in range (self.numclusters):
@@ -2540,7 +3272,8 @@ class PageCluster(wx.Panel):
                 for i in range (self.numclusters):
                     clusterspectrum = self.anlz.clusterspectra[i, ]
                     fileName_spec = self.SaveFileName+"_CAspectrum_" +str(i+1)+".csv"
-                    self.stk.write_csv(fileName_spec, self.anlz.stack.ev, clusterspectrum)
+                    cname = 'CAspectrum_' +str(i+1)
+                    self.stk.write_csv(fileName_spec, self.anlz.stack.ev, clusterspectrum, cname=cname)
                                                      
                 
             ext = 'pdf'
@@ -2554,16 +3287,16 @@ class PageCluster(wx.Panel):
                     colorcl = min(i,9)
                     indvclusterimage[ind] = colorcl
 
-                    fig = mtplot.figure.Figure(figsize =(PlotH, PlotH))
+                    fig = mtplot.figure.Figure(figsize =(float(self.stk.n_rows)/30, float(self.stk.n_cols)/30))
                     canvas = FigureCanvas(fig)
-                    fig.add_axes((0.02,0.02,0.96,0.96))
+                    fig.add_axes((0.0,0.0,1.0,1.0))
                     axes = fig.gca()      
                     mtplot.rcParams['font.size'] = self.fontsize        
                     im = axes.imshow(indvclusterimage, cmap=self.clusterclrmap2, norm=self.bnorm2)
                     axes.axis("off")
                    
                     fileName_img = self.SaveFileName+"_CAimg_" +str(i+1)+"."+ext               
-                    fig.savefig(fileName_img)
+                    fig.savefig(fileName_img, dpi=300, pad_inches = 0.0)
                 
             if spec_pdf:
                 for i in range (self.numclusters):
@@ -2695,9 +3428,11 @@ class PageCluster(wx.Panel):
         colors_i = npy.linspace(0,self.maxclcolors,self.maxclcolors+1)
 
        
-        self.colors=['#0000FF','#FF0000','#FFFF00','#33FF33','#B366FF',
+        self.colors=['#0000FF','#FF0000','#DFE32D','#36F200','#B366FF',
                 '#FF470A','#33FFFF','#006600','#CCCC99','#993300',
                 '#000000']
+
+
         
         self.clusterclrmap1=mtplot.colors.LinearSegmentedColormap.from_list('clustercm',self.colors)
      
@@ -2706,7 +3441,7 @@ class PageCluster(wx.Panel):
         colors_i = npy.linspace(0,self.maxclcolors+2,self.maxclcolors+3)
         
         #use black color for clusters > maxclcolors, the other 2 colors are for background      
-        colors2=['#0000FF','#FF0000','#FFFF00','#33FF33','#B366FF',
+        colors2=['#0000FF','#FF0000','#DFE32D','#36F200','#B366FF',
                 '#FF470A','#33FFFF','#006600','#CCCC99','#993300',
                 '#000000','#FFFFFF','#EEEEEE']
         
@@ -2765,7 +3500,7 @@ class Scatterplots(wx.Frame):
         i1panel = wx.Panel(panel, -1, style = wx.SUNKEN_BORDER)
         self.ScatterPPanel = wxmpl.PlotPanel(i1panel, -1, size=(5.0, 4.0), cursor=False, crosshairs=False, location=False, zoom=False)
         
-        self.slidershow_y = wx.Slider(panel, -1, self.pca_y, 1, self.numsigpca, style=wx.SL_RIGHT|wx.SL_LABELS|wx.SL_INVERSE)
+        self.slidershow_y = wx.Slider(panel, -1, self.pca_y, 1, self.numsigpca, style=wx.SL_RIGHT|wx.SL_VERTICAL|wx.SL_LABELS|wx.SL_INVERSE)
         self.slidershow_y.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnSliderScroll_y, self.slidershow_y)
         
@@ -2773,7 +3508,7 @@ class Scatterplots(wx.Frame):
         grid1.Add(i1panel, 0)
                
         
-        self.slidershow_x = wx.Slider(panel, -1, self.pca_x, 1, self.numsigpca, style=wx.SL_TOP|wx.SL_LABELS)
+        self.slidershow_x = wx.Slider(panel, -1, self.pca_x, 1, self.numsigpca, style=wx.SL_TOP|wx.SL_LABELS|wx.SL_HORIZONTAL)
         self.slidershow_x.SetFocus()        
         self.Bind(wx.EVT_SCROLL, self.OnSliderScroll_x, self.slidershow_x)
         
@@ -3101,7 +3836,7 @@ class PagePCA(wx.Panel):
         self.PCAImagePan = wxmpl.PlotPanel(i1panel, -1, size =(ph*1.10, ph), cursor=False, crosshairs=False, location=False, zoom=False)
                
         vbox11 = wx.BoxSizer(wx.VERTICAL)               
-        self.slidershow = wx.Slider(panel1, -1, self.selpca, 1, 20, style=wx.SL_LEFT)
+        self.slidershow = wx.Slider(panel1, -1, self.selpca, 1, 20, style=wx.SL_LEFT|wx.SL_VERTICAL)
         self.slidershow.Disable()          
         self.slidershow.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnPCAScroll, self.slidershow)
@@ -3168,12 +3903,13 @@ class PagePCA(wx.Panel):
         
         #panel 3
         panel3 = wx.Panel(self, -1)
-        
+        panel3.SetBackgroundColour("White")
+  
         i3panel = wx.Panel(panel3, -1, style = wx.SUNKEN_BORDER)
         self.PCASpecPan = wxmpl.PlotPanel(i3panel, -1, size =(pw, ph), cursor=False, crosshairs=False, location=False, zoom=False)
              
         vbox3 = wx.BoxSizer(wx.VERTICAL)
-        self.text_pcaspec = wx.TextCtrl(panel3, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.text_pcaspec = wx.TextCtrl(panel3, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE, size=(600,-1))
         self.text_pcaspec.SetFont(self.com.font)
         self.text_pcaspec.SetValue("PCA spectrum ")        
         vbox3.Add(self.text_pcaspec, 0)
@@ -3183,13 +3919,14 @@ class PagePCA(wx.Panel):
         
         #panel 4
         panel4 = wx.Panel(self, -1)
-             
+        panel4.SetBackgroundColour("White")        
+
         i4panel = wx.Panel(panel4, -1, style = wx.SUNKEN_BORDER)
         self.PCAEvalsPan = wxmpl.PlotPanel(i4panel, -1, size =(pw, ph*0.75), cursor=False, crosshairs=False, location=False, zoom=False)
         wxmpl.EVT_POINT(i4panel, self.PCAEvalsPan.GetId(), self.OnPointEvalsImage)   
         
         vbox4 = wx.BoxSizer(wx.VERTICAL)
-        text4 = wx.TextCtrl(panel4, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        text4 = wx.TextCtrl(panel4, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE, size=(600,-1))
         text4.SetFont(self.com.font)
         text4.SetValue("PCA eigenvalues ")        
         vbox4.Add(text4, 0)
@@ -3226,8 +3963,7 @@ class PagePCA(wx.Panel):
         scrollmax = npy.min([self.stk.n_ev, 20])
         self.slidershow.SetMax(scrollmax)
 
-        #try: 
-        if True:
+        try: 
             self.CalcPCA()
             self.calcpca = True
             self.loadPCAImage()
@@ -3235,10 +3971,10 @@ class PagePCA(wx.Panel):
             self.showEvals()
             self.com.pca_calculated = 1
             wx.EndBusyCursor() 
-#        except:
-#            self.com.pca_calculated = 0
-#            wx.EndBusyCursor()
-#            wx.MessageBox("PCA not calculated.")
+        except:
+            self.com.pca_calculated = 0
+            wx.EndBusyCursor()
+            wx.MessageBox("PCA not calculated.")
         
         wx.GetApp().TopWindow.refresh_widgets()
 
@@ -3378,7 +4114,7 @@ class PagePCA(wx.Panel):
                     axes.axis("off") 
                                 
                     fileName_img = self.SaveFileName+"_PCA_" +str(i+1)+"."+ext
-                    fig.savefig(fileName_img)
+                    fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
             
             if spec_png:
                 for i in range (self.numsigpca):
@@ -3400,7 +4136,8 @@ class PagePCA(wx.Panel):
                 for i in range (self.numsigpca):
                     pcaspectrum = self.anlz.eigenvecs[:,i]
                     fileName_spec = self.SaveFileName+"_PCAspectrum_" +str(i+1)+".csv"
-                    self.stk.write_csv(fileName_spec, self.stk.ev, pcaspectrum)
+                    cname = "PCAspectrum_" +str(i+1)
+                    self.stk.write_csv(fileName_spec, self.stk.ev, pcaspectrum, cname = cname)
                     
                 
             ext = 'pdf'
@@ -3426,7 +4163,7 @@ class PagePCA(wx.Panel):
                     axes.axis("off") 
                                 
                     fileName_img = self.SaveFileName+"_PCA_" +str(i+1)+"."+ext
-                    fig.savefig(fileName_img)
+                    fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
             
             if spec_pdf:
                 for i in range (self.numsigpca):
@@ -3781,7 +4518,7 @@ class PageStack(wx.Panel):
         #panel 1        
         panel1 = wx.Panel(self, -1)
         vbox1 = wx.BoxSizer(wx.VERTICAL)
-        
+        panel1.SetBackgroundColour("White")
         self.tc_imageeng = wx.TextCtrl(panel1, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         self.tc_imageeng.SetFont(self.com.font)
         self.tc_imageeng.SetValue("Image at energy: ")
@@ -3794,7 +4531,7 @@ class PageStack(wx.Panel):
         wxmpl.EVT_POINT(i1panel, self.AbsImagePanel.GetId(), self.OnPointAbsimage)
         
         vbox11 = wx.BoxSizer(wx.VERTICAL)                    
-        self.slider_eng = wx.Slider(panel1, -1, self.iev, 0, 100, style=wx.SL_LEFT )        
+        self.slider_eng = wx.Slider(panel1, -1, self.iev, 0, 100, style=wx.SL_LEFT|wx.SL_VERTICAL)        
         self.slider_eng.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnScrollEng, self.slider_eng)
         
@@ -3819,7 +4556,7 @@ class PageStack(wx.Panel):
         #panel 2
         panel2 = wx.Panel(self, -1)
         vbox2 = wx.BoxSizer(wx.VERTICAL)
-        
+        panel2.SetBackgroundColour("White")
         self.tc_spec = wx.TextCtrl(panel2, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
         self.tc_spec.SetValue("Spectrum")
         self.tc_spec.SetFont(self.com.font)
@@ -3846,7 +4583,7 @@ class PageStack(wx.Panel):
         self.button_align.Disable()
         vbox31.Add(self.button_align, 0, wx.EXPAND) 
         
-        vbox31.Add((0,3))       
+        vbox31.Add((0,2))       
 
         self.button_i0ffile = wx.Button(panel3, -1, 'I0 from file...')
         self.button_i0ffile.SetFont(self.com.font)
@@ -3864,7 +4601,7 @@ class PageStack(wx.Panel):
         self.button_showi0.Disable()
         vbox31.Add(self.button_showi0, 0, wx.EXPAND)
         
-        vbox31.Add((0,3))
+        vbox31.Add((0,2))
         
         self.button_limitev = wx.Button(panel3, -1, 'Limit energy range...')
         self.Bind(wx.EVT_BUTTON, self.OnLimitEv, id=self.button_limitev.GetId())
@@ -3872,7 +4609,13 @@ class PageStack(wx.Panel):
         self.button_limitev.Disable()
         vbox31.Add(self.button_limitev, 0, wx.EXPAND)
         
-        vbox31.Add((0,3))
+        self.button_subregion = wx.Button(panel3, -1, 'Clip to subregion...')
+        self.Bind(wx.EVT_BUTTON, self.OnCliptoSubregion, id=self.button_subregion.GetId())
+        self.button_subregion.SetFont(self.com.font)
+        self.button_subregion.Disable()
+        vbox31.Add(self.button_subregion, 0, wx.EXPAND)
+        
+        vbox31.Add((0,2))
         
             
         self.button_savestack = wx.Button(panel3, -1, 'Save preprocessed stack')
@@ -4059,12 +4802,12 @@ class PageStack(wx.Panel):
         
         vbox51.Add((0,1))
         
-#        self.button_ROIdosecalc = wx.Button(panel5, -1, 'ROI Dose Calculation...')
-#        self.button_ROIdosecalc.SetFont(self.com.font)
-#        self.Bind(wx.EVT_BUTTON, self.OnROI_DoseCalc, id=self.button_ROIdosecalc.GetId())   
-#        #self.button_ROIdosecalc.Disable()     
-#        vbox51.Add(self.button_ROIdosecalc, 0, wx.EXPAND)       
-#        vbox51.Add((0,1))        
+        self.button_ROIdosecalc = wx.Button(panel5, -1, 'ROI Dose Calculation...')
+        self.button_ROIdosecalc.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.OnROI_DoseCalc, id=self.button_ROIdosecalc.GetId())   
+        self.button_ROIdosecalc.Disable()     
+        vbox51.Add(self.button_ROIdosecalc, 0, wx.EXPAND)       
+        vbox51.Add((0,1))        
         
         self.button_spectralROI = wx.Button(panel5, -1, 'Spectral ROI...')
         self.button_spectralROI.SetFont(self.com.font)
@@ -4166,7 +4909,7 @@ class PageStack(wx.Panel):
         if self.show_scale_bar == 1:
             startx = int(self.stk.n_rows*0.05)
             starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
-            um_string = '$\mu m$'
+            um_string = ' $\mathrm{\mu m}$'
             microns = '$'+self.stk.scale_bar_string+' $'+um_string
             axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center',
                       color = 'black', fontsize=14)
@@ -4211,7 +4954,6 @@ class PageStack(wx.Panel):
         
         self.tc_spec.SetValue("Spectrum at pixel [" +str(ypos)+", " + str(xpos)+"] or position ["+
                               str(self.stk.x_dist[xpos])+", "+ str(self.stk.y_dist[ypos])+ "]")
-
 
         
 #----------------------------------------------------------------------            
@@ -4310,9 +5052,10 @@ class PageStack(wx.Panel):
 
 
         try: 
-            wildcard = "I0 files (*.csv)|*.csv|SDF I0 files (*.hdr)|*.hdr"
+            wildcard = "I0 CSV files (*.csv)|*.csv| I0 files (*.xas)|*.xas|SDF I0 files (*.hdr)|*.hdr"
             dialog = wx.FileDialog(None, "Choose i0 file",
                                    wildcard=wildcard,
+                                   defaultDir = defaultDir,
                                    style=wx.OPEN)
             if dialog.ShowModal() == wx.ID_OK:
                 filepath_i0 = dialog.GetPath()
@@ -4337,7 +5080,7 @@ class PageStack(wx.Panel):
                 wx.EndBusyCursor()
                 
                 
-            elif extension == '.csv':
+            elif extension == '.xas':
                 wx.BeginBusyCursor()                                    
 
                 x=self.stk.n_cols
@@ -4347,13 +5090,30 @@ class PageStack(wx.Panel):
                 self.ix = x/2
                 self.iy = y/2
 
-                self.stk.read_stk_i0(filepath_i0)
+                self.stk.read_stk_i0(filepath_i0, extension)
 
                 self.loadSpectrum(self.ix, self.iy)
                 self.loadImage()
                 self.com.i0_loaded = 1
                 wx.EndBusyCursor()
 
+            elif extension == '.csv':
+                wx.BeginBusyCursor()                             
+
+                x=self.stk.n_cols
+                y=self.stk.n_rows
+                z=self.iev               
+
+                self.ix = x/2
+                self.iy = y/2
+
+                self.stk.read_stk_i0(filepath_i0, extension)
+
+                self.loadSpectrum(self.ix, self.iy)
+                self.loadImage()
+                self.com.i0_loaded = 1
+                wx.EndBusyCursor()
+                
             
         except:
             wx.BeginBusyCursor()  
@@ -4424,9 +5184,10 @@ class PageStack(wx.Panel):
                 fig.savefig(fileName_spec)
 
             if img_png:
+                
                 fileName_img = self.SaveFileName+"_" +str(self.stk.ev[self.iev])+"eV."+ext
                 fig = self.AbsImagePanel.get_figure()
-                fig.savefig(fileName_img)
+                fig.savefig(fileName_img, pad_inches = 0.0)
                 
             #Save all images in the stack
             if img_all:
@@ -4442,16 +5203,16 @@ class PageStack(wx.Panel):
                         #Show OD image
                         image = self.stk.od3d[:,:,i]
 
-                    fig = mtplot.figure.Figure(figsize =(PlotH, PlotH))
+                    fig = mtplot.figure.Figure(figsize =(float(self.stk.n_rows)/10, float(self.stk.n_cols)/10))
                     fig.clf()
                     canvas = FigureCanvas(fig)
-                    fig.add_axes((0.02,0.02,0.96,0.96))
+                    fig.add_axes((0.0,0.0,1.0,1.0))
                     axes = fig.gca()
                     im = axes.imshow(image, cmap=mtplot.cm.get_cmap(self.colortable)) 
                     axes.axis("off") 
                                 
                     fileName_img = self.SaveFileName+"_imnum_" +str(i+1)+"."+ext
-                    fig.savefig(fileName_img)
+                    fig.savefig(fileName_img,  dpi=ImgDpi, pad_inches = 0.0)
                 wx.EndBusyCursor()
                     
             ext = 'pdf'
@@ -4466,7 +5227,7 @@ class PageStack(wx.Panel):
             if img_pdf:
                 fileName_img = self.SaveFileName+"_" +str(self.stk.ev[self.iev])+"eV."+ext
                 fig = self.AbsImagePanel.get_figure()
-                fig.savefig(fileName_img)
+                fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
                 
             if sp_csv:
                 fileName_spec = self.SaveFileName+"_spectrum.csv"
@@ -4510,6 +5271,7 @@ class PageStack(wx.Panel):
                 self.loadImage()
                 self.slider_eng.SetValue(self.iev)
                 self.loadSpectrum(self.ix, self.iy)
+                
                 time.sleep(0.01)
                 
             self.iev = old_iev 
@@ -4517,6 +5279,7 @@ class PageStack(wx.Panel):
             self.slider_eng.SetValue(self.iev)
             self.loadSpectrum(self.ix, self.iy)
             self.button_slideshow.SetLabel("Play stack movie")
+            self.movie_playing = 0
             
 
                         
@@ -4637,7 +5400,12 @@ class PageStack(wx.Panel):
 #----------------------------------------------------------------------        
     def OnLimitEv(self, evt):    
         LimitEv(self.com, self.stk).Show()
+
+#----------------------------------------------------------------------        
+    def OnCliptoSubregion(self, evt):    
+        CliptoSubregion(self.com, self.stk).Show()
         
+                
 #----------------------------------------------------------------------         
 # Determine if a point is inside a given polygon or not. The algorithm is called
 # "Ray Casting Method".
@@ -4679,6 +5447,7 @@ class PageStack(wx.Panel):
         
         self.button_acceptROI.Disable()
         self.button_resetROI.Enable()
+        self.button_ROIdosecalc.Disable() 
         wx.GetApp().TopWindow.refresh_widgets()
 
         return
@@ -4749,6 +5518,7 @@ class PageStack(wx.Panel):
 
         self.button_saveROIspectr.Enable()
         self.button_setROII0.Enable()
+        self.button_ROIdosecalc.Enable() 
         wx.GetApp().TopWindow.refresh_widgets()
                 
         self.loadImage()
@@ -4768,6 +5538,7 @@ class PageStack(wx.Panel):
         self.button_setROII0.Disable()
         self.button_resetROI.Disable()
         self.button_saveROIspectr.Disable()
+        self.button_ROIdosecalc.Disable() 
         wx.GetApp().TopWindow.refresh_widgets()
         
         self.loadImage()
@@ -4816,7 +5587,10 @@ class PageStack(wx.Panel):
         
 #----------------------------------------------------------------------    
     def OnROI_DoseCalc(self, event):  
-        DoseCalculation(self.com, self.stk).Show()
+        
+        self.CalcROISpectrum()
+        
+        DoseCalculation(self.com, self.stk, self.ROIspectrum).Show()
         
         
 #----------------------------------------------------------------------    
@@ -4834,10 +5608,10 @@ class PageStack(wx.Panel):
    
         try:
             if (self.com.i0_loaded == 1):
-                self.stk.write_csv(fileName, self.stk.ev, self.ROIspectrum)
+                self.stk.write_csv(fileName, self.stk.ev, self.ROIspectrum, cname='from ROI')
             else:
                 self.CalcROI_I0Spectrum()
-                self.stk.write_csv(fileName, self.stk.ev, self.ROIspectrum)
+                self.stk.write_csv(fileName, self.stk.ev, self.ROIspectrum, cname='from ROI')
                      
                 
         except IOError, e:
@@ -5355,11 +6129,14 @@ class LimitEv(wx.Frame):
         
         self.stack.absdata = self.stack.absdata[:,:,self.limitevmin:self.limitevmax+1]
         
-        self.stack.od3d = self.stack.od3d[:,:,self.limitevmin:self.limitevmax+1]
+        if self.com.i0_loaded == 1:   
+            self.stack.od3d = self.stack.od3d[:,:,self.limitevmin:self.limitevmax+1]
         
-        self.stack.od = self.stack.od3d.copy()
+            self.stack.od = self.stack.od3d.copy()
         
-        self.stack.od = npy.reshape(self.stack.od, (self.stack.n_rows*self.stack.n_cols, self.stack.n_ev), order='F')
+            self.stack.od = npy.reshape(self.stack.od, (self.stack.n_rows*self.stack.n_cols, self.stack.n_ev), order='F')
+        
+        self.stack.fill_h5_struct_from_stk()
         
         #Fix the slider on Page 1! 
         wx.GetApp().TopWindow.page1.slider_eng.SetRange(0,self.stack.n_ev-1)
@@ -5375,6 +6152,194 @@ class LimitEv(wx.Frame):
     def OnCancel(self, evt):
         self.Destroy()
         
+
+#---------------------------------------------------------------------- 
+class CliptoSubregion(wx.Frame):
+
+    title = "Clip to Subregion"
+
+    def __init__(self, common, stack):
+        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(500, 600))
+               
+        ico = logos.getlogo_2l_32Icon()
+        self.SetIcon(ico)
+        
+        self.SetBackgroundColour("White") 
+        
+        self.stack = stack
+        
+        self.com = common         
+        self.fontsize = self.com.fontsize
+        
+        self.new_y1 = int(self.stack.n_cols*0.10)
+        self.new_y2 = int(self.stack.n_cols*0.90)
+        self.new_x1 = int(self.stack.n_rows*0.10)
+        self.new_x2 = int(self.stack.n_rows*0.90)
+        
+        self.new_ncols = self.new_y2 - self.new_y1
+        self.new_nrows = self.new_x2 - self.new_x1
+    
+        vboxtop = wx.BoxSizer(wx.VERTICAL)
+        
+        panel = wx.Panel(self, -1)
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        
+        vbox.Add((0,40))
+               
+       
+       
+        hbox2 = wx.BoxSizer(wx.HORIZONTAL)
+        sizer2 = wx.StaticBoxSizer(wx.StaticBox(panel, -1, 'Select new stack size'), orient=wx.VERTICAL)
+        self.textctrl1 = wx.TextCtrl(panel, -1, size = (200, 20), style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.textctrl1.SetValue('Original stack size:\t{0:5d}   x{1:5d} '.format(self.stack.n_cols, self.stack.n_rows))
+        self.textctrl1.SetBackgroundColour("White")
+        sizer2.Add(self.textctrl1, 0)
+ 
+        self.textctrl2 = wx.TextCtrl(panel, -1, size = (200, 20), style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.textctrl2.SetValue('New stack size:\t{0:5d}   x{1:5d} '.format(self.new_ncols, self.new_nrows))
+        self.textctrl2.SetBackgroundColour("White")
+        sizer2.Add(self.textctrl2, 0)       
+        
+        self.textctrl3 = wx.TextCtrl(panel, -1, size = (400, 20), style=wx.TE_MULTILINE|wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE)
+        self.textctrl3.SetValue('Clip coordinates [[x1, x2], [y1, y2]] : [[{0:5d},{1:5d}], [{2:5d},{3:5d}]]'.format(
+                                    self.new_x1, self.new_x2, self.new_y1, self.new_y2))
+        self.textctrl3.SetBackgroundColour("White")
+        sizer2.Add(self.textctrl3, 0)    
+
+        self.AbsImagePanel = wxmpl.PlotPanel(panel, -1, size =(PlotH,PlotH), cursor=False, crosshairs=False, location=False, zoom=False)
+        wxmpl.EVT_SELECTION(panel, self.AbsImagePanel.GetId(), self.OnSelection)
+        sizer2.Add(self.AbsImagePanel, 0)
+        hbox2.Add(sizer2, 0, wx.LEFT|wx.RIGHT ,20)
+        vbox.Add(hbox2, 0, wx.EXPAND)              
+        vbox.Add((0,10))
+         
+         
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
+              
+        button_ok = wx.Button(panel, -1, 'Accept')
+        self.Bind(wx.EVT_BUTTON, self.OnAccept, id=button_ok.GetId())
+        hbox.Add(button_ok, 1, wx.ALL,20)
+        
+        button_cancel = wx.Button(panel, -1, 'Cancel')
+        self.Bind(wx.EVT_BUTTON, self.OnCancel, id=button_cancel.GetId())
+        self.Bind(wx.EVT_CLOSE, self.OnCancel)
+        hbox.Add(button_cancel, 1, wx.ALL ,20)
+        
+        vbox.Add(hbox, 0 )
+        
+        panel.SetSizer(vbox)
+        
+        vboxtop.Add(panel,1, wx.EXPAND | wx.LEFT, 20 )
+        
+        self.SetSizer(vboxtop)
+        
+
+        self.draw_image()
+        
+        self.Centre()
+
+    
+    
+#----------------------------------------------------------------------        
+    def draw_image(self):
+        
+   
+        image = self.stack.absdata[:,:,self.stack.n_ev/2].copy() 
+       
+       
+               
+        fig = self.AbsImagePanel.get_figure()
+        fig.clf()
+        fig.add_axes((0.02,0.02,0.96,0.96))
+        
+        
+        axes = fig.gca()
+        fig.patch.set_alpha(1.0) 
+      
+        im = axes.imshow(image, cmap=mtplot.cm.get_cmap("gray")) 
+        
+        # Draw the rectangle
+        line1=mtplot.lines.Line2D([self.new_x1,self.new_x2], [self.new_y1,self.new_y1] ,color="red")
+        line1.set_clip_on(False)
+        axes.add_line(line1)   
+
+        line2=mtplot.lines.Line2D([self.new_x1,self.new_x2], [self.new_y2,self.new_y2] ,color="red")
+        line2.set_clip_on(False)
+        axes.add_line(line2)   
+        
+        line3=mtplot.lines.Line2D([self.new_x1,self.new_x1], [self.new_y1,self.new_y2] ,color="red")
+        line3.set_clip_on(False)
+        axes.add_line(line3)   
+        
+        line4=mtplot.lines.Line2D([self.new_x2,self.new_x2], [self.new_y1,self.new_y2] ,color="red")
+        line4.set_clip_on(False)
+        axes.add_line(line4)   
+         
+        axes.axis("off")  
+        self.AbsImagePanel.draw()
+
+
+#----------------------------------------------------------------------        
+    def OnSelection(self, evt):
+        
+        x1, y1 = evt.x1data, evt.y1data
+        x2, y2 = evt.x2data, evt.y2data
+        
+        self.new_y1 = int(y1)
+        self.new_y2 = int(y2)
+        self.new_x1 = int(x1)
+        self.new_x2 = int(x2)
+        
+        self.new_ncols = self.new_y1 - self.new_y2 + 1
+        self.new_nrows = self.new_x2 - self.new_x1 + 1
+
+        self.textctrl2.SetValue('New stack size:\t{0:5d}   x{1:5d} '.format(self.new_ncols, self.new_nrows))
+        self.textctrl3.SetValue('Clip coordinates [[x1, x2], [y1, y2]]:[[{0:5d},{1:5d}], [{2:5d},{3:5d}]]'.format(
+                                    self.new_x1, self.new_x2, self.new_y1, self.new_y2))
+    
+        self.draw_image()
+
+#----------------------------------------------------------------------        
+    def OnAccept(self, evt):
+        
+        #change the stack size to [x1,x2], [y1,y2] 
+        #Matlab axis are inverted
+        self.stack.absdata = self.stack.absdata[self.new_y2:self.new_y1+1, self.new_x1:self.new_x2+1, :]
+              
+        self.stack.n_cols = self.stack.absdata.shape[0]
+        self.stack.n_rows = self.stack.absdata.shape[1]
+
+        
+        if self.com.i0_loaded == 1:        
+            self.stack.od3d = self.stack.od3d[self.new_y2:self.new_y1+1, self.new_x1:self.new_x2+1, :]
+        
+            self.stack.od = self.stack.od3d.copy()
+        
+            self.stack.od = npy.reshape(self.stack.od, (self.stack.n_rows*self.stack.n_cols, self.stack.n_ev), order='F')
+        
+        #Fix the slider on Page 1! 
+        wx.GetApp().TopWindow.page1.ix = self.stack.n_cols/2
+        wx.GetApp().TopWindow.page1.iy = self.stack.n_rows/2
+        
+        self.stack.fill_h5_struct_from_stk()
+        
+        wx.GetApp().TopWindow.page1.loadSpectrum(wx.GetApp().TopWindow.page1.ix, wx.GetApp().TopWindow.page1.iy)
+        wx.GetApp().TopWindow.page1.loadImage()
+        wx.GetApp().TopWindow.page0.ShowImage()
+
+
+        self.Destroy() 
+        wx.GetApp().TopWindow.Show()
+
+
+
+                
+#---------------------------------------------------------------------- 
+    def OnCancel(self, evt):
+        wx.GetApp().TopWindow.Show()
+        self.Destroy()   
+
+
         
 #---------------------------------------------------------------------- 
 class ImageRegistration(wx.Frame):
@@ -5441,7 +6406,7 @@ class ImageRegistration(wx.Frame):
         wxmpl.EVT_POINT(i1panel, self.AbsImagePanel.GetId(), self.OnPointCorrimage)
 
                     
-        self.slider_eng = wx.Slider(panel1, -1, self.iev, 0, self.stack.n_ev-1, style=wx.SL_LEFT )        
+        self.slider_eng = wx.Slider(panel1, -1, self.iev, 0, self.stack.n_ev-1, style=wx.SL_LEFT|wx.SL_VERTICAL)        
         self.slider_eng.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnScrollEng, self.slider_eng)
 
@@ -5677,7 +6642,18 @@ class ImageRegistration(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnCropShifts, id=self.button_crop.GetId())   
         self.button_crop.Disable()
         vbox7.Add(self.button_crop, 0, wx.EXPAND)
+
+        self.button_saveshifts = wx.Button(panel7, -1, 'Save image shifts')
+        self.button_saveshifts.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.OnSaveShifts, id=self.button_saveshifts.GetId())
+        self.button_saveshifts.Disable()
+        vbox7.Add(self.button_saveshifts, 0, wx.EXPAND)
         
+        self.button_loadshifts = wx.Button(panel7, -1, 'Load image shifts')
+        self.button_loadshifts.SetFont(self.com.font)
+        self.Bind(wx.EVT_BUTTON, self.OnLoadShifts, id=self.button_loadshifts.GetId())
+        vbox7.Add(self.button_loadshifts, 0, wx.EXPAND)
+                
         self.button_accept = wx.Button(panel7, -1, 'Accept changes')
         self.button_accept.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnAccept, id=self.button_accept.GetId())
@@ -5720,7 +6696,7 @@ class ImageRegistration(wx.Frame):
         
         vboxR.Add((0,20))
         vboxR.Add(hboxRT)
-        vboxR.Add((0,20))
+        vboxR.Add((0,30))
         vboxR.Add(hboxRB)
         
         hboxtop.Add(vboxL)
@@ -6322,6 +7298,84 @@ class ImageRegistration(wx.Frame):
         self.ShowRefImage()
 
 #----------------------------------------------------------------------  
+    def OnSaveShifts(self, evt):
+        
+        wildcard = "CSV files (*.csv)|*.csv"
+        dialog = wx.FileDialog(None, "Please select an alignment file (.csv)",
+                               wildcard=wildcard,
+                               style=wx.SAVE)
+        if dialog.ShowModal() == wx.ID_OK:
+            filepath = dialog.GetPath()
+            
+            file = open(filepath, 'w')
+            print>>file, '*********************  Alignment file  ********************'
+            print>>file, '***  for ', self.com.filename
+            print>>file, '***  ev, xshift, yshift'           
+            for ie in range(self.stack.n_ev):
+                print>>file, '%.6f, %.6f, %.6f' %(self.stack.ev[ie], self.xshifts[ie], self.yshifts[ie])
+        
+            file.close()            
+        
+#----------------------------------------------------------------------  
+    def OnLoadShifts(self, evt):
+        wildcard = "CSV files (*.csv)|*.csv"
+        dialog = wx.FileDialog(None, "Please select an alignment file (.csv)",
+                               wildcard=wildcard,
+                               style=wx.OPEN)
+        if dialog.ShowModal() == wx.ID_OK:
+            filepath = dialog.GetPath()
+
+
+            f = open(str(filepath),'r')
+            
+            elist = []
+            xshiftlist = []    
+            yshiftlist = []  
+            
+            for line in f:
+                if line.startswith('*'):
+                    continue
+                else:
+                    e, xs, ys = [float (x) for x in line.split(',')] 
+                    elist.append(e)
+                    xshiftlist.append(xs)
+                    yshiftlist.append(ys)                   
+                   
+            f.close()
+            
+ 
+            self.xshifts = npy.zeros((self.stack.n_ev))
+            self.yshifts = npy.zeros((self.stack.n_ev)) 
+           
+            for ie in range(self.stack.n_ev):
+                engfl = '%.6f' % ( self.stack.ev[ie])
+                eng = float(engfl)
+                if eng in elist:
+                    ind = elist.index(eng)
+                    self.xshifts[ie] = xshiftlist[ind]
+                    self.yshifts[ie] = yshiftlist[ind]
+                 
+
+            #Apply shifts
+            self.PlotShifts()
+            for i in range(self.stack.n_ev):
+                img = self.aligned_stack[:,:,i]
+                if (abs(self.xshifts[i])>0.02) or (abs(self.yshifts[i])>0.02):
+                    shifted_img = self.stack.apply_image_registration(img, 
+                                                                      self.xshifts[i], 
+                                                                      self.yshifts[i])
+                    self.aligned_stack[:,:,i] = shifted_img
+    
+                    
+            self.regist_calculated = 1
+            self.iev = 0
+            self.ShowImage()
+            self.slider_eng.SetValue(self.iev)
+            
+            self.UpdateWidgets()                    
+           
+            
+#----------------------------------------------------------------------  
     def UpdateWidgets(self):
         
         if self.auto:
@@ -6337,10 +7391,12 @@ class ImageRegistration(wx.Frame):
             if self.regist_calculated == 1:
                 self.button_crop.Enable()
                 self.button_accept.Enable()
+                self.button_saveshifts.Enable()
                 self.button_saveimg.Enable()
             else:
                 self.button_crop.Disable()
                 self.button_accept.Disable() 
+                self.button_saveshifts.Disable()
                 self.button_saveimg.Disable()
                            
         else:
@@ -6356,9 +7412,11 @@ class ImageRegistration(wx.Frame):
             if self.regist_calculated == 1:
                 self.button_crop.Enable()
                 self.button_accept.Enable()
+                self.button_saveshifts.Enable()
             else:
                 self.button_crop.Disable()
                 self.button_accept.Disable() 
+                self.button_saveshifts.Disable()
                            
             if self.man_align == 0:
                 self.button_pick2ndpoint.Disable()
@@ -6377,7 +7435,7 @@ class SpectralROI(wx.Frame):
     title = "Spectral Regions of Interest"
 
     def __init__(self, common, stack):
-        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(630, 700))
+        wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(630, 720))
                
         ico = logos.getlogo_2l_32Icon()
         self.SetIcon(ico)
@@ -6409,13 +7467,15 @@ class SpectralROI(wx.Frame):
         
         panel = wx.Panel(self, -1)
         vbox = wx.BoxSizer(wx.VERTICAL)
-               
+        text = wx.StaticText(panel, 0, 'First select I0 region below the edge, then select I region above the edge:')
+        
         i1panel = wx.Panel(panel, -1, style = wx.SUNKEN_BORDER)
         self.SpectrumPanel = wxmpl.PlotPanel(i1panel, -1, size=(6.0, 3.7), cursor=False, crosshairs=False, location=False, zoom=False)
         
         wxmpl.EVT_SELECTION(i1panel, self.SpectrumPanel.GetId(), self.OnSelection)
 
-        vbox.Add(i1panel, 0, wx.ALL, 20)
+        vbox.Add(text, 0, wx.TOP|wx.LEFT, 20)
+        vbox.Add(i1panel, 0, wx.BOTTOM|wx.LEFT, 20)
         
        
         hbox2 = wx.BoxSizer(wx.HORIZONTAL)
@@ -6508,10 +7568,30 @@ class SpectralROI(wx.Frame):
         fig.clf()
         fig.add_axes((0.02,0.02,0.96,0.96))
         
-        
         axes = fig.gca()
+        divider = make_axes_locatable(axes)
+        axcb = divider.new_horizontal(size="3%", pad=0.03)  
+
+        fig.add_axes(axcb)
+        
+        axes.set_position([0.03,0.03,0.8,0.94])
+        
         
         im = axes.imshow(self.odthickmap, cmap=mtplot.cm.get_cmap("gray")) 
+
+        cbar = axes.figure.colorbar(im, orientation='vertical',cax=axcb) 
+
+        #Show Scale Bar
+        startx = int(self.stack.n_rows*0.05)
+        starty = self.stack.n_cols-int(self.stack.n_cols*0.05)-self.stack.scale_bar_pixels_y
+        um_string = ' $\mathrm{\mu m}$'
+        microns = '$'+self.stack.scale_bar_string+' $'+um_string
+        axes.text(self.stack.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center',
+                  color = 'black', fontsize=14)
+        #Matplotlib has flipped scales so I'm using rows instead of cols!
+        p = mtplot.patches.Rectangle((startx,starty), self.stack.scale_bar_pixels_x, self.stack.scale_bar_pixels_y,
+                               color = 'black', fill = True)
+        axes.add_patch(p)
 
          
         axes.axis("off")  
@@ -6610,7 +7690,7 @@ class DoseCalculation(wx.Frame):
 
     title = "Dose Calculation"
 
-    def __init__(self, common, stack):
+    def __init__(self, common, stack, ROIspectrum):
         wx.Frame.__init__(self, wx.GetApp().TopWindow, title=self.title, size=(415, 270))
                
         ico = logos.getlogo_2l_32Icon()
@@ -6620,6 +7700,7 @@ class DoseCalculation(wx.Frame):
         
         self.stack = stack
         self.com = common
+        self.ROIspectrum = ROIspectrum
                
         self.fontsize = self.com.fontsize
         
@@ -6627,8 +7708,9 @@ class DoseCalculation(wx.Frame):
         
         panel1 = wx.Panel(self, -1)
         
-        gridtop = wx.FlexGridSizer(4, 2, vgap=20, hgap=20)
-    
+        gridtop = wx.FlexGridSizer(3, 2, vgap=20, hgap=20)
+        #gridtop = wx.FlexGridSizer(4, 2, vgap=20, hgap=20)
+        
         fontb = wx.SystemSettings_GetFont(wx.SYS_DEFAULT_GUI_FONT)
         fontb.SetWeight(wx.BOLD)
         
@@ -6637,47 +7719,89 @@ class DoseCalculation(wx.Frame):
         st1.SetFont(fontb)
         st2 = wx.StaticText(panel1, -1, 'I region composition:',  style=wx.ALIGN_LEFT)
         st2.SetFont(fontb)
-        st3 = wx.StaticText(panel1, -1, 'Xray absorption length:',  style=wx.ALIGN_LEFT)
-        st3.SetFont(fontb)
+#        st3 = wx.StaticText(panel1, -1, 'Xray absorption length:',  style=wx.ALIGN_LEFT)
+#        st3.SetFont(fontb)
         st4 = wx.StaticText(panel1, -1, 'Dose [Gray]:',  style=wx.ALIGN_LEFT)
         st4.SetFont(fontb)
 
         
         self.tc_1 = wx.TextCtrl(panel1, -1, size=((200,-1)), style=wx.TE_RICH|wx.VSCROLL, 
-                                         value=' ')
+                                         value='30')
         
         self.tc_2 = wx.TextCtrl(panel1, -1, size=((200,-1)), style=wx.TE_RICH|wx.VSCROLL, 
+                                         value='')
+        
+#        self.tc_3 = wx.TextCtrl(panel1, -1, size=((200,-1)), style=wx.TE_RICH|wx.VSCROLL|wx.TE_READONLY, 
+#                                         value=' ')   
+        
+        self.tc_4 = wx.TextCtrl(panel1, -1, size=((200,-1)), style=wx.TE_RICH|wx.VSCROLL|wx.TE_READONLY, 
                                          value=' ')
         
-        self.tc_3 = wx.TextCtrl(panel1, -1, size=((200,-1)), style=wx.TE_RICH|wx.VSCROLL, 
-                                         value=' ')   
-        
-        self.tc_4 = wx.TextCtrl(panel1, -1, size=((200,-1)), style=wx.TE_RICH|wx.VSCROLL, 
-                                         value=' ')
-              
+      
         gridtop.Add(st1, 0)
         gridtop.Add( self.tc_1, 0)
         gridtop.Add(st2, 0)
         gridtop.Add( self.tc_2, 0)
-        gridtop.Add(st3, 0)
-        gridtop.Add( self.tc_3, 0)
+#        gridtop.Add(st3, 0)
+#        gridtop.Add( self.tc_3, 0)
         gridtop.Add(st4, 0)        
         gridtop.Add( self.tc_4, 0)             
           
         panel1.SetSizer(gridtop)
 
-        
+        button_calcdose = wx.Button(self, -1, 'Calculate Dose')
+        self.Bind(wx.EVT_BUTTON, self.OnCalcDose, id=button_calcdose.GetId())
+                
         button_cancel = wx.Button(self, -1, 'Dismiss')
         self.Bind(wx.EVT_BUTTON, self.OnCancel, id=button_cancel.GetId())
 
 
         vboxtop.Add(panel1, 1, wx.LEFT| wx.RIGHT|wx.TOP|wx.EXPAND, 20)
-        vboxtop.Add(button_cancel, 0, wx.ALL | wx.EXPAND, 20) 
+        vboxtop.Add(button_calcdose, 0, wx.LEFT| wx.RIGHT | wx.EXPAND, 20) 
+        vboxtop.Add(button_cancel, 0, wx.LEFT| wx.RIGHT | wx.BOTTOM | wx.EXPAND, 20) 
         
         self.SetSizer(vboxtop)    
         
               
+#---------------------------------------------------------------------- 
+    def CalcDose(self):
+                      
+        
+        try:
+            detector_eff = 0.01*float(self.tc_1.GetValue())
+        except:
+            print 'Please enter numeric number for detector efficiency.'
+            return
+            
+        
+        i_composition = str(self.tc_2.GetValue())
+        
+        dose = 0.
+        
+        Chenke = henke.henke()
+        
+        #Check if composition array is recognizable
+        try:
+            z_array, atwt = Chenke.compound(i_composition,1.0)
+        except:
+            print 'Composition string error: Please re-enter composition string.'
+            return
+        
+        
+        dose = Chenke.dose_calc(self.stack, i_composition, self.ROIspectrum, self.stack.i0data, detector_eff)
+        
+        self.tc_4.SetValue(str(dose))
+        
+        return
+        
+        
+#---------------------------------------------------------------------- 
+    def OnCalcDose(self, evt):
 
+        wx.BeginBusyCursor()
+        self.CalcDose()
+        wx.EndBusyCursor()
+        
 #---------------------------------------------------------------------- 
     def OnCancel(self, evt):
 
@@ -6771,7 +7895,7 @@ class PlotFrame(wx.Frame):
                                     style=wx.SAVE|wx.OVERWRITE_PROMPT)
 
             if dialog.ShowModal() == wx.ID_OK:
-                            filepath = dialog.GetPath()
+                filepath = dialog.GetPath()
                             
             wx.BeginBusyCursor()                  
             self.Save(filepath)    
@@ -6790,39 +7914,39 @@ class PlotFrame(wx.Frame):
 #----------------------------------------------------------------------
     def Save(self, filename):
             
-        file = open(filename, 'w')
-        print>>file, '*********************  X-ray Absorption Data  ********************'
-        print>>file, '*'
-        print>>file, '* Formula: '
-        print>>file, '* Common name: ', self.title
-        print>>file, '* Edge: '
-        print>>file, '* Acquisition mode: '
-        print>>file, '* Source and purity: ' 
-        print>>file, '* Comments: Stack list ROI ""'
-        print>>file, '* Delta eV: '
-        print>>file, '* Min eV: '
-        print>>file, '* Max eV: '
-        print>>file, '* Y axis: '
-        print>>file, '* Contact person: '
-        print>>file, '* Write date: '
-        print>>file, '* Journal: '
-        print>>file, '* Authors: '
-        print>>file, '* Title: '
-        print>>file, '* Volume: '
-        print>>file, '* Issue number: '
-        print>>file, '* Year: '
-        print>>file, '* Pages: '
-        print>>file, '* Booktitle: '
-        print>>file, '* Editors: '
-        print>>file, '* Publisher: '
-        print>>file, '* Address: '
-        print>>file, '*--------------------------------------------------------------'
+        f = open(filename, 'w')
+        print>>f, '*********************  X-ray Absorption Data  ********************'
+        print>>f, '*'
+        print>>f, '* Formula: '
+        print>>f, '* Common name: ', self.title
+        print>>f, '* Edge: '
+        print>>f, '* Acquisition mode: '
+        print>>f, '* Source and purity: ' 
+        print>>f, '* Comments: Stack list ROI ""'
+        print>>f, '* Delta eV: '
+        print>>f, '* Min eV: '
+        print>>f, '* Max eV: '
+        print>>f, '* Y axis: '
+        print>>f, '* Contact person: '
+        print>>f, '* Write date: '
+        print>>f, '* Journal: '
+        print>>f, '* Authors: '
+        print>>f, '* Title: '
+        print>>f, '* Volume: '
+        print>>f, '* Issue number: '
+        print>>f, '* Year: '
+        print>>f, '* Pages: '
+        print>>f, '* Booktitle: '
+        print>>f, '* Editors: '
+        print>>f, '* Publisher: '
+        print>>f, '* Address: '
+        print>>f, '*--------------------------------------------------------------'
         dim = self.datax.shape
         n=dim[0]
         for ie in range(n):
-            print>>file, '%.6f, %.6f' %(self.datax[ie], self.datay[ie])
+            print>>f, '%.6f, %.6f' %(self.datax[ie], self.datay[ie])
         
-        file.close()
+        f.close()
     
         
 #----------------------------------------------------------------------              
@@ -6988,7 +8112,7 @@ class PageLoadData(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self.OnLoadHDF5, id=self.button_hdf5.GetId())
         vbox1.Add(self.button_hdf5, 0, wx.EXPAND)
         
-        self.button_sdf = wx.Button(panel1, -1, 'Load SDF Stack (*.hrd)')
+        self.button_sdf = wx.Button(panel1, -1, 'Load SDF Stack (*.hdr)')
         self.button_sdf.SetFont(self.com.font)
         self.Bind(wx.EVT_BUTTON, self.OnLoadSDF, id=self.button_sdf.GetId())   
         vbox1.Add(self.button_sdf, 0, wx.EXPAND)
@@ -7006,7 +8130,12 @@ class PageLoadData(wx.Panel):
         self.button_txrm = wx.Button(panel1, -1, 'Load TXRM Stack (*.txrm)')
         self.Bind(wx.EVT_BUTTON, self.OnLoadTXRM, id=self.button_txrm.GetId())
         self.button_txrm.SetFont(self.com.font)
-        vbox1.Add(self.button_txrm, 0, wx.EXPAND)        
+        vbox1.Add(self.button_txrm, 0, wx.EXPAND)    
+        
+        self.button_tif = wx.Button(panel1, -1, 'Load TIF Stack (*.tif)')
+        self.Bind(wx.EVT_BUTTON, self.OnLoadTIF, id=self.button_tif.GetId())
+        self.button_tif.SetFont(self.com.font)
+        vbox1.Add(self.button_tif, 0, wx.EXPAND)      
 
         sizer1.Add(vbox1,1, wx.ALL|wx.EXPAND,10)
         panel1.SetSizer(sizer1)
@@ -7063,7 +8192,7 @@ class PageLoadData(wx.Panel):
         panel5 = wx.Panel(self, -1)
         vbox5 = wx.BoxSizer(wx.VERTICAL)
         
-        self.tc_imageeng = wx.TextCtrl(panel5, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE, size=(160,-1))
+        self.tc_imageeng = wx.TextCtrl(panel5, 0, style=wx.TE_READONLY|wx.TE_RICH|wx.BORDER_NONE, size=(300,-1))
         self.tc_imageeng.SetFont(self.com.font)
         self.tc_imageeng.SetValue("Image at energy: ")
         
@@ -7073,7 +8202,7 @@ class PageLoadData(wx.Panel):
         self.AbsImagePanel = wxmpl.PlotPanel(i1panel, -1, size =(PlotH*.8, PlotH*.8), cursor=False, crosshairs=False, location=False, zoom=False)
         
         vbox51 = wx.BoxSizer(wx.VERTICAL)
-        self.slider_eng = wx.Slider(panel5, -1, self.iev, 0, 100, style=wx.SL_LEFT)        
+        self.slider_eng = wx.Slider(panel5, 0, self.iev, 0, 100, style=wx.SL_LEFT|wx.SL_VERTICAL)        
         self.slider_eng.SetFocus()
         self.Bind(wx.EVT_SCROLL, self.OnScrollEng, self.slider_eng)
 
@@ -7135,33 +8264,39 @@ class PageLoadData(wx.Panel):
 #----------------------------------------------------------------------          
     def OnLoadHDF5(self, event):
 
-        wildcard =  "HDF5 files (*.hdf5)|*.hdf5|SDF files (*.hdr)|*.hdr|STK files (*.stk)|*.stk|TXRM (*.txrm)|*.txrm|XRM (*.xrm)|*.xrm" 
+        wildcard =  "HDF5 files (*.hdf5)|*.hdf5|SDF files (*.hdr)|*.hdr|STK files (*.stk)|*.stk|TXRM (*.txrm)|*.txrm|XRM (*.xrm)|*.xrm|TIF (*.tif)|*.tif" 
         wx.GetApp().TopWindow.LoadStack(wildcard)
         
 #----------------------------------------------------------------------          
     def OnLoadSDF(self, event):
 
-        wildcard =  "SDF files (*.hdr)|*.hdr|HDF5 files (*.hdf5)|*.hdf5|STK files (*.stk)|*.stk|TXRM (*.txrm)|*.txrm|XRM (*.xrm)|*.xrm" 
+        wildcard =  "SDF files (*.hdr)|*.hdr|HDF5 files (*.hdf5)|*.hdf5|STK files (*.stk)|*.stk|TXRM (*.txrm)|*.txrm|XRM (*.xrm)|*.xrm|TIF (*.tif)|*.tif" 
         wx.GetApp().TopWindow.LoadStack(wildcard)
                 
 #----------------------------------------------------------------------          
     def OnLoadSTK(self, event):
 
-        wildcard =  "STK files (*.stk)|*.stk|HDF5 files (*.hdf5)|*.hdf5|SDF files (*.hdr)|*.hdr|TXRM (*.txrm)|*.txrm|XRM (*.xrm)|*.xrm" 
+        wildcard =  "STK files (*.stk)|*.stk|HDF5 files (*.hdf5)|*.hdf5|SDF files (*.hdr)|*.hdr|TXRM (*.txrm)|*.txrm|XRM (*.xrm)|*.xrm|TIF (*.tif)|*.tif" 
         wx.GetApp().TopWindow.LoadStack(wildcard)
         
 #----------------------------------------------------------------------          
     def OnLoadTXRM(self, event):
 
-        wildcard =  "TXRM (*.txrm)|*.txrm|HDF5 files (*.hdf5)|*.hdf5|SDF files (*.hdr)|*.hdr|STK files (*.stk)|*.stk|XRM (*.xrm)|*.xrm" 
+        wildcard =  "TXRM (*.txrm)|*.txrm|HDF5 files (*.hdf5)|*.hdf5|SDF files (*.hdr)|*.hdr|STK files (*.stk)|*.stk|XRM (*.xrm)|*.xrm|TIF (*.tif)|*.tif" 
         wx.GetApp().TopWindow.LoadStack(wildcard)
 
 #----------------------------------------------------------------------          
     def OnLoadXRM(self, event):
 
-        wildcard =  "XRM (*.xrm)|*.xrm|HDF5 files (*.hdf5)|*.hdf5|SDF files (*.hdr)|*.hdr|STK files (*.stk)|*.stk|TXRM (*.txrm)|*.txrm" 
+        wildcard =  "XRM (*.xrm)|*.xrm|HDF5 files (*.hdf5)|*.hdf5|SDF files (*.hdr)|*.hdr|STK files (*.stk)|*.stk|TXRM (*.txrm)|*.txrm|TIF (*.tif)|*.tif" 
         wx.GetApp().TopWindow.LoadStack(wildcard)
-        
+
+#----------------------------------------------------------------------          
+    def OnLoadTIF(self, event):
+
+        wildcard =  "TIF (*.tif)|*.tif|XRM (*.xrm)|*.xrm|HDF5 files (*.hdf5)|*.hdf5|SDF files (*.hdr)|*.hdr|STK files (*.stk)|*.stk|TXRM (*.txrm)|*.txrm" 
+        wx.GetApp().TopWindow.LoadStack(wildcard)
+                
 #----------------------------------------------------------------------          
     def OnBuildStack(self, event):
 
@@ -7204,17 +8339,18 @@ class PageLoadData(wx.Panel):
         
         im = axes.imshow(image, cmap=mtplot.cm.get_cmap("gray")) 
         
-        #Show Scale Bar
-        startx = int(self.stk.n_rows*0.05)
-        starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
-        um_string = '$\mu m$'
-        microns = '$'+self.stk.scale_bar_string+' $'+um_string
-        axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center',
-                  color = 'black', fontsize=14)
-        #Matplotlib has flipped scales so I'm using rows instead of cols!
-        p = mtplot.patches.Rectangle((startx,starty), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
-                               color = 'black', fill = True)
-        axes.add_patch(p)
+        if wx.GetApp().TopWindow.page1.show_scale_bar == 1:
+            #Show Scale Bar
+            startx = int(self.stk.n_rows*0.05)
+            starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
+            um_string = ' $\mathrm{\mu m}$'
+            microns = '$'+self.stk.scale_bar_string+' $'+um_string
+            axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center',
+                      color = 'black', fontsize=14)
+            #Matplotlib has flipped scales so I'm using rows instead of cols!
+            p = mtplot.patches.Rectangle((startx,starty), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
+                                   color = 'black', fill = True)
+            axes.add_patch(p)
             
        
         axes.axis("off")      
@@ -7239,6 +8375,7 @@ class MainFrame(wx.Frame):
     def __init__(self, parent, id, title):
         wx.Frame.__init__(self, parent, id, title, size=(Winsizex, Winsizey))
         
+        
       
         ico = logos.getlogo_2l_32Icon()
         self.SetIcon(ico)
@@ -7249,10 +8386,11 @@ class MainFrame(wx.Frame):
         self.data_struct = data_struct.h5()
         self.stk = data_stack.data(self.data_struct)
         self.anlz = analyze.analyze(self.stk)
+        self.nnma = nnma.nnma(self.stk, self.data_struct, self.anlz)
         self.common = common()
-	self.nnma = nnma.nnma(self.stk, self.data_struct, self.anlz)
         
         self.SetFont(self.common.font)
+              
 
         # Here we create a panel and a notebook on the panel
         p = wx.Panel(self)
@@ -7264,11 +8402,8 @@ class MainFrame(wx.Frame):
         self.page2 = PagePCA(nb, self.common, self.data_struct, self.stk, self.anlz)
         self.page3 = PageCluster(nb, self.common, self.data_struct, self.stk, self.anlz)
         self.page4 = PageSpectral(nb, self.common, self.data_struct, self.stk, self.anlz)
-        self.page5Notebook = wx.Notebook(nb)    # page 5 is a wx.Notebook, with different pages for different NNMA analysis results
-	#self.page5 = PageNNMA(nb, self.common, self.data_struct, self.stk, self.nnma)
-        self.page5a = PageNNMAOptDensity(self.page5Notebook, self.common, self.data_struct, self.stk, self.nnma)
-        self.page5b = PageNNMASpectra(self.page5Notebook, self.common, self.data_struct, self.stk, self.nnma)
-        self.page5c = PageNNMAThickness(self.page5Notebook, self.common, self.data_struct, self.stk, self.nnma)
+        self.page7 = None
+
 
         # add the pages to the notebook with the label to show on the tab
         nb.AddPage(self.page0, "Load Data")
@@ -7277,15 +8412,38 @@ class MainFrame(wx.Frame):
         nb.AddPage(self.page3, "Cluster Analysis")
         nb.AddPage(self.page4, "Spectral Analysis")
         # Only add NNMA pages if option "--nnma" is given in command line
-        options, extraParams = getopt.getopt(sys.argv[1:], '', 'nnma')
+        options, extraParams = getopt.getopt(sys.argv[1:], '', ['wx', 'batch', 'nnma', 'ica', 'keyeng'])
         for opt, arg in options:
-          if opt in "--nnma":
-	    nb.AddPage(self.page5Notebook, "NNMA Analysis")
-	    self.page5Notebook.AddPage(self.page5a, 'NNMA optical density')
-	    self.page5Notebook.AddPage(self.page5b, 'NNMA spectra')
-	    self.page5Notebook.AddPage(self.page5c, 'NNMA thickness maps')
-        
+            if opt in '--nnma':
+                if verbose: print "Running with NNMA."
+                self.page5Notebook = wx.Notebook(nb)    # page 5 is a wx.Notebook, with different pages for different NNMA analysis results
+                #self.page5 = PageNNMA(nb, self.common, self.data_struct, self.stk, self.nnma)
+                self.page5a = PageNNMAOptDensity(self.page5Notebook, self.common, self.data_struct, self.stk, self.nnma)
+                self.page5b = PageNNMASpectra(self.page5Notebook, self.common, self.data_struct, self.stk, self.nnma)
+                self.page5c = PageNNMAThickness(self.page5Notebook, self.common, self.data_struct, self.stk, self.nnma)
+                nb.AddPage(self.page5Notebook, "NNMA Analysis")
+                self.page5Notebook.AddPage(self.page5a, 'NNMA optical density')
+                self.page5Notebook.AddPage(self.page5b, 'NNMA spectra')
+                self.page5Notebook.AddPage(self.page5c, 'NNMA thickness maps')
 
+            if opt in '--ica':
+                if verbose: print "Running with ICA."
+                self.page6 = PageICA(nb, self.common, self.data_struct, self.stk, self.anlz)
+                nb.AddPage(self.page6, "ICA")
+                
+            
+#             if opt in '--keyeng':
+#                 if verbose: print "Running with KeyEng."
+#                 self.page7 = PageKeyEng(nb, self.common, self.data_struct, self.stk, self.anlz)
+#                 nb.AddPage(self.page7, "Key Energies")
+
+          
+
+        self.page7 = PageKeyEng(nb, self.common, self.data_struct, self.stk, self.anlz)
+        nb.AddPage(self.page7, "Key Energies")
+                            
+                
+                
         # finally, put the notebook in a sizer for the panel to manage
         # the layout
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -7307,14 +8465,15 @@ class MainFrame(wx.Frame):
         openTool = self.toolbar.AddSimpleTool(wx.ID_OPEN, open_ico, "Open stack .hdf5 or .stk", "Open stack .hdf5 or .stk")
         self.Bind(wx.EVT_MENU, self.onBrowse, openTool)
         
-        open_sl_ico = logos.getslBitmap()
+        open_sl_ico = wx.Image(os.path.join('images', 'open-sl.png'), wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+        #open_sl_ico = logos.getslBitmap()
         openslTool = self.toolbar.AddSimpleTool(101, open_sl_ico, "Open directory with file sequence", "Open direcory with file sequence")   
         self.Bind(wx.EVT_MENU, self.onOpenSL, openslTool)
         
         save_ico = wx.ArtProvider.GetBitmap(wx.ART_FILE_SAVE, wx.ART_TOOLBAR, (16,16))
-        saveTool = self.toolbar.AddSimpleTool(wx.ID_SAVE, save_ico, "Save analysis", "Save analysis")
+        saveTool = self.toolbar.AddSimpleTool(wx.ID_SAVE, save_ico, "Save results to .hdf5", "Save results to .hdf5")
         self.toolbar.EnableTool(wx.ID_SAVE, False)       
-        #self.Bind(wx.EVT_MENU, self.onBrowse, saveTool)     
+        self.Bind(wx.EVT_MENU, self.onSaveResultsToH5, saveTool)     
         
         saveas_ico = wx.ArtProvider.GetBitmap(wx.ART_FILE_SAVE_AS, wx.ART_TOOLBAR, (16,16))
         saveasTool = self.toolbar.AddSimpleTool(wx.ID_SAVEAS, saveas_ico, "Save as .hdf5", "Save as .hdf5")
@@ -7344,7 +8503,7 @@ class MainFrame(wx.Frame):
 
         try:
             if wildcard == '':
-                wildcard =  "HDF5 files (*.hdf5)|*.hdf5|SDF files (*.hdr)|*.hdr|STK files (*.stk)|*.stk|TXRM (*.txrm)|*.txrm|XRM (*.xrm)|*.xrm" 
+                wildcard =  "HDF5 files (*.hdf5)|*.hdf5|SDF files (*.hdr)|*.hdr|STK files (*.stk)|*.stk|TXRM (*.txrm)|*.txrm|XRM (*.xrm)|*.xrm|TIF (*.tif)|*.tif" 
             dialog = wx.FileDialog(None, "Choose a file", style=wx.OPEN)
             
             dialog.SetWildcard(wildcard)
@@ -7352,6 +8511,10 @@ class MainFrame(wx.Frame):
                 filepath = dialog.GetPath()
                 self.page1.filename = dialog.GetFilename()
                 directory = dialog.GetDirectory()
+                defaultDir = directory
+            else:
+                return
+            
             wx.BeginBusyCursor() 
             basename, extension = os.path.splitext(self.page1.filename)      
             
@@ -7408,10 +8571,21 @@ class MainFrame(wx.Frame):
                     self.anlz.delete_data()  
                          
                 self.stk.read_xrm(filepath)        
+                
+            if extension == '.tif':              
+                if self.common.stack_loaded == 1:
+                    self.new_stack_refresh()  
+                    self.stk.new_data()
+                    #self.stk.data_struct.delete_data()
+                    self.anlz.delete_data()  
+                         
+                self.stk.read_tiff(filepath)    
+                self.page1.show_scale_bar = 0
+                self.page1.add_scale_cb.SetValue(False)
 
 
             #Update widgets 
-            self.iev = self.stk.n_ev/2
+            self.iev = int(self.stk.n_ev/2)
             self.page0.slider_eng.SetRange(0,self.stk.n_ev-1)
             self.page0.iev = self.iev
             self.page0.slider_eng.SetValue(self.iev)
@@ -7427,9 +8601,9 @@ class MainFrame(wx.Frame):
             self.page1.imgrgb = npy.zeros(x*y*3,dtype = "uint8")        
             self.page1.maxval = npy.amax(self.stk.absdata)
             
-        
-            self.ix = x/2
-            self.iy = y/2
+
+            self.ix = int(x/2)
+            self.iy = int(y/2)
                     
             self.common.stack_loaded = 1
             
@@ -7443,8 +8617,6 @@ class MainFrame(wx.Frame):
             self.page1.loadImage()
             self.page1.loadSpectrum(self.ix, self.iy)
             self.page1.textctrl.SetValue(self.page1.filename)
-
-            self.page5a.loadODImage()	# load optical density image on NNMA page
             
             self.page0.ShowInfo(self.page1.filename, directory)
             
@@ -7477,9 +8649,8 @@ class MainFrame(wx.Frame):
         """
 
         try:
-
             dialog = wx.DirDialog(None, "Choose a directory",
-                                   style=wx.DD_DIR_MUST_EXIST)
+                                   style=wx.DD_DIR_MUST_EXIST|wx.DD_CHANGE_DIR)
             #dialog.SetWildcard(wildcard)
             if dialog.ShowModal() == wx.ID_OK:
                 directory = dialog.GetPath()
@@ -7489,14 +8660,14 @@ class MainFrame(wx.Frame):
             StackListFrame(directory, self.common, self.stk, self.data_struct).Show()
             
         except:
-
+            print 'Error could not build stack list.'
             self.common.stack_loaded = 0 
             self.common.i0_loaded = 0
             self.new_stack_refresh()
             self.refresh_widgets()
                                
-#            wx.MessageBox(".sm files not loaded.")
-#            import sys; print sys.exc_info()
+            wx.MessageBox(".sm files not loaded.")
+            import sys; print sys.exc_info()
         
 
 #----------------------------------------------------------------------
@@ -7537,7 +8708,46 @@ class MainFrame(wx.Frame):
         self.refresh_widgets()
         
         return
-       
+ 
+#----------------------------------------------------------------------
+    def onSaveResultsToH5(self, event):
+        self.SaveResultsToH5()
+        
+        
+#----------------------------------------------------------------------
+    def SaveResultsToH5(self):
+
+        """
+        Browse for .hdf5 file
+        """
+
+        try: 
+            wildcard = "HDF5 files (*.hdf5)|*.hdf5"
+            dialog = wx.FileDialog(None, "Save as .hdf5", wildcard=wildcard,
+                                    style=wx.SAVE|wx.OVERWRITE_PROMPT)
+
+            if dialog.ShowModal() == wx.ID_OK:
+                filepath = dialog.GetPath()
+                self.page1.filename = dialog.GetFilename()
+                dir = dialog.GetDirectory()
+                
+                self.common.path = dir
+                self.common.filename = self.page1.filename
+
+            wx.BeginBusyCursor()                  
+            self.stk.write_results_h5(filepath, self.data_struct, self.anlz)    
+            wx.EndBusyCursor()      
+
+        except:
+
+            wx.EndBusyCursor()
+            wx.MessageBox("Could not save HDF5 file.")
+                   
+        dialog.Destroy()
+        self.refresh_widgets()
+        
+        return
+          
 #----------------------------------------------------------------------
     def onAbout(self, event):
         AboutFrame().Show()
@@ -7546,7 +8756,7 @@ class MainFrame(wx.Frame):
 #----------------------------------------------------------------------        
     def refresh_widgets(self):
         
-        #page 1
+
         if self.common.stack_loaded == 0:
             self.page1.button_i0ffile.Disable()
             self.page1.button_i0histogram.Disable() 
@@ -7559,6 +8769,7 @@ class MainFrame(wx.Frame):
             self.page1.button_resetdisplay.Disable() 
             self.page1.button_despike.Disable()   
             self.page1.button_displaycolor.Disable()
+            self.toolbar.EnableTool(wx.ID_SAVE, False)
             self.toolbar.EnableTool(wx.ID_SAVEAS, False)
         else:
             self.page1.button_i0ffile.Enable()
@@ -7572,21 +8783,28 @@ class MainFrame(wx.Frame):
             self.page1.button_resetdisplay.Enable() 
             self.page1.button_despike.Enable() 
             self.page1.button_displaycolor.Enable()
+            self.toolbar.EnableTool(wx.ID_SAVE, True) 
             self.toolbar.EnableTool(wx.ID_SAVEAS, True)  
             
             
         if self.common.i0_loaded == 0:
             self.page1.button_limitev.Disable()
+            self.page1.button_subregion.Disable()
             self.page1.button_showi0.Disable() 
             self.page1.rb_flux.Disable()
             self.page1.rb_od.Disable()
             self.page2.button_calcpca.Disable()
+            self.page4.button_loadtspec.Disable()
+            self.page4.button_addflat.Disable()
         else:
             self.page1.button_limitev.Enable()
+            self.page1.button_subregion.Enable()
             self.page1.button_showi0.Enable()
             self.page1.rb_flux.Enable()
             self.page1.rb_od.Enable()   
             self.page2.button_calcpca.Enable() 
+            self.page4.button_loadtspec.Enable()
+            self.page4.button_addflat.Enable()   
             
             
             
@@ -7594,14 +8812,14 @@ class MainFrame(wx.Frame):
             self.page2.button_savepca.Disable()
             self.page2.slidershow.Disable() 
             self.page3.button_calcca.Disable()
-            self.page4.button_loadtspec.Disable()
-            self.page4.button_addflat.Disable()
+            self.page4.rb_fit.Disable()
+            if self.page7: self.page7.button_calckeng.Disable()
         else:
             self.page2.button_savepca.Enable()
             self.page2.slidershow.Enable()
-            self.page3.button_calcca.Enable()
-            self.page4.button_loadtspec.Enable()
-            self.page4.button_addflat.Enable()            
+            self.page3.button_calcca.Enable()  
+            self.page4.rb_fit.Enable()  
+            if self.page7: self.page7.button_calckeng.Enable()       
             
         if self.common.cluster_calculated == 0:   
             self.page3.button_scatterplots.Disable()
@@ -7634,7 +8852,8 @@ class MainFrame(wx.Frame):
             
 #----------------------------------------------------------------------        
     def new_stack_refresh(self):
-       
+        
+        
         self.common.i0_loaded = 0
         self.common.pca_calculated = 0
         self.common.cluster_calculated = 0
@@ -7712,16 +8931,20 @@ class MainFrame(wx.Frame):
         
         #page 4
         self.page4.ClearWidgets()
-       
-
-        # page 5a, 5b, 5c
-        figOD = self.page5a.ODPanel.getfigure()
-        figOD.clf()
-        figODRecon = self.page5a.ODRecon.getfigure()
-        figODRecon.clf()
-        self.page5a.ODPanel.draw()        
-        self.page5a.ODReconPanel.draw()
-
+        
+        #page 7
+        if self.page7:
+            self.page7.button_calckeng.Disable()
+            fig = self.page7.KESpecPan.get_figure()
+            fig.clf()
+            self.page7.KESpecPan.draw()         
+            fig = self.page7.AbsImagePanel.get_figure()
+            fig.clf()
+            self.page7.AbsImagePanel.draw()   
+            self.page7.lc_1.DeleteAllItems()   
+            self.page7.keyenergies = []
+            self.page7.keyengs_calculated = 0     
+        
 #---------------------------------------------------------------------- 
 class StackListFrame(wx.Frame):
 
@@ -7852,15 +9075,13 @@ class StackListFrame(wx.Frame):
                 else:
                     continue
                 
-
             return
          
             
         self.xrm_files = [x for x in os.listdir(self.filepath) if x.endswith('.xrm')] 
         
 
-
-        if self.xrm_files:
+        if self.xrm_files:        
             
             self.filetype = 'xrm'
             
@@ -7870,21 +9091,20 @@ class StackListFrame(wx.Frame):
             count = 0
         
             for i in range(len(self.xrm_files)):
-                #print sm_files
+
                 filename = self.xrm_files[i]
                 file = os.path.join(self.filepath, filename)
-            
+
                 ncols, nrows, iev = self.xrm.read_xrm_fileinfo(file)
-            
+  
                 if ncols > 0:           
                     self.filelist.InsertStringItem(count,filename)
                     self.filelist.SetStringItem(count,1,str(ncols))
                     self.filelist.SetStringItem(count,2,str(nrows))
                     self.filelist.SetStringItem(count,3,'{0:5.2f}'.format(iev))
                     count += 1
-                else:
-                    continue
-                
+
+            
         self.sm_files = self.xrm_files
         return
         
@@ -7920,6 +9140,10 @@ class StackListFrame(wx.Frame):
 #----------------------------------------------------------------------        
     def OnAccept(self, evt):
         
+        wx.BeginBusyCursor()
+        
+        wx.GetApp().TopWindow.new_stack_refresh()
+        self.stk.new_data()
         
         ind1st = self.sm_files.index(self.file1st) 
         indlast = self.sm_files.index(self.filelast)
@@ -7954,6 +9178,8 @@ class StackListFrame(wx.Frame):
         
         
         self.stk.fill_h5_struct_from_stk()
+        
+        self.stk.scale_bar()
                    
 
         wx.GetApp().TopWindow.page1.iev = int(self.stk.n_ev/3)
@@ -7967,7 +9193,10 @@ class StackListFrame(wx.Frame):
         wx.GetApp().TopWindow.page1.ResetDisplaySettings()
         wx.GetApp().TopWindow.page1.filename = filelist[0]
         wx.GetApp().TopWindow.page1.textctrl.SetValue(filelist[0])
-        
+ 
+        wx.GetApp().TopWindow.page0.slider_eng.SetRange(0,self.stk.n_ev-1)
+        wx.GetApp().TopWindow.page0.iev = self.stk.n_ev/2
+        wx.GetApp().TopWindow.page0.slider_eng.SetValue(wx.GetApp().TopWindow.page1.iev)       
         
         wx.GetApp().TopWindow.page1.slider_eng.SetRange(0,self.stk.n_ev-1)
         wx.GetApp().TopWindow.page1.iev = self.stk.n_ev/2
@@ -7978,6 +9207,7 @@ class StackListFrame(wx.Frame):
         
         wx.GetApp().TopWindow.page0.ShowInfo(filelist[0], self.filepath)
         
+        wx.EndBusyCursor()
         self.Destroy()
         
 #---------------------------------------------------------------------- 
@@ -7992,8 +9222,8 @@ class AboutFrame(wx.Frame):
     def __init__(self):
         wx.Frame.__init__(self, wx.GetApp().TopWindow, title = "About Mantis", size=(420, 700))
         
-        ico = logos.getlogo_2l_32Icon()
-        self.SetIcon(ico)
+        #ico = logos.getlogo_2l_32Icon()
+        #self.SetIcon(ico)
         
         
         self.com = wx.GetApp().TopWindow.common         
@@ -8008,8 +9238,9 @@ class AboutFrame(wx.Frame):
         panel = wx.Panel(self, -1)
         vbox = wx.BoxSizer(wx.VERTICAL)
         
-        img = logos.getMantis_logo_aboutImage()
-        self.imageCtrl = wx.StaticBitmap(panel, wx.ID_ANY, wx.BitmapFromImage(img))
+        img = wx.Image(os.path.join('images', 'Mantis_logo_about.png'), wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+        #img = logos.getMantis_logo_aboutImage()
+        self.imageCtrl = wx.StaticBitmap(panel, wx.ID_ANY, img)
  
         vbox.Add(self.imageCtrl, 0, wx.ALL, 2)
 
@@ -8077,20 +9308,22 @@ http://www.gnu.org/licenses/.''')
 def show_splash():
     # create, show and return the splash screen
     bitmap = logos.getMantis_logo_splashBitmap()
+    
     splash = wx.SplashScreen(bitmap, wx.SPLASH_CENTRE_ON_SCREEN|wx.SPLASH_NO_TIMEOUT, 3000, None, -1)
     splash.Show()
     return splash
 
+
 """ ------------------------------------------------------------------------------------------------"""
 def main():
     app = wx.App()
-    splash = show_splash()
+    #splash = show_splash()
    
-    time.sleep(1)
+    #time.sleep(1)
     frame = MainFrame(None, -1, 'Mantis')
     frame.Show()
 
-    splash.Destroy()
+    #splash.Destroy()
     app.MainLoop()
 
 if __name__ == '__main__':
