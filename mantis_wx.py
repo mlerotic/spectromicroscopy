@@ -37,7 +37,7 @@ import data_struct
 import data_stack
 import analyze
 import logos
-import nnma
+#import nnma
 import henke
 
 
@@ -8386,7 +8386,7 @@ class MainFrame(wx.Frame):
         self.data_struct = data_struct.h5()
         self.stk = data_stack.data(self.data_struct)
         self.anlz = analyze.analyze(self.stk)
-        self.nnma = nnma.nnma(self.stk, self.data_struct, self.anlz)
+#        self.nnma = nnma.nnma(self.stk, self.data_struct, self.anlz)
         self.common = common()
         
         self.SetFont(self.common.font)

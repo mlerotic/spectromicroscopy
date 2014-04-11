@@ -102,8 +102,10 @@ class nnma():
 # Calculate NNMA
 #---------------------------------------------------------------------------------------
   def calcNNMA(self):
+      
+    print 'calculating nnma'
 
-    self.OD = self.stack.od
+    self.OD = self.stack.od.copy()
     self.energies = self.stack.ev
     self.nEnergies = self.stack.n_ev
     self.nCols = self.stack.n_cols
@@ -158,6 +160,7 @@ class nnma():
       costCurrent, deltaErrorCurrent = self.calcCostFn(muCurrent, tCurrent, count)
 
       count = count + 1
+      print count
 
     endTime = time.time()
     self.timeTaken = endTime - startTime

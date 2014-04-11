@@ -204,8 +204,7 @@ class analyze:
             self.eigenvecs = self.eigenvecs[:,perm]
             
             self.pcaimages = np.dot(od,self.eigenvecs)
-            self.pcaimages2D = self.pcaimages.T 	# use this to pass on to NNMA calculations; using transpose here because matrices in NNMA are generally filled in C order (instead of Fortran), with energy as leftmost (slowest-changing) index; pcaimages2D has dimensions SxP 
-            
+
             #calculate eigenimages
             self.pcaimages = np.reshape(self.pcaimages, (self.stack.n_cols, self.stack.n_rows, self.stack.n_ev), order='F')
 

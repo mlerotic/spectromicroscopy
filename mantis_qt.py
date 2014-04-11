@@ -388,7 +388,8 @@ class PageNNMA(QtGui.QWidget):
        
 #----------------------------------------------------------------------          
     def OnCalcNNMA(self, event):
-      self.nnma.calcNNMA() 
+        
+        self.nnma.calcNNMA() 
         
 """ ------------------------------------------------------------------------------------------------"""
 class PageXrayPeakFitting(QtGui.QWidget):
