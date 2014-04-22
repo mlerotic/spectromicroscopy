@@ -88,6 +88,19 @@ class PageNNMA(QtGui.QWidget):
         self.anlz = anlz
         self.nnma = nnma
         
+        self.i_map = 0
+        self.show_scale_bar = 0
+        self.nnmacalculated = 0
+        
+        self.nComponents = 5    
+        self.maxIters = 10        
+        self.deltaErrorThreshold = 1e-3        
+        self.initMatrices = 'Random'  
+    
+        self.lambdaSparse = 0.        
+        self.lambdaClusterSim = 0.    
+        self.lambdaSmooth = 0.      
+        
         
         #panel 1
         sizer1 = QtGui.QGroupBox('NNMA analysis')
@@ -97,17 +110,17 @@ class PageNNMA(QtGui.QWidget):
         vbox1.addStretch(1) 
         self.button_calcnnma = QtGui.QPushButton('Calculate NNMA')
         self.button_calcnnma.clicked.connect( self.OnCalcNNMA)   
-        self.button_calcnnma.setEnabled(True)
+        self.button_calcnnma.setEnabled(False)
         vbox1.addWidget(self.button_calcnnma)
         self.button_mucluster = QtGui.QPushButton('Load initial cluster spectra...')
-        #self.button_mucluster.clicked.connect( self.OnShowScatterplots)
+        self.button_mucluster.clicked.connect( self.OnLoadClusterSpectra)
         self.button_mucluster.setEnabled(False)
         self.button_mufile = QtGui.QPushButton('Load initial standard spectra...')
-        #self.button_mucfile.clicked.connect( self.OnShowScatterplots)
+        self.button_mufile.clicked.connect( self.OnLoadStandardSpectra)
         self.button_mufile.setEnabled(False)   
         self.button_murand = QtGui.QPushButton('Load initial random spectra...')
-        #self.button_mucmurand.clicked.connect( self.OnShowScatterplots)
-        self.button_murand.setEnabled(False)          
+        self.button_murand.clicked.connect( self.OnLoadRandomSpectra)         
+        self.button_murand.setEnabled(False) 
         self.button_savecluster = QtGui.QPushButton('Save NNMA Results...')
         #self.button_savecluster.clicked.connect( self.OnSave)
         self.button_savecluster.setEnabled(False)
@@ -126,8 +139,8 @@ class PageNNMA(QtGui.QWidget):
         hbox11.addStretch(1)
         self.ncompspin = QtGui.QSpinBox()
         self.ncompspin.setRange(2,20)
-        #self.ncompspin.setValue(self.init_nclusters)
-        #self.ncompspin.valueChanged[int].connect(self.OnNClusterspin)
+        self.ncompspin.setValue(self.nComponents)
+        self.ncompspin.valueChanged[int].connect(self.OnNNMAspin)
         hbox11.addWidget(self.ncompspin)  
         
         vbox11.addLayout(hbox11) 
@@ -152,7 +165,7 @@ class PageNNMA(QtGui.QWidget):
         self.ntc_lamsim.setValidator(QtGui.QDoubleValidator(0, 99999, 2, self))
         self.ntc_lamsim.setAlignment(QtCore.Qt.AlignRight)         
         hbox15a.addStretch(1)
-        #self.ntc_lamsim.setText(str(self.pcscalingfactor))
+        self.ntc_lamsim.setText(str(self.lambdaClusterSim))
         hbox15a.addWidget(self.ntc_lamsim) 
         
         vbox11.addLayout(hbox15a) 
@@ -166,7 +179,7 @@ class PageNNMA(QtGui.QWidget):
         self.ntc_lamsmooth.setValidator(QtGui.QDoubleValidator(0, 99999, 2, self))
         self.ntc_lamsmooth.setAlignment(QtCore.Qt.AlignRight)         
         hbox15b.addStretch(1)
-        #self.ntc_lamsmooth.setText(str(self.pcscalingfactor))
+        self.ntc_lamsmooth.setText(str(self.lambdaSmooth))
         hbox15b.addWidget(self.ntc_lamsmooth) 
         
         vbox11.addLayout(hbox15b) 
@@ -180,7 +193,7 @@ class PageNNMA(QtGui.QWidget):
         self.ntc_lamspar.setValidator(QtGui.QDoubleValidator(0, 99999, 2, self))
         self.ntc_lamspar.setAlignment(QtCore.Qt.AlignRight)         
         hbox15c.addStretch(1)
-        #self.ntc_lamspar.setText(str(self.pcscalingfactor))
+        self.ntc_lamspar.setText(str(self.lambdaSparse))
         hbox15c.addWidget(self.ntc_lamspar) 
         
         vbox11.addLayout(hbox15c) 
@@ -201,6 +214,7 @@ class PageNNMA(QtGui.QWidget):
         self.ntc_niterations.setFixedWidth(65)
         self.ntc_niterations.setValidator(QtGui.QDoubleValidator(0, 99999, 2, self))
         self.ntc_niterations.setAlignment(QtCore.Qt.AlignRight)   
+        self.ntc_niterations.setText(str(self.maxIters))
         hbox12.addWidget(self.ntc_niterations)  
   
         vbox11.addLayout(hbox12) 
@@ -215,7 +229,7 @@ class PageNNMA(QtGui.QWidget):
         self.ntc_dthresh.setValidator(QtGui.QDoubleValidator(0, 99999, 2, self))
         self.ntc_dthresh.setAlignment(QtCore.Qt.AlignRight)         
         hbox14a.addStretch(1)
-        #self.ntc_dthresh.setText(str(self.pcscalingfactor))
+        self.ntc_dthresh.setText(str(self.deltaErrorThreshold))
         hbox14a.addWidget(self.ntc_dthresh) 
         
         vbox11.addLayout(hbox14a) 
@@ -262,9 +276,9 @@ class PageNNMA(QtGui.QWidget):
             
         self.slidershow = QtGui.QScrollBar(QtCore.Qt.Vertical)
         self.slidershow.setFocusPolicy(QtCore.Qt.StrongFocus)
-        self.slidershow.setRange(1,20)
-        self.slidershow.setEnabled(False)          
-        #self.slidershow.valueChanged[int].connect(self.OnPCAScroll)
+        self.slidershow.setRange(0,20)
+        #self.slidershow.setEnabled(False)          
+        self.slidershow.valueChanged[int].connect(self.OnScroll)
 
         
         hbox21.addWidget(self.slidershow)
@@ -275,9 +289,9 @@ class PageNNMA(QtGui.QWidget):
         #panel 3
         vbox3 = QtGui.QVBoxLayout()
     
-        self.text_nnmaspec = QtGui.QLabel(self)
-        self.text_nnmaspec.setText("NNMA spectrum ") 
-        vbox3.addWidget(self.text_nnmaspec)
+        self.tc_nnmaspec = QtGui.QLabel(self)
+        self.tc_nnmaspec.setText("NNMA spectrum ") 
+        vbox3.addWidget(self.tc_nnmaspec)
                         
         frame = QtGui.QFrame()
         frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
@@ -319,13 +333,13 @@ class PageNNMA(QtGui.QWidget):
          
         hbox51 = QtGui.QHBoxLayout()
         self.cb_inputsp = QtGui.QCheckBox('Overlay input spectra', self)
-        #self.cb_inputsp.stateChanged.connect(self.OnShowallspectra)
+        self.cb_inputsp.stateChanged.connect(self.ShowSpectrum)
         hbox51.addWidget(self.cb_inputsp)
         vbox5.addLayout(hbox51)         
         
         hbox52 = QtGui.QHBoxLayout()
         self.cb_showallsp = QtGui.QCheckBox('Show all spectra', self)
-        #self.cb_showallsp.stateChanged.connect(self.OnShowallspectra)
+        self.cb_showallsp.stateChanged.connect(self.ShowSpectrum)
         hbox52.addWidget(self.cb_showallsp)
         vbox5.addLayout(hbox52)        
         
@@ -337,25 +351,26 @@ class PageNNMA(QtGui.QWidget):
         
         hbox52 = QtGui.QHBoxLayout()
         self.cb_totalcost = QtGui.QCheckBox('Total cost', self)
-        #self.cb_totalcost.stateChanged.connect(self.OnShowallspectra)
+        self.cb_totalcost.setChecked(True)
+        self.cb_totalcost.stateChanged.connect(self.ShowCostFunction)
         hbox52.addWidget(self.cb_totalcost)
         vbox5.addLayout(hbox52)  
         
         hbox53 = QtGui.QHBoxLayout()
         self.cb_simlcost = QtGui.QCheckBox('Similarity cost', self)
-        #self.cb_simlcost.stateChanged.connect(self.OnShowallspectra)
+        self.cb_simlcost.stateChanged.connect(self.ShowCostFunction)
         hbox53.addWidget(self.cb_simlcost)
         vbox5.addLayout(hbox53)  
         
         hbox54 = QtGui.QHBoxLayout()
         self.cb_smoothcost = QtGui.QCheckBox('Smoothness cost', self)
-        #self.cb_smoothcost.stateChanged.connect(self.OnShowallspectra)
+        self.cb_smoothcost.stateChanged.connect(self.ShowCostFunction)
         hbox54.addWidget(self.cb_smoothcost)
         vbox5.addLayout(hbox54)  
 
         hbox54 = QtGui.QHBoxLayout()
         self.cb_sparcost = QtGui.QCheckBox('Sparsness cost', self)
-        #self.cb_sparcost.stateChanged.connect(self.OnShowallspectra)
+        self.cb_sparcost.stateChanged.connect(self.ShowCostFunction)
         hbox54.addWidget(self.cb_sparcost)
         vbox5.addLayout(hbox54)  
         
@@ -385,12 +400,260 @@ class PageNNMA(QtGui.QWidget):
         vboxtop.addLayout(gridsizertop)
         vboxtop.addStretch(1)
         self.setLayout(vboxtop)
-       
+
+
+#----------------------------------------------------------------------          
+    def OnLoadClusterSpectra(self, event):
+        
+        self.nnma.setClusterSpectra(self.anlz.clusterspectra)
+                                                        
+        self.window().refresh_widgets()     
+        
+        self.initMatrices = 'Cluster'     
+        
+#----------------------------------------------------------------------          
+    def OnLoadRandomSpectra(self, event):
+        
+        self.initMatrices = 'Random'
+        
+        self.lambdaClusterSim = 0.0
+        self.ntc_lamsim.setText(str(self.lambdaClusterSim))
+          
+#----------------------------------------------------------------------          
+    def OnLoadStandardSpectra(self, event):    
+
+        if True:
+        #try: 
+            
+            wildcard = "Spectrum files (*.csv);;Spectrum files (*.xas);;"
+            
+            #filepath = QtGui.QFileDialog.getOpenFileNames(self, 'Choose Spectra files', '', wildcard, self.DefaultDir)
+            filepath = QtGui.QFileDialog.getOpenFileNames(self, 'Choose Spectra files', '', wildcard)
+
+            if filepath == '':
+                return
+            
+            self.filenames = []
+            for name in filepath:
+                self.filenames.append(str(name))
+
+                
+            kNNMA = len(self.filenames)
+            muInit = npy.zeros((self.stk.n_ev, kNNMA))
+                                   
+            for i in range(kNNMA):
+                thisfn = os.path.basename(str(self.filenames[i]))
+                basename, extension = os.path.splitext(thisfn)      
+                if extension == '.csv':
+                    spectrum_evdata, spectrum_data, spectrum_common_name = self.stk.read_csv(self.filenames[i])
+                elif extension == '.xas':
+                    spectrum_evdata, spectrum_data, spectrum_common_name = self.stk.read_xas(self.filenames[i])
+                                        
+                # Map this spectrum onto our energy range - interpolate to ev
+                init_spectrum = npy.interp(self.stk.ev, spectrum_evdata, spectrum_data)      
+
+                muInit[:, i] = init_spectrum[:]
+                
+            
+            self.nnma.setStandardsSpectra(muInit)   
+            self.initMatrices = 'Standards'                     
+            self.lambdaClusterSim = 0.0
+            self.ntc_lamsim.setText(str(self.lambdaClusterSim))
+                                    
+                    
+            QtGui.QApplication.restoreOverrideCursor()
+            
+#         except:
+#             QtGui.QApplication.restoreOverrideCursor()  
+#             QtGui.QMessageBox.warning(self, 'Error', 'Spectra files not loaded.')
+                                   
+                                 
+        self.window().refresh_widgets()  
+                      
 #----------------------------------------------------------------------          
     def OnCalcNNMA(self, event):
         
-        self.nnma.calcNNMA() 
+
+        value = self.ntc_niterations.text()
+        self.maxIters = int(value)  
+        value = self.ntc_dthresh.text()      
+        self.deltaErrorThreshold = float(value)        
+
+        value = self.ntc_lamspar.text() 
+        self.lambdaSparse = float(value)       
+        value = self.ntc_lamsim.text()  
+        self.lambdaClusterSim = float(value)   
+        value = self.ntc_lamsmooth.text()  
+        self.lambdaSmooth = float(value)      
         
+
+        self.nnma.setParameters(kNNMA = self.nComponents, 
+                                maxIters = self.maxIters, 
+                                deltaErrorThreshold = self.deltaErrorThreshold, 
+                                initMatrices = self.initMatrices, 
+                                lambdaSparse = self.lambdaSparse, 
+                                lambdaClusterSim = self.lambdaClusterSim, 
+                                lambdaSmooth = self.lambdaSmooth)
+        
+        self.nnma.calcNNMA(initmatrices = self.initMatrices) 
+        
+        self.nnmacalculated = 1
+        self.i_map = 0
+        self.slidershow.setValue(self.i_map)
+        self.slidershow.setMaximum(self.nComponents-1)
+        self.ShowMaps()
+        self.ShowSpectrum()
+        self.ShowCostFunction()
+        
+        
+        
+#----------------------------------------------------------------------        
+    def OnNNMAspin(self, value):
+        num = value
+        self.nComponents = num        
+
+#----------------------------------------------------------------------        
+    def OnScroll(self, value):
+        self.i_map = value
+        if self.nnmacalculated == 1:
+            self.ShowMaps()
+            self.ShowSpectrum()
+ 
+  
+#----------------------------------------------------------------------      
+    def ShowMaps(self):
+
+
+        mapimage = self.nnma.tRecon[self.i_map, :,:]
+
+        
+        colors=['#FF0000','#000000','#FFFFFF']
+        
+        spanclrmap=matplotlib.colors.LinearSegmentedColormap.from_list('spancm',colors)
+                
+        fig = self.nnmaimgfig
+        fig.clf()
+     
+        axes = fig.gca()
+    
+        divider = make_axes_locatable(axes)
+        ax_cb = divider.new_horizontal(size="3%", pad=0.03)  
+
+        fig.add_axes(ax_cb)
+        
+        axes.set_position([0.03,0.03,0.8,0.94])
+        
+        
+        min_val = npy.min(mapimage)
+        max_val = npy.max(mapimage)
+        bound = npy.max((npy.abs(min_val), npy.abs(max_val)))
+        
+        if self.show_scale_bar == 1:
+            um_string = ' $\mathrm{\mu m}$'
+            microns = '$'+self.stk.scale_bar_string+' $'+um_string
+            axes.text(self.stk.scale_bar_pixels_x+10,self.stk.n_cols-9, microns, horizontalalignment='left', verticalalignment='center',
+                      color = 'white', fontsize=14)
+            #Matplotlib has flipped scales so I'm using rows instead of cols!
+            p = matplotlib.patches.Rectangle((5,self.stk.n_cols-10), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
+                                   color = 'white', fill = True)
+            axes.add_patch(p)     
+     
+        im = axes.imshow(mapimage, cmap=spanclrmap, vmin = -bound, vmax = bound)
+        cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
+    
+        axes.axis("off") 
+        self.NNMAImagePan.draw()
+        
+
+
+#----------------------------------------------------------------------     
+    def ShowSpectrum(self):
+        
+        if self.nnmacalculated == 0:
+            return
+
+        fig = self.nnmaspecfig
+        fig.clf()
+        fig.add_axes((0.15,0.15,0.75,0.75))
+        axes = fig.gca()        
+
+        if self.cb_showallsp.isChecked():
+            for i in range(self.nComponents):
+                nspectrum = self.nnma.muRecon[:,i]
+       
+                line1 = axes.plot(self.stk.ev,nspectrum)
+        
+                if self.cb_inputsp.isChecked():       
+                    initspec = self.nnma.muinit[:,i]   
+                    line2 = axes.plot(self.stk.ev,initspec, color='green', label = 'Fit')
+
+        else:
+        
+            nspectrum = self.nnma.muRecon[:,self.i_map]
+   
+            line1 = axes.plot(self.stk.ev,nspectrum)
+    
+            if self.cb_inputsp.isChecked():       
+                initspec = self.nnma.muinit[:,self.i_map]   
+                line2 = axes.plot(self.stk.ev,initspec, color='green', label = 'Fit')
+
+        
+                        
+        axes.set_xlabel('Photon Energy [eV]')
+        axes.set_ylabel('Optical Density')
+        
+        self.NNMASpecPan.draw()
+        
+        self.tc_nnmaspec.setText("NNMA spectrum " + str(self.i_map+1))
+        
+        
+#----------------------------------------------------------------------     
+    def ShowCostFunction(self):
+        
+        if self.nnmacalculated == 0:
+            return
+            
+        costTotal = self.nnma.costFnArray[0]
+        costSparse = self.nnma.costFnArray[2]
+        costClusterSim = self.nnma.costFnArray[2]
+        costSmooth = self.nnma.costFnArray[2]
+                 
+                
+        fig = self.costffig
+        fig.clf()
+        fig.add_axes((0.20,0.15,0.75,0.75))
+        axes = fig.gca()
+        
+        if self.cb_totalcost.isChecked():
+            line1 = axes.plot(costTotal, label='Total')
+
+        if self.cb_sparcost.isChecked():
+            line2 = axes.plot(costSparse, label='Sparseness ')
+
+        if self.cb_simlcost.isChecked():
+            line3 = axes.plot(costClusterSim, label='Similarity')
+
+        if self.cb_smoothcost.isChecked():
+            line4 = axes.plot(costSmooth, label='Smoothness')
+            
+            
+        fontP = matplotlib.font_manager.FontProperties()
+        fontP.set_size('small')
+       
+        axes.legend(loc=1, prop = fontP)
+
+                        
+        axes.set_xlabel('Iteration')
+        axes.set_ylabel('Cost Function')
+        
+        self.CostFPan.draw()
+        
+        
+        
+
+
+
+                
 """ ------------------------------------------------------------------------------------------------"""
 class PageXrayPeakFitting(QtGui.QWidget):
     def __init__(self, common, data_struct, stack, anlz):
@@ -3015,7 +3278,6 @@ class PageSpectral(QtGui.QWidget):
         if self.anlz.tspectrum_loaded == 0:
             return
         
-
         tspectrum = self.anlz.target_spectra[self.i_tspec-1, :]
                  
         
@@ -4048,8 +4310,7 @@ class PageCluster(QtGui.QWidget):
         self.calcclusters = False  
         
 
-        #try: 
-        if True:
+        try: 
             
             value = self.ntc_pcscaling.text()
             #try:
@@ -4074,9 +4335,9 @@ class PageCluster(QtGui.QWidget):
             self.com.cluster_calculated = 1       
             QtGui.QApplication.restoreOverrideCursor()
             
-#         except:
-#             self.com.cluster_calculated = 0
-#             QtGui.QApplication.restoreOverrideCursor()     
+        except:
+            self.com.cluster_calculated = 0
+            QtGui.QApplication.restoreOverrideCursor()     
             
         self.window().refresh_widgets()
             
@@ -10359,7 +10620,7 @@ class MainFrame(QtGui.QMainWindow):
         self.page4 = PageSpectral(self.common, self.data_struct, self.stk, self.anlz)
         self.page5 = PagePeakID(self.common, self.data_struct, self.stk, self.anlz)
         self.page6 = PageXrayPeakFitting(self.common, self.data_struct, self.stk, self.anlz)
-
+        self.page7 = None
         
         tabs.addTab(self.page0,"Load Data")
         tabs.addTab(self.page1,"Preprocess Data")
@@ -10736,7 +10997,7 @@ class MainFrame(QtGui.QMainWindow):
             self.page1.button_resetdisplay.setEnabled(False) 
             self.page1.button_despike.setEnabled(False)   
             self.page1.button_displaycolor.setEnabled(False)
-            self.actionSave.setEnabled(False)
+            self.actionSave.setEnabled(False)           
         else:
             self.page1.button_i0ffile.setEnabled(True)
             self.page1.button_i0histogram.setEnabled(True) 
@@ -10764,6 +11025,10 @@ class MainFrame(QtGui.QMainWindow):
             self.page4.button_loadtspec.setEnabled(False)
             self.page4.button_addflat.setEnabled(False)
             self.page5.button_save.setEnabled(False)
+            if self.page7:
+                self.page7.button_calcnnma.setEnabled(False)
+                self.page7.button_mufile.setEnabled(False)
+                self.page7.button_murand.setEnabled(False)
         else:
             self.page1.button_limitev.setEnabled(True)
             self.page1.button_subregion.setEnabled(True)
@@ -10774,7 +11039,10 @@ class MainFrame(QtGui.QMainWindow):
             self.page4.button_loadtspec.setEnabled(True)
             self.page4.button_addflat.setEnabled(True)   
             self.page5.button_save.setEnabled(True)
-             
+            if self.page7:
+                self.page7.button_calcnnma.setEnabled(True)
+                self.page7.button_mufile.setEnabled(True)
+                self.page7.button_murand.setEnabled(True)             
              
              
         if self.common.pca_calculated == 0:      
@@ -10796,12 +11064,17 @@ class MainFrame(QtGui.QMainWindow):
             self.page3.slidershow.setEnabled(False)
             self.page4.button_addclspec.setEnabled(False)
             self.page5.button_addclspec.setEnabled(False)
+            if self.page7:
+                self.page7.button_mucluster.setEnabled(False)
         else:
             self.page3.button_scatterplots.setEnabled(True)
             self.page3.button_savecluster.setEnabled(True)  
             self.page3.slidershow.setEnabled(True)
             self.page4.button_addclspec.setEnabled(True)
             self.page5.button_addclspec.setEnabled(True)
+            if self.page7:
+                self.page7.button_mucluster.setEnabled(True)            
+            
              
         if self.common.spec_anl_calculated == 0:
             self.page4.button_removespec.setEnabled(False)
