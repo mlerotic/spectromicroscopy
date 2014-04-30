@@ -613,10 +613,10 @@ class PageNNMA(QtGui.QWidget):
         if self.nnmacalculated == 0:
             return
             
-        costTotal = self.nnma.costFnArray[0]
-        costSparse = self.nnma.costFnArray[2]
-        costClusterSim = self.nnma.costFnArray[2]
-        costSmooth = self.nnma.costFnArray[2]
+        costTotal = self.nnma.costFnArray[:,0]
+        costSparse = self.nnma.costFnArray[:,1]
+        costClusterSim = self.nnma.costFnArray[:,2]
+        costSmooth = self.nnma.costFnArray[:,3]
                  
                 
         fig = self.costffig
