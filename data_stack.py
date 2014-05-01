@@ -403,7 +403,7 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
         self.i0datahist = np.zeros(self.n_ev)
 
         i0_indices = np.where((fluxmin<self.averageflux)&(self.averageflux<fluxmax))
-        if i0_indices:
+        if np.any(i0_indices):
             invnumel = 1./self.averageflux[i0_indices].shape[0]
             for ie in range(self.n_ev):  
                 thiseng_abs = self.absdata[:,:,ie]

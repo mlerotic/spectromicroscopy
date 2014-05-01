@@ -600,7 +600,7 @@ class PageNNMA(QtGui.QWidget):
         
                         
         axes.set_xlabel('Photon Energy [eV]')
-        axes.set_ylabel('Optical Density')
+        axes.set_ylabel('Absorption coefficient [a.u.]')
         
         self.NNMASpecPan.draw()
         
@@ -6983,7 +6983,10 @@ class PageStack(QtGui.QWidget):
 #         self.tc_spec.setText("Spectrum at pixel [" +str(ypos)+", " + str(xpos)+"] or position ["+
 #                               str(self.stk.x_dist[xpos])+", "+ str(self.stk.y_dist[ypos])+ "]")
 
-        self.tc_spec.setText('Spectrum at pixel [{0}, {1}] or position [{2:5.2f}, {3:5.2f}]'.format(str(ypos),  str(xpos), self.stk.x_dist[xpos], self.stk.y_dist[ypos]))
+        #self.tc_spec.setText('Spectrum at pixel [{0}, {1}] or position [{2:5.2f}, {3:5.2f}]'.format(str(ypos),  str(xpos), self.stk.x_dist[xpos], self.stk.y_dist[ypos]))
+        print("self.stk.x_dist[xpos] = ", type(ypos))
+        print("self.stk.y_dist[ypos] = ", type(xpos))
+        self.tc_spec.setText('Spectrum at pixel [{0}, {1}] or position [{2:5.2f}, {3:5.2f}]'.format(str(ypos),  str(xpos), npy.float(self.stk.x_dist[xpos]), npy.float(self.stk.y_dist[ypos])))
 
 #----------------------------------------------------------------------
     def ResetDisplaySettings(self):

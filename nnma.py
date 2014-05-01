@@ -145,10 +145,11 @@ class nnma():
         self.nRows = self.stack.n_rows
         self.nPixels = self.nCols * self.nRows
     
-        # Need to do some data reshaping
+        # Transpose optical density matrix since NNMA needs dim NxP
         self.OD = self.OD.T
-#         for n in range(self.nEnergies):
-#             self.OD[n, :] = ( (self.OD[n, :].reshape((self.nCols, self.nRows))).T ).flatten()
+        # Zero out negative values in OD matrix
+        negInd = np.where(self.OD < 0.)
+        if negInd: self.OD[negInd] = 0.
 
         self.muRecon = np.zeros((self.nEnergies, self.kNNMA))
         self.tRecon = np.zeros((self.kNNMA, self.nPixels))
@@ -187,6 +188,11 @@ class nnma():
             # Now do NNMA update
             tUpdated = self.tUpdate(muCurrent, tCurrent)
             muUpdated = self.muUpdate(muCurrent, tUpdated)
+            # Zero out any negative values in t and mu
+            negIndT = np.where(tUpdated < 0.)
+            if negIndT: tUpdated[negIndT] = 0.
+            negIndMu = np.where(muUpdated < 0.)
+            if negIndMu: muUpdated[negIndMu] = 0.
             tCurrent = tUpdated
             muCurrent = muUpdated
 
