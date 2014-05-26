@@ -93,12 +93,12 @@ class PageNNMA(QtGui.QWidget):
         self.nnmacalculated = 0
         
         self.nComponents = 5    
-        self.maxIters = 10        
+        self.maxIters = 1000        
         self.deltaErrorThreshold = 1e-3        
         self.initMatrices = 'Random'  
     
-        self.lambdaSparse = 0.        
-        self.lambdaClusterSim = 0.    
+        self.lambdaSparse = 0.5        
+        self.lambdaClusterSim = 10.    
         self.lambdaSmooth = 0.      
         
         
@@ -112,15 +112,17 @@ class PageNNMA(QtGui.QWidget):
         self.button_calcnnma.clicked.connect( self.OnCalcNNMA)   
         self.button_calcnnma.setEnabled(False)
         vbox1.addWidget(self.button_calcnnma)
-        self.button_mucluster = QtGui.QPushButton('Load initial cluster spectra...')
+        self.button_mucluster = QtGui.QPushButton('Load initial cluster spectra')
         self.button_mucluster.clicked.connect( self.OnLoadClusterSpectra)
         self.button_mucluster.setEnabled(False)
-        self.button_mufile = QtGui.QPushButton('Load initial standard spectra...')
+        self.button_mufile = QtGui.QPushButton('Load initial standard spectra')
         self.button_mufile.clicked.connect( self.OnLoadStandardSpectra)
         self.button_mufile.setEnabled(False)   
-        self.button_murand = QtGui.QPushButton('Load initial random spectra...')
+        self.button_murand = QtGui.QPushButton('Load initial random spectra')
         self.button_murand.clicked.connect( self.OnLoadRandomSpectra)         
         self.button_murand.setEnabled(False) 
+        self.tc_initspectra = QtGui.QLabel(self)
+        self.tc_initspectra.setText('Initial Spectra: ' + self.initMatrices)
         self.button_savecluster = QtGui.QPushButton('Save NNMA Results...')
         #self.button_savecluster.clicked.connect( self.OnSave)
         self.button_savecluster.setEnabled(False)
@@ -246,6 +248,7 @@ class PageNNMA(QtGui.QWidget):
         vbox1.addWidget(self.button_mucluster)
         vbox1.addWidget(self.button_mufile)
         vbox1.addWidget(self.button_murand)
+        vbox1.addWidget(self.tc_initspectra)
 
         
         hbox1.addLayout(vbox1)
@@ -409,7 +412,9 @@ class PageNNMA(QtGui.QWidget):
                                                         
         self.window().refresh_widgets()     
         
-        self.initMatrices = 'Cluster'     
+        self.initMatrices = 'Cluster'  
+        
+        self.tc_initspectra.setText('Initial Spectra: ' + self.initMatrices)   
         
 #----------------------------------------------------------------------          
     def OnLoadRandomSpectra(self, event):
@@ -418,6 +423,8 @@ class PageNNMA(QtGui.QWidget):
         
         self.lambdaClusterSim = 0.0
         self.ntc_lamsim.setText(str(self.lambdaClusterSim))
+        
+        self.tc_initspectra.setText('Initial Spectra: ' + self.initMatrices)
           
 #----------------------------------------------------------------------          
     def OnLoadStandardSpectra(self, event):    
@@ -466,6 +473,9 @@ class PageNNMA(QtGui.QWidget):
 #         except:
 #             QtGui.QApplication.restoreOverrideCursor()  
 #             QtGui.QMessageBox.warning(self, 'Error', 'Spectra files not loaded.')
+
+        
+            self.tc_initspectra.setText('Initial Spectra: ' + self.initMatrices)
                                    
                                  
         self.window().refresh_widgets()  
@@ -485,6 +495,8 @@ class PageNNMA(QtGui.QWidget):
         self.lambdaClusterSim = float(value)   
         value = self.ntc_lamsmooth.text()  
         self.lambdaSmooth = float(value)      
+        
+        
         
 
         self.nnma.setParameters(kNNMA = self.nComponents, 
@@ -576,26 +588,29 @@ class PageNNMA(QtGui.QWidget):
         fig.clf()
         fig.add_axes((0.15,0.15,0.75,0.75))
         axes = fig.gca()        
+        
 
         if self.cb_showallsp.isChecked():
             for i in range(self.nComponents):
                 nspectrum = self.nnma.muRecon[:,i]
        
                 line1 = axes.plot(self.stk.ev,nspectrum)
+                lcolor = line1[0].get_color()
         
                 if self.cb_inputsp.isChecked():       
                     initspec = self.nnma.muinit[:,i]   
-                    line2 = axes.plot(self.stk.ev,initspec, color='green', label = 'Fit')
+                    line2 = axes.plot(self.stk.ev,initspec, color=lcolor, linestyle = '--', label = 'Fit')
 
         else:
         
             nspectrum = self.nnma.muRecon[:,self.i_map]
    
             line1 = axes.plot(self.stk.ev,nspectrum)
+            lcolor = line1[0].get_color()
     
             if self.cb_inputsp.isChecked():       
                 initspec = self.nnma.muinit[:,self.i_map]   
-                line2 = axes.plot(self.stk.ev,initspec, color='green', label = 'Fit')
+                line2 = axes.plot(self.stk.ev,initspec, color=lcolor, linestyle = '--', label = 'Fit')
 
         
                         
@@ -6984,8 +6999,8 @@ class PageStack(QtGui.QWidget):
 #                               str(self.stk.x_dist[xpos])+", "+ str(self.stk.y_dist[ypos])+ "]")
 
         #self.tc_spec.setText('Spectrum at pixel [{0}, {1}] or position [{2:5.2f}, {3:5.2f}]'.format(str(ypos),  str(xpos), self.stk.x_dist[xpos], self.stk.y_dist[ypos]))
-        print("self.stk.x_dist[xpos] = ", type(ypos))
-        print("self.stk.y_dist[ypos] = ", type(xpos))
+#         print("self.stk.x_dist[xpos] = ", type(ypos))
+#         print("self.stk.y_dist[ypos] = ", type(xpos))
         self.tc_spec.setText('Spectrum at pixel [{0}, {1}] or position [{2:5.2f}, {3:5.2f}]'.format(str(ypos),  str(xpos), npy.float(self.stk.x_dist[xpos]), npy.float(self.stk.y_dist[ypos])))
 
 #----------------------------------------------------------------------

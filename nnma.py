@@ -160,7 +160,7 @@ class nnma():
         self.deltaError = 0    # stores current value of cost function change
 
         # If doing cluster spectra similarity regularization, import cluster spectra
-        if self.lambdaClusterSim != 0.:
+        if initmatrices == 'Cluster':
             self.muCluster = self.clusterspectra
         else:
             self.muCluster = 0.
