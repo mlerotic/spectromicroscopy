@@ -10874,8 +10874,8 @@ class MainFrame(QtGui.QMainWindow):
         Browse for .sm files
         """
         
-        #try:
-        if True:
+        try:
+
             directory = QtGui.QFileDialog.getExistingDirectory(self, "Choose a directory", '', QtGui.QFileDialog.ShowDirsOnly|QtGui.QFileDialog.ReadOnly )       
                                                         
         
@@ -10888,15 +10888,15 @@ class MainFrame(QtGui.QMainWindow):
             stackframe = StackListFrame(self, directory, self.common, self.stk, self.data_struct)
             stackframe.show()
              
-#         except:
-#             print 'Error could not build stack list.'
-#             self.common.stack_loaded = 0 
-#             self.common.i0_loaded = 0
-#             self.new_stack_refresh()
-#             self.refresh_widgets()
-#                                  
-#             QtGui.QMessageBox.warning(self,'Error',"Error could not build stack list")
-#             import sys; print sys.exc_info()
+        except:
+            print 'Error could not build stack list.'
+            self.common.stack_loaded = 0 
+            self.common.i0_loaded = 0
+            self.new_stack_refresh()
+            self.refresh_widgets()
+                                  
+            QtGui.QMessageBox.warning(self,'Error',"Error could not build stack list")
+            import sys; print sys.exc_info()
             
 #----------------------------------------------------------------------
     def onSaveAsH5(self, event):
