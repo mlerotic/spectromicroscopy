@@ -10664,13 +10664,14 @@ class MainFrame(QtGui.QMainWindow):
             print 'Error - wrong command line option used. Available options are --wx, --batch and --nnma'
             return
         
-        for opt, arg in options:        
-            if opt in '--nnma':
-                if verbose: print "Running with NNMA."
-                self.page7 = PageNNMA(self.common, self.data_struct, self.stk, self.anlz, self.nnma)
-                tabs.addTab(self.page7, "NNMA Analysis")
+#         for opt, arg in options:        
+#             if opt in '--nnma':
+#                 if verbose: print "Running with NNMA."
+#                 self.page7 = PageNNMA(self.common, self.data_struct, self.stk, self.anlz, self.nnma)
+#                 tabs.addTab(self.page7, "NNMA Analysis")
 
-            
+        self.page7 = PageNNMA(self.common, self.data_struct, self.stk, self.anlz, self.nnma)
+        tabs.addTab(self.page7, "NNMA Analysis")
 
     
         layout = QVBoxLayout()
