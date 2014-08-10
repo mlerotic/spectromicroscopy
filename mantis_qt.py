@@ -42,6 +42,7 @@ import analyze
 import nnma
 import henke
 
+from helpers import resource_path
 
 Winsizex = 1000
 Winsizey = 700
@@ -10530,7 +10531,7 @@ class AboutFrame(QtGui.QDialog):
         
        
 
-        self.image = QtGui.QImage(os.path.join('images','Mantis_logo_about.png'))
+        self.image = QtGui.QImage(resource_path(os.path.join('images','Mantis_logo_about.png')))
         
         self.imageLabel = QtGui.QLabel()
         self.imageLabel.setBackgroundRole(QtGui.QPalette.Base)
@@ -10622,7 +10623,7 @@ class MainFrame(QtGui.QMainWindow):
         self.initToolbar()
 
                             
-        ico = QtGui.QIcon(os.path.join('images','logo-2l-32.ico'))
+        ico = QtGui.QIcon(resource_path(os.path.join('images','logo-2l-32.ico')))
         self.setWindowIcon(ico)  
         
         tabs = QtGui.QTabWidget()
@@ -10690,27 +10691,27 @@ class MainFrame(QtGui.QMainWindow):
         
         self.actionOpen = QtGui.QAction(self)
         self.actionOpen.setObjectName('actionOpen')
-        self.actionOpen.setIcon(QtGui.QIcon(os.path.join('images','document-open.png')))
+        self.actionOpen.setIcon(QtGui.QIcon(resource_path(os.path.join('images','document-open.png'))))
         self.toolbar = self.addToolBar('actionOpen') 
         self.toolbar.addAction(self.actionOpen)
         self.actionOpen.triggered.connect(self.LoadStack)
         
         self.actionOpenSL = QtGui.QAction(self)
         self.actionOpenSL.setObjectName('actionOpenSL')
-        self.actionOpenSL.setIcon(QtGui.QIcon(os.path.join('images','open-sl.png')))
+        self.actionOpenSL.setIcon(QtGui.QIcon(resource_path(os.path.join('images','open-sl.png'))))
         self.toolbar.addAction(self.actionOpenSL)
         self.actionOpenSL.triggered.connect(self.BuildStack)
         
         self.actionSave = QtGui.QAction(self)
         self.actionSave.setObjectName('actionSave')
-        self.actionSave.setIcon(QtGui.QIcon(os.path.join('images','media-floppy.png')))
+        self.actionSave.setIcon(QtGui.QIcon(resource_path(os.path.join('images','media-floppy.png'))))
         self.toolbar.addAction(self.actionSave)
         self.actionSave.triggered.connect(self.onSaveResultsToH5)
         self.actionSave.setEnabled(False)
 
         self.actionInfo = QtGui.QAction(self)
         self.actionInfo.setObjectName('actionInfo')
-        self.actionInfo.setIcon(QtGui.QIcon(os.path.join('images','help-browser.png')))
+        self.actionInfo.setIcon(QtGui.QIcon(resource_path(os.path.join('images','help-browser.png'))))
         self.toolbar.addAction(self.actionInfo)
         self.actionInfo.triggered.connect(self.onAbout)
         

@@ -40,6 +40,7 @@ import logos
 #import nnma
 import henke
 
+from helpers import resource_path
 
 Winsizex = 1000
 Winsizey = 740
@@ -8465,7 +8466,7 @@ class MainFrame(wx.Frame):
         openTool = self.toolbar.AddSimpleTool(wx.ID_OPEN, open_ico, "Open stack .hdf5 or .stk", "Open stack .hdf5 or .stk")
         self.Bind(wx.EVT_MENU, self.onBrowse, openTool)
         
-        open_sl_ico = wx.Image(os.path.join('images', 'open-sl.png'), wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+        open_sl_ico = wx.Image(resource_path(os.path.join('images', 'open-sl.png')), wx.BITMAP_TYPE_ANY).ConvertToBitmap()
         #open_sl_ico = logos.getslBitmap()
         openslTool = self.toolbar.AddSimpleTool(101, open_sl_ico, "Open directory with file sequence", "Open direcory with file sequence")   
         self.Bind(wx.EVT_MENU, self.onOpenSL, openslTool)
@@ -9238,7 +9239,7 @@ class AboutFrame(wx.Frame):
         panel = wx.Panel(self, -1)
         vbox = wx.BoxSizer(wx.VERTICAL)
         
-        img = wx.Image(os.path.join('images', 'Mantis_logo_about.png'), wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+        img = wx.Image(resource_path(os.path.join('images', 'Mantis_logo_about.png')), wx.BITMAP_TYPE_ANY).ConvertToBitmap()
         #img = logos.getMantis_logo_aboutImage()
         self.imageCtrl = wx.StaticBitmap(panel, wx.ID_ANY, img)
  
