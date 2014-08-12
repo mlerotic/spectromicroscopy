@@ -10682,6 +10682,8 @@ class MainFrame(QtGui.QMainWindow):
        
                               
         self.show()
+		if sys.platform == "darwin":
+			self.raise_()
 
         
         
