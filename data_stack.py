@@ -2,7 +2,7 @@
 #   This file is part of Mantis, a Multivariate ANalysis Tool for Spectromicroscopy.
 # 
 #   Copyright (C) 2011 Mirna Lerotic, 2nd Look
-#   http://2ndlook.co/products.html
+#   http://2ndlookconsulting.com
 #   License: GNU GPL v3
 #
 #   Mantis is free software: you can redistribute it and/or modify
@@ -28,15 +28,17 @@ import datetime
 
 import x1a_stk
 import aps_hdf5
+import hdf5_stack
 import xradia_xrm
 import accel_sdf
 import data_struct
 
 #----------------------------------------------------------------------
-class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
+class data(x1a_stk.x1astk,aps_hdf5.h5, hdf5_stack.h5data, xradia_xrm.xrm, accel_sdf.sdfstk):
     def __init__(self, data_struct):
         x1a_stk.x1astk.__init__(self)
         aps_hdf5.h5.__init__(self)
+        hdf5_stack.h5data.__init__(self)
         xradia_xrm.xrm.__init__(self)
         accel_sdf.sdfstk.__init__(self)
         
@@ -126,7 +128,13 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
 #---------------------------------------------------------------------- 
     def read_h5(self, filename):    
         self.new_data()  
-        aps_hdf5.h5.read_h5(self, filename, self.data_struct)
+        if aps_hdf5.h5.check_h5_format(self, filename):
+            aps_hdf5.h5.read_h5(self, filename, self.data_struct)
+        elif hdf5_stack.h5data.check_h5_format(self, filename):
+            hdf5_stack.h5data.read_h5(self, filename, self.data_struct)
+            self.fill_h5_struct_from_stk()
+        else:
+            return
         
         if self.data_struct.spectromicroscopy.optical_density is not None: 
             #print 'reading optical density'
@@ -242,11 +250,11 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
             self.absdata = self.absdata[:,:,sortind]
 
         
-        self.original_n_cols = imgstack.shape[0]
-        self.original_n_rows = imgstack.shape[1]
-        self.original_n_ev = imgstack.shape[2]
-        self.original_ev = self.ev.copy()
-        self.original_absdata = self.absdata.copy()
+#         self.original_n_cols = imgstack.shape[0]
+#         self.original_n_rows = imgstack.shape[1]
+#         self.original_n_ev = imgstack.shape[2]
+#         self.original_ev = self.ev.copy()
+#         self.original_absdata = self.absdata.copy()
 
        
         self.fill_h5_struct_from_stk()
@@ -321,11 +329,11 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, xradia_xrm.xrm, accel_sdf.sdfstk):
             self.absdata = self.absdata[:,:,sortind]
 
         
-        self.original_n_cols = imgstack.shape[0]
-        self.original_n_rows = imgstack.shape[1]
-        self.original_n_ev = imgstack.shape[2]
-        self.original_ev = self.ev.copy()
-        self.original_absdata = self.absdata.copy()
+#         self.original_n_cols = imgstack.shape[0]
+#         self.original_n_rows = imgstack.shape[1]
+#         self.original_n_ev = imgstack.shape[2]
+#         self.original_ev = self.ev.copy()
+#         self.original_absdata = self.absdata.copy()
 
        
         self.fill_h5_struct_from_stk()

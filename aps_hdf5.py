@@ -2,7 +2,7 @@
 #   This file is part of Mantis, a Multivariate ANalysis Tool for Spectromicroscopy.
 # 
 #   Copyright (C) 2011 Mirna Lerotic - 2nd Look, Nicholas Schwarz
-#   http://2ndlook.co/products.html
+#   http://2ndlookconsulting.com
 #   License: GNU GPL v3
 #
 #   Mantis is free software: you can redistribute it and/or modify
@@ -35,6 +35,21 @@ class h5:
         pass
 
 
+#----------------------------------------------------------------------
+    def check_h5_format(self, filename):
+        
+        aps_format = False
+        # Open HDF5 file
+        f = h5py.File(filename, 'r')   
+        
+        #Check is exchange is in the file
+        #Exchange HDF5 Group
+        if 'exchange' in f:      
+            aps_format = True
+            
+        f.close()
+            
+        return aps_format
     
 #----------------------------------------------------------------------
     def read_h5(self, filename, data_struct):

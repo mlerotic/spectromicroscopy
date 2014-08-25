@@ -203,11 +203,11 @@ class sdfstk:
 
             self.absdata = numpy.reshape(imagestack, (self.n_cols, self.n_rows, self.n_ev), order='F')       
 
-            self.original_n_cols = self.n_cols.copy()
-            self.original_n_rows = self.n_rows.copy()
-            self.original_n_ev = self.n_ev.copy()
-            self.original_ev = self.ev.copy()
-            self.original_absdata = self.absdata.copy()
+#             self.original_n_cols = self.n_cols.copy()
+#             self.original_n_rows = self.n_rows.copy()
+#             self.original_n_ev = self.n_ev.copy()
+#             self.original_ev = self.ev.copy()
+#             self.original_absdata = self.absdata.copy()
         else:
             print "Only Image Stack files are supported."
       

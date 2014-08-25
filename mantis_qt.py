@@ -2,7 +2,7 @@
 #   This file is part of Mantis, a Multivariate ANalysis Tool for Spectromicroscopy.
 # 
 #   Copyright (C) 2013 Mirna Lerotic, 2nd Look
-#   http://2ndlook.co/products.html
+#   http://2ndlookconsulting.com
 #   License: GNU GPL v3
 #
 #   Mantis is free software: you can redistribute it and/or modify
@@ -5481,6 +5481,8 @@ class PagePCA(QtGui.QWidget):
         scrollmax = npy.min([self.stk.n_ev, 20])
         self.slidershow.setMaximum(scrollmax)
 
+
+
         try: 
             self.CalcPCA()
             self.calcpca = True
@@ -10015,6 +10017,10 @@ class PageLoadData(QtGui.QWidget):
         self.button_hdf5.clicked.connect( self.OnLoadHDF5)
         vbox1.addWidget(self.button_hdf5)
         
+        self.button_hdf5_2 = QtGui.QPushButton('  Load HDF5 Nexus Stack (*.hdf5) - DLS  ')
+        self.button_hdf5_2.clicked.connect( self.OnLoadHDF5)
+        vbox1.addWidget(self.button_hdf5_2)
+        
         self.button_sdf = QtGui.QPushButton('Load SDF Stack (*.hdr) - ALS, SLS, Bessy')
         self.button_sdf.clicked.connect( self.OnLoadSDF)   
         vbox1.addWidget(self.button_sdf)
@@ -10682,8 +10688,8 @@ class MainFrame(QtGui.QMainWindow):
        
                               
         self.show()
-		if sys.platform == "darwin":
-			self.raise_()
+        if sys.platform == "darwin":
+            self.raise_()
 
         
         
@@ -10723,8 +10729,8 @@ class MainFrame(QtGui.QMainWindow):
         Browse for a stack file:
         """
 
-        #try:
-        if True:
+        try:
+        #if True:
             if wildcard == False:
                 wildcard =  "HDF5 files (*.hdf5);;SDF files (*.hdr);;STK files (*.stk);;TXRM (*.txrm);;XRM (*.xrm);;TIF (*.tif);;FTIR (*.dpt)" 
 
@@ -10857,16 +10863,16 @@ class MainFrame(QtGui.QMainWindow):
 
             QtGui.QApplication.restoreOverrideCursor()
                  
-#         except:
-#    
-#             self.common.stack_loaded = 0 
-#             self.common.i0_loaded = 0
-#             self.new_stack_refresh()
-#                                   
-#             QtGui.QApplication.restoreOverrideCursor()
-#             QtGui.QMessageBox.warning(self, 'Error', 'Image stack not loaded.')
-#   
-#             import sys; print sys.exc_info()
+        except:
+    
+            self.common.stack_loaded = 0 
+            self.common.i0_loaded = 0
+            self.new_stack_refresh()
+                                   
+            QtGui.QApplication.restoreOverrideCursor()
+            QtGui.QMessageBox.warning(self, 'Error', 'Image stack not loaded.')
+   
+            import sys; print sys.exc_info()
                    
 
         self.refresh_widgets()

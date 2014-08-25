@@ -2,7 +2,7 @@
 #   This file is part of Mantis, a Multivariate ANalysis Tool for Spectromicroscopy.
 # 
 #   Copyright (C) 2011 Mirna Lerotic, 2nd Look
-#   http://2ndlook.co/products.html
+#   http://2ndlookconsulting.com
 #   License: GNU GPL v3
 #
 #   Mantis is free software: you can redistribute it and/or modify
@@ -223,7 +223,7 @@ class analyze:
             self.variance = self.variance/totalvar
             
             #Scree plot - find an elbow in the curve - between 1 and 20 components
-            maxpoints = 25
+            maxpoints = min(25, self.stack.n_ev-1)
             #Find a line between first (x1, y1) and last point (x2, y2) and calculate distances:
             y2 = np.log(self.eigenvals[maxpoints])
             x2 = maxpoints
@@ -231,8 +231,8 @@ class analyze:
             x1 = 0
             
             #Calculate distances between all the points and the line x1 and x2 are points on the line and x0 are eigenvals
-            distance = np.zeros((25))
-            for i in range(25):
+            distance = np.zeros((maxpoints))
+            for i in range(maxpoints):
                 y0 = np.log(self.eigenvals[i])
                 x0=i
                 distance[i] = np.abs((x2-x1)*(y1-y0)-(x1-x0)*(y2-y1))/np.math.sqrt((x2-x1)**2+(y2-y1)**2)  

@@ -2,7 +2,7 @@
 #   This file is part of Mantis, a Multivariate ANalysis Tool for Spectromicroscopy.
 # 
 #   Copyright (C) 2011 Mirna Lerotic, 2nd Look
-#   http://2ndlook.co/products.html
+#   http://2ndlookconsulting.com
 #   License: GNU GPL v3
 #
 #   Mantis is free software: you can redistribute it and/or modify
@@ -63,11 +63,11 @@ class x1astk:
 
         f.close()
         
-        self.original_n_cols = self.n_cols.copy()
-        self.original_n_rows = self.n_rows.copy()
-        self.original_n_ev = self.n_ev.copy()
-        self.original_ev = self.ev.copy()
-        self.original_absdata = self.absdata.copy()
+#         self.original_n_cols = self.n_cols.copy()
+#         self.original_n_rows = self.n_rows.copy()
+#         self.original_n_ev = self.n_ev.copy()
+#         self.original_ev = self.ev.copy()
+#         self.original_absdata = self.absdata.copy()
       
         return
 
