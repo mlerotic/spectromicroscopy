@@ -44,6 +44,8 @@ import henke
 
 from helpers import resource_path
 
+version = '2.0.5'
+
 Winsizex = 1000
 Winsizey = 700
 
@@ -124,10 +126,10 @@ class PageNNMA(QtGui.QWidget):
         self.button_murand.setEnabled(False) 
         self.tc_initspectra = QtGui.QLabel(self)
         self.tc_initspectra.setText('Initial Spectra: ' + self.initMatrices)
-        self.button_savecluster = QtGui.QPushButton('Save NNMA Results...')
-        #self.button_savecluster.clicked.connect( self.OnSave)
-        self.button_savecluster.setEnabled(False)
-        vbox1.addWidget(self.button_savecluster)
+        self.button_savennma = QtGui.QPushButton('Save NNMA Results...')
+        self.button_savennma.clicked.connect( self.OnSave)
+        self.button_savennma.setEnabled(False)
+        vbox1.addWidget(self.button_savennma)
         
         vbox1.addStretch(1)
         
@@ -517,6 +519,7 @@ class PageNNMA(QtGui.QWidget):
         self.ShowMaps()
         self.ShowSpectrum()
         self.ShowCostFunction()
+        self.updatewidgets()
         
         
         
@@ -532,7 +535,261 @@ class PageNNMA(QtGui.QWidget):
             self.ShowMaps()
             self.ShowSpectrum()
  
-  
+#----------------------------------------------------------------------    
+    def OnSave(self, event):     
+               
+        savewin = SaveWinP5(self.window())
+        savewin.show()
+        
+            
+#----------------------------------------------------------------------    
+    def Save(self, filename, path, spec_png = True, spec_pdf = False, spec_svg = False, spec_csv = False,
+             map_png = True, map_pdf = False, map_svg = False, 
+             costf_png = True, costf_pdf = False, costf_svg = False): 
+        
+        
+        self.SaveFileName = os.path.join(path,filename)
+   
+        try: 
+        #if True:
+            matplotlib.rcParams['pdf.fonttype'] = 42
+            if costf_png:
+                ext = 'png'
+                suffix = "." + ext
+                fileName_evals = self.SaveFileName+"_CostFunction."+ext
+                            
+                fig = self.costffig
+                fig.savefig(fileName_evals)
+                
+            if costf_pdf:
+                ext = 'pdf'
+                suffix = "." + ext
+                fileName_evals = self.SaveFileName+"_CostFunction."+ext
+                            
+                fig = self.costffig
+                fig.savefig(fileName_evals)     
+                
+            if costf_svg:
+                ext = 'svg'
+                suffix = "." + ext
+                fileName_evals = self.SaveFileName+"_CostFunction."+ext
+                            
+                fig = self.costffig
+                fig.savefig(fileName_evals)             
+
+                        
+            from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+            matplotlib.rcParams['pdf.fonttype'] = 42
+            
+            ext = 'png'
+            suffix = "." + ext       
+            
+            colors=['#FF0000','#000000','#FFFFFF'] 
+            spanclrmap=matplotlib.colors.LinearSegmentedColormap.from_list('spancm',colors)
+                
+            if map_png:
+                for i in range(self.nComponents):
+              
+                    mapimage = self.nnma.tRecon[i, :,:]
+              
+                    fig = matplotlib.figure.Figure(figsize =(PlotH*1.15, PlotH))
+                    canvas = FigureCanvas(fig)
+                    axes = fig.gca()
+    
+                    divider = make_axes_locatable(axes)
+                    ax_cb = divider.new_horizontal(size="3%", pad=0.03)  
+                    fig.add_axes(ax_cb)
+                    axes.set_position([0.03,0.03,0.8,0.94])   
+        
+                    min_val = npy.min(mapimage)
+                    max_val = npy.max(mapimage)
+                    bound = npy.max((npy.abs(min_val), npy.abs(max_val)))
+        
+                    if self.show_scale_bar == 1:
+                        um_string = ' $\mathrm{\mu m}$'
+                        microns = '$'+self.stk.scale_bar_string+' $'+um_string
+                        axes.text(self.stk.scale_bar_pixels_x+10,self.stk.n_cols-9, microns, horizontalalignment='left', verticalalignment='center',
+                                  color = 'white', fontsize=14)
+                        #Matplotlib has flipped scales so I'm using rows instead of cols!
+                        p = matplotlib.patches.Rectangle((5,self.stk.n_cols-10), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
+                                               color = 'white', fill = True)
+                        axes.add_patch(p)     
+     
+                    im = axes.imshow(mapimage, cmap=spanclrmap, vmin = -bound, vmax = bound)
+                    cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
+    
+                    axes.axis("off") 
+                                
+                    fileName_img = self.SaveFileName+"_NNMA_" +str(i+1)+"."+ext
+                    fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
+            
+            if spec_png:
+                for i in range(self.nComponents):
+                
+                    fig = matplotlib.figure.Figure(figsize =(PlotW, PlotH))
+                    canvas = FigureCanvas(fig)
+                    fig.add_axes((0.15,0.15,0.75,0.75))
+                    axes = fig.gca()
+
+                    nspectrum = self.nnma.muRecon[:,i]
+           
+                    line1 = axes.plot(self.stk.ev,nspectrum)
+                    lcolor = line1[0].get_color()
+            
+                    if self.cb_inputsp.isChecked():       
+                        initspec = self.nnma.muinit[:,self.i_map]   
+                        line2 = axes.plot(self.stk.ev,initspec, color=lcolor, linestyle = '--', label = 'Fit')
+                        
+                    axes.set_xlabel('Photon Energy [eV]')
+                    axes.set_ylabel('Absorption coefficient [a.u.]')
+                
+                    fileName_spec = self.SaveFileName+"_NNMAspectrum_" +str(i+1)+"."+ext
+                    fig.savefig(fileName_spec)
+                    
+            if spec_csv:
+                for i in range(self.nComponents):
+                    nspectrum = self.nnma.muRecon[:,i]
+                    fileName_spec = self.SaveFileName+"_NNMAspectrum_" +str(i+1)+".csv"
+                    cname = "NNMAspectrum_" +str(i+1)
+                    self.stk.write_csv(fileName_spec, self.stk.ev, nspectrum, cname = cname)
+                    
+                
+            ext = 'pdf'
+            suffix = "." + ext        
+                
+            if map_pdf:
+                for i in range(self.nComponents):
+              
+                    mapimage = self.nnma.tRecon[i, :,:]
+              
+                    fig = matplotlib.figure.Figure(figsize =(PlotH*1.15, PlotH))
+                    canvas = FigureCanvas(fig)
+                    axes = fig.gca()
+
+                    divider = make_axes_locatable(axes)
+                    ax_cb = divider.new_horizontal(size="3%", pad=0.03)  
+                    fig.add_axes(ax_cb)
+                    axes.set_position([0.03,0.03,0.8,0.94])   
+        
+                    min_val = npy.min(mapimage)
+                    max_val = npy.max(mapimage)
+                    bound = npy.max((npy.abs(min_val), npy.abs(max_val)))
+        
+                    if self.show_scale_bar == 1:
+                        um_string = ' $\mathrm{\mu m}$'
+                        microns = '$'+self.stk.scale_bar_string+' $'+um_string
+                        axes.text(self.stk.scale_bar_pixels_x+10,self.stk.n_cols-9, microns, horizontalalignment='left', verticalalignment='center',
+                                  color = 'white', fontsize=14)
+                        #Matplotlib has flipped scales so I'm using rows instead of cols!
+                        p = matplotlib.patches.Rectangle((5,self.stk.n_cols-10), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
+                                               color = 'white', fill = True)
+                        axes.add_patch(p)     
+     
+                    im = axes.imshow(mapimage, cmap=spanclrmap, vmin = -bound, vmax = bound)
+                    cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
+    
+                    axes.axis("off") 
+                                
+                    fileName_img = self.SaveFileName+"_NNMA_" +str(i+1)+"."+ext
+                    fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
+            
+            if spec_pdf:
+                for i in range(self.nComponents):
+                
+                    
+                    fig = matplotlib.figure.Figure(figsize =(PlotW, PlotH))
+                    canvas = FigureCanvas(fig)
+                    fig.add_axes((0.15,0.15,0.75,0.75))
+                    axes = fig.gca()
+
+                    nspectrum = self.nnma.muRecon[:,i]
+           
+                    line1 = axes.plot(self.stk.ev,nspectrum)
+                    lcolor = line1[0].get_color()
+            
+                    if self.cb_inputsp.isChecked():       
+                        initspec = self.nnma.muinit[:,self.i_map]   
+                        line2 = axes.plot(self.stk.ev,initspec, color=lcolor, linestyle = '--', label = 'Fit')
+                        
+                    axes.set_xlabel('Photon Energy [eV]')
+                    axes.set_ylabel('Absorption coefficient [a.u.]')
+                
+                    fileName_spec = self.SaveFileName+"_NNMAspectrum_" +str(i+1)+"."+ext
+                    fig.savefig(fileName_spec)                
+
+            ext = 'svg'
+            suffix = "." + ext        
+                
+            if map_pdf:
+                for i in range(self.nComponents):
+              
+                    mapimage = self.nnma.tRecon[i, :,:]
+              
+                    fig = matplotlib.figure.Figure(figsize =(PlotH*1.15, PlotH))
+                    canvas = FigureCanvas(fig)
+                    axes = fig.gca()
+
+                    divider = make_axes_locatable(axes)
+                    ax_cb = divider.new_horizontal(size="3%", pad=0.03)  
+                    fig.add_axes(ax_cb)
+                    axes.set_position([0.03,0.03,0.8,0.94])   
+        
+                    min_val = npy.min(mapimage)
+                    max_val = npy.max(mapimage)
+                    bound = npy.max((npy.abs(min_val), npy.abs(max_val)))
+        
+                    if self.show_scale_bar == 1:
+                        um_string = ' $\mathrm{\mu m}$'
+                        microns = '$'+self.stk.scale_bar_string+' $'+um_string
+                        axes.text(self.stk.scale_bar_pixels_x+10,self.stk.n_cols-9, microns, horizontalalignment='left', verticalalignment='center',
+                                  color = 'white', fontsize=14)
+                        #Matplotlib has flipped scales so I'm using rows instead of cols!
+                        p = matplotlib.patches.Rectangle((5,self.stk.n_cols-10), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
+                                               color = 'white', fill = True)
+                        axes.add_patch(p)     
+     
+                    im = axes.imshow(mapimage, cmap=spanclrmap, vmin = -bound, vmax = bound)
+                    cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
+    
+                    axes.axis("off") 
+                                
+                    fileName_img = self.SaveFileName+"_NNMA_" +str(i+1)+"."+ext
+                    fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
+            
+            if spec_pdf:
+                for i in range(self.nComponents):
+                
+                    
+                    fig = matplotlib.figure.Figure(figsize =(PlotW, PlotH))
+                    canvas = FigureCanvas(fig)
+                    fig.add_axes((0.15,0.15,0.75,0.75))
+                    axes = fig.gca()
+
+                    nspectrum = self.nnma.muRecon[:,i]
+           
+                    line1 = axes.plot(self.stk.ev,nspectrum)
+                    lcolor = line1[0].get_color()
+            
+                    if self.cb_inputsp.isChecked():       
+                        initspec = self.nnma.muinit[:,self.i_map]   
+                        line2 = axes.plot(self.stk.ev,initspec, color=lcolor, linestyle = '--', label = 'Fit')
+                        
+                    axes.set_xlabel('Photon Energy [eV]')
+                    axes.set_ylabel('Absorption coefficient [a.u.]')
+                
+                    fileName_spec = self.SaveFileName+"_NNMAspectrum_" +str(i+1)+"."+ext
+                    fig.savefig(fileName_spec)         
+                                
+        except IOError, e:
+            if e.strerror:
+                err = e.strerror 
+            else: 
+                err = e 
+    
+            QtGui.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % err)
+#         
+
+    
 #----------------------------------------------------------------------      
     def ShowMaps(self):
 
@@ -665,9 +922,215 @@ class PageNNMA(QtGui.QWidget):
         self.CostFPan.draw()
         
         
+#----------------------------------------------------------------------     
+    def updatewidgets(self):        
+
+        if self.nnmacalculated == 0:
+            self.button_savennma.setEnabled(False)
+        else:
+            self.button_savennma.setEnabled(True)
+
+
+
+#---------------------------------------------------------------------- 
+class SaveWinP5(QtGui.QDialog):
+
+    def __init__(self, parent):    
+        QtGui.QWidget.__init__(self, parent)
         
+        self.parent = parent
+
+        
+        self.resize(400, 300)
+        self.setWindowTitle('Save')
+        
+        pal = QtGui.QPalette()
+        self.setAutoFillBackground(True)
+        pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
+        self.setPalette(pal)
 
 
+        self.com = self.parent.common          
+        
+        path, ext = os.path.splitext(self.com.filename) 
+        ext = ext[1:].lower()   
+        suffix = "." + ext
+        path, fn = os.path.split(self.com.filename)
+        filename = fn[:-len(suffix)]
+        
+        self.path = self.com.path
+        self.filename = filename
+                          
+        
+        vboxtop = QtGui.QVBoxLayout()
+        vboxtop.setContentsMargins(20,20,20,20)
+        
+        gridtop = QtGui.QGridLayout()
+        gridtop.setVerticalSpacing(20)
+    
+        fontb = QtGui.QFont()
+        fontb.setBold(True)            
+        
+        st1 = QtGui.QLabel(self)
+        st1.setText('Save')
+        st1.setFont(fontb)
+        st2 = QtGui.QLabel(self)
+        st2.setText('.pdf')
+        st2.setFont(fontb)
+        st3 = QtGui.QLabel(self)
+        st3.setText('.png')
+        st3.setFont(fontb)
+        st4 = QtGui.QLabel(self)
+        st4.setText('.svg')
+        st4.setFont(fontb)
+        st5 = QtGui.QLabel(self)
+        st5.setText('.csv')
+        st5.setFont(fontb)        
+        
+        
+        st6 = QtGui.QLabel(self)
+        st6.setText('_spectrum')
+        
+        self.cb11 = QtGui.QCheckBox('', self)
+        self.cb11.setChecked(True)
+        self.cb12 = QtGui.QCheckBox('', self)
+        self.cb13 = QtGui.QCheckBox('', self)   
+        self.cb14 = QtGui.QCheckBox('', self)
+        
+        st7 = QtGui.QLabel(self)
+        st7.setText('_map')
+        
+        self.cb21 = QtGui.QCheckBox('', self)
+        self.cb21.setChecked(True)
+        self.cb22 = QtGui.QCheckBox('', self)
+        self.cb23 = QtGui.QCheckBox('', self)
+        
+        st8 = QtGui.QLabel(self)
+        st8.setText('_costfunction')   
+        self.cb31 = QtGui.QCheckBox('', self)
+        self.cb32 = QtGui.QCheckBox('', self)
+        self.cb33 = QtGui.QCheckBox('', self)
+
+
+        gridtop.addWidget(st1, 0, 0)
+        gridtop.addWidget(st2, 0, 1)
+        gridtop.addWidget(st3, 0, 2)
+        gridtop.addWidget(st4, 0, 3)
+        gridtop.addWidget(st5, 0, 4)
+                                
+        gridtop.addWidget(st6, 1, 0)
+        gridtop.addWidget(self.cb11, 1, 1)
+        gridtop.addWidget(self.cb12, 1, 2)  
+        gridtop.addWidget(self.cb13, 1, 3)  
+        gridtop.addWidget(self.cb14, 1, 4)           
+  
+        gridtop.addWidget(st7, 2, 0)
+        gridtop.addWidget(self.cb21, 2, 1)
+        gridtop.addWidget(self.cb22, 2, 2) 
+        gridtop.addWidget(self.cb23, 2, 3)  
+        
+        gridtop.addWidget(st8, 3, 0)
+        gridtop.addWidget(self.cb31, 3, 1)
+        gridtop.addWidget(self.cb32, 3, 2) 
+        gridtop.addWidget(self.cb33, 3, 3) 
+        
+        vboxtop.addStretch(0.5)
+        vboxtop.addLayout(gridtop)
+        vboxtop.addStretch(1)
+        
+         
+        hbox0 = QtGui.QHBoxLayout()
+         
+        stf = QtGui.QLabel(self)
+        stf.setText('Filename:\t')
+        self.tc_savefn = QtGui.QLineEdit(self)
+        self.tc_savefn.setText(self.filename)
+
+        hbox0.addWidget(stf)
+        hbox0.addWidget(self.tc_savefn)         
+                  
+        hbox1 = QtGui.QHBoxLayout()
+                 
+        stp = QtGui.QLabel(self)
+        stp.setText('Path:  \t')
+        self.tc_savepath = QtGui.QLineEdit(self)
+        self.tc_savepath.setReadOnly(True)
+        self.tc_savepath.setText(self.path)
+        self.tc_savepath.setMinimumWidth(100)
+        hbox1.addWidget(stp)
+        hbox1.addWidget(self.tc_savepath)  
+         
+        button_path = QtGui.QPushButton('Browse...')
+        button_path.clicked.connect(self.OnBrowseDir)
+        hbox1.addWidget(button_path)
+         
+         
+        hbox2 = QtGui.QHBoxLayout()
+        button_save = QtGui.QPushButton('Save')
+        button_save.clicked.connect(self.OnSave)
+        hbox2.addWidget(button_save)
+         
+        button_cancel = QtGui.QPushButton('Cancel')
+        button_cancel.clicked.connect(self.close)
+        hbox2.addWidget(button_cancel)
+        
+        vboxtop.addLayout(hbox0)
+        vboxtop.addLayout(hbox1)
+        vboxtop.addStretch(1.0)
+        vboxtop.addLayout(hbox2)
+
+        
+        
+        self.setLayout(vboxtop)
+        
+#----------------------------------------------------------------------        
+    def OnBrowseDir(self, evt):
+        
+        directory = QtGui.QFileDialog.getExistingDirectory(self, "Choose a directory", self.path, QtGui.QFileDialog.ShowDirsOnly|QtGui.QFileDialog.ReadOnly)       
+                                                        
+        
+       
+        if directory == '':
+            return
+                 
+        directory = str(directory)
+        self.com.path = directory
+                    
+        self.path = directory
+        
+        self.tc_savepath.setText(self.path)
+            
+            
+                
+#----------------------------------------------------------------------        
+    def OnSave(self, evt):
+        
+        self.filename = str(self.tc_savefn.text())
+        
+        sp_pdf = self.cb11.isChecked()
+        sp_png = self.cb12.isChecked()
+        sp_svg = self.cb13.isChecked()
+        sp_csv = self.cb14.isChecked()
+        im_pdf = self.cb21.isChecked()
+        im_png = self.cb22.isChecked()
+        im_svg = self.cb23.isChecked()
+        cf_pdf = self.cb31.isChecked()
+        cf_png = self.cb32.isChecked()
+        cf_svg = self.cb33.isChecked()
+        
+        self.close() 
+        self.parent.page7.Save(self.filename, self.path,
+                               spec_png = sp_png, 
+                               spec_pdf = sp_pdf, 
+                               spec_svg = sp_svg,
+                               spec_csv = sp_csv,
+                               map_png = im_png, 
+                               map_pdf = im_pdf,
+                               map_svg = im_svg,
+                               costf_png = cf_png, 
+                               costf_pdf = cf_pdf,
+                               costf_svg = cf_svg)        
+        
 
                 
 """ ------------------------------------------------------------------------------------------------"""
@@ -4623,7 +5086,7 @@ class PageCluster(QtGui.QWidget):
                 fileName_caimg = self.SaveFileName+"_CAcimg."+ext       
                 fig.savefig(fileName_caimg, dpi=300, pad_inches = 0.0)
                             
-            if img_pdf:
+            if img_svg:
                 ext = 'svg'
                 suffix = "." + ext
             
@@ -10554,7 +11017,7 @@ class AboutFrame(QtGui.QDialog):
         
         #font2 = wx.Font(12, wx.SWISS, wx.NORMAL, wx.NORMAL)
         text2 = QtGui.QLabel(self)
-        text2.setText('''Mantis 2.0''')  
+        text2.setText('Mantis '+version)  
         text2.setStyleSheet('font-size: 12pt')
         #text2.SetFont(font2)        
 
@@ -11128,8 +11591,7 @@ class MainFrame(QtGui.QMainWindow):
             else:
                 self.page6.slider_spec.setEnabled(False)
         
-            
-                   
+                                                      
              
         self.page1.ResetDisplaySettings()
              

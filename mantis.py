@@ -563,7 +563,7 @@ def batch_mode():
     
     settingsfile = 'Mantis_batch_settings.txt'     
     
-    version = 2
+    version = '2.0.5'
     wdir = ''
     outdir = 'MantisResults'
     filename = ''
