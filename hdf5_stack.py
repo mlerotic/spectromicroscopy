@@ -63,7 +63,8 @@ class h5data:
                 
                 dsdata = counter1Grp['data']
                 self.absdata = dsdata[...]
-                self.absdata = np.transpose(self.absdata)
+                self.absdata = np.transpose(self.absdata, axes=(2,1,0))
+                self.absdata = np.rot90(self.absdata)
                 
                 dseng = counter1Grp['photon_energy']                           
                 self.ev = dseng[...]

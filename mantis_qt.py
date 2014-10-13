@@ -30,7 +30,7 @@ from PyQt4.QtCore import Qt, QCoreApplication
 import matplotlib 
 matplotlib.rcParams['backend.qt4'] = 'PyQt4'
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg as NavigationToolbar
+#from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg as NavigationToolbar
 from matplotlib.figure import Figure
 from mpl_toolkits.axes_grid import make_axes_locatable
 matplotlib.interactive( True )
@@ -453,11 +453,11 @@ class PageNNMA(QtGui.QWidget):
                                    
             for i in range(kNNMA):
                 thisfn = os.path.basename(str(self.filenames[i]))
-                basename, extension = os.path.splitext(thisfn)      
+                _basename, extension = os.path.splitext(thisfn)      
                 if extension == '.csv':
-                    spectrum_evdata, spectrum_data, spectrum_common_name = self.stk.read_csv(self.filenames[i])
+                    spectrum_evdata, spectrum_data, _spectrum_common_name = self.stk.read_csv(self.filenames[i])
                 elif extension == '.xas':
-                    spectrum_evdata, spectrum_data, spectrum_common_name = self.stk.read_xas(self.filenames[i])
+                    spectrum_evdata, spectrum_data, _spectrum_common_name = self.stk.read_xas(self.filenames[i])
                                         
                 # Map this spectrum onto our energy range - interpolate to ev
                 init_spectrum = npy.interp(self.stk.ev, spectrum_evdata, spectrum_data)      
@@ -555,7 +555,6 @@ class PageNNMA(QtGui.QWidget):
             matplotlib.rcParams['pdf.fonttype'] = 42
             if costf_png:
                 ext = 'png'
-                suffix = "." + ext
                 fileName_evals = self.SaveFileName+"_CostFunction."+ext
                             
                 fig = self.costffig
@@ -563,7 +562,6 @@ class PageNNMA(QtGui.QWidget):
                 
             if costf_pdf:
                 ext = 'pdf'
-                suffix = "." + ext
                 fileName_evals = self.SaveFileName+"_CostFunction."+ext
                             
                 fig = self.costffig
@@ -571,7 +569,6 @@ class PageNNMA(QtGui.QWidget):
                 
             if costf_svg:
                 ext = 'svg'
-                suffix = "." + ext
                 fileName_evals = self.SaveFileName+"_CostFunction."+ext
                             
                 fig = self.costffig
@@ -581,8 +578,7 @@ class PageNNMA(QtGui.QWidget):
             from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
             matplotlib.rcParams['pdf.fonttype'] = 42
             
-            ext = 'png'
-            suffix = "." + ext       
+            ext = 'png'    
             
             colors=['#FF0000','#000000','#FFFFFF'] 
             spanclrmap=matplotlib.colors.LinearSegmentedColormap.from_list('spancm',colors)
@@ -593,7 +589,7 @@ class PageNNMA(QtGui.QWidget):
                     mapimage = self.nnma.tRecon[i, :,:]
               
                     fig = matplotlib.figure.Figure(figsize =(PlotH*1.15, PlotH))
-                    canvas = FigureCanvas(fig)
+                    _canvas = FigureCanvas(fig)
                     axes = fig.gca()
     
                     divider = make_axes_locatable(axes)
@@ -616,7 +612,7 @@ class PageNNMA(QtGui.QWidget):
                         axes.add_patch(p)     
      
                     im = axes.imshow(mapimage, cmap=spanclrmap, vmin = -bound, vmax = bound)
-                    cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
+                    _cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
     
                     axes.axis("off") 
                                 
@@ -627,7 +623,7 @@ class PageNNMA(QtGui.QWidget):
                 for i in range(self.nComponents):
                 
                     fig = matplotlib.figure.Figure(figsize =(PlotW, PlotH))
-                    canvas = FigureCanvas(fig)
+                    _canvas = FigureCanvas(fig)
                     fig.add_axes((0.15,0.15,0.75,0.75))
                     axes = fig.gca()
 
@@ -638,7 +634,7 @@ class PageNNMA(QtGui.QWidget):
             
                     if self.cb_inputsp.isChecked():       
                         initspec = self.nnma.muinit[:,self.i_map]   
-                        line2 = axes.plot(self.stk.ev,initspec, color=lcolor, linestyle = '--', label = 'Fit')
+                        _line2 = axes.plot(self.stk.ev,initspec, color=lcolor, linestyle = '--', label = 'Fit')
                         
                     axes.set_xlabel('Photon Energy [eV]')
                     axes.set_ylabel('Absorption coefficient [a.u.]')
@@ -654,8 +650,7 @@ class PageNNMA(QtGui.QWidget):
                     self.stk.write_csv(fileName_spec, self.stk.ev, nspectrum, cname = cname)
                     
                 
-            ext = 'pdf'
-            suffix = "." + ext        
+            ext = 'pdf'    
                 
             if map_pdf:
                 for i in range(self.nComponents):
@@ -663,7 +658,7 @@ class PageNNMA(QtGui.QWidget):
                     mapimage = self.nnma.tRecon[i, :,:]
               
                     fig = matplotlib.figure.Figure(figsize =(PlotH*1.15, PlotH))
-                    canvas = FigureCanvas(fig)
+                    _canvas = FigureCanvas(fig)
                     axes = fig.gca()
 
                     divider = make_axes_locatable(axes)
@@ -686,7 +681,7 @@ class PageNNMA(QtGui.QWidget):
                         axes.add_patch(p)     
      
                     im = axes.imshow(mapimage, cmap=spanclrmap, vmin = -bound, vmax = bound)
-                    cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
+                    _cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
     
                     axes.axis("off") 
                                 
@@ -698,7 +693,7 @@ class PageNNMA(QtGui.QWidget):
                 
                     
                     fig = matplotlib.figure.Figure(figsize =(PlotW, PlotH))
-                    canvas = FigureCanvas(fig)
+                    _canvas = FigureCanvas(fig)
                     fig.add_axes((0.15,0.15,0.75,0.75))
                     axes = fig.gca()
 
@@ -709,7 +704,7 @@ class PageNNMA(QtGui.QWidget):
             
                     if self.cb_inputsp.isChecked():       
                         initspec = self.nnma.muinit[:,self.i_map]   
-                        line2 = axes.plot(self.stk.ev,initspec, color=lcolor, linestyle = '--', label = 'Fit')
+                        _line2 = axes.plot(self.stk.ev,initspec, color=lcolor, linestyle = '--', label = 'Fit')
                         
                     axes.set_xlabel('Photon Energy [eV]')
                     axes.set_ylabel('Absorption coefficient [a.u.]')
@@ -718,7 +713,6 @@ class PageNNMA(QtGui.QWidget):
                     fig.savefig(fileName_spec)                
 
             ext = 'svg'
-            suffix = "." + ext        
                 
             if map_pdf:
                 for i in range(self.nComponents):
@@ -726,7 +720,7 @@ class PageNNMA(QtGui.QWidget):
                     mapimage = self.nnma.tRecon[i, :,:]
               
                     fig = matplotlib.figure.Figure(figsize =(PlotH*1.15, PlotH))
-                    canvas = FigureCanvas(fig)
+                    _canvas = FigureCanvas(fig)
                     axes = fig.gca()
 
                     divider = make_axes_locatable(axes)
@@ -749,7 +743,7 @@ class PageNNMA(QtGui.QWidget):
                         axes.add_patch(p)     
      
                     im = axes.imshow(mapimage, cmap=spanclrmap, vmin = -bound, vmax = bound)
-                    cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
+                    _cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
     
                     axes.axis("off") 
                                 
@@ -761,7 +755,7 @@ class PageNNMA(QtGui.QWidget):
                 
                     
                     fig = matplotlib.figure.Figure(figsize =(PlotW, PlotH))
-                    canvas = FigureCanvas(fig)
+                    _canvas = FigureCanvas(fig)
                     fig.add_axes((0.15,0.15,0.75,0.75))
                     axes = fig.gca()
 
@@ -772,7 +766,7 @@ class PageNNMA(QtGui.QWidget):
             
                     if self.cb_inputsp.isChecked():       
                         initspec = self.nnma.muinit[:,self.i_map]   
-                        line2 = axes.plot(self.stk.ev,initspec, color=lcolor, linestyle = '--', label = 'Fit')
+                        _line2 = axes.plot(self.stk.ev,initspec, color=lcolor, linestyle = '--', label = 'Fit')
                         
                     axes.set_xlabel('Photon Energy [eV]')
                     axes.set_ylabel('Absorption coefficient [a.u.]')
@@ -857,7 +851,7 @@ class PageNNMA(QtGui.QWidget):
         
                 if self.cb_inputsp.isChecked():       
                     initspec = self.nnma.muinit[:,i]   
-                    line2 = axes.plot(self.stk.ev,initspec, color=lcolor, linestyle = '--', label = 'Fit')
+                    _line2 = axes.plot(self.stk.ev,initspec, color=lcolor, linestyle = '--', label = 'Fit')
 
         else:
         
@@ -898,16 +892,16 @@ class PageNNMA(QtGui.QWidget):
         axes = fig.gca()
         
         if self.cb_totalcost.isChecked():
-            line1 = axes.plot(costTotal, label='Total')
+            _line1 = axes.plot(costTotal, label='Total')
 
         if self.cb_sparcost.isChecked():
-            line2 = axes.plot(costSparse, label='Sparseness ')
+            _line2 = axes.plot(costSparse, label='Sparseness ')
 
         if self.cb_simlcost.isChecked():
-            line3 = axes.plot(costClusterSim, label='Similarity')
+            _line3 = axes.plot(costClusterSim, label='Similarity')
 
         if self.cb_smoothcost.isChecked():
-            line4 = axes.plot(costSmooth, label='Smoothness')
+            _line4 = axes.plot(costSmooth, label='Smoothness')
             
             
         fontP = matplotlib.font_manager.FontProperties()
@@ -952,10 +946,10 @@ class SaveWinP5(QtGui.QDialog):
 
         self.com = self.parent.common          
         
-        path, ext = os.path.splitext(self.com.filename) 
+        _path, ext = os.path.splitext(self.com.filename) 
         ext = ext[1:].lower()   
         suffix = "." + ext
-        path, fn = os.path.split(self.com.filename)
+        _path, fn = os.path.split(self.com.filename)
         filename = fn[:-len(suffix)]
         
         self.path = self.com.path
@@ -5055,7 +5049,6 @@ class PageCluster(QtGui.QWidget):
             
             if img_png:
                 ext = 'png'
-                suffix = "." + ext
             
                 fig = matplotlib.figure.Figure(figsize = (float(self.stk.n_rows)/10, float(self.stk.n_cols)/10))
                 canvas = FigureCanvas(fig)
@@ -6027,6 +6020,9 @@ class PagePCA(QtGui.QWidget):
         if self.com.pca_calculated == 1:     
             #Find the closest point to the point clicked on the plot
             self.selpca = int(npy.round(x))
+            
+            if self.selpca < 1:
+                self.selpca = 1
                        
             self.loadPCAImage()
             self.loadPCASpectrum()
@@ -8118,8 +8114,8 @@ class ShowHistogram(QtGui.QDialog):
     def OnAccept(self, evt):
         
         self.stack.i0_from_histogram(self.histmin, self.histmax)
-        self.close()
         self.parent.I0histogramCalculated()
+        self.close()
 
 
 
@@ -8939,7 +8935,7 @@ class ImageRegistration(QtGui.QDialog):
         axes = fig.gca()  
              
 
-        im = axes.imshow(image, cmap=matplotlib.cm.get_cmap('gray')) 
+        _im = axes.imshow(image, cmap=matplotlib.cm.get_cmap('gray')) 
         axes.autoscale(False)
 #         if self.man_align == 2:           
 #             lx=matplotlib.lines.Line2D([self.man_yref-self.man_ys[self.iev],
@@ -9001,7 +8997,7 @@ class ImageRegistration(QtGui.QDialog):
         axes = fig.gca()
         
     
-        im = axes.imshow(self.ref_image, cmap=matplotlib.cm.get_cmap('gray')) 
+        _im = axes.imshow(self.ref_image, cmap=matplotlib.cm.get_cmap('gray')) 
         
         if (self.subregion == 1):
 
@@ -11192,8 +11188,8 @@ class MainFrame(QtGui.QMainWindow):
         Browse for a stack file:
         """
 
-        try:
-        #if True:
+        #try:
+        if True:
             if wildcard == False:
                 wildcard =  "HDF5 files (*.hdf5);;SDF files (*.hdr);;STK files (*.stk);;TXRM (*.txrm);;XRM (*.xrm);;TIF (*.tif);;FTIR (*.dpt)" 
 
@@ -11326,16 +11322,17 @@ class MainFrame(QtGui.QMainWindow):
 
             QtGui.QApplication.restoreOverrideCursor()
                  
-        except:
-    
-            self.common.stack_loaded = 0 
-            self.common.i0_loaded = 0
-            self.new_stack_refresh()
-                                   
-            QtGui.QApplication.restoreOverrideCursor()
-            QtGui.QMessageBox.warning(self, 'Error', 'Image stack not loaded.')
-   
-            import sys; print sys.exc_info()
+#         except:
+#     
+#             self.common.stack_loaded = 0 
+#             self.common.i0_loaded = 0
+#             self.new_stack_refresh()
+#                                    
+#             QtGui.QApplication.restoreOverrideCursor()
+#             QtGui.QMessageBox.warning(self, 'Error', 'Image stack not loaded.')
+#    
+#             import sys
+#             print sys.exc_info()
                    
 
         self.refresh_widgets()

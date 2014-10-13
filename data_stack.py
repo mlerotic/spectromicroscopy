@@ -21,6 +21,7 @@ from __future__ import division
 
 
 import numpy as np
+import scipy as sp
 import scipy.interpolate
 import scipy.ndimage
 import h5py 
@@ -420,11 +421,11 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, hdf5_stack.h5data, xradia_xrm.xrm, accel_
 
         self.evi0 = self.ev.copy()
         self.i0data = self.i0datahist 
-        
+         
         self.i0_dwell = self.data_dwell
-
+ 
         self.calculate_optical_density()   
-        
+         
         self.fill_h5_struct_normalization()
         
         return    
@@ -477,30 +478,33 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, hdf5_stack.h5data, xradia_xrm.xrm, accel_
         #little hack to deal with rounding errors
         self.evi0[self.evi0.size-1] += 0.001
         
-        fi0int = scipy.interpolate.interp1d(self.evi0,self.i0data, kind='cubic', bounds_error=False, fill_value=0.0)      
+        if len(self.evi0) > 2:
+            fi0int = scipy.interpolate.interp1d(self.evi0,self.i0data, kind='cubic', bounds_error=False, fill_value=0.0)      
+        else:
+            fi0int = scipy.interpolate.interp1d(self.evi0,self.i0data, bounds_error=False, fill_value=0.0)      
         i0 = fi0int(self.ev)
-        
+         
         if (self.data_dwell is not None) and (self.i0_dwell is not None):
-
+ 
             i0 = i0*(self.data_dwell/self.i0_dwell)
         
         #zero out all negative values in the image stack
         negative_indices = np.where(self.absdata <= 0)
         if negative_indices:
             self.absdata[negative_indices] = 0.01
-                           
-
+                            
+ 
         for i in range(self.n_ev):
             self.od[:,:,i] = - np.log(self.absdata[:,:,i]/i0[i])
-        
+         
         #clean up the result
         nan_indices = np.where(np.isfinite(self.od) == False)
         if nan_indices:
             self.od[nan_indices] = 0
-            
+             
         self.od3d = self.od.copy()
-        
-
+         
+ 
         #Optical density matrix is rearranged into n_pixelsxn_ev
         self.od = np.reshape(self.od, (n_pixels, self.n_ev), order='F')
 
