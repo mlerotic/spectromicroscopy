@@ -25,6 +25,7 @@ import scipy.interpolate
 import scipy.ndimage
 import h5py 
 import datetime 
+from h5py.h5i import inc_ref
 
 
 #----------------------------------------------------------------------
@@ -55,38 +56,112 @@ class h5data:
         # Open HDF5 file
         f = h5py.File(filename, 'r') 
         
-        if 'entry1' in f:
-            entry1Grp = f['entry1']     
+        n_regions = 0
+        for i in range(1,11):
+            if 'entry{0}'.format(i) in f:
+                n_regions += 1
+                
                
-            if 'Counter1' in  entry1Grp:
-                counter1Grp = entry1Grp['Counter1']
-                
-                dsdata = counter1Grp['data']
-                self.absdata = dsdata[...]
-                self.absdata = np.transpose(self.absdata, axes=(2,1,0))
-                self.absdata = np.rot90(self.absdata)
-                
-                dseng = counter1Grp['photon_energy']                           
-                self.ev = dseng[...]
+        if n_regions == 1:        
+            if 'entry1' in f:
+                entry1Grp = f['entry1']     
+                   
+                if 'Counter1' in  entry1Grp:
+                    counter1Grp = entry1Grp['Counter1']
+                    
+                    dsdata = counter1Grp['data']
+                    self.absdata = dsdata[...]
+                    self.absdata = np.transpose(self.absdata, axes=(2,1,0))
+                    self.absdata = np.rot90(self.absdata)
+                    
+                    dseng = counter1Grp['photon_energy']                           
+                    self.ev = dseng[...]
+    
+                    dsx = counter1Grp['sample_x']                           
+                    self.x_dist = dsx[...]       
+                    
+                    dsy = counter1Grp['sample_y']                           
+                    self.y_dist = dsy[...]          
+                    
+                    dsdd = counter1Grp['count_time']                           
+                    self.data_dwell = dsdd[...]    
+                      
+            f.close()
+            
+            dims = np.int32(self.absdata.shape)
+                   
+            self.n_cols = dims[0]
+            self.n_rows = dims[1]
+            self.n_ev = dims[2]
+            
+        elif n_regions > 1:
+            #Multi region stack
+            adata = []
+            idimc = []
+            idimr = []
+            nc = 0
+            nr = 0
+            xd = []
+            yd = []
 
-                dsx = counter1Grp['sample_x']                           
-                self.x_dist = dsx[...]       
-                
-                dsy = counter1Grp['sample_y']                           
-                self.y_dist = dsy[...]          
-                
-                dsdd = counter1Grp['count_time']                           
-                self.data_dwell = dsdd[...]    
-                  
-        f.close()
+            
+            for i in range(1,n_regions+1):
+                if 'entry{0}'.format(i) in f:      
+                    entryGrp = f['entry{0}'.format(i)]     
+                       
+                    if 'Counter1' in  entryGrp:
+                        counter1Grp = entryGrp['Counter1']
+                        
+                        dsdata = counter1Grp['data']
+                        idata = dsdata[...]
+                        idata = np.transpose(idata, axes=(2,1,0))
+                        idata = np.rot90(idata)
+                        adata.append(idata)
+                        
+                        dims = np.int32(idata.shape)
+                   
+                        inc = dims[0]
+                        inr = dims[1]
+                        self.n_ev = dims[2]
+                        
+                        if inr > nr:
+                            nr = inr
+                        nc += inc
+                        idimc.append(inc)
+                        idimr.append(inr)
+                        
+                        dseng = counter1Grp['photon_energy']                           
+                        self.ev = dseng[...]
         
-        dims = np.int32(self.absdata.shape)
-               
-        self.n_cols = dims[0]
-        self.n_rows = dims[1]
-        self.n_ev = dims[2]
-        
-      
+                        dsx = counter1Grp['sample_x']                           
+                        xd.append(dsx[...])      
+                        
+                        dsy = counter1Grp['sample_y']                           
+                        yd.append(dsy[...])          
+                        
+                        dsdd = counter1Grp['count_time']                           
+                        self.data_dwell = dsdd[...]   
+                        
+                       
+            self.n_cols = nc
+            self.n_rows = nr
+            self.absdata = np.zeros((nc,nr,self.n_ev))
+            self.x_dist = np.zeros(nc)
+            self.y_dist = np.zeros(nr)
+            thisr = 0
+            for i in range(n_regions):
+#                 self.absdata[0:idimc[i],thisr:idimr[i]+thisr, :] = adata[i]
+#                 thisr+=idimr[i]
+                self.absdata[thisr:idimc[i]+thisr,0:idimr[i], :] = adata[i]
+                thisr+=idimc[i]
                 
+            thisr = 0
+            for i in range(n_regions):            
+                if nc == idimc[i]:
+                    self.x_dist = yd[i]
+                self.y_dist[thisr:idimr[i]+thisr]=xd[i]
+                
+            
+                          
         return
     
