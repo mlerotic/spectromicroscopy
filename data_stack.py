@@ -26,22 +26,24 @@ import scipy.interpolate
 import scipy.ndimage
 import h5py 
 import datetime 
+import os
 
-import x1a_stk
-import aps_hdf5
-import hdf5_stack
-import xradia_xrm
-import accel_sdf
+import file_stk
+import file_dataexch_hdf5
+import file_nexus_hdf5
+import file_xrm
+import file_sdf
+import file_tif
 import data_struct
 
 #----------------------------------------------------------------------
-class data(x1a_stk.x1astk,aps_hdf5.h5, hdf5_stack.h5data, xradia_xrm.xrm, accel_sdf.sdfstk):
+class data(file_stk.x1astk,file_dataexch_hdf5.h5, file_nexus_hdf5.h5data, file_xrm.xrm, file_sdf.sdfstk):
     def __init__(self, data_struct):
-        x1a_stk.x1astk.__init__(self)
-        aps_hdf5.h5.__init__(self)
-        hdf5_stack.h5data.__init__(self)
-        xradia_xrm.xrm.__init__(self)
-        accel_sdf.sdfstk.__init__(self)
+        file_stk.x1astk.__init__(self)
+        file_dataexch_hdf5.h5.__init__(self)
+        file_nexus_hdf5.h5data.__init__(self)
+        file_xrm.xrm.__init__(self)
+        file_sdf.sdfstk.__init__(self)
         
         self.data_struct = data_struct
         
@@ -81,9 +83,9 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, hdf5_stack.h5data, xradia_xrm.xrm, accel_
 #----------------------------------------------------------------------   
     def read_stk_i0(self, filename, extension):
         if extension == '.xas':
-            x1a_stk.x1astk.read_stk_i0_xas(self,filename)
+            file_stk.x1astk.read_stk_i0_xas(self,filename)
         elif extension == '.csv':
-            x1a_stk.x1astk.read_stk_i0_csv(self,filename)
+            file_stk.x1astk.read_stk_i0_csv(self,filename)
             
         self.calculate_optical_density()
         
@@ -92,7 +94,7 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, hdf5_stack.h5data, xradia_xrm.xrm, accel_
         
 #----------------------------------------------------------------------   
     def read_sdf_i0(self, filename):
-        accel_sdf.sdfstk.read_sdf_i0(self,filename)
+        file_sdf.sdfstk.read_sdf_i0(self,filename)
         self.calculate_optical_density()
         
         self.fill_h5_struct_normalization()
@@ -111,7 +113,7 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, hdf5_stack.h5data, xradia_xrm.xrm, accel_
 #---------------------------------------------------------------------- 
     def read_stk(self, filename):    
         self.new_data()  
-        x1a_stk.x1astk.read_stk(self, filename)
+        file_stk.x1astk.read_stk(self, filename)
         
         self.fill_h5_struct_from_stk()
         
@@ -120,7 +122,7 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, hdf5_stack.h5data, xradia_xrm.xrm, accel_
 #---------------------------------------------------------------------- 
     def read_sdf(self, filename):    
         self.new_data()  
-        accel_sdf.sdfstk.read_sdf(self, filename)
+        file_sdf.sdfstk.read_sdf(self, filename)
         
         self.fill_h5_struct_from_stk()
         
@@ -129,10 +131,10 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, hdf5_stack.h5data, xradia_xrm.xrm, accel_
 #---------------------------------------------------------------------- 
     def read_h5(self, filename):    
         self.new_data()  
-        if aps_hdf5.h5.check_h5_format(self, filename):
-            aps_hdf5.h5.read_h5(self, filename, self.data_struct)
-        elif hdf5_stack.h5data.check_h5_format(self, filename):
-            hdf5_stack.h5data.read_h5(self, filename, self.data_struct)
+        if file_dataexch_hdf5.h5.check_h5_format(self, filename):
+            file_dataexch_hdf5.h5.read_h5(self, filename, self.data_struct)
+        elif file_nexus_hdf5.h5data.check_h5_format(self, filename):
+            file_nexus_hdf5.h5data.read_h5(self, filename, self.data_struct)
             self.fill_h5_struct_from_stk()
         else:
             return
@@ -158,7 +160,7 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, hdf5_stack.h5data, xradia_xrm.xrm, accel_
 #---------------------------------------------------------------------- 
     def read_txrm(self, filename):    
         self.new_data()  
-        xradia_xrm.xrm.read_txrm(self, filename, self.data_struct)
+        file_xrm.xrm.read_txrm(self, filename, self.data_struct)
         
                 
         self.scale_bar()
@@ -166,7 +168,7 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, hdf5_stack.h5data, xradia_xrm.xrm, accel_
 #---------------------------------------------------------------------- 
     def read_xrm(self, filename):    
         self.new_data()  
-        xradia_xrm.xrm.read_xrm(self, filename, self.data_struct)
+        file_xrm.xrm.read_xrm(self, filename, self.data_struct)
         
                 
         self.scale_bar()
@@ -176,8 +178,7 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, hdf5_stack.h5data, xradia_xrm.xrm, accel_
     def read_tiff(self, filename):    
         self.new_data()  
         
-        import tiff_stack
-        tiffstack = tiff_stack.TiffStackWrapper(filename)
+        tiffstack = file_tif.TiffStackWrapper(filename)
         mode = tiffstack.get_mode()
         if mode == 'I;16B':
             imgmode = 16
@@ -213,7 +214,6 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, hdf5_stack.h5data, xradia_xrm.xrm, accel_
         self.y_dist = np.arange(np.float(self.n_rows))*pixelsize
 
         #Read energies from file
-        import os
         basename, extension = os.path.splitext(filename) 
         engfilename = basename+'.txt'
         f = open(str(engfilename),'r')
@@ -528,7 +528,7 @@ class data(x1a_stk.x1astk,aps_hdf5.h5, hdf5_stack.h5data, xradia_xrm.xrm, accel_
         refimgs = np.empty((self.n_cols, self.n_rows, self.n_ev))
         refimgs_ev = []
         for i in range(len(files)):
-            ncols, nrows, iev, imgdata = xradia_xrm.xrm.read_xrm_fileinfo(self, files[i], readimgdata = True)
+            ncols, nrows, iev, imgdata = file_xrm.xrm.read_xrm_fileinfo(self, files[i], readimgdata = True)
             refimgs[:,:,i] = np.reshape(imgdata, (ncols, nrows), order='F')
             refimgs_ev.append(iev)
  

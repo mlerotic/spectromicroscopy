@@ -568,6 +568,7 @@ def batch_mode():
     outdir = 'MantisResults'
     filename = ''
     save_hdf5 = 0
+    align_stack = 0
     i0_file = ''
     i0_histogram = 0
     run_pca = 0
@@ -598,6 +599,7 @@ def batch_mode():
                 elif tag == 'WORK_DIR' : wdir  =  value.strip()
                 elif tag == 'OUTPUT_DIR_NAME' : outdir  =  value.strip()
                 elif tag == 'FILENAME' : filename  =  value.strip()
+                elif tag == 'ALIGN_STACK' : align_stack  =  value.strip()
                 elif tag == 'I0_FILE' : i0_file  =  value.strip()
                 elif tag == 'I0_HISTOGRAM' : i0_histogram = int(value)
                 elif tag == 'SAVE_HDF5' : save_hdf5 = int(value)
@@ -679,6 +681,45 @@ def batch_mode():
     except:
         print "Error: Could not load stack."
         return
+    
+    
+    if align_stack:
+        print 'Aligning the stack'
+        xshifts = np.zeros((stk.n_ev))
+        yshifts = np.zeros((stk.n_ev))
+        
+        referenceimage = stk.absdata[:,:,0].copy()            
+
+        for i in range(stk.n_ev):
+
+            img2 = stk.absdata[:,:,i]  
+ 
+               
+            if i==0:     
+                xshift, yshift, ccorr = stk.register_images(referenceimage, img2, 
+                                                          have_ref_img_fft = False)        
+            else:
+                xshift, yshift, ccorr = stk.register_images(referenceimage, img2, 
+                                                          have_ref_img_fft = True)
+            
+#             #Limit the shifts to MAXSHIFT chosen by the user
+#             if (self.maxshift > 0):
+#                 if (abs(xshift) > self.maxshift):
+#                         xshift = npy.sign(xshift)*self.maxshift
+#                 if (abs(yshift) > self.maxshift):
+#                         yshift = npy.sign(yshift)*self.maxshift
+            
+            xshifts[i] = xshift
+            yshifts[i] = yshift
+
+                                       
+        #Apply shifts
+        for i in range(stk.n_ev):
+            img = stk.absdata[:,:,i]
+            if (abs(xshifts[i])>0.02) or (abs(yshifts[i])>0.02):
+                shifted_img = stk.apply_image_registration(img, xshifts[i], yshifts[i])
+                stk.absdata[:,:,i] = shifted_img
+
                     
     
     if datastruct.spectromicroscopy.normalization.white_spectrum is not None:
@@ -708,7 +749,7 @@ def batch_mode():
         return
     
     if save_hdf5 == 1:
-        fnameh5 =  os.path.join(wdir,basename+'_MantisBatch.h5')
+        fnameh5 =  os.path.join(wdir,basename+'_MantisBatch.hdf5')
         stk.write_h5(fnameh5, data_struct)  
         print 'Saving data to HDF5 file:', fnameh5
         
@@ -762,7 +803,7 @@ def batch_mode():
         save_keyeng(key_engs, outdir, filename, stk, anlz, save_png, save_pdf, save_svg)
     
     if (save_hdf5 == 1) and (pca_calculated == 1) :
-        fnameh5 =  os.path.join(wdir,basename+'_MantisBatch.h5')
+        fnameh5 =  os.path.join(wdir,basename+'_MantisBatch.hdf5')
         stk.write_results_h5(fnameh5, data_struct, anlz)    
     
         

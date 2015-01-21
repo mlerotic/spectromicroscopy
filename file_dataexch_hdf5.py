@@ -16,7 +16,7 @@
 #   GNU General Public License for more details <http://www.gnu.org/licenses/>.
 
 # File format details can be found on 
-#https://confluence.aps.anl.gov/display/NX/Data+Exchange+Basics
+# https://confluence.aps.anl.gov/display/NX/Data+Exchange+Basics
  
 
 from __future__ import division
@@ -297,26 +297,31 @@ class h5:
             if data_struct.version != '1.0':
                 #load old version data
                 # /exchange/detector
-                detectorGrp = exchangeGrp['detector']      
-                dsdata = detectorGrp['data']
-                data_struct.exchange.data = dsdata[...]
+#                 detectorGrp = exchangeGrp['detector']      
+#                 dsdata = detectorGrp['data']
+#                 data_struct.exchange.data = dsdata[...]
+ 
+                #detectorGrp = exchangeGrp['detector']      
+                dsdata = exchangeGrp['data']
+                data_struct.exchange.data = dsdata[...]               
+                
                 if 'axes' in dsdata.attrs:
                     data_struct.exchange.data_axes = dsdata.attrs['axes']
                 
                        
-                
-                if 'x' in detectorGrp:
-                    dsx = detectorGrp['x']
-                    data_struct.exchange.x = dsx[...]
-                    self.have_dimscale = 1
-                    
-                if 'y' in detectorGrp:   
-                    dsy = detectorGrp['y']
-                    data_struct.exchange.y = dsy[...]
+#                 
+#                 if 'x' in detectorGrp:
+#                     dsx = detectorGrp['x']
+#                     data_struct.exchange.x = dsx[...]
+#                     self.have_dimscale = 1
+#                     
+#                 if 'y' in detectorGrp:   
+#                     dsy = detectorGrp['y']
+#                     data_struct.exchange.y = dsy[...]
                                                
-                dseng = detectorGrp['energy']                           
+                dseng = exchangeGrp['energy']                           
                 data_struct.exchange.energy = dseng[...]
-                data_struct.exchange.energy_units = dseng.attrs['units']
+                #data_struct.exchange.energy_units = dseng.attrs['units']
         
             else:
                 # Version 1.0

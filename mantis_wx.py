@@ -9051,8 +9051,8 @@ class StackListFrame(wx.Frame):
             
             try: 
                 from netCDF4 import Dataset
-                import sm_netcdf
-                self.sm = sm_netcdf.sm(data_struct)
+                import file_sm_netcdf
+                self.sm = file_sm_netcdf.sm(data_struct)
             
             except:
                 wx.MessageBox("Could not import netCDF4 library.")
@@ -9086,8 +9086,8 @@ class StackListFrame(wx.Frame):
             
             self.filetype = 'xrm'
             
-            import xradia_xrm
-            self.xrm = xradia_xrm.xrm()
+            import file_xrm
+            self.xrm = file_xrm.xrm()
 
             count = 0
         

@@ -3497,7 +3497,7 @@ class PageSpectral(QtGui.QWidget):
         suffix = "." + ext                       
                        
             
-        for i in range (self.anlz.n_target_spectra):
+        for i in range (self.anlz.n_target_spectra):   
               
             #Save composition maps
             if self.showraw == True:
@@ -7446,7 +7446,6 @@ class PageStack(QtGui.QWidget):
             axes.set_xlabel('Photon Energy [eV]')
             axes.set_ylabel('Flux')
  
-    
  
         specplot = axes.plot(self.stk.ev,self.spectrum)
          
@@ -7463,7 +7462,8 @@ class PageStack(QtGui.QWidget):
         #self.tc_spec.setText('Spectrum at pixel [{0}, {1}] or position [{2:5.2f}, {3:5.2f}]'.format(str(ypos),  str(xpos), self.stk.x_dist[xpos], self.stk.y_dist[ypos]))
 #         print("self.stk.x_dist[xpos] = ", type(ypos))
 #         print("self.stk.y_dist[ypos] = ", type(xpos))
-        self.tc_spec.setText('Spectrum at pixel [{0}, {1}] or position [{2:5.2f}, {3:5.2f}]'.format(str(ypos),  str(xpos), npy.float(self.stk.x_dist[xpos]), npy.float(self.stk.y_dist[ypos])))
+
+        #self.tc_spec.setText('Spectrum at pixel [{0}, {1}] or position [{2:5.2f}, {3:5.2f}]'.format(str(xpos),  str(ypos), npy.float(self.stk.x_dist[ypos]), npy.float(self.stk.y_dist[xpos])))
 
 #----------------------------------------------------------------------
     def ResetDisplaySettings(self):
@@ -8923,6 +8923,7 @@ class ImageRegistration(QtGui.QDialog):
         
 #----------------------------------------------------------------------        
     def ShowImage(self):
+        
                
         image = self.aligned_stack[:,:,self.iev]
         
@@ -8969,7 +8970,7 @@ class ImageRegistration(QtGui.QDialog):
 #----------------------------------------------------------------------            
     def OnScrollEng(self, value):
         self.iev = value
-        
+            
         self.ShowImage()
             
 
@@ -9147,15 +9148,17 @@ class ImageRegistration(QtGui.QDialog):
         if self.iev < 0:
             self.iev = 0
 
-        self.ShowImage() 
         
-        
-        self.parent.page1.slider_eng.setRange(0,self.stack.n_ev-1)
+        self.slider_eng.setRange(0, self.stack.n_ev-1)
+
+        self.parent.page1.slider_eng.setRange(0, self.stack.n_ev-1)
         self.parent.page1.iev = self.stack.n_ev/2
         self.parent.page1.slider_eng.setValue(self.parent.page1.iev)
         
         self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
         self.parent.page1.loadImage() 
+        
+        self.ShowImage() 
 
 #----------------------------------------------------------------------            
     def OnCalcRegistration(self, event):
@@ -10832,8 +10835,8 @@ class StackListFrame(QtGui.QDialog):
             
             try: 
                 from netCDF4 import Dataset
-                import sm_netcdf
-                self.sm = sm_netcdf.sm(data_struct)
+                import file_sm_netcdf
+                self.sm = file_sm_netcdf.sm(data_struct)
             
             except:
                 QtGui.QMessageBox.warning(self, 'Error', "Could not import netCDF4 library.")
@@ -10872,8 +10875,8 @@ class StackListFrame(QtGui.QDialog):
             
             self.filetype = 'xrm'
             
-            import xradia_xrm
-            self.xrm = xradia_xrm.xrm()
+            import file_xrm
+            self.xrm = file_xrm.xrm()
 
             count = 0
         

@@ -4,6 +4,8 @@ OUTPUT_DIR_NAME: MantisResults
 FILENAME: luhae.hdf5
 SAVE_HDF5: 0
 
+ALIGN_STACK: 1 
+
 I0_FILE: ''
 I0_HISTOGRAM: 0
 
