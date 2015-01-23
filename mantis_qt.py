@@ -26,6 +26,9 @@ from PyQt4 import QtCore, QtGui
 from PyQt4.QtGui import *
 from PyQt4.QtCore import Qt, QCoreApplication
 
+import Tkinter
+import FileDialog
+
 
 import matplotlib 
 matplotlib.rcParams['backend.qt4'] = 'PyQt4'
