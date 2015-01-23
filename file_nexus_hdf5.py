@@ -25,7 +25,6 @@ import scipy.interpolate
 import scipy.ndimage
 import h5py 
 import datetime 
-from h5py.h5i import inc_ref
 
 
 #----------------------------------------------------------------------

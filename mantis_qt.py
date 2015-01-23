@@ -30,7 +30,7 @@ from PyQt4.QtCore import Qt, QCoreApplication
 import matplotlib 
 matplotlib.rcParams['backend.qt4'] = 'PyQt4'
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
-#from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg as NavigationToolbar
+from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg as NavigationToolbar
 from matplotlib.figure import Figure
 from mpl_toolkits.axes_grid import make_axes_locatable
 matplotlib.interactive( True )
@@ -7442,6 +7442,7 @@ class PageStack(QtGui.QWidget):
             axes.set_xlabel('Photon Energy [eV]')
             axes.set_ylabel('Optical Density')
         else:
+
             self.spectrum = self.stk.absdata[xpos,ypos, :]
             axes.set_xlabel('Photon Energy [eV]')
             axes.set_ylabel('Flux')
@@ -7463,7 +7464,7 @@ class PageStack(QtGui.QWidget):
 #         print("self.stk.x_dist[xpos] = ", type(ypos))
 #         print("self.stk.y_dist[ypos] = ", type(xpos))
 
-        #self.tc_spec.setText('Spectrum at pixel [{0}, {1}] or position [{2:5.2f}, {3:5.2f}]'.format(str(xpos),  str(ypos), npy.float(self.stk.x_dist[ypos]), npy.float(self.stk.y_dist[xpos])))
+        self.tc_spec.setText('Spectrum at pixel [{0}, {1}] or position [{2:5.2f}, {3:5.2f}]'.format(str(ypos),  str(xpos), npy.float(self.stk.x_dist[xpos]), npy.float(self.stk.y_dist[ypos])))
 
 #----------------------------------------------------------------------
     def ResetDisplaySettings(self):
@@ -11191,8 +11192,8 @@ class MainFrame(QtGui.QMainWindow):
         Browse for a stack file:
         """
 
-        #try:
-        if True:
+        try:
+        #if True:
             if wildcard == False:
                 wildcard =  "HDF5 files (*.hdf5);;SDF files (*.hdr);;STK files (*.stk);;TXRM (*.txrm);;XRM (*.xrm);;TIF (*.tif);;FTIR (*.dpt)" 
 
@@ -11286,6 +11287,17 @@ class MainFrame(QtGui.QMainWindow):
 
 
             #Update widgets 
+            x=self.stk.n_cols
+            y=self.stk.n_rows  
+            self.page1.imgrgb = npy.zeros(x*y*3,dtype = "uint8")        
+            self.page1.maxval = npy.amax(self.stk.absdata)
+            
+            self.ix = int(x/2)
+            self.iy = int(y/2)
+            
+            self.page1.ix = self.ix
+            self.page1.iy = self.iy
+            
             self.iev = int(self.stk.n_ev/2)
             self.page0.slider_eng.setRange(0,self.stk.n_ev-1)
             self.page0.iev = self.iev
@@ -11295,24 +11307,14 @@ class MainFrame(QtGui.QMainWindow):
             self.page1.iev = self.iev
             self.page1.slider_eng.setValue(self.iev)
             
-        
-            x=self.stk.n_cols
-            y=self.stk.n_rows
-            z=self.iev               
-            self.page1.imgrgb = npy.zeros(x*y*3,dtype = "uint8")        
-            self.page1.maxval = npy.amax(self.stk.absdata)
-            
 
-            self.ix = int(x/2)
-            self.iy = int(y/2)
                     
             self.common.stack_loaded = 1
             
             if self.stk.data_struct.spectromicroscopy.normalization.white_spectrum is not None:
                 self.common.i0_loaded = 1
             
-            self.page1.ix = self.ix
-            self.page1.iy = self.iy
+
             
             self.page1.ResetDisplaySettings()
             self.page1.loadImage()
@@ -11325,17 +11327,17 @@ class MainFrame(QtGui.QMainWindow):
 
             QtGui.QApplication.restoreOverrideCursor()
                  
-#         except:
-#     
-#             self.common.stack_loaded = 0 
-#             self.common.i0_loaded = 0
-#             self.new_stack_refresh()
-#                                    
-#             QtGui.QApplication.restoreOverrideCursor()
-#             QtGui.QMessageBox.warning(self, 'Error', 'Image stack not loaded.')
-#    
-#             import sys
-#             print sys.exc_info()
+        except:
+     
+            self.common.stack_loaded = 0 
+            self.common.i0_loaded = 0
+            self.new_stack_refresh()
+                                    
+            QtGui.QApplication.restoreOverrideCursor()
+            QtGui.QMessageBox.warning(self, 'Error', 'Image stack not loaded.')
+    
+            import sys
+            print sys.exc_info()
                    
 
         self.refresh_widgets()
@@ -11382,7 +11384,7 @@ class MainFrame(QtGui.QMainWindow):
         """
         Browse for .hdf5 file
         """
-
+        
         try:
 
             wildcard = "HDF5 files (*.hdf5)"
@@ -11407,9 +11409,9 @@ class MainFrame(QtGui.QMainWindow):
             QtGui.QApplication.restoreOverrideCursor()
 
         except:
-   
+    
             QtGui.QApplication.restoreOverrideCursor()
-              
+               
             QtGui.QMessageBox.warning(self, 'Error', 'Could not save HDF5 file.')
                    
 
