@@ -31,6 +31,7 @@ import FileDialog
 
 
 import matplotlib 
+from numpy import NAN
 matplotlib.rcParams['backend.qt4'] = 'PyQt4'
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg as NavigationToolbar
@@ -47,7 +48,7 @@ import henke
 
 from helpers import resource_path
 
-version = '2.0.7'
+version = '2.0.8'
 
 Winsizex = 1000
 Winsizey = 700
@@ -7405,8 +7406,10 @@ class PageStack(QtGui.QWidget):
             im = axes.imshow(image, cmap=matplotlib.cm.get_cmap(self.colortable), 
                              vmin=vmin,vmax=vmax)
              
+
         if (self.showROImask == 1) and (self.addroi == 1):
-            im_red = axes.imshow(self.ROIpix_masked,cmap=matplotlib.cm.get_cmap("autumn")) 
+            im_red = axes.imshow(self.ROIpix_masked, cmap=matplotlib.cm.get_cmap("autumn")) 
+        
           
         axes.axis("off") 
          
@@ -7587,13 +7590,17 @@ class PageStack(QtGui.QWidget):
         
         for i in range(self.stk.n_cols):
             for j in range(self.stk.n_rows):
-                Pinside = self.point_in_poly(i, j, self.roixdata, self.roiydata)
+                Pinside = self.point_in_poly(j, i, self.roixdata, self.roiydata)
                 if Pinside == True:
-                    self.ROIpix[j,i] = 255
+                    self.ROIpix[i, j] = 255
               
+
+
         self.ROIpix = npy.ma.array(self.ROIpix)
         
+        
         self.ROIpix_masked =  npy.ma.masked_values(self.ROIpix, 0)
+        
         
         self.showROImask = 1
         self.line = None

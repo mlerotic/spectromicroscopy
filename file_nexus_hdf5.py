@@ -75,11 +75,13 @@ class h5data:
                     
                     dseng = counter1Grp['photon_energy']                           
                     self.ev = dseng[...]
-    
-                    dsx = counter1Grp['sample_x']                           
+                    
+                    #The image was rotated to show correct orientation so we have
+                    #to swap x and y distance    
+                    dsx = counter1Grp['sample_y']                           
                     self.x_dist = dsx[...]       
                     
-                    dsy = counter1Grp['sample_y']                           
+                    dsy = counter1Grp['sample_x']                           
                     self.y_dist = dsy[...]          
                     
                     dsdd = counter1Grp['count_time']                           
@@ -92,6 +94,7 @@ class h5data:
             self.n_cols = dims[0]
             self.n_rows = dims[1]
             self.n_ev = dims[2]
+            
             
         elif n_regions > 1:
             #Multi region stack
@@ -132,10 +135,12 @@ class h5data:
                         dseng = counter1Grp['photon_energy']                           
                         self.ev = dseng[...]
         
-                        dsx = counter1Grp['sample_x']                           
+                        #The image was rotated to show correct orientation so we have
+                        #to swap x and y distance  
+                        dsx = counter1Grp['sample_y']                           
                         xd.append(dsx[...])      
                         
-                        dsy = counter1Grp['sample_y']                           
+                        dsy = counter1Grp['sample_x']                           
                         yd.append(dsy[...])          
                         
                         dsdd = counter1Grp['count_time']                           
