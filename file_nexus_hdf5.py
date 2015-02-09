@@ -37,6 +37,7 @@ class h5data:
     def check_h5_format(self, filename):
         
         nxs_format = False
+        regions = 0
         # Open HDF5 file
         f = h5py.File(filename, 'r')   
         
@@ -45,23 +46,28 @@ class h5data:
         if 'entry1' in f:      
             nxs_format = True
             
+        n_regions = 0
+        for i in range(1,21):
+            if 'entry{0}'.format(i) in f:
+                n_regions += 1
+            
         f.close()
             
-        return nxs_format
+        return nxs_format, n_regions
 
 #---------------------------------------------------------------------- 
-    def read_h5(self, filename, data_struct):    
+    def read_h5(self, filename, data_struct, loadregion):    
         
         # Open HDF5 file
         f = h5py.File(filename, 'r') 
         
         n_regions = 0
-        for i in range(1,11):
+        for i in range(1,21):
             if 'entry{0}'.format(i) in f:
                 n_regions += 1
                 
                
-        if n_regions == 1:        
+        if (n_regions == 1) or (loadregion == 1):        
             if 'entry1' in f:
                 entry1Grp = f['entry1']     
                    
@@ -94,9 +100,44 @@ class h5data:
             self.n_cols = dims[0]
             self.n_rows = dims[1]
             self.n_ev = dims[2]
+
+        elif loadregion > 1:        
+            if 'entry{0}'.format(loadregion) in f:
+                entry1Grp = f['entry{0}'.format(loadregion)]     
+                   
+                if 'Counter1' in  entry1Grp:
+                    counter1Grp = entry1Grp['Counter1']
+                    
+                    dsdata = counter1Grp['data']
+                    self.absdata = dsdata[...]
+                    self.absdata = np.transpose(self.absdata, axes=(2,1,0))
+                    self.absdata = np.rot90(self.absdata)
+                    
+                    dseng = counter1Grp['photon_energy']                           
+                    self.ev = dseng[...]
+                    
+                    #The image was rotated to show correct orientation so we have
+                    #to swap x and y distance    
+                    dsx = counter1Grp['sample_y']                           
+                    self.x_dist = dsx[...]       
+                    
+                    dsy = counter1Grp['sample_x']                           
+                    self.y_dist = dsy[...]          
+                    
+                    dsdd = counter1Grp['count_time']                           
+                    self.data_dwell = dsdd[...]    
+                      
+            f.close()
             
+            dims = np.int32(self.absdata.shape)
+                   
+            self.n_cols = dims[0]
+            self.n_rows = dims[1]
+            self.n_ev = dims[2]
+                        
             
-        elif n_regions > 1:
+        elif loadregion == 0: #Combined stack 
+            
             #Multi region stack
             adata = []
             idimc = []
@@ -162,8 +203,8 @@ class h5data:
             thisr = 0
             for i in range(n_regions):            
                 if nc == idimc[i]:
-                    self.x_dist = yd[i]
-                self.y_dist[thisr:idimr[i]+thisr]=xd[i]
+                    self.x_dist = xd[i]
+                self.y_dist[thisr:idimr[i]+thisr]=yd[i]
                 
             
                           

@@ -129,12 +129,28 @@ class data(file_stk.x1astk,file_dataexch_hdf5.h5, file_nexus_hdf5.h5data, file_x
         self.scale_bar()
   
 #---------------------------------------------------------------------- 
-    def read_h5(self, filename):    
-        self.new_data()  
+    def check_h5_format(self, filename):   
+        #format 1-data exchange, 2 - nexus 1 region
+        format = 1 
+        nregions = 1
+        
         if file_dataexch_hdf5.h5.check_h5_format(self, filename):
+            format = 1
+        else:
+            nxsformat, nregions = file_nexus_hdf5.h5data.check_h5_format(self, filename)
+            if nxsformat:
+                format = 2
+
+            
+        return format, nregions
+  
+#---------------------------------------------------------------------- 
+    def read_h5(self, filename, format = 1, loadregion = 1):    
+        self.new_data()  
+        if format == 1:
             file_dataexch_hdf5.h5.read_h5(self, filename, self.data_struct)
-        elif file_nexus_hdf5.h5data.check_h5_format(self, filename):
-            file_nexus_hdf5.h5data.read_h5(self, filename, self.data_struct)
+        elif format == 2:
+            file_nexus_hdf5.h5data.read_h5(self, filename, self.data_struct, loadregion = loadregion)
             self.fill_h5_struct_from_stk()
         else:
             return

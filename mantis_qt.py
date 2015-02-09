@@ -10990,12 +10990,56 @@ class StackListFrame(QtGui.QDialog):
         self.close()
         
                 
-                        
+
+class InputRegionDialog(QtGui.QDialog):
+
+    def __init__(self, parent, nregions, title='Multi Region Stack'):
+    
+        QtGui.QWidget.__init__(self, parent)
+        
+        self.parent = parent
+    
+        mainLayout = QtGui.QVBoxLayout()
+    
+        layout = QtGui.QHBoxLayout()
+        label = QtGui.QLabel()
+        label.setText('Select Region to load:')
+        layout.addWidget(label)
+    
+        combo = QtGui.QComboBox(self)
+        combo.addItem("All")
+        for i in range(nregions):
+            combo.addItem(str(i+1))
+        combo.activated[int].connect(self.OnSelectRegion) 
+
+        layout.addWidget(combo)
+    
+        mainLayout.addLayout(layout)
+    
+
+        layout = QtGui.QHBoxLayout()
+        button = QtGui.QPushButton("Submit") #string or icon
+        self.connect(button, QtCore.SIGNAL("clicked()"), self.close)
+        layout.addWidget(button)
+    
+        mainLayout.addLayout(layout)
+        self.setLayout(mainLayout)
+    
+        self.resize(250, 60)
+        self.setWindowTitle(title)
+                               
+#----------------------------------------------------------------------           
+    def OnSelectRegion(self, value):
+        item = value
+        selregion = item
+        self.parent.loadregion = selregion
+
+        
         
 #---------------------------------------------------------------------- 
 class AboutFrame(QtGui.QDialog):
 
-    def __init__(self, parent = None):    
+    def __init__(self, parent = None, title='About'):    
         QtGui.QWidget.__init__(self, parent)
 
         self.resize(360, 660)
@@ -11202,8 +11246,8 @@ class MainFrame(QtGui.QMainWindow):
         Browse for a stack file:
         """
 
-        try:
-        #if True:
+        #try:
+        if True:
             if wildcard == False:
                 wildcard =  "HDF5 files (*.hdf5);;SDF files (*.hdr);;STK files (*.stk);;TXRM (*.txrm);;XRM (*.xrm);;TIF (*.tif);;FTIR (*.dpt)" 
 
@@ -11252,7 +11296,18 @@ class MainFrame(QtGui.QMainWindow):
                     #self.stk.data_struct.delete_data()
                     self.anlz.delete_data()                
 
-                self.stk.read_h5(filepath)
+                format, nregions = self.stk.check_h5_format(filepath)
+                
+                #If this is a multiregion stack check which region to load
+                self.loadregion = 0 #0-load all regions
+                if nregions > 1:
+                    QtGui.QApplication.restoreOverrideCursor()
+                    inputter = InputRegionDialog(self, nregions = nregions)
+                    inputter.exec_()
+
+                    QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+
+                self.stk.read_h5(filepath, format = format, loadregion = self.loadregion)
 
                 
             elif extension == '.txrm':            
@@ -11337,17 +11392,17 @@ class MainFrame(QtGui.QMainWindow):
 
             QtGui.QApplication.restoreOverrideCursor()
                  
-        except:
-     
-            self.common.stack_loaded = 0 
-            self.common.i0_loaded = 0
-            self.new_stack_refresh()
-                                    
-            QtGui.QApplication.restoreOverrideCursor()
-            QtGui.QMessageBox.warning(self, 'Error', 'Image stack not loaded.')
-    
-            import sys
-            print sys.exc_info()
+#         except:
+#      
+#             self.common.stack_loaded = 0 
+#             self.common.i0_loaded = 0
+#             self.new_stack_refresh()
+#                                     
+#             QtGui.QApplication.restoreOverrideCursor()
+#             QtGui.QMessageBox.warning(self, 'Error', 'Image stack not loaded.')
+#     
+#             import sys
+#             print sys.exc_info()
                    
 
         self.refresh_widgets()
