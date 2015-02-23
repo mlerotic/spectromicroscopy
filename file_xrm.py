@@ -416,6 +416,7 @@ class xrm:
             datasize[1] = np.int(nev[0])
             self.n_rows = datasize[1]
                 
+        angles = []
         if ole.exists('ImageInfo/Angles'):                  
             stream = ole.openstream('ImageInfo/Angles')
             data = stream.read()
@@ -513,6 +514,8 @@ class xrm:
         
         ds.exchange.energy=self.ev
         ds.exchange.energy_units = 'ev'
+        
+        ds.exchange.angles = angles
         
         
         #Since we do not have a scanning microscope we fill the x_dist and y_dist from pixel_size
@@ -619,6 +622,7 @@ class xrm:
             datasize[1] = np.int(nev[0])
             self.n_rows = datasize[1]
                 
+        angles = []
         if ole.exists('ImageInfo/Angles'):                  
             stream = ole.openstream('ImageInfo/Angles')
             data = stream.read()
@@ -705,6 +709,8 @@ class xrm:
         
         ds.exchange.energy=self.ev
         ds.exchange.energy_units = 'ev'
+        
+        ds.exchange.angles = angles
         
         
         #Since we do not have a scanning microscope we fill the x_dist and y_dist from pixel_size
