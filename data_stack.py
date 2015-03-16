@@ -155,21 +155,22 @@ class data(file_stk.x1astk,file_dataexch_hdf5.h5, file_nexus_hdf5.h5data, file_x
         else:
             return
         
-        if self.data_struct.spectromicroscopy.optical_density is not None: 
-            #print 'reading optical density'
-            self.i0data = self.data_struct.spectromicroscopy.normalization.white_spectrum 
-            self.evi0 = self.data_struct.spectromicroscopy.normalization.white_spectrum_energy 
-        
-            self.od = self.data_struct.spectromicroscopy.optical_density
-            
-            self.od3d = self.od.copy()
-            
-            self.od3d = np.reshape(self.od3d, (self.n_cols, self.n_rows, self.n_ev), order='F')
+#         if self.data_struct.spectromicroscopy.optical_density is not None: 
+#             #print 'reading optical density'
+#             self.i0data = self.data_struct.spectromicroscopy.normalization.white_spectrum 
+#             self.evi0 = self.data_struct.spectromicroscopy.normalization.white_spectrum_energy 
+#         
+#             self.od = self.data_struct.spectromicroscopy.optical_density
+#             
+#             self.od3d = self.od.copy()
+#             
+#             self.od3d = np.reshape(self.od3d, (self.n_cols, self.n_rows, self.n_ev), order='F')
                     
-        elif self.data_struct.spectromicroscopy.normalization.white_spectrum is not None:
+        if self.data_struct.spectromicroscopy.normalization.white_spectrum is not None:
             self.calculate_optical_density()
             self.fill_h5_struct_normalization()
-
+            
+            
             
         self.scale_bar()
         

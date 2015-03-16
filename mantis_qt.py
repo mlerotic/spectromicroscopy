@@ -48,7 +48,7 @@ import henke
 
 from helpers import resource_path
 
-version = '2.0.8'
+version = '2.0.9'
 
 Winsizex = 1000
 Winsizey = 700
