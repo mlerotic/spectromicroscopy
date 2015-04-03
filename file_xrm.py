@@ -605,6 +605,52 @@ class xrm:
                 if verbose: print "ImageInfo/Date = %s" % date    
         except:
             pass
+
+        if ole.exists('Alignment/StageShiftsApplied'):
+            stream = ole.openstream('Alignment/StageShiftsApplied')
+            data = stream.read()
+            shift = struct.unpack('<I', data)
+            if verbose: print "shift = ", shift[0]  
+
+        if ole.exists('Alignment/X-Shifts'):                  
+            stream = ole.openstream('Alignment/X-Shifts')
+            data = stream.read()
+            size = ole.get_size('Alignment/X-Shifts')
+            struct_fmt = "<{}f".format(size/4)
+            XShift = struct.unpack(struct_fmt, data)
+            if verbose: print "Alignment/X-Shifts: \n ",  XShift  
+
+        if ole.exists('Alignment/Y-Shifts'):                  
+            stream = ole.openstream('Alignment/Y-Shifts')
+            data = stream.read()
+            size = ole.get_size('Alignment/Y-Shifts')
+            struct_fmt = "<{}f".format(size/4)
+            YShift = struct.unpack(struct_fmt, data)
+            if verbose: print "Alignment/Y-Shifts: \n ",  YShift  
+
+        if ole.exists('ImageInfo/XPosition'):                  
+            stream = ole.openstream('ImageInfo/XPosition')
+            data = stream.read()
+            size = ole.get_size('ImageInfo/XPosition')
+            struct_fmt = "<{}f".format(size/4)
+            XPosition = struct.unpack(struct_fmt, data)
+            if verbose: print "ImageInfo/XPosition: \n ",  XPosition  
+
+        if ole.exists('ImageInfo/YPosition'):                  
+            stream = ole.openstream('ImageInfo/YPosition')
+            data = stream.read()
+            size = ole.get_size('ImageInfo/YPosition')
+            struct_fmt = "<{}f".format(size/4)
+            YPosition = struct.unpack(struct_fmt, data)
+            if verbose: print "ImageInfo/YPosition: \n ",  YPosition  
+
+        if ole.exists('ImageInfo/ZPosition'):                  
+            stream = ole.openstream('ImageInfo/ZPosition')
+            data = stream.read()
+            size = ole.get_size('ImageInfo/ZPosition')
+            struct_fmt = "<{}f".format(size/4)
+            ZPosition = struct.unpack(struct_fmt, data)
+            if verbose: print "ImageInfo/ZPosition: \n ",  ZPosition  
                 
         if ole.exists('ImageInfo/ImageWidth'):                 
             stream = ole.openstream('ImageInfo/ImageWidth')
@@ -726,6 +772,15 @@ class xrm:
         
         
         self.data_dwell = np.ones((self.n_ev))*exptimes[0]
+    
+        ds.exchange.sample_position_x = XPosition
+        ds.exchange.sample_position_y = YPosition
+        ds.exchange.sample_position_z = ZPosition
+
+        ds.exchange.sample_image_shift_x = XShift
+        ds.exchange.sample_image_shift_y = YShift
+
+        ds.exchange.actual_pixel_size =  pixelsize 
           
           
         return
