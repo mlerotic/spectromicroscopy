@@ -8,6 +8,7 @@ not only reduce the time needed but also can uncover hidden trends in the data.
 # Mantis #
 [MANTiS](http://spectromicroscopy.com) is Multivariate ANalysis Tool for Spectromicroscopy developed in Python by [2nd Look Consulting](http://2ndlookconsulting.com). It uses principal component analysis and cluster analysis to classify pixels according to spectral similarity.
 
+## Title ##
 Mantis package and binaries can be downloaded from 
 [spectromicroscopy.com](http://spectromicroscopy.com).
 
