@@ -12,6 +12,9 @@ not only reduce the time needed but also can uncover hidden trends in the data.
 Mantis package and binaries can be downloaded from 
 [spectromicroscopy.com](http://spectromicroscopy.com).
 
+## User Guide ##
+Mantis User Guide can be found on the project wiki pages [[Home]].
+
 ## References ##
 
 Please use the following reference when quoting Mantis
