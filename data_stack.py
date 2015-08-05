@@ -30,6 +30,7 @@ import os
 
 import file_stk
 from file_plugins import file_dataexch_hdf5
+from file_plugins import file_sdf
 #import file_nexus_hdf5
 import file_xrm
 #import file_sdf
@@ -37,13 +38,13 @@ import file_tif
 import data_struct
 
 #----------------------------------------------------------------------
-class data(file_stk.x1astk, file_xrm.xrm, file_dataexch_hdf5.h5):
+class data(file_stk.x1astk, file_xrm.xrm, file_dataexch_hdf5.h5,file_sdf.sdfstk):
     def __init__(self, data_struct):
         file_stk.x1astk.__init__(self)
         file_dataexch_hdf5.h5.__init__(self)
         #file_nexus_hdf5.h5data.__init__(self)
         file_xrm.xrm.__init__(self)
-        #file_sdf.sdfstk.__init__(self)
+        file_sdf.sdfstk.__init__(self)
         
         self.data_struct = data_struct
         

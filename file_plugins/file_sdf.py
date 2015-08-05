@@ -31,8 +31,9 @@ def identify(filename):
 		print "Error in SDF plugin:", sys.exc_info()
 		return False
 
-def read(FileName,entry=0,channel=0):
-	pass
+def read(filepath, data_stk):
+    data_stk.read_sdf(filepath)
+    return
 
 #----------------------------------------------------------------------
 class HDR_FileParser:

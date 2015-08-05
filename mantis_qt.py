@@ -7471,6 +7471,7 @@ class PageStack(QtGui.QWidget):
         #self.tc_spec.setText('Spectrum at pixel [{0}, {1}] or position [{2:5.2f}, {3:5.2f}]'.format(str(ypos),  str(xpos), self.stk.x_dist[xpos], self.stk.y_dist[ypos]))
 #         print("self.stk.x_dist[xpos] = ", type(ypos))
 #         print("self.stk.y_dist[ypos] = ", type(xpos))
+        print "Note that X and Y are messed up and need fixing throughout (including in the loading code)!"
 
         self.tc_spec.setText('Spectrum at pixel [{0}, {1}] or position [{2:5.2f}, {3:5.2f}]'.format(str(ypos),  str(xpos), npy.float(self.stk.x_dist[xpos]), npy.float(self.stk.y_dist[ypos])))
 
