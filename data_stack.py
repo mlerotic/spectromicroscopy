@@ -29,21 +29,21 @@ import datetime
 import os
 
 import file_stk
-import file_dataexch_hdf5
-import file_nexus_hdf5
+from file_plugins import file_dataexch_hdf5
+#import file_nexus_hdf5
 import file_xrm
-import file_sdf
+#import file_sdf
 import file_tif
 import data_struct
 
 #----------------------------------------------------------------------
-class data(file_stk.x1astk,file_dataexch_hdf5.h5, file_nexus_hdf5.h5data, file_xrm.xrm, file_sdf.sdfstk):
+class data(file_stk.x1astk, file_xrm.xrm, file_dataexch_hdf5.h5):
     def __init__(self, data_struct):
         file_stk.x1astk.__init__(self)
         file_dataexch_hdf5.h5.__init__(self)
-        file_nexus_hdf5.h5data.__init__(self)
+        #file_nexus_hdf5.h5data.__init__(self)
         file_xrm.xrm.__init__(self)
-        file_sdf.sdfstk.__init__(self)
+        #file_sdf.sdfstk.__init__(self)
         
         self.data_struct = data_struct
         
@@ -146,9 +146,10 @@ class data(file_stk.x1astk,file_dataexch_hdf5.h5, file_nexus_hdf5.h5data, file_x
   
 #---------------------------------------------------------------------- 
     def read_h5(self, filename, format = 1, loadregion = 1):    
-        self.new_data()  
+        self.new_data()
         if format == 1:
-            file_dataexch_hdf5.h5.read_h5(self, filename, self.data_struct)
+            #file_dataexch_hdf5.h5.read_h5(self, filename, self.data_struct)
+            file_dataexch_hdf5.h5.read_h5(self, filename)
         elif format == 2:
             file_nexus_hdf5.h5data.read_h5(self, filename, self.data_struct, loadregion = loadregion)
             self.fill_h5_struct_from_stk()

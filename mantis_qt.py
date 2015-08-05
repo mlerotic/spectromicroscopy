@@ -47,6 +47,8 @@ import nnma
 import henke
 
 from helpers import resource_path
+import file_plugins
+File_GUI = file_plugins.File_GUI()
 
 version = '2.0.9'
 
@@ -10486,17 +10488,21 @@ class PageLoadData(QtGui.QWidget):
         sizer1 = QtGui.QGroupBox('Load Data Stack')
         vbox1 = QtGui.QVBoxLayout()
         
-        self.button_hdf5 = QtGui.QPushButton('  Load HDF5 DataExchange Stack (*.hdf5) - APS  ')
+        self.button_multiload = QtGui.QPushButton('  Load Stack  ')
+        self.button_multiload.clicked.connect( self.OnLoadMulti)
+        vbox1.addWidget(self.button_multiload)
+        
+        self.button_hdf5 = QtGui.QPushButton('  Load HDF5 Exchange Stack (*.hdf5) - APS  ')
         self.button_hdf5.clicked.connect( self.OnLoadHDF5)
         vbox1.addWidget(self.button_hdf5)
         
-        self.button_hdf5_2 = QtGui.QPushButton('  Load HDF5 Nexus Stack (*.hdf5) - DLS  ')
-        self.button_hdf5_2.clicked.connect( self.OnLoadHDF5)
-        vbox1.addWidget(self.button_hdf5_2)
+        #self.button_hdf5_2 = QtGui.QPushButton('  Load HDF5 Nexus Stack (*.hdf5) - DLS  ')
+        #self.button_hdf5_2.clicked.connect( self.OnLoadHDF5)
+        #vbox1.addWidget(self.button_hdf5_2)
         
-        self.button_sdf = QtGui.QPushButton('Load SDF Stack (*.hdr) - ALS, SLS, Bessy')
-        self.button_sdf.clicked.connect( self.OnLoadSDF)   
-        vbox1.addWidget(self.button_sdf)
+        #self.button_sdf = QtGui.QPushButton('Load SDF Stack (*.hdr) - ALS, SLS, Bessy')
+        #self.button_sdf.clicked.connect( self.OnLoadSDF)   
+        #vbox1.addWidget(self.button_sdf)
         
         self.button_stk = QtGui.QPushButton('Load STK Stack (*.stk) - NSLS')
         self.button_stk.clicked.connect( self.OnLoadSTK)   
@@ -10627,16 +10633,21 @@ class PageLoadData(QtGui.QWidget):
         
         
 #----------------------------------------------------------------------          
+    def OnLoadMulti(self, event):
+
+        self.window().LoadStack(False)
+        
+#----------------------------------------------------------------------          
     def OnLoadHDF5(self, event):
 
         wildcard =  'HDF5 files (*.hdf5)'
         self.window().LoadStack(wildcard)
         
 #----------------------------------------------------------------------          
-    def OnLoadSDF(self, event):
+    #def OnLoadSDF(self, event):
 
-        wildcard =  "SDF files (*.hdr)" 
-        self.window().LoadStack(wildcard)
+        #wildcard =  "SDF files (*.hdr)" 
+        #self.window().LoadStack(wildcard)
                 
 #----------------------------------------------------------------------          
     def OnLoadSTK(self, event):
@@ -11249,106 +11260,120 @@ class MainFrame(QtGui.QMainWindow):
         #try:
         if True:
             if wildcard == False:
-                wildcard =  "HDF5 files (*.hdf5);;SDF files (*.hdr);;STK files (*.stk);;TXRM (*.txrm);;XRM (*.xrm);;TIF (*.tif);;FTIR (*.dpt)" 
+                filepath, plugin = File_GUI.load()
+                if filepath is not None:
+                    if plugin is None:
+                        plugin = file_plugins.identify(filepath)
+                    print filepath, '\t', plugin.title
+                    if self.common.stack_loaded == 1:
+                        self.new_stack_refresh()
+                        self.stk.new_data()
+                        self.anlz.delete_data()
+                    #file_plugins.load(filepath,plugin=plugin)
+                    plugin.read( filepath, self.stk)
+                    #plugin.h5.read_h5(plugin.h5, filepath, self.data_struct)
+                    directory =  os.path.dirname(str(filepath))
+                    self.page1.filename =  os.path.basename(str(filepath))
+            else:
+                filepath = QtGui.QFileDialog.getOpenFileName(self, 'Open file', '', wildcard)
+                
 
-            filepath = QtGui.QFileDialog.getOpenFileName(self, 'Open file', '', wildcard)
+                filepath = str(filepath)
+                if filepath == '':
+                    return
+                
+                
+                directory =  os.path.dirname(str(filepath))
+                self.page4.DefaultDir = directory
+                self.page1.filename =  os.path.basename(str(filepath))
             
-
-            filepath = str(filepath)
-            if filepath == '':
-                return
-            
-            
-            directory =  os.path.dirname(str(filepath))
-            self.page4.DefaultDir = directory
-            self.page1.filename =  os.path.basename(str(filepath))
-        
-            QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
-            basename, extension = os.path.splitext(self.page1.filename)      
-            
-            self.common.path = directory
-            self.common.filename = self.page1.filename
-                       
-            
-            if extension == '.hdr':            
-                if self.common.stack_loaded == 1:
-                    self.new_stack_refresh()  
-                    self.stk.new_data()
-                    #self.stk.data_struct.delete_data()
-                    self.anlz.delete_data()    
-                self.stk.read_sdf(filepath)        
-                           
-            
-            elif extension == '.stk':            
-                if self.common.stack_loaded == 1:
-                    self.new_stack_refresh()  
-                    self.stk.new_data()
-                    #self.stk.data_struct.delete_data()
-                    self.anlz.delete_data()       
-                self.stk.read_stk(filepath)     
+                QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+                basename, extension = os.path.splitext(self.page1.filename)      
                 
-
+                self.common.path = directory
+                self.common.filename = self.page1.filename
+                        
                 
-            elif extension == '.hdf5':
-                if self.common.stack_loaded == 1:
-                    self.new_stack_refresh()  
-                    self.stk.new_data()
-                    #self.stk.data_struct.delete_data()
-                    self.anlz.delete_data()                
-
-                format, nregions = self.stk.check_h5_format(filepath)
-                
-                #If this is a multiregion stack check which region to load
-                self.loadregion = 0 #0-load all regions
-                if nregions > 1:
-                    QtGui.QApplication.restoreOverrideCursor()
-                    inputter = InputRegionDialog(self, nregions = nregions)
-                    inputter.exec_()
-
-                    QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
-
-                self.stk.read_h5(filepath, format = format, loadregion = self.loadregion)
-
-                
-            elif extension == '.txrm':            
-                if self.common.stack_loaded == 1:
-                    self.new_stack_refresh()  
-                    self.stk.new_data()
-                    #self.stk.data_struct.delete_data()
-                    self.anlz.delete_data()  
-                         
-                self.stk.read_txrm(filepath)        
-                
-                              
-            elif extension == '.xrm':              
-                if self.common.stack_loaded == 1:
-                    self.new_stack_refresh()  
-                    self.stk.new_data()
-                    #self.stk.data_struct.delete_data()
-                    self.anlz.delete_data()  
-                         
-                self.stk.read_xrm(filepath)        
-                
-            elif extension == '.tif':              
-                if self.common.stack_loaded == 1:
-                    self.new_stack_refresh()  
-                    self.stk.new_data()
-                    #self.stk.data_struct.delete_data()
-                    self.anlz.delete_data()  
-                         
-                self.stk.read_tiff(filepath)    
-                self.page1.show_scale_bar = 0
-                self.page1.add_scale_cb.setChecked(False)
-                
-            elif extension == '.dpt':              
-                if self.common.stack_loaded == 1:
-                    self.new_stack_refresh()  
-                    self.stk.new_data()
-                    self.anlz.delete_data()  
-                         
-                self.stk.read_dpt(filepath)  
-                self.common.i0_loaded = 1
+                if extension == '.hdr':            
+                    if self.common.stack_loaded == 1:
+                        self.new_stack_refresh()  
+                        self.stk.new_data()
+                        #self.stk.data_struct.delete_data()
+                        self.anlz.delete_data()    
+                    self.stk.read_sdf(filepath)        
                             
+                
+                if extension == '.stk':            
+                    if self.common.stack_loaded == 1:
+                        self.new_stack_refresh()  
+                        self.stk.new_data()
+                        #self.stk.data_struct.delete_data()
+                        self.anlz.delete_data()       
+                    self.stk.read_stk(filepath)     
+                    
+
+                    
+                elif extension == '.hdf5':
+                    if self.common.stack_loaded == 1:
+                        self.new_stack_refresh()  
+                        self.stk.new_data()
+                        #self.stk.data_struct.delete_data()
+                        self.anlz.delete_data()                
+
+                    #format, nregions = self.stk.check_h5_format(filepath)
+                    
+                    ##If this is a multiregion stack check which region to load
+                    #self.loadregion = 0 #0-load all regions
+                    #if nregions > 1:
+                        #QtGui.QApplication.restoreOverrideCursor()
+                        #inputter = InputRegionDialog(self, nregions = nregions)
+                        #inputter.exec_()
+
+                        #QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+
+                    #self.stk.read_h5(filepath, format = format, loadregion = self.loadregion)
+                    self.stk.read_h5(filepath, format = 1, loadregion = 0)
+
+                    
+                elif extension == '.txrm':            
+                    if self.common.stack_loaded == 1:
+                        self.new_stack_refresh()  
+                        self.stk.new_data()
+                        #self.stk.data_struct.delete_data()
+                        self.anlz.delete_data()  
+                            
+                    self.stk.read_txrm(filepath)        
+                    
+                                
+                elif extension == '.xrm':              
+                    if self.common.stack_loaded == 1:
+                        self.new_stack_refresh()  
+                        self.stk.new_data()
+                        #self.stk.data_struct.delete_data()
+                        self.anlz.delete_data()  
+                            
+                    self.stk.read_xrm(filepath)        
+                    
+                elif extension == '.tif':              
+                    if self.common.stack_loaded == 1:
+                        self.new_stack_refresh()  
+                        self.stk.new_data()
+                        #self.stk.data_struct.delete_data()
+                        self.anlz.delete_data()  
+                            
+                    self.stk.read_tiff(filepath)    
+                    self.page1.show_scale_bar = 0
+                    self.page1.add_scale_cb.setChecked(False)
+                    
+                elif extension == '.dpt':              
+                    if self.common.stack_loaded == 1:
+                        self.new_stack_refresh()  
+                        self.stk.new_data()
+                        self.anlz.delete_data()  
+                            
+                    self.stk.read_dpt(filepath)  
+                    self.common.i0_loaded = 1
+                                
 
 
             #Update widgets 

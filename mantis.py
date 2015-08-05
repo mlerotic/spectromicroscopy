@@ -28,6 +28,7 @@ import data_stack
 import analyze
 #import nnma
 import henke
+#import file_plugins
 
 PlotH = 4.0
 PlotW = PlotH*1.61803
