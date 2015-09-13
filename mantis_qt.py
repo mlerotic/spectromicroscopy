@@ -3252,10 +3252,11 @@ class PageSpectral(QtGui.QWidget):
         
 
         try: 
-            
+        
             wildcard = "Spectrum files (*.csv);;Spectrum files (*.xas);;"
             
-            filepath = QtGui.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', '', wildcard, self.DefaultDir)
+            #filepath = QtGui.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', '', wildcard, self.DefaultDir)
+            filepath = QtGui.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', '', wildcard)
             
 
             filepath = str(filepath)
@@ -10520,13 +10521,17 @@ class PageLoadData(QtGui.QWidget):
         sizer2 = QtGui.QGroupBox('Build a stack from a set of files')
         vbox2 = QtGui.QVBoxLayout()
 
-        self.button_sm = QtGui.QPushButton( 'Build a stack from a set of NetCDF (*.sm) files')
-        self.button_sm.clicked.connect( self.OnBuildStack)
-        vbox2.addWidget(self.button_sm)
+        button_sm = QtGui.QPushButton( 'Build a stack from a set of NetCDF (*.sm) files')
+        button_sm.clicked.connect( self.OnBuildStack)
+        vbox2.addWidget(button_sm)
         
-        self.button_xrm_list = QtGui.QPushButton( 'Build a stack from a set of XRM (*.xrm) files')
-        self.button_xrm_list.clicked.connect( self.OnBuildStack)
-        vbox2.addWidget(self.button_xrm_list)
+        button_xrm_list = QtGui.QPushButton( 'Build a stack from a set of XRM (*.xrm) files')
+        button_xrm_list.clicked.connect( self.OnBuildStack)
+        vbox2.addWidget(button_xrm_list)
+        
+        button_bim_list = QtGui.QPushButton( 'Build a stack from a set of BIM (*.bim) files')
+        button_bim_list.clicked.connect( self.OnBuildStack)
+        vbox2.addWidget(button_bim_list)
         
         sizer2.setLayout(vbox2)
 
@@ -10729,7 +10734,7 @@ class StackListFrame(QtGui.QDialog):
         self.stk = stack
         self.common = com
         
-        self.resize(400, 500)
+        self.resize(600, 500)
         self.setWindowTitle('Stack File List')
         
         pal = QtGui.QPalette()
@@ -10762,7 +10767,7 @@ class StackListFrame(QtGui.QDialog):
         self.filelist.setShowGrid(False)
         self.filelist.verticalHeader().setVisible(False)
         
-        self.filelist.setColumnWidth(0,200)
+        self.filelist.setColumnWidth(0,400)
         self.filelist.setColumnWidth(1,50)
         self.filelist.setColumnWidth(2,50)
         self.filelist.setColumnWidth(3,50)
@@ -10803,7 +10808,6 @@ class StackListFrame(QtGui.QDialog):
         
         vbox.addStretch(0.5)
                         
-        
         
         self.setLayout(vbox)
         
@@ -10858,9 +10862,9 @@ class StackListFrame(QtGui.QDialog):
             for i in range(len(self.sm_files)):
                 #print sm_files
                 filename = self.sm_files[i]
-                file = os.path.join(filepath, filename)
+                thisfile = os.path.join(filepath, filename)
             
-                filever, ncols, nrows, iev = self.sm.read_sm_header(file)
+                filever, ncols, nrows, iev = self.sm.read_sm_header(thisfile)
             
                 
                 if filever > 0:  
@@ -10876,7 +10880,7 @@ class StackListFrame(QtGui.QDialog):
                 else:
                     continue
                 
-            return
+            
          
             
         self.xrm_files = [x for x in os.listdir(filepath) if x.endswith('.xrm')] 
@@ -10894,9 +10898,9 @@ class StackListFrame(QtGui.QDialog):
             for i in range(len(self.xrm_files)):
 
                 filename = self.xrm_files[i]
-                file = os.path.join(filepath, filename)
+                thisfile = os.path.join(filepath, filename)
 
-                ncols, nrows, iev = self.xrm.read_xrm_fileinfo(file)
+                ncols, nrows, iev = self.xrm.read_xrm_fileinfo(thisfile)
   
                 if ncols > 0:                       
                     self.filelist.insertRow(count)
@@ -10910,7 +10914,42 @@ class StackListFrame(QtGui.QDialog):
                     count += 1
 
             
-        self.sm_files = self.xrm_files
+            self.sm_files = self.xrm_files
+        
+        
+        self.bim_files = [x for x in os.listdir(filepath) if x.endswith('.bim')]
+        
+        
+        if self.bim_files:
+            
+            self.filetype = 'bim'
+            
+            import file_bim
+            self.Cbim = file_bim.Cbim()
+
+            count = 0
+        
+            for i in range(len(self.bim_files)):
+                #print sm_files
+                filename = self.bim_files[i]
+                thisfile = os.path.join(filepath, filename)
+            
+                ncols, nrows, iev = self.Cbim.read_bim_info(thisfile)
+
+                if ncols >0 :
+                    self.filelist.insertRow(count)
+                    self.filelist.setRowHeight(count,20)
+    
+                    self.filelist.setItem(count, 0, QtGui.QTableWidgetItem(filename))
+                    self.filelist.setItem(count, 1, QtGui.QTableWidgetItem(str(ncols)))
+                    self.filelist.setItem(count, 2, QtGui.QTableWidgetItem(str(nrows)))
+                    self.filelist.setItem(count, 3, QtGui.QTableWidgetItem('{0:5.2f}'.format(iev)))
+                                     
+                    count += 1
+
+                
+            self.sm_files = self.bim_files
+        
         return
         
 
@@ -10933,6 +10972,8 @@ class StackListFrame(QtGui.QDialog):
             self.sm.read_sm_list(filelist, self.filepath, self.data_struct)
         elif self.filetype == 'xrm':
             self.xrm.read_xrm_list(filelist, self.filepath, self.data_struct)
+        elif self.filetype == 'bim':
+            self.Cbim.read_bim_list(filelist, self.filepath, self.data_struct)
         else:
             print 'Wrong file type'
             return
@@ -10990,7 +11031,7 @@ class StackListFrame(QtGui.QDialog):
         self.close()
         
                 
-
+#----------------------------------------------------------------------  
 class InputRegionDialog(QtGui.QDialog):
 
     def __init__(self, parent, nregions, title='Multi Region Stack'):
@@ -11246,8 +11287,8 @@ class MainFrame(QtGui.QMainWindow):
         Browse for a stack file:
         """
 
-        #try:
-        if True:
+        try:
+        #if True:
             if wildcard == False:
                 wildcard =  "HDF5 files (*.hdf5);;SDF files (*.hdr);;STK files (*.stk);;TXRM (*.txrm);;XRM (*.xrm);;TIF (*.tif);;FTIR (*.dpt)" 
 
@@ -11348,6 +11389,15 @@ class MainFrame(QtGui.QMainWindow):
                          
                 self.stk.read_dpt(filepath)  
                 self.common.i0_loaded = 1
+                
+                
+            elif extension == '.bim':              
+                if self.common.stack_loaded == 1:
+                    self.new_stack_refresh()  
+                    self.stk.new_data()
+                    #self.stk.data_struct.delete_data()
+                    self.anlz.delete_data()       
+                self.stk.read_bim(filepath)     
                             
 
 
@@ -11392,17 +11442,17 @@ class MainFrame(QtGui.QMainWindow):
 
             QtGui.QApplication.restoreOverrideCursor()
                  
-#         except:
-#      
-#             self.common.stack_loaded = 0 
-#             self.common.i0_loaded = 0
-#             self.new_stack_refresh()
-#                                     
-#             QtGui.QApplication.restoreOverrideCursor()
-#             QtGui.QMessageBox.warning(self, 'Error', 'Image stack not loaded.')
-#     
-#             import sys
-#             print sys.exc_info()
+        except:
+      
+            self.common.stack_loaded = 0 
+            self.common.i0_loaded = 0
+            self.new_stack_refresh()
+                                     
+            QtGui.QApplication.restoreOverrideCursor()
+            QtGui.QMessageBox.warning(self, 'Error', 'Image stack not loaded.')
+     
+            import sys
+            print sys.exc_info()
                    
 
         self.refresh_widgets()
@@ -11414,8 +11464,8 @@ class MainFrame(QtGui.QMainWindow):
         Browse for .sm files
         """
         
-        try:
-
+        #try:
+        if True:
             directory = QtGui.QFileDialog.getExistingDirectory(self, "Choose a directory", '', QtGui.QFileDialog.ShowDirsOnly|QtGui.QFileDialog.ReadOnly )       
                                                         
         
@@ -11428,15 +11478,15 @@ class MainFrame(QtGui.QMainWindow):
             stackframe = StackListFrame(self, directory, self.common, self.stk, self.data_struct)
             stackframe.show()
              
-        except:
-            print 'Error could not build stack list.'
-            self.common.stack_loaded = 0 
-            self.common.i0_loaded = 0
-            self.new_stack_refresh()
-            self.refresh_widgets()
-                                  
-            QtGui.QMessageBox.warning(self,'Error',"Error could not build stack list")
-            import sys; print sys.exc_info()
+#         except:
+#             print 'Error could not build stack list.'
+#             self.common.stack_loaded = 0 
+#             self.common.i0_loaded = 0
+#             self.new_stack_refresh()
+#             self.refresh_widgets()
+#                                   
+#             QtGui.QMessageBox.warning(self,'Error',"Error could not build stack list")
+#             import sys; print sys.exc_info()
             
 #----------------------------------------------------------------------
     def onSaveAsH5(self, event):

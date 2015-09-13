@@ -335,11 +335,7 @@ class xrm:
         
         self.data_dwell = np.ones((nev))*exptimes[0]
         ds.spectromicroscopy.data_dwell = self.data_dwell
-        
-
-            
-        
-        
+    
         return
     
 #----------------------------------------------------------------------

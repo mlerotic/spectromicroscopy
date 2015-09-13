@@ -781,7 +781,7 @@ def batch_mode():
         if len(sa_spectra) > 0:
             print "Loading spectra:", sa_spectra
             for i in range(len(sa_spectra)):
-                sppath = filepath = os.path.join(wdir, sa_spectra[i])
+                sppath = os.path.join(wdir, sa_spectra[i])
                 anlz.read_target_spectrum(filename=sppath)
                 
         if sa_use_clspectra == 1:

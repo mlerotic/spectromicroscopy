@@ -160,3 +160,4 @@ class sm:
         self.ds.spectromicroscopy.data_dwell = dwell_msec
         
         return
+    
