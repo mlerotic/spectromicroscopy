@@ -71,27 +71,41 @@ class h5data:
             if 'entry1' in f:
                 entry1Grp = f['entry1']     
                    
-                if 'Counter1' in  entry1Grp:
+                if 'Counter1' in entry1Grp:
                     counter1Grp = entry1Grp['Counter1']
+                elif 'Counter0' in  entry1Grp:
+                    counter1Grp = entry1Grp['Counter0']
+                else:
+                    print 'ERROR reading NEXUS HDF5 file.'
+                    return
                     
-                    dsdata = counter1Grp['data']
-                    self.absdata = dsdata[...]
-                    self.absdata = np.transpose(self.absdata, axes=(2,1,0))
-                    self.absdata = np.rot90(self.absdata)
-                    
+                dsdata = counter1Grp['data']
+                self.absdata = dsdata[...]
+                self.absdata = np.transpose(self.absdata, axes=(2,1,0))
+                self.absdata = np.rot90(self.absdata)
+                
+                if 'E' in counter1Grp:
+                    dseng = counter1Grp['E']
+                elif 'photon_energy' in counter1Grp:
                     dseng = counter1Grp['photon_energy']                           
-                    self.ev = dseng[...]
-                    
-                    #The image was rotated to show correct orientation so we have
-                    #to swap x and y distance    
-                    dsx = counter1Grp['sample_y']                           
-                    self.x_dist = dsx[...]       
-                    
-                    dsy = counter1Grp['sample_x']                           
-                    self.y_dist = dsy[...]          
-                    
-                    dsdd = counter1Grp['count_time']                           
-                    self.data_dwell = dsdd[...]    
+                self.ev = dseng[...]
+                
+                #The image was rotated to show correct orientation so we have
+                #to swap x and y distance    
+                if 'sample_y' in counter1Grp:
+                    dsx = counter1Grp['sample_y']        
+                elif 'Y' in counter1Grp:
+                    dsx = counter1Grp['Y']                                         
+                self.x_dist = dsx[...]       
+                
+                if 'sample_x' in counter1Grp:
+                    dsy = counter1Grp['sample_x']      
+                elif 'X' in counter1Grp:
+                    dsy = counter1Grp['X']                       
+                self.y_dist = dsy[...]          
+                
+                dsdd = counter1Grp['count_time']                           
+                self.data_dwell = dsdd[...]    
                       
             f.close()
             
@@ -107,25 +121,30 @@ class h5data:
                    
                 if 'Counter1' in  entry1Grp:
                     counter1Grp = entry1Grp['Counter1']
+                elif 'Counter0' in  entry1Grp:
+                    counter1Grp = entry1Grp['Counter0']
+                else:
+                    print 'ERROR reading NEXUS HDF5 file.'
+                    return
                     
-                    dsdata = counter1Grp['data']
-                    self.absdata = dsdata[...]
-                    self.absdata = np.transpose(self.absdata, axes=(2,1,0))
-                    self.absdata = np.rot90(self.absdata)
-                    
-                    dseng = counter1Grp['photon_energy']                           
-                    self.ev = dseng[...]
-                    
-                    #The image was rotated to show correct orientation so we have
-                    #to swap x and y distance    
-                    dsx = counter1Grp['sample_y']                           
-                    self.x_dist = dsx[...]       
-                    
-                    dsy = counter1Grp['sample_x']                           
-                    self.y_dist = dsy[...]          
-                    
-                    dsdd = counter1Grp['count_time']                           
-                    self.data_dwell = dsdd[...]    
+                dsdata = counter1Grp['data']
+                self.absdata = dsdata[...]
+                self.absdata = np.transpose(self.absdata, axes=(2,1,0))
+                self.absdata = np.rot90(self.absdata)
+                
+                dseng = counter1Grp['photon_energy']                           
+                self.ev = dseng[...]
+                
+                #The image was rotated to show correct orientation so we have
+                #to swap x and y distance    
+                dsx = counter1Grp['sample_y']                           
+                self.x_dist = dsx[...]       
+                
+                dsy = counter1Grp['sample_x']                           
+                self.y_dist = dsy[...]          
+                
+                dsdd = counter1Grp['count_time']                           
+                self.data_dwell = dsdd[...]    
                       
             f.close()
             
@@ -152,40 +171,45 @@ class h5data:
                 if 'entry{0}'.format(i) in f:      
                     entryGrp = f['entry{0}'.format(i)]     
                        
-                    if 'Counter1' in  entryGrp:
-                        counter1Grp = entryGrp['Counter1']
+                    if 'Counter1' in  entry1Grp:
+                        counter1Grp = entry1Grp['Counter1']
+                    elif 'Counter0' in  entry1Grp:
+                        counter1Grp = entry1Grp['Counter0']
+                    else:
+                        print 'ERROR reading NEXUS HDF5 file.'
+                        return
                         
-                        dsdata = counter1Grp['data']
-                        idata = dsdata[...]
-                        idata = np.transpose(idata, axes=(2,1,0))
-                        idata = np.rot90(idata)
-                        adata.append(idata)
-                        
-                        dims = np.int32(idata.shape)
-                   
-                        inc = dims[0]
-                        inr = dims[1]
-                        self.n_ev = dims[2]
-                        
-                        if inr > nr:
-                            nr = inr
-                        nc += inc
-                        idimc.append(inc)
-                        idimr.append(inr)
-                        
-                        dseng = counter1Grp['photon_energy']                           
-                        self.ev = dseng[...]
-        
-                        #The image was rotated to show correct orientation so we have
-                        #to swap x and y distance  
-                        dsx = counter1Grp['sample_y']                           
-                        xd.append(dsx[...])      
-                        
-                        dsy = counter1Grp['sample_x']                           
-                        yd.append(dsy[...])          
-                        
-                        dsdd = counter1Grp['count_time']                           
-                        self.data_dwell = dsdd[...]   
+                    dsdata = counter1Grp['data']
+                    idata = dsdata[...]
+                    idata = np.transpose(idata, axes=(2,1,0))
+                    idata = np.rot90(idata)
+                    adata.append(idata)
+                    
+                    dims = np.int32(idata.shape)
+               
+                    inc = dims[0]
+                    inr = dims[1]
+                    self.n_ev = dims[2]
+                    
+                    if inr > nr:
+                        nr = inr
+                    nc += inc
+                    idimc.append(inc)
+                    idimr.append(inr)
+                    
+                    dseng = counter1Grp['photon_energy']                           
+                    self.ev = dseng[...]
+    
+                    #The image was rotated to show correct orientation so we have
+                    #to swap x and y distance  
+                    dsx = counter1Grp['sample_y']                           
+                    xd.append(dsx[...])      
+                    
+                    dsy = counter1Grp['sample_x']                           
+                    yd.append(dsy[...])          
+                    
+                    dsdd = counter1Grp['count_time']                           
+                    self.data_dwell = dsdd[...]   
                         
                        
             self.n_cols = nc

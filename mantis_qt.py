@@ -48,7 +48,7 @@ import henke
 
 from helpers import resource_path
 
-version = '2.0.9'
+version = '2.0.10'
 
 Winsizex = 1000
 Winsizey = 700
@@ -11287,8 +11287,8 @@ class MainFrame(QtGui.QMainWindow):
         Browse for a stack file:
         """
 
-        try:
-        #if True:
+        #try:
+        if True:
             if wildcard == False:
                 wildcard =  "HDF5 files (*.hdf5);;SDF files (*.hdr);;STK files (*.stk);;TXRM (*.txrm);;XRM (*.xrm);;TIF (*.tif);;FTIR (*.dpt)" 
 
@@ -11442,17 +11442,17 @@ class MainFrame(QtGui.QMainWindow):
 
             QtGui.QApplication.restoreOverrideCursor()
                  
-        except:
-      
-            self.common.stack_loaded = 0 
-            self.common.i0_loaded = 0
-            self.new_stack_refresh()
-                                     
-            QtGui.QApplication.restoreOverrideCursor()
-            QtGui.QMessageBox.warning(self, 'Error', 'Image stack not loaded.')
-     
-            import sys
-            print sys.exc_info()
+#         except:
+#       
+#             self.common.stack_loaded = 0 
+#             self.common.i0_loaded = 0
+#             self.new_stack_refresh()
+#                                      
+#             QtGui.QApplication.restoreOverrideCursor()
+#             QtGui.QMessageBox.warning(self, 'Error', 'Image stack not loaded.')
+#      
+#             import sys
+#             print sys.exc_info()
                    
 
         self.refresh_widgets()
