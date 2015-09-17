@@ -11270,9 +11270,8 @@ class MainFrame(QtGui.QMainWindow):
                         self.new_stack_refresh()
                         self.stk.new_data()
                         self.anlz.delete_data()
-                    #file_plugins.load(filepath,plugin=plugin)
-                    plugin.read( filepath, self.stk)
-                    #plugin.h5.read_h5(plugin.h5, filepath, self.data_struct)
+                    #plugin.read_old( filepath, self.stk)
+                    plugin.read(self.stk, filepath)
                     directory =  os.path.dirname(str(filepath))
                     self.page1.filename =  os.path.basename(str(filepath))
             else:
@@ -11379,7 +11378,7 @@ class MainFrame(QtGui.QMainWindow):
 
             #Update widgets 
             x=self.stk.n_cols
-            y=self.stk.n_rows  
+            y=self.stk.n_rows
             self.page1.imgrgb = npy.zeros(x*y*3,dtype = "uint8")        
             self.page1.maxval = npy.amax(self.stk.absdata)
             
@@ -11398,15 +11397,16 @@ class MainFrame(QtGui.QMainWindow):
             self.page1.iev = self.iev
             self.page1.slider_eng.setValue(self.iev)
             
-
+            self.stk.scale_bar()
                     
             self.common.stack_loaded = 1
             
             if self.stk.data_struct.spectromicroscopy.normalization.white_spectrum is not None:
                 self.common.i0_loaded = 1
-            
+                self.stk.calculate_optical_density()
+                self.stk.fill_h5_struct_normalization()
 
-            
+
             self.page1.ResetDisplaySettings()
             self.page1.loadImage()
             self.page1.loadSpectrum(self.ix, self.iy)
