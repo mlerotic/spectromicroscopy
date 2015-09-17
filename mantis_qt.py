@@ -10513,7 +10513,11 @@ class PageLoadData(QtGui.QWidget):
         
         self.button_tif = QtGui.QPushButton( 'Load Multi-Page TIF Stack (*.tif)')
         self.button_tif.clicked.connect( self.OnLoadTIF)
-        vbox1.addWidget(self.button_tif)      
+        vbox1.addWidget(self.button_tif)    
+        
+        self.button_ncb = QtGui.QPushButton( 'Load aXis2000 NCB Stack (*.ncb, *.dat)')
+        self.button_ncb.clicked.connect( self.OnLoadNCB)
+        vbox1.addWidget(self.button_ncb)     
 
         sizer1.setLayout(vbox1)
 
@@ -10665,6 +10669,12 @@ class PageLoadData(QtGui.QWidget):
     def OnLoadTIF(self, event):
 
         wildcard =  "TIF (*.tif)" 
+        self.window().LoadStack(wildcard)
+        
+#----------------------------------------------------------------------          
+    def OnLoadNCB(self, event):
+
+        wildcard =  "NCB (*.ncb)" 
         self.window().LoadStack(wildcard)
                 
 #----------------------------------------------------------------------          
@@ -11398,6 +11408,14 @@ class MainFrame(QtGui.QMainWindow):
                     #self.stk.data_struct.delete_data()
                     self.anlz.delete_data()       
                 self.stk.read_bim(filepath)     
+                
+            elif extension == '.ncb':              
+                if self.common.stack_loaded == 1:
+                    self.new_stack_refresh()  
+                    self.stk.new_data()
+                    #self.stk.data_struct.delete_data()
+                    self.anlz.delete_data()       
+                self.stk.read_ncb(filepath)     
                             
 
 

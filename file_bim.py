@@ -1,7 +1,7 @@
 # 
 #   This file is part of Mantis, a Multivariate ANalysis Tool for Spectromicroscopy.
 # 
-#   Copyright (C) 2011 Mirna Lerotic, 2nd Look
+#   Copyright (C) 2015 Mirna Lerotic, 2nd Look
 #   http://2ndlookconsulting.com
 #   License: GNU GPL v3
 #

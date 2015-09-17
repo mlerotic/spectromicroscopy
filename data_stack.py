@@ -35,10 +35,12 @@ import file_xrm
 import file_sdf
 import file_tif
 import file_bim
+import file_ncb
 import data_struct
 
 #----------------------------------------------------------------------
-class data(file_stk.x1astk,file_dataexch_hdf5.h5, file_nexus_hdf5.h5data, file_xrm.xrm, file_sdf.sdfstk, file_bim.Cbim):
+class data(file_stk.x1astk,file_dataexch_hdf5.h5, file_nexus_hdf5.h5data, 
+           file_xrm.xrm, file_sdf.sdfstk, file_bim.Cbim, file_ncb.Cncb):
     def __init__(self, data_struct):
         file_stk.x1astk.__init__(self)
         file_dataexch_hdf5.h5.__init__(self)
@@ -46,6 +48,7 @@ class data(file_stk.x1astk,file_dataexch_hdf5.h5, file_nexus_hdf5.h5data, file_x
         file_xrm.xrm.__init__(self)
         file_sdf.sdfstk.__init__(self)
         file_bim.Cbim.__init__(self)
+        file_ncb.Cncb.__init__(self)
         
         self.data_struct = data_struct
         
@@ -201,6 +204,16 @@ class data(file_stk.x1astk,file_dataexch_hdf5.h5, file_nexus_hdf5.h5data, file_x
         
         self.fill_h5_struct_from_stk()        
                 
+        self.scale_bar()
+        
+        
+#---------------------------------------------------------------------- 
+    def read_ncb(self, filename):    
+        self.new_data()  
+        file_ncb.Cncb.read_ncb(self, filename)
+
+        self.fill_h5_struct_from_stk()
+        
         self.scale_bar()
         
         
