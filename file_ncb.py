@@ -71,11 +71,14 @@ class Cncb:
         for i in range(self.n_ev):
             self.ev[i] = float(lines[4+i])
 
-        for i in range(self.n_ev):
-            temp = lines[4+self.n_ev+i].split()
-            
-            filename_list.append(temp[0])
-            self.data_dwell[i] = float(temp[2])
+        try:
+            for i in range(self.n_ev):
+                temp = lines[4+self.n_ev+i].split()
+                
+                filename_list.append(temp[0])
+                self.data_dwell[i] = float(temp[2])
+        except:
+            self.data_dwell = np.ones((self.n_ev))
 
     
         f.close()
@@ -133,9 +136,5 @@ class Cncb:
         self.n_rows = t
         
 
-           
-        
-        print self.n_cols, self.n_rows
-        print self.absdata.shape
   
         return
