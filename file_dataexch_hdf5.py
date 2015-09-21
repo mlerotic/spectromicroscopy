@@ -450,8 +450,8 @@ class h5:
         self.i0data = data_struct.spectromicroscopy.normalization.white_spectrum           
         self.evi0 = data_struct.spectromicroscopy.normalization.white_spectrum_energy
         
-        self.data_dwell = None
-        self.i0_dwell = None
+        self.data_dwell = np.ones((self.n_ev))
+        self.i0_dwell = np.ones((self.n_ev))
         
 
         

@@ -7015,7 +7015,7 @@ class PageStack(QtGui.QWidget):
 #----------------------------------------------------------------------    
     def OnSaveStack(self, event): 
         
-        self.window().SaveStackH5()
+        self.window().SaveProcessedStack()
                
 #----------------------------------------------------------------------    
     def OnSave(self, event):     
@@ -11441,13 +11441,11 @@ class MainFrame(QtGui.QMainWindow):
             self.page1.slider_eng.setValue(self.iev)
             
 
-                    
             self.common.stack_loaded = 1
             
             if self.stk.data_struct.spectromicroscopy.normalization.white_spectrum is not None:
                 self.common.i0_loaded = 1
             
-
             
             self.page1.ResetDisplaySettings()
             self.page1.loadImage()
@@ -11507,22 +11505,22 @@ class MainFrame(QtGui.QMainWindow):
 #             import sys; print sys.exc_info()
             
 #----------------------------------------------------------------------
-    def onSaveAsH5(self, event):
-        self.SaveStackH5()
+    def OnSaveProcessedStack(self, event):
+        self.SaveProcessedStack()
        
         
 #----------------------------------------------------------------------
-    def SaveStackH5(self):
+    def SaveProcessedStack(self):
 
         """
-        Browse for .hdf5 file
+        Browse for .hdf5 file or .ncb or tiff
         """
         
-        try:
+        #try:
+        if True:
+            wildcard = "HDF5 file (*.hdf5);;aXis2000 NCB file (*.ncb);;Tiff file (.tif);;"
 
-            wildcard = "HDF5 files (*.hdf5)"
-
-            filepath = QtGui.QFileDialog.getSaveFileName(self, 'Save as .hdf5', '', wildcard)
+            filepath = QtGui.QFileDialog.getSaveFileName(self, 'Save processed stack', '', wildcard)
 
             filepath = str(filepath)
             if filepath == '':
@@ -11537,15 +11535,27 @@ class MainFrame(QtGui.QMainWindow):
             self.common.path = directory
             self.common.filename = self.page1.filename
             
-                
-            self.stk.write_h5(filepath, self.data_struct)    
+            
+            basename, extension = os.path.splitext(self.page1.filename)      
+                       
+            
+            if extension == '.hdf5':            
+                self.stk.write_h5(filepath, self.data_struct) 
+                           
+            elif extension == '.ncb':    
+                self.stk.write_ncb(filepath, self.data_struct) 
+           
+            elif extension == '.tif':    
+                pass
+            
+         
             QtGui.QApplication.restoreOverrideCursor()
 
-        except:
-    
-            QtGui.QApplication.restoreOverrideCursor()
-               
-            QtGui.QMessageBox.warning(self, 'Error', 'Could not save HDF5 file.')
+#         except:
+#     
+#             QtGui.QApplication.restoreOverrideCursor()
+#                
+#             QtGui.QMessageBox.warning(self, 'Error', 'Could not save processed stack file.')
                    
 
         self.refresh_widgets()
