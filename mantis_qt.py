@@ -7453,7 +7453,7 @@ class PageStack(QtGui.QWidget):
             self.spectrum = self.stk.absdata[xpos,ypos, :]
             axes.set_xlabel('Photon Energy [eV]')
             axes.set_ylabel('Flux')
- 
+             
  
         specplot = axes.plot(self.stk.ev,self.spectrum)
          
@@ -11297,8 +11297,8 @@ class MainFrame(QtGui.QMainWindow):
         Browse for a stack file:
         """
 
-        #try:
-        if True:
+        try:
+        #if True:
             if wildcard == False:
                 wildcard =  "HDF5 files (*.hdf5);;SDF files (*.hdr);;STK files (*.stk);;TXRM (*.txrm);;XRM (*.xrm);;TIF (*.tif);;FTIR (*.dpt)" 
 
@@ -11416,7 +11416,6 @@ class MainFrame(QtGui.QMainWindow):
                     #self.stk.data_struct.delete_data()
                     self.anlz.delete_data()       
                 self.stk.read_ncb(filepath)     
-                            
 
 
             #Update widgets 
@@ -11424,6 +11423,7 @@ class MainFrame(QtGui.QMainWindow):
             y=self.stk.n_rows  
             self.page1.imgrgb = npy.zeros(x*y*3,dtype = "uint8")        
             self.page1.maxval = npy.amax(self.stk.absdata)
+            
             
             self.ix = int(x/2)
             self.iy = int(y/2)
@@ -11458,17 +11458,17 @@ class MainFrame(QtGui.QMainWindow):
 
             QtGui.QApplication.restoreOverrideCursor()
                  
-#         except:
-#       
-#             self.common.stack_loaded = 0 
-#             self.common.i0_loaded = 0
-#             self.new_stack_refresh()
-#                                      
-#             QtGui.QApplication.restoreOverrideCursor()
-#             QtGui.QMessageBox.warning(self, 'Error', 'Image stack not loaded.')
-#      
-#             import sys
-#             print sys.exc_info()
+        except:
+       
+            self.common.stack_loaded = 0 
+            self.common.i0_loaded = 0
+            self.new_stack_refresh()
+                                      
+            QtGui.QApplication.restoreOverrideCursor()
+            QtGui.QMessageBox.warning(self, 'Error', 'Image stack not loaded.')
+      
+            import sys
+            print sys.exc_info()
                    
 
         self.refresh_widgets()
@@ -11480,8 +11480,8 @@ class MainFrame(QtGui.QMainWindow):
         Browse for .sm files
         """
         
-        #try:
-        if True:
+        try:
+        #if True:
             directory = QtGui.QFileDialog.getExistingDirectory(self, "Choose a directory", '', QtGui.QFileDialog.ShowDirsOnly|QtGui.QFileDialog.ReadOnly )       
                                                         
         
@@ -11494,15 +11494,15 @@ class MainFrame(QtGui.QMainWindow):
             stackframe = StackListFrame(self, directory, self.common, self.stk, self.data_struct)
             stackframe.show()
              
-#         except:
-#             print 'Error could not build stack list.'
-#             self.common.stack_loaded = 0 
-#             self.common.i0_loaded = 0
-#             self.new_stack_refresh()
-#             self.refresh_widgets()
-#                                   
-#             QtGui.QMessageBox.warning(self,'Error',"Error could not build stack list")
-#             import sys; print sys.exc_info()
+        except:
+            print 'Error could not build stack list.'
+            self.common.stack_loaded = 0 
+            self.common.i0_loaded = 0
+            self.new_stack_refresh()
+            self.refresh_widgets()
+                                   
+            QtGui.QMessageBox.warning(self,'Error',"Error could not build stack list")
+            import sys; print sys.exc_info()
             
 #----------------------------------------------------------------------
     def OnSaveProcessedStack(self, event):
@@ -11546,7 +11546,7 @@ class MainFrame(QtGui.QMainWindow):
                 self.stk.write_ncb(filepath, self.data_struct) 
            
             elif extension == '.tif':    
-                pass
+                self.stk.write_tif(filepath, self.stk.absdata, energies=self.stk.ev) 
             
          
             QtGui.QApplication.restoreOverrideCursor()

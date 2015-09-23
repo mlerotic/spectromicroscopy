@@ -1,51 +1,168 @@
-'''
-Created on Nov 19, 2012
-
-@author: Mirna Lerotic
-'''
+# 
+#   This file is part of Mantis, a Multivariate ANalysis Tool for Spectromicroscopy.
+# 
+#   Copyright (C) 2011 Mirna Lerotic, 2nd Look
+#   http://2ndlookconsulting.com
+#   License: GNU GPL v3
+#
+#   Mantis is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or
+#   any later version.
+#
+#   Mantis is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details <http://www.gnu.org/licenses/>.
 
 import numpy as np
-from PIL import Image        
+from PIL import Image     
+import os   
         
-class TiffStackWrapper:
-    def __init__(self,fname):
-        '''fname is the full path '''
-        self.im  = Image.open(fname)
-        
-        self.im.seek(0)
-        # get image dimensions from the meta data the order is flipped
-        # due to row major v col major ordering in tiffs and numpy
-        self.im_sz = [self.im.tag[0x101][0],
-                      self.im.tag[0x100][0]]
-        self.cur = self.im.tell()
-
-    def get_mode(self):
-        return self.im.mode
-        
-    def get_frame(self,j):
-        '''Extracts the jth frame from the image sequence.
-        if the frame does not exist return None'''
-        try:
-            self.im.seek(j)
-        except EOFError:
-            return None
-
-        self.cur = self.im.tell()
-        return np.reshape(self.im.getdata(),self.im_sz)
+# class TiffStackWrapper:
+#     def __init__(self,fname):
+#         '''fname is the full path '''
+#         self.im  = Image.open(fname)
+#         
+#         self.im.seek(0)
+#         # get image dimensions from the meta data the order is flipped
+#         # due to row major v col major ordering in tiffs and numpy
+#         self.im_sz = [self.im.tag[0x101][0],
+#                       self.im.tag[0x100][0]]
+#         self.cur = self.im.tell()
+# 
+#     def get_mode(self):
+#         return self.im.mode
+#         
+#     def get_frame(self,j):
+#         '''Extracts the jth frame from the image sequence.
+#         if the frame does not exist return None'''
+#         try:
+#             self.im.seek(j)
+#         except EOFError:
+#             return None
+# 
+#         self.cur = self.im.tell()
+#         return np.reshape(self.im.getdata(),self.im_sz)
+#     
+#     def __iter__(self):
+#         self.im.seek(0)
+#         self.old = self.cur
+#         self.cur = self.im.tell()
+#         return self
+# 
+#     def next(self):
+#         try:
+#             self.im.seek(self.cur)
+#             self.cur = self.im.tell()+1
+#         except EOFError:
+#             self.im.seek(self.old)
+#             self.cur = self.im.tell()
+#             raise StopIteration
+#         return np.reshape(self.im.getdata(),self.im_sz)   
     
-    def __iter__(self):
-        self.im.seek(0)
-        self.old = self.cur
-        self.cur = self.im.tell()
-        return self
+    
+#----------------------------------------------------------------------
+class Ctif:
+    def __init__(self):
+        pass
+    
+    
+#---------------------------------------------------------------------- 
+    def read_tiff(self, filename):    
 
-    def next(self):
-        try:
-            self.im.seek(self.cur)
-            self.cur = self.im.tell()+1
-        except EOFError:
-            self.im.seek(self.old)
-            self.cur = self.im.tell()
-            raise StopIteration
-        return np.reshape(self.im.getdata(),self.im_sz)        
+        img = Image.open(filename)
+         
+        imgstack = []
+         
+        i = 0
+        while True:
+            try:
+                img.seek(i)
+                i += 1
+                imgstack.append(np.array((img)))
+            except EOFError:
+                break        
+
+
+        imgstack = np.array((imgstack))
+        
+        imgstack = np.transpose(imgstack, axes=(1,2,0))
+          
+            
+        self.n_cols = imgstack.shape[0]
+        self.n_rows = imgstack.shape[1]
+        self.n_ev = imgstack.shape[2]
+        
+        
+        pixelsize = 1
+        #Since we do not have a scanning microscope we fill the x_dist and y_dist from pixel_size
+        self.x_dist = np.arange(np.float(self.n_cols))*pixelsize
+        self.y_dist = np.arange(np.float(self.n_rows))*pixelsize
+
+        #Read energies from file
+        basename, extension = os.path.splitext(filename) 
+        engfilename = basename+'.txt'
+        f = open(str(engfilename),'r')
+        
+        elist = []   
+    
+        for line in f:
+            if line.startswith("*"):
+                pass
+            else:
+                e = float(line)
+                elist.append(e)
+                
+        self.ev = np.array(elist)
+                
+        f.close()
+        
+        
+        msec = np.ones((self.n_ev))
+         
+        self.data_dwell = msec
+                       
+        self.absdata = imgstack
+                
+        #Check if the energies are consecutive, if they are not sort the data
+        sort = 0
+        for i in range(self.n_ev - 1):
+            if self.ev[i] > self.ev[i+1]:
+                sort = 1
+                break
+        if sort == 1:
+            sortind = np.argsort(self.ev)
+            self.ev = self.ev[sortind]
+            self.absdata = self.absdata[:,:,sortind]
+
+
+        
+
+#---------------------------------------------------------------------- 
+      
+    def write_tif(self, filename, data, energies = []):   
+
+        dims = data.shape
+        for i in range(dims[2]):
+            basename, extension = os.path.splitext(filename) 
+            thisfn = basename + '_' + str(i+1) + extension
+        
+            img1 = Image.fromarray(data[:,:,i])
+            img1.save(thisfn)
+            
+        img2 = Image.open(thisfn)
+
+        f1 = list(img1.getdata())
+        f2 = list(img2.getdata())
+
+            
+        if len(energies) > 0:
+            thisfn = basename + '.txt'
+            f = open(thisfn, 'w')
+            for i in range(len(energies)):
+                print>>f, '%.6f' %(energies[i])
+            f.close()
+            
+
         
