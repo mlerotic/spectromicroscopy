@@ -2929,7 +2929,7 @@ class PagePeakID(QtGui.QWidget):
         axes = fig.gca()
         fig.patch.set_alpha(1.0)
         
-        im = axes.imshow(image, cmap=matplotlib.cm.get_cmap("gray")) 
+        im = axes.imshow(image.T, cmap=matplotlib.cm.get_cmap("gray"), origin="lower") 
         
         #Show Scale Bar
         startx = int(self.stk.n_rows*0.05)
@@ -7208,8 +7208,8 @@ class PageStack(QtGui.QWidget):
             return
         
         if (self.com.stack_loaded == 1) and (self.addroi == 0):      
-            self.ix = int(npy.floor(y))           
-            self.iy = int(npy.floor(x))  
+            self.ix = int(npy.floor(x))           
+            self.iy = int(npy.floor(y))  
                     
             if self.ix<0 :
                 self.ix=0
@@ -7392,7 +7392,7 @@ class PageStack(QtGui.QWidget):
          
  
         if self.defaultdisplay == 1.0:
-            im = axes.imshow(image, cmap=matplotlib.cm.get_cmap(self.colortable)) 
+            im = axes.imshow(image.T, cmap=matplotlib.cm.get_cmap(self.colortable), origin='lower') 
         else:
             imgmax = npy.amax(image)
             imgmin = npy.amin(image)
@@ -7471,9 +7471,9 @@ class PageStack(QtGui.QWidget):
         #self.tc_spec.setText('Spectrum at pixel [{0}, {1}] or position [{2:5.2f}, {3:5.2f}]'.format(str(ypos),  str(xpos), self.stk.x_dist[xpos], self.stk.y_dist[ypos]))
 #         print("self.stk.x_dist[xpos] = ", type(ypos))
 #         print("self.stk.y_dist[ypos] = ", type(xpos))
-        print "Note that X and Y are messed up and need fixing throughout (including in the loading code)!"
 
-        self.tc_spec.setText('Spectrum at pixel [{0}, {1}] or position [{2:5.2f}, {3:5.2f}]'.format(str(ypos),  str(xpos), npy.float(self.stk.x_dist[xpos]), npy.float(self.stk.y_dist[ypos])))
+        self.tc_spec.setText('Spectrum at pixel [{0}, {1}] or position [{2:5.2f}, {3:5.2f}]'.format(str(xpos),  str(ypos), npy.float(self.stk.x_dist[xpos]), npy.float(self.stk.y_dist[ypos])))
+        #self.tc_spec.setText('Spectrum at pixel [{0}, {1}] or position [{2:5.2f}, {3:5.2f}] = {4}'.format(str(xpos),  str(ypos), npy.float(self.stk.x_dist[xpos]), npy.float(self.stk.y_dist[ypos]), self.stk.absdata[xpos,ypos,self.iev]))
 
 #----------------------------------------------------------------------
     def ResetDisplaySettings(self):
@@ -8950,7 +8950,7 @@ class ImageRegistration(QtGui.QDialog):
         axes = fig.gca()  
              
 
-        _im = axes.imshow(image, cmap=matplotlib.cm.get_cmap('gray')) 
+        _im = axes.imshow(image.T, cmap=matplotlib.cm.get_cmap('gray'), origin='lower') 
         axes.autoscale(False)
 #         if self.man_align == 2:           
 #             lx=matplotlib.lines.Line2D([self.man_yref-self.man_ys[self.iev],
@@ -10698,7 +10698,7 @@ class PageLoadData(QtGui.QWidget):
         axes = fig.gca()
         fig.patch.set_alpha(1.0)
          
-        im = axes.imshow(image, cmap=matplotlib.cm.get_cmap("gray")) 
+        im = axes.imshow(image.T, cmap=matplotlib.cm.get_cmap("gray"), origin="lower") 
          
         if self.window().page1.show_scale_bar == 1:
             #Show Scale Bar
