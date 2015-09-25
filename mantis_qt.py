@@ -610,14 +610,14 @@ class PageNNMA(QtGui.QWidget):
                     if self.show_scale_bar == 1:
                         um_string = ' $\mathrm{\mu m}$'
                         microns = '$'+self.stk.scale_bar_string+' $'+um_string
-                        axes.text(self.stk.scale_bar_pixels_x+10,self.stk.n_cols-9, microns, horizontalalignment='left', verticalalignment='center',
+                        axes.text(self.stk.scale_bar_pixels_x+10,10, microns, horizontalalignment='left', verticalalignment='center',
                                   color = 'white', fontsize=14)
                         #Matplotlib has flipped scales so I'm using rows instead of cols!
-                        p = matplotlib.patches.Rectangle((5,self.stk.n_cols-10), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
+                        p = matplotlib.patches.Rectangle((5,10), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
                                                color = 'white', fill = True)
                         axes.add_patch(p)     
      
-                    im = axes.imshow(mapimage, cmap=spanclrmap, vmin = -bound, vmax = bound)
+                    im = axes.imshow(mapimage.T, cmap=spanclrmap, origin='lower', vmin = -bound, vmax = bound)
                     _cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
     
                     axes.axis("off") 
@@ -679,14 +679,14 @@ class PageNNMA(QtGui.QWidget):
                     if self.show_scale_bar == 1:
                         um_string = ' $\mathrm{\mu m}$'
                         microns = '$'+self.stk.scale_bar_string+' $'+um_string
-                        axes.text(self.stk.scale_bar_pixels_x+10,self.stk.n_cols-9, microns, horizontalalignment='left', verticalalignment='center',
+                        axes.text(self.stk.scale_bar_pixels_x+10,10, microns, horizontalalignment='left', verticalalignment='center',
                                   color = 'white', fontsize=14)
                         #Matplotlib has flipped scales so I'm using rows instead of cols!
-                        p = matplotlib.patches.Rectangle((5,self.stk.n_cols-10), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
+                        p = matplotlib.patches.Rectangle((5,10), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
                                                color = 'white', fill = True)
                         axes.add_patch(p)     
      
-                    im = axes.imshow(mapimage, cmap=spanclrmap, vmin = -bound, vmax = bound)
+                    im = axes.imshow(mapimage.T, origin='lower', cmap=spanclrmap, vmin = -bound, vmax = bound)
                     _cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
     
                     axes.axis("off") 
@@ -741,14 +741,14 @@ class PageNNMA(QtGui.QWidget):
                     if self.show_scale_bar == 1:
                         um_string = ' $\mathrm{\mu m}$'
                         microns = '$'+self.stk.scale_bar_string+' $'+um_string
-                        axes.text(self.stk.scale_bar_pixels_x+10,self.stk.n_cols-9, microns, horizontalalignment='left', verticalalignment='center',
+                        axes.text(self.stk.scale_bar_pixels_x+10,10, microns, horizontalalignment='left', verticalalignment='center',
                                   color = 'white', fontsize=14)
                         #Matplotlib has flipped scales so I'm using rows instead of cols!
-                        p = matplotlib.patches.Rectangle((5,self.stk.n_cols-10), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
+                        p = matplotlib.patches.Rectangle((5,10), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
                                                color = 'white', fill = True)
                         axes.add_patch(p)     
      
-                    im = axes.imshow(mapimage, cmap=spanclrmap, vmin = -bound, vmax = bound)
+                    im = axes.imshow(mapimage.T, origin='lower', cmap=spanclrmap, vmin = -bound, vmax = bound)
                     _cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
     
                     axes.axis("off") 
@@ -821,14 +821,14 @@ class PageNNMA(QtGui.QWidget):
         if self.show_scale_bar == 1:
             um_string = ' $\mathrm{\mu m}$'
             microns = '$'+self.stk.scale_bar_string+' $'+um_string
-            axes.text(self.stk.scale_bar_pixels_x+10,self.stk.n_cols-9, microns, horizontalalignment='left', verticalalignment='center',
+            axes.text(self.stk.scale_bar_pixels_x+10,10, microns, horizontalalignment='left', verticalalignment='center',
                       color = 'white', fontsize=14)
             #Matplotlib has flipped scales so I'm using rows instead of cols!
-            p = matplotlib.patches.Rectangle((5,self.stk.n_cols-10), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
+            p = matplotlib.patches.Rectangle((5,10), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
                                    color = 'white', fill = True)
             axes.add_patch(p)     
      
-        im = axes.imshow(mapimage, cmap=spanclrmap, vmin = -bound, vmax = bound)
+        im = axes.imshow(mapimage.T, origin='lower', cmap=spanclrmap, vmin = -bound, vmax = bound)
         cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
     
         axes.axis("off") 
@@ -2933,7 +2933,7 @@ class PagePeakID(QtGui.QWidget):
         
         #Show Scale Bar
         startx = int(self.stk.n_rows*0.05)
-        starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
+        starty = int(self.stk.n_cols*0.05)+self.stk.scale_bar_pixels_y
         um_string = ' $\mathrm{\mu m}$'
         microns = '$'+self.stk.scale_bar_string+' $'+um_string
         axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center',
@@ -3530,14 +3530,14 @@ class PageSpectral(QtGui.QWidget):
             if self.show_scale_bar == 1:
                 um_string = ' $\mathrm{\mu m}$'
                 microns = '$'+self.stk.scale_bar_string+' $'+um_string
-                axes.text(self.stk.scale_bar_pixels_x+10,self.stk.n_cols-9, microns, horizontalalignment='left', verticalalignment='center',
+                axes.text(self.stk.scale_bar_pixels_x+10,10, microns, horizontalalignment='left', verticalalignment='center',
                               color = 'white', fontsize=14)
                 #Matplotlib has flipped scales so I'm using rows instead of cols!
-                p = matplotlib.patches.Rectangle((5,self.stk.n_cols-10), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
+                p = matplotlib.patches.Rectangle((5,10), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
                                             color = 'white', fill = True)
                 axes.add_patch(p)     
      
-            im = axes.imshow(tsmapimage, cmap=spanclrmap, vmin = -bound, vmax = bound)
+            im = axes.imshow(tsmapimage.T, origin='lower', cmap=spanclrmap, vmin = -bound, vmax = bound)
             cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
     
             axes.axis("off") 
@@ -3735,14 +3735,14 @@ class PageSpectral(QtGui.QWidget):
         if self.show_scale_bar == 1:
             um_string = ' $\mathrm{\mu m}$'
             microns = '$'+self.stk.scale_bar_string+' $'+um_string
-            axes.text(self.stk.scale_bar_pixels_x+10,self.stk.n_cols-9, microns, horizontalalignment='left', verticalalignment='center',
+            axes.text(self.stk.scale_bar_pixels_x+10,10, microns, horizontalalignment='left', verticalalignment='center',
                       color = 'white', fontsize=14)
             #Matplotlib has flipped scales so I'm using rows instead of cols!
-            p = matplotlib.patches.Rectangle((5,self.stk.n_cols-10), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
+            p = matplotlib.patches.Rectangle((5,10), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
                                    color = 'white', fill = True)
             axes.add_patch(p)     
      
-        im = axes.imshow(tsmapimage, cmap=spanclrmap, vmin = -bound, vmax = bound)
+        im = axes.imshow(tsmapimage.T, origin='lower', cmap=spanclrmap, vmin = -bound, vmax = bound)
         cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
     
         axes.axis("off") 
@@ -4260,7 +4260,7 @@ class ShowCompositeRBGmap(QtGui.QDialog):
         axes = fig.gca()
         fig.patch.set_alpha(1.0) 
       
-        im = axes.imshow(self.rgbimage) 
+        im = axes.imshow(self.rgbimage.T, origin='lower') 
         
         axes.axis("off")  
         
@@ -4912,7 +4912,7 @@ class PageCluster(QtGui.QWidget):
         
         
         
-        im = axes.imshow(self.clusterimage, cmap=self.clusterclrmap1, norm=self.bnorm1)
+        im = axes.imshow(self.clusterimage.T, origin='lower', cmap=self.clusterclrmap1, norm=self.bnorm1)
         axes.axis("off")
         #cbar = axes.figure.colorbar(im)         
         self.ClusterImagePan.draw()
@@ -4934,7 +4934,7 @@ class PageCluster(QtGui.QWidget):
         axes = fig.gca()
             
         
-        im = axes.imshow(indvclusterimage, cmap=self.clusterclrmap2, norm=self.bnorm2)
+        im = axes.imshow(indvclusterimage.T, origin='lower', cmap=self.clusterclrmap2, norm=self.bnorm2)
         axes.axis("off")
 
         self.ClusterIndvImagePan.draw()
@@ -5004,7 +5004,7 @@ class PageCluster(QtGui.QWidget):
                
         
         
-        im = axes.imshow(mapimage, cmap=matplotlib.cm.get_cmap('gray'))
+        im = axes.imshow(mapimage.T, origin='lower', cmap=matplotlib.cm.get_cmap('gray'))
         
         #cbar = axes.figure.colorbar(im, orientation='vertical',cax=axcb) 
         
@@ -5062,7 +5062,7 @@ class PageCluster(QtGui.QWidget):
                 fig.add_axes((0.0,0.0,1.0,1.0))
                 axes = fig.gca()         
         
-                im = axes.imshow(self.clusterimage, cmap=self.clusterclrmap1, norm=self.bnorm1)
+                im = axes.imshow(self.clusterimage.T, origin='lower', cmap=self.clusterclrmap1, norm=self.bnorm1)
                 axes.axis("off")
                 
                 fileName_caimg = self.SaveFileName+"_CAcimg."+ext       
@@ -5079,7 +5079,7 @@ class PageCluster(QtGui.QWidget):
                 fig.add_axes((0.0,0.0,1.0,1.0))
                 axes = fig.gca() 
         
-                im = axes.imshow(self.clusterimage, cmap=self.clusterclrmap1, norm=self.bnorm1)
+                im = axes.imshow(self.clusterimage.T, origin='lower', cmap=self.clusterclrmap1, norm=self.bnorm1)
                 axes.axis("off")
                 
                 fileName_caimg = self.SaveFileName+"_CAcimg."+ext       
@@ -5095,7 +5095,7 @@ class PageCluster(QtGui.QWidget):
                 fig.add_axes((0.0,0.0,1.0,1.0))
                 axes = fig.gca() 
         
-                im = axes.imshow(self.clusterimage, cmap=self.clusterclrmap1, norm=self.bnorm1)
+                im = axes.imshow(self.clusterimage.T, origin='lower', cmap=self.clusterclrmap1, norm=self.bnorm1)
                 axes.axis("off")
                 
                 fileName_caimg = self.SaveFileName+"_CAcimg."+ext       
@@ -5118,7 +5118,7 @@ class PageCluster(QtGui.QWidget):
                     canvas = FigureCanvas(fig)
                     fig.add_axes((0.0,0.0,1.0,1.0))
                     axes = fig.gca()            
-                    im = axes.imshow(indvclusterimage, cmap=self.clusterclrmap2, norm=self.bnorm2)
+                    im = axes.imshow(indvclusterimage.T, origin='lower', cmap=self.clusterclrmap2, norm=self.bnorm2)
                     axes.axis("off")
                    
                     fileName_img = self.SaveFileName+"_CAimg_" +str(i+1)+"."+ext               
@@ -5192,7 +5192,7 @@ class PageCluster(QtGui.QWidget):
                     canvas = FigureCanvas(fig)
                     fig.add_axes((0.0,0.0,1.0,1.0))
                     axes = fig.gca()       
-                    im = axes.imshow(indvclusterimage, cmap=self.clusterclrmap2, norm=self.bnorm2)
+                    im = axes.imshow(indvclusterimage.T, origin='lower', cmap=self.clusterclrmap2, norm=self.bnorm2)
                     axes.axis("off")
                    
                     fileName_img = self.SaveFileName+"_CAimg_" +str(i+1)+"."+ext               
@@ -5257,7 +5257,7 @@ class PageCluster(QtGui.QWidget):
                     canvas = FigureCanvas(fig)
                     fig.add_axes((0.0,0.0,1.0,1.0))
                     axes = fig.gca()       
-                    im = axes.imshow(indvclusterimage, cmap=self.clusterclrmap2, norm=self.bnorm2)
+                    im = axes.imshow(indvclusterimage.T, origin='lower', cmap=self.clusterclrmap2, norm=self.bnorm2)
                     axes.axis("off")
                    
                     fileName_img = self.SaveFileName+"_CAimg_" +str(i+1)+"."+ext               
@@ -6099,7 +6099,7 @@ class PagePCA(QtGui.QWidget):
                     axes.set_position([0.03,0.03,0.8,0.94])
                     bound = self.anlz.pcaimagebounds[i]       
         
-                    im = axes.imshow(self.pcaimage, cmap=matplotlib.cm.get_cmap("seismic_r"), vmin = -bound, vmax = bound)
+                    im = axes.imshow(self.pcaimage.T, origin='lower', cmap=matplotlib.cm.get_cmap("seismic_r"), vmin = -bound, vmax = bound)
                     cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
                     axes.axis("off") 
                                 
@@ -6146,7 +6146,7 @@ class PagePCA(QtGui.QWidget):
                     axes.set_position([0.03,0.03,0.8,0.94])
                     bound = self.anlz.pcaimagebounds[i]            
         
-                    im = axes.imshow(self.pcaimage, cmap=matplotlib.cm.get_cmap("seismic_r"), vmin = -bound, vmax = bound)
+                    im = axes.imshow(self.pcaimage.T, origin='lower', cmap=matplotlib.cm.get_cmap("seismic_r"), vmin = -bound, vmax = bound)
                     cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
                     axes.axis("off") 
                                 
@@ -6185,7 +6185,7 @@ class PagePCA(QtGui.QWidget):
                     axes.set_position([0.03,0.03,0.8,0.94])
                     bound = self.anlz.pcaimagebounds[i]            
         
-                    im = axes.imshow(self.pcaimage, cmap=matplotlib.cm.get_cmap("seismic_r"), vmin = -bound, vmax = bound)
+                    im = axes.imshow(self.pcaimage.T, origin='lower', cmap=matplotlib.cm.get_cmap("seismic_r"), vmin = -bound, vmax = bound)
                     cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
                     axes.axis("off") 
                                 
@@ -6264,7 +6264,7 @@ class PagePCA(QtGui.QWidget):
         bound = self.anlz.pcaimagebounds[self.selpca-1]
         
      
-        im = axes.imshow(self.pcaimage, cmap=matplotlib.cm.get_cmap("seismic_r"), vmin = -bound, vmax = bound)
+        im = axes.imshow(self.pcaimage.T, origin='lower', cmap=matplotlib.cm.get_cmap("seismic_r"), vmin = -bound, vmax = bound)
         cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
     
         axes.axis("off") 
@@ -7078,7 +7078,7 @@ class PageStack(QtGui.QWidget):
                     canvas = FigureCanvas(fig)
                     fig.add_axes((0.0,0.0,1.0,1.0))
                     axes = fig.gca()
-                    im = axes.imshow(image, cmap=matplotlib.cm.get_cmap(self.colortable)) 
+                    im = axes.imshow(image.T, origin='lower', cmap=matplotlib.cm.get_cmap(self.colortable)) 
                     axes.axis("off") 
                                 
                     fileName_img = self.SaveFileName+"_imnum_" +str(i+1)+"."+ext
@@ -7405,12 +7405,12 @@ class PageStack(QtGui.QWidget):
             vmin=(imgmin+imgmax*self.brightness_min)
             vmax=imgmax*self.brightness_max
             if vmin > vmax : vmax = vmin + 0.1
-            im = axes.imshow(image, cmap=matplotlib.cm.get_cmap(self.colortable), 
-                             vmin=vmin,vmax=vmax)
+            im = axes.imshow(image.T, cmap=matplotlib.cm.get_cmap(self.colortable), 
+                             vmin=vmin,vmax=vmax, origin='lower')
              
 
         if (self.showROImask == 1) and (self.addroi == 1):
-            im_red = axes.imshow(self.ROIpix_masked, cmap=matplotlib.cm.get_cmap("autumn")) 
+            im_red = axes.imshow(self.ROIpix_masked, cmap=matplotlib.cm.get_cmap("autumn"), origin='lower') 
         
           
         axes.axis("off") 
@@ -7420,7 +7420,7 @@ class PageStack(QtGui.QWidget):
          
         if self.show_scale_bar == 1:
             startx = int(self.stk.n_rows*0.05)
-            starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
+            starty = int(self.stk.n_cols*0.05)+self.stk.scale_bar_pixels_y
             um_string = ' $\mathrm{\mu m}$'
             microns = '$'+self.stk.scale_bar_string+' $'+um_string
             axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center',
@@ -8060,9 +8060,9 @@ class ShowHistogram(QtGui.QDialog):
         axes = fig.gca()
         fig.patch.set_alpha(1.0) 
       
-        im = axes.imshow(image, cmap=matplotlib.cm.get_cmap("gray")) 
+        im = axes.imshow(image.T, origin='lower', cmap=matplotlib.cm.get_cmap("gray")) 
 
-        im_red = axes.imshow(redpix_masked,cmap=matplotlib.cm.get_cmap("autumn"))  
+        im_red = axes.imshow(redpix_masked.T, origin='lower',cmap=matplotlib.cm.get_cmap("autumn"))  
          
         axes.axis("off")  
         self.AbsImagePanel.draw()
@@ -8418,7 +8418,7 @@ class CliptoSubregion(QtGui.QDialog):
         axes = fig.gca()
         fig.patch.set_alpha(1.0) 
       
-        im = axes.imshow(image, cmap=matplotlib.cm.get_cmap("gray")) 
+        im = axes.imshow(image.T, origin='lower', cmap=matplotlib.cm.get_cmap("gray")) 
         
         # Draw the rectangle
         line1=matplotlib.lines.Line2D([self.new_x1,self.new_x2], [self.new_y1,self.new_y1] ,color="red")
@@ -9012,7 +9012,7 @@ class ImageRegistration(QtGui.QDialog):
         axes = fig.gca()
         
     
-        _im = axes.imshow(self.ref_image, cmap=matplotlib.cm.get_cmap('gray')) 
+        _im = axes.imshow(self.ref_image.T, origin='lower', cmap=matplotlib.cm.get_cmap('gray')) 
         
         if (self.subregion == 1):
 
@@ -9094,7 +9094,7 @@ class ImageRegistration(QtGui.QDialog):
         fig.add_axes(((0.0,0.0,1.0,1.0)))
         axes = fig.gca()
     
-        im = axes.imshow(ccorr, cmap=matplotlib.cm.get_cmap('gray')) 
+        im = axes.imshow(ccorr.T, origin='lower', cmap=matplotlib.cm.get_cmap('gray')) 
         
         nx = ccorr.shape[0]
         ny = ccorr.shape[1]
@@ -9925,7 +9925,7 @@ class SpectralROI(QtGui.QDialog):
         axes.set_position([0.03,0.03,0.8,0.94])
         
         
-        im = axes.imshow(self.odthickmap, cmap=matplotlib.cm.get_cmap("gray")) 
+        im = axes.imshow(self.odthickmap.T, origin='lower', cmap=matplotlib.cm.get_cmap("gray")) 
 
         cbar = axes.figure.colorbar(im, orientation='vertical',cax=axcb) 
 
@@ -10703,7 +10703,7 @@ class PageLoadData(QtGui.QWidget):
         if self.window().page1.show_scale_bar == 1:
             #Show Scale Bar
             startx = int(self.stk.n_rows*0.05)
-            starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
+            starty = int(self.stk.n_cols*0.05)+self.stk.scale_bar_pixels_y
             um_string = ' $\mathrm{\mu m}$'
             microns = '$'+self.stk.scale_bar_string+' $'+um_string
             axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center',
