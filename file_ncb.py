@@ -91,7 +91,7 @@ class Cncb:
         else:
             dataformat = np.int16
             
-        print 'data format', dataformat
+        #print 'data format', dataformat
             
         f = open(str(filename),'rb')
         big_array = np.fromfile(f, dataformat, self.n_cols*self.n_rows*self.n_ev)
@@ -147,6 +147,7 @@ class Cncb:
 #  with associated *.dat file to track paramaters
     def write_ncb(self, filename, data_struct):
         
+        
         print 'Writing .ncb stack:', filename
         
         
@@ -179,7 +180,8 @@ class Cncb:
             image_stack.astype(np.float32).tofile(f)
         f.close()
 
-        print 'imagedims', image_stack.shape
+        #print 'imagedims', image_stack.shape
+        
     
         f = open(str(dat_fn),'w')
 

@@ -73,6 +73,8 @@ class common:
         self.ica_calculated = 0
         self.xpf_loaded = 0
         
+        self.white_scale_bar = 0
+        
         self.path = ''
         self.filename = ''
 
@@ -6530,6 +6532,7 @@ class PageStack(QtGui.QWidget):
         self.ROIpix = None
         
         self.show_scale_bar = 1
+        self.white_scale_bar = 0
         
         self.movie_playing = 0
         
@@ -6589,7 +6592,7 @@ class PageStack(QtGui.QWidget):
         vbox1b.addWidget(self.button_showi0)
         
         self.button_prenorm = QtGui.QPushButton('Use pre-normalized data')
-        self.button_prenorm.clicked.connect( self.OnPreNormalizedData)   
+        self.button_prenorm.clicked.connect(self.OnPreNormalizedData)   
         self.button_prenorm.setEnabled(False)
         vbox1b.addWidget(self.button_prenorm)
         
@@ -6597,6 +6600,16 @@ class PageStack(QtGui.QWidget):
         self.button_refimgs.clicked.connect(self.OnRefImgs)
         self.button_refimgs.setEnabled(False)
         vbox1b.addWidget(self.button_refimgs)    
+        
+        self.button_reseti0 = QtGui.QPushButton('Reset I0')
+        self.button_reseti0.clicked.connect(self.OnResetI0)   
+        self.button_reseti0.setEnabled(False)
+        vbox1b.addWidget(self.button_reseti0)
+        
+        self.button_saveod = QtGui.QPushButton('Save OD data')
+        self.button_saveod.clicked.connect(self.OnSaveOD)   
+        self.button_saveod.setEnabled(False)
+        vbox1b.addWidget(self.button_saveod)        
         
         sizer1b.setLayout(vbox1b)  
 
@@ -6660,6 +6673,14 @@ class PageStack(QtGui.QWidget):
         self.add_scale_cb.setChecked(True)
         self.add_scale_cb.stateChanged.connect(self.OnShowScale)
         vbox23.addWidget(self.add_scale_cb)
+        
+        hbox211 = QtGui.QHBoxLayout()
+        hbox211.addSpacing(20)
+        self.cb_white_scale_bar = QtGui.QCheckBox('White', self) 
+        self.cb_white_scale_bar.setChecked(False)
+        self.cb_white_scale_bar.stateChanged.connect(self.OnWhiteScale)
+        hbox211.addWidget(self.cb_white_scale_bar)
+        vbox23.addLayout(hbox211)
          
         self.add_colbar_cb = QtGui.QCheckBox('Colorbar', self)
         self.add_colbar_cb.stateChanged.connect(self.OnShowColBar)
@@ -6896,9 +6917,10 @@ class PageStack(QtGui.QWidget):
                 self.ix = x/2
                 self.iy = y/2
                 self.stk.read_sdf_i0(filepath)
+                self.com.i0_loaded = 1
                 self.loadSpectrum(self.ix, self.iy)
                 self.loadImage()
-                self.com.i0_loaded = 1
+                
                 QtGui.QApplication.restoreOverrideCursor()
                 
                 
@@ -6913,10 +6935,11 @@ class PageStack(QtGui.QWidget):
                 self.iy = y/2
 
                 self.stk.read_stk_i0(filepath, extension)
-
+                
+                self.com.i0_loaded = 1
                 self.loadSpectrum(self.ix, self.iy)
                 self.loadImage()
-                self.com.i0_loaded = 1
+                
                 QtGui.QApplication.restoreOverrideCursor()
 
             elif extension == '.csv':
@@ -6931,9 +6954,10 @@ class PageStack(QtGui.QWidget):
 
                 self.stk.read_stk_i0(filepath, extension)
 
+                self.com.i0_loaded = 1
                 self.loadSpectrum(self.ix, self.iy)
                 self.loadImage()
-                self.com.i0_loaded = 1
+                
                 QtGui.QApplication.restoreOverrideCursor()
             
         except:
@@ -6962,11 +6986,11 @@ class PageStack(QtGui.QWidget):
         plot = PlotFrame(self, self.stk.evi0hist,self.stk.i0datahist)
         plot.show()
         
+        self.com.i0_loaded = 1
          
         self.loadSpectrum(self.ix, self.iy)
         self.loadImage()
         
-        self.com.i0_loaded = 1
         self.window().refresh_widgets()
         
 #----------------------------------------------------------------------    
@@ -6980,9 +7004,10 @@ class PageStack(QtGui.QWidget):
 
         self.stk.UsePreNormalizedData()
         
+        self.com.i0_loaded = 1
         self.loadSpectrum(self.ix, self.iy)
         self.loadImage()
-        self.com.i0_loaded = 1
+        
         self.window().refresh_widgets()
         
 #----------------------------------------------------------------------    
@@ -7028,7 +7053,21 @@ class PageStack(QtGui.QWidget):
         self.window().refresh_widgets()
 
         
- 
+#----------------------------------------------------------------------    
+    def OnResetI0(self, event):     
+
+        self.stk.reset_i0()
+        
+        self.com.i0_loaded = 0
+        
+        self.showflux = True
+        self.rb_flux.setChecked(True)
+        
+        self.loadSpectrum(self.ix, self.iy)
+        self.loadImage()
+        self.window().refresh_widgets()
+        
+        
 #----------------------------------------------------------------------    
     def OnSaveStack(self, event): 
         
@@ -7142,6 +7181,44 @@ class PageStack(QtGui.QWidget):
             QtGui.QMessageBox.warning(self,'Error','Could not save file: %s' % err)
 
 
+#----------------------------------------------------------------------    
+    def OnSaveOD(self, event): 
+        
+        """
+        Browse for tiff 
+        """
+        
+        try:
+        #if True:
+            wildcard = "TIFF files (.tif)"
+
+            filepath = QtGui.QFileDialog.getSaveFileName(self, 'Save OD', '', wildcard)
+
+            filepath = str(filepath)
+            if filepath == '':
+                return
+            
+            
+            directory =  os.path.dirname(str(filepath))
+        
+            QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+            
+            
+            self.stk.write_tif(filepath, self.stk.od3d) 
+                
+ 
+         
+            QtGui.QApplication.restoreOverrideCursor()
+
+        except:
+     
+            QtGui.QApplication.restoreOverrideCursor()
+                
+            QtGui.QMessageBox.warning(self, 'Error', 'Could not save OD stack file.')
+                   
+
+        
+        return
         
 #----------------------------------------------------------------------    
     def OnAlignImgs(self, event):  
@@ -7286,10 +7363,26 @@ class PageStack(QtGui.QWidget):
             self.show_scale_bar = 1
         else: 
             self.show_scale_bar = 0
+            
         
         if self.com.stack_loaded == 1:
             self.loadImage()
             
+#----------------------------------------------------------------------           
+    def OnWhiteScale(self,state):
+
+        
+        if state == QtCore.Qt.Checked:
+            self.white_scale_bar = 1
+        else: 
+            self.white_scale_bar = 0
+            
+        self.com.white_scale_bar = self.white_scale_bar
+        
+        if self.com.stack_loaded == 1:
+            self.loadImage()
+            self.window().page0.ShowImage()
+                    
  #----------------------------------------------------------------------           
     def OnShowColBar(self, state):
         
@@ -7373,7 +7466,7 @@ class PageStack(QtGui.QWidget):
     def loadImage(self):
         
         
-        if self.defaultdisplay == 1.0:
+        if (self.defaultdisplay == 1.0):
             #use a pointer to the data not a copy
             if self.showflux:
                 #Show flux image      
@@ -7388,7 +7481,6 @@ class PageStack(QtGui.QWidget):
             else:
                 image = self.stk.od3d[:,:,self.iev].copy() 
                  
- 
  
                        
         fig = self.absimgfig
@@ -7442,15 +7534,19 @@ class PageStack(QtGui.QWidget):
             cbar = axes.figure.colorbar(im, orientation='vertical',cax=axcb) 
          
         if self.show_scale_bar == 1:
+            if self.white_scale_bar == 1:
+                sbcolor = 'white'
+            else:
+                sbcolor = 'black'
             startx = int(self.stk.n_rows*0.05)
             starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
             um_string = ' $\mathrm{\mu m}$'
             microns = '$'+self.stk.scale_bar_string+' $'+um_string
             axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center',
-                      color = 'black', fontsize=14)
+                      color = sbcolor, fontsize=14)
             #Matplotlib has flipped scales so I'm using rows instead of cols!
             p = matplotlib.patches.Rectangle((startx,starty), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
-                                   color = 'black', fill = True)
+                                   color = sbcolor, fill = True)
             axes.add_patch(p)
          
         self.AbsImagePanel.draw()
@@ -10258,7 +10354,6 @@ class DarkSignal(QtGui.QDialog):
         st1 = QtGui.QLabel(self)
         st1.setText('Dark Signal Value:')
 
-
         
         self.ntc_ds = QtGui.QLineEdit(self)
         self.ntc_ds.setFixedWidth(150)
@@ -10835,15 +10930,19 @@ class PageLoadData(QtGui.QWidget):
          
         if self.window().page1.show_scale_bar == 1:
             #Show Scale Bar
+            if self.com.white_scale_bar == 1:
+                sbcolor = 'white'
+            else:
+                sbcolor = 'black'
             startx = int(self.stk.n_rows*0.05)
             starty = self.stk.n_cols-int(self.stk.n_cols*0.05)-self.stk.scale_bar_pixels_y
             um_string = ' $\mathrm{\mu m}$'
             microns = '$'+self.stk.scale_bar_string+' $'+um_string
             axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center',
-                      color = 'black', fontsize=14)
+                      color = sbcolor, fontsize=14)
             #Matplotlib has flipped scales so I'm using rows instead of cols!
             p = matplotlib.patches.Rectangle((startx,starty), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
-                                   color = 'black', fill = True)
+                                   color = sbcolor, fill = True)
             axes.add_patch(p)
              
         
@@ -11646,8 +11745,8 @@ class MainFrame(QtGui.QMainWindow):
         Browse for .hdf5 file or .ncb or tiff or .stk
         """
         
-        #try:
-        if True:
+        try:
+        #if True:
             wildcard = "HDF5 file (*.hdf5);;aXis2000 NCB file (*.ncb);;TIFF file (.tif);;STK file (*.stk);;"
 
             filepath = QtGui.QFileDialog.getSaveFileName(self, 'Save processed stack', '', wildcard)
@@ -11655,20 +11754,15 @@ class MainFrame(QtGui.QMainWindow):
             filepath = str(filepath)
             if filepath == '':
                 return
-            
-            
+               
             directory =  os.path.dirname(str(filepath))
-            self.page1.filename =  os.path.basename(str(filepath))
         
             QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+
             
-            self.common.path = directory
-            self.common.filename = self.page1.filename
-            
-            
-            basename, extension = os.path.splitext(self.page1.filename)      
+            basename, extension = os.path.splitext(filepath)      
                        
-            
+            print extension
             if extension == '.hdf5':            
                 self.stk.write_h5(filepath, self.data_struct) 
                            
@@ -11684,11 +11778,11 @@ class MainFrame(QtGui.QMainWindow):
          
             QtGui.QApplication.restoreOverrideCursor()
 
-#         except:
-#     
-#             QtGui.QApplication.restoreOverrideCursor()
-#                
-#             QtGui.QMessageBox.warning(self, 'Error', 'Could not save processed stack file.')
+        except:
+      
+            QtGui.QApplication.restoreOverrideCursor()
+                 
+            QtGui.QMessageBox.warning(self, 'Error', 'Could not save processed stack file.')
                    
 
         self.refresh_widgets()
@@ -11794,6 +11888,8 @@ class MainFrame(QtGui.QMainWindow):
             self.page1.button_showi0.setEnabled(False) 
             self.page1.rb_flux.setEnabled(False)
             self.page1.rb_od.setEnabled(False)
+            self.page1.button_reseti0.setEnabled(False)
+            self.page1.button_saveod.setEnabled(False)
             self.page2.button_calcpca.setEnabled(False)
             self.page4.button_loadtspec.setEnabled(False)
             self.page4.button_addflat.setEnabled(False)
@@ -11806,6 +11902,8 @@ class MainFrame(QtGui.QMainWindow):
             self.page1.button_showi0.setEnabled(True)
             self.page1.rb_flux.setEnabled(True)
             self.page1.rb_od.setEnabled(True)   
+            self.page1.button_reseti0.setEnabled(True)
+            self.page1.button_saveod.setEnabled(True)
             self.page2.button_calcpca.setEnabled(True) 
             self.page4.button_loadtspec.setEnabled(True)
             self.page4.button_addflat.setEnabled(True)   

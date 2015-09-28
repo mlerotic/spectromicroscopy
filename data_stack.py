@@ -65,6 +65,8 @@ class data(file_stk.x1astk,file_dataexch_hdf5.h5, file_nexus_hdf5.h5data,
                
         self.x_dist = 0       
         self.y_dist = 0
+        
+        self.i0_dwell = None 
 
         self.ev = 0         
         self.absdata = 0
@@ -433,6 +435,24 @@ class data(file_stk.x1astk,file_dataexch_hdf5.h5, file_nexus_hdf5.h5data,
         self.fill_h5_struct_normalization()
     
         return  
+    
+#----------------------------------------------------------------------   
+    def reset_i0(self):
+        
+
+        self.i0_dwell = None 
+
+        self.i0data = 0
+        self.evi0 = 0
+        
+        self.od = 0
+        self.od3d = 0
+        
+        self.data_struct.spectromicroscopy.normalization.white_spectrum = None
+        self.data_struct.spectromicroscopy.normalization.white_spectrum_energy = None
+        self.data_struct.spectromicroscopy.normalization.white_spectrum_energy_units = None
+        
+        self.data_struct.spectromicroscopy.optical_density = None      
     
 #----------------------------------------------------------------------   
 # Normalize the data: calculate optical density matrix D 
