@@ -340,7 +340,7 @@ class data(file_stk.x1astk,file_dataexch_hdf5.h5, file_nexus_hdf5.h5data,
         
         self.data_struct.exchange.data = self.absdata
         self.data_struct.exchange.data_signal = 1
-        self.data_struct.exchange.data_axes='x:y'
+        self.data_struct.exchange.data_axes='x:y:energy'
         
         self.data_struct.exchange.energy=self.ev
         self.data_struct.exchange.energy_units = 'ev'
@@ -388,7 +388,7 @@ class data(file_stk.x1astk,file_dataexch_hdf5.h5, file_nexus_hdf5.h5data,
         self.evi0 = self.ev.copy()
         self.i0data = self.i0datahist 
          
-        self.i0_dwell = self.data_dwell
+        self.i0_dwell = self.data_dwell.copy()
  
         self.calculate_optical_density()   
          
@@ -449,6 +449,7 @@ class data(file_stk.x1astk,file_dataexch_hdf5.h5, file_nexus_hdf5.h5data,
         else:
             fi0int = scipy.interpolate.interp1d(self.evi0,self.i0data, bounds_error=False, fill_value=0.0)      
         i0 = fi0int(self.ev)
+        
          
         if (self.data_dwell is not None) and (self.i0_dwell is not None):
  

@@ -37,7 +37,7 @@ class x1astk:
         self.n_rows = data[1]
         self.n_ev = data[2]
         
-        #print 'self.n_cols, self.n_rows, self.n_ev', self.n_cols, self.n_rows, self.n_ev
+        print 'self.n_cols, self.n_rows, self.n_ev', self.n_cols, self.n_rows, self.n_ev
         
         self.x_dist = np.fromfile(f, np.float32, self.n_cols)
         self.x_dist.byteswap(True)   
@@ -64,11 +64,29 @@ class x1astk:
 
         f.close()
         
-#         self.original_n_cols = self.n_cols.copy()
-#         self.original_n_rows = self.n_rows.copy()
-#         self.original_n_ev = self.n_ev.copy()
-#         self.original_ev = self.ev.copy()
-#         self.original_absdata = self.absdata.copy()
+      
+        return
+    
+#----------------------------------------------------------------------
+    def write_stk(self, filename):
+        f = open(str(filename),'wb')
+        data = np.array([(self.n_cols),self.n_rows,self.n_ev])
+        f.write(data.astype(np.int32).byteswap(True))
+
+        
+        f.write(self.x_dist.astype(np.float32).byteswap(True))
+        f.write(self.y_dist.astype(np.float32).byteswap(True))
+        
+        f.write(self.ev.astype(np.float32).byteswap(True))
+
+        f.write(self.data_dwell.astype(np.float32).byteswap(True))
+        
+
+        imagestack = np.reshape(self.absdata, (self.n_cols*self.n_rows*self.n_ev), order='F')   
+        f.write(imagestack.astype(np.float32).byteswap(True))
+               
+        f.close()
+        
       
         return
 

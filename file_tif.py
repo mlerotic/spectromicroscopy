@@ -151,11 +151,6 @@ class Ctif:
             img1 = Image.fromarray(data[:,:,i])
             img1.save(thisfn)
             
-        img2 = Image.open(thisfn)
-
-        f1 = list(img1.getdata())
-        f2 = list(img2.getdata())
-
             
         if len(energies) > 0:
             thisfn = basename + '.txt'

@@ -6544,28 +6544,7 @@ class PageStack(QtGui.QWidget):
         self.button_align.setEnabled(False)
         vbox1.addWidget(self.button_align) 
         
-        self.button_i0ffile = QtGui.QPushButton('I0 from file...')
-        self.button_i0ffile.clicked.connect(self.OnI0FFile)
-        self.button_i0ffile.setEnabled(False)
-        vbox1.addWidget(self.button_i0ffile)
-        self.button_i0histogram = QtGui.QPushButton('I0 from histogram...')
-        self.button_i0histogram.clicked.connect( self.OnI0histogram)   
-        self.button_i0histogram.setEnabled(False)     
-        vbox1.addWidget(self.button_i0histogram)
-        self.button_showi0 = QtGui.QPushButton('Show I0...')
-        self.button_showi0.clicked.connect( self.OnShowI0)   
-        self.button_showi0.setEnabled(False)
-        vbox1.addWidget(self.button_showi0)
-        
-        self.button_prenorm = QtGui.QPushButton('Use pre-normalized data')
-        self.button_prenorm.clicked.connect( self.OnPreNormalizedData)   
-        self.button_prenorm.setEnabled(False)
-        vbox1.addWidget(self.button_prenorm)
-        
-        self.button_refimgs = QtGui.QPushButton('Load Reference Images')
-        self.button_refimgs.clicked.connect(self.OnRefImgs)
-        self.button_refimgs.setEnabled(False)
-        vbox1.addWidget(self.button_refimgs)        
+  
         
         self.button_limitev = QtGui.QPushButton('Limit energy range...')
         self.button_limitev.clicked.connect( self.OnLimitEv)
@@ -6575,14 +6554,51 @@ class PageStack(QtGui.QWidget):
         self.button_subregion = QtGui.QPushButton('Clip to subregion...')
         self.button_subregion.clicked.connect(self.OnCliptoSubregion)
         self.button_subregion.setEnabled(False)
-        vbox1.addWidget(self.button_subregion)       
+        vbox1.addWidget(self.button_subregion)    
+        
+        self.button_darksig = QtGui.QPushButton('Dark signal subtraction...')
+        self.button_darksig.clicked.connect(self.OnDarkSignal)
+        self.button_darksig.setEnabled(False)
+        vbox1.addWidget(self.button_darksig)     
+        
             
-        self.button_savestack = QtGui.QPushButton('Save preprocessed stack')
+        self.button_savestack = QtGui.QPushButton('Save processed stack')
         self.button_savestack.clicked.connect(self.OnSaveStack)
         self.button_savestack.setEnabled(False)          
         vbox1.addWidget(self.button_savestack)
         
         sizer1.setLayout(vbox1)
+        
+
+        #panel 1B
+        sizer1b = QtGui.QGroupBox('Normalize')
+        vbox1b = QtGui.QVBoxLayout()
+        vbox1b.setSpacing(0)
+        
+        self.button_i0ffile = QtGui.QPushButton('I0 from file...')
+        self.button_i0ffile.clicked.connect(self.OnI0FFile)
+        self.button_i0ffile.setEnabled(False)
+        vbox1b.addWidget(self.button_i0ffile)
+        self.button_i0histogram = QtGui.QPushButton('I0 from histogram...')
+        self.button_i0histogram.clicked.connect( self.OnI0histogram)   
+        self.button_i0histogram.setEnabled(False)     
+        vbox1b.addWidget(self.button_i0histogram)
+        self.button_showi0 = QtGui.QPushButton('Show I0...')
+        self.button_showi0.clicked.connect( self.OnShowI0)   
+        self.button_showi0.setEnabled(False)
+        vbox1b.addWidget(self.button_showi0)
+        
+        self.button_prenorm = QtGui.QPushButton('Use pre-normalized data')
+        self.button_prenorm.clicked.connect( self.OnPreNormalizedData)   
+        self.button_prenorm.setEnabled(False)
+        vbox1b.addWidget(self.button_prenorm)
+        
+        self.button_refimgs = QtGui.QPushButton('Load Reference Images')
+        self.button_refimgs.clicked.connect(self.OnRefImgs)
+        self.button_refimgs.setEnabled(False)
+        vbox1b.addWidget(self.button_refimgs)    
+        
+        sizer1b.setLayout(vbox1b)  
 
 
         #panel 2
@@ -6824,6 +6840,7 @@ class PageStack(QtGui.QWidget):
         
         hboxtop = QtGui.QHBoxLayout()
         hboxtop.addWidget(sizer1)
+        hboxtop.addWidget(sizer1b)
         hboxtop.addWidget(sizer2)
         hboxtop.addWidget(sizer3)
         
@@ -7132,6 +7149,13 @@ class PageStack(QtGui.QWidget):
         #self.window().Hide()
         imgregwin = ImageRegistration(self.window(), self.com, self.stk)
         imgregwin.show()
+        
+#----------------------------------------------------------------------    
+    def OnDarkSignal(self, event):  
+        
+
+        dswin = DarkSignal(self.window(), self.com, self.stk)
+        dswin.show()
 
 #----------------------------------------------------------------------    
     def OnSlideshow(self, event):  
@@ -8206,8 +8230,13 @@ class LimitEv(QtGui.QDialog):
 #----------------------------------------------------------------------        
     def draw_limitev_plot(self):
         
-        odtotal = self.stack.od3d.sum(axis=0)   
-        odtotal = odtotal.sum(axis=0)/(self.stack.n_rows*self.stack.n_cols) 
+        
+        if self.com.i0_loaded == 1: 
+            odtotal = self.stack.od3d.sum(axis=0)   
+        else:
+            odtotal = self.stack.absdata.sum(axis=0)   
+        
+        odtotal = odtotal.sum(axis=0)/(self.stack.n_rows*self.stack.n_cols)             
         
         fig = self.specfig
         fig.clf()
@@ -8294,6 +8323,7 @@ class LimitEv(QtGui.QDialog):
         #print self.stack.n_ev, self.stack.ev.shape
         self.stack.n_ev = self.limitevmax+1-self.limitevmin
         self.stack.ev = self.stack.ev[self.limitevmin:self.limitevmax+1]
+        self.stack.data_dwell = self.stack.data_dwell[self.limitevmin:self.limitevmax+1]
         
         #print self.stack.n_ev, self.stack.ev.shape
         
@@ -10078,9 +10108,6 @@ class DoseCalculation(QtGui.QDialog):
         QtGui.QWidget.__init__(self, parent)
         
         self.parent = parent
-
-        self.stack = stack
-        self.com = common  
         
         self.resize(300, 170)
         self.setWindowTitle('Dose Calculation')
@@ -10091,7 +10118,6 @@ class DoseCalculation(QtGui.QDialog):
         self.setPalette(pal) 
                 
         self.stack = stack
-        self.com = common
         self.ROIspectrum = ROIspectrum
                
 
@@ -10162,6 +10188,7 @@ class DoseCalculation(QtGui.QDialog):
         try:
             detector_eff = 0.01*float(self.tc_1.text())
         except:
+            QtGui.QMessageBox.warning(self, 'Error', 'Please enter numeric number for detector efficiency.')
             print 'Please enter numeric number for detector efficiency.'
             return
             
@@ -10176,11 +10203,14 @@ class DoseCalculation(QtGui.QDialog):
         try:
             z_array, atwt = Chenke.compound(i_composition,1.0)
         except:
-            print 'Composition string error: Please re-enter composition string.'
+            QtGui.QMessageBox.warning(self, 'Error', "Please enter new compound.")
             return
         
-        
-        dose = Chenke.dose_calc(self.stack, i_composition, self.ROIspectrum, self.stack.i0data, detector_eff)
+        try:
+            dose = Chenke.dose_calc(self.stack, i_composition, self.ROIspectrum, self.stack.i0data, detector_eff)
+        except:
+            QtGui.QMessageBox.warning(self, 'Error', "Could not calculate dose. Please enter new compound.")
+            return            
         
         self.tc_4.setText(str(dose))
         
@@ -10195,7 +10225,107 @@ class DoseCalculation(QtGui.QDialog):
         QtGui.QApplication.restoreOverrideCursor()
         
         
+#---------------------------------------------------------------------- 
+class DarkSignal(QtGui.QDialog):
+
+    def __init__(self, parent, common, stack):    
+        QtGui.QWidget.__init__(self, parent)
         
+        self.parent = parent
+
+        self.stack = stack
+        self.com = common
+        
+        self.resize(300, 170)
+        self.setWindowTitle('Dark Signal Correction')
+        
+        pal = QtGui.QPalette()
+        self.setAutoFillBackground(True)
+        pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
+        self.setPalette(pal) 
+                
+        
+        vboxtop = QtGui.QVBoxLayout()
+        
+        
+        gridtop = QtGui.QGridLayout()
+
+        
+        #fontb = wx.SystemSettings_GetFont(wx.SYS_DEFAULT_GUI_FONT)
+        #fontb.SetWeight(wx.BOLD)
+        
+        
+        st1 = QtGui.QLabel(self)
+        st1.setText('Dark Signal Value:')
+
+
+        
+        self.ntc_ds = QtGui.QLineEdit(self)
+        self.ntc_ds.setFixedWidth(150)
+        self.ntc_ds.setValidator(QtGui.QDoubleValidator(-99999, 99999, 2, self))
+        self.ntc_ds.setAlignment(QtCore.Qt.AlignRight)         
+        
+        self.ntc_ds.setText(str(0.0))
+ 
+
+        gridtop.addWidget(st1, 0,0)
+        gridtop.addWidget(self.ntc_ds, 0,1)
+        
+
+        button_dscalc = QtGui.QPushButton('Subtract Dark Signal')
+        button_dscalc.clicked.connect(self.OnDSCalc)
+                
+        button_cancel = QtGui.QPushButton('Dismiss')
+        button_cancel.clicked.connect(self.close)
+
+
+        vboxtop.addLayout(gridtop)
+        vboxtop.addWidget(button_dscalc) 
+        vboxtop.addWidget(button_cancel) 
+        
+        self.setLayout(vboxtop)
+        
+              
+#---------------------------------------------------------------------- 
+    def OnDSCalc(self):
+                      
+        QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+        
+        darksig = 0.0
+        
+        try:
+            value = self.ntc_ds.text()
+            darksig = float(value)
+        except:
+            QtGui.QApplication.restoreOverrideCursor()
+            QtGui.QMessageBox.warning(self, 'Error', 'Please enter numeric number for dark signal.')
+            return
+            
+
+        self.stack.absdata = self.stack.absdata - darksig
+        
+        if self.com.i0_loaded == 1:   
+            self.stack.calculate_optical_density()
+            
+        self.stack.fill_h5_struct_from_stk()
+        if self.com.i0_loaded == 1: 
+            self.stack.fill_h5_struct_normalization()
+        
+        
+        self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
+        self.parent.page1.loadImage()
+        
+        
+        
+        QtGui.QApplication.restoreOverrideCursor()
+        
+        self.close()
+        
+        return
+        
+        
+        
+                
 #---------------------------------------------------------------------- 
 class PlotFrame(QtGui.QDialog):
 
@@ -11513,12 +11643,12 @@ class MainFrame(QtGui.QMainWindow):
     def SaveProcessedStack(self):
 
         """
-        Browse for .hdf5 file or .ncb or tiff
+        Browse for .hdf5 file or .ncb or tiff or .stk
         """
         
         #try:
         if True:
-            wildcard = "HDF5 file (*.hdf5);;aXis2000 NCB file (*.ncb);;Tiff file (.tif);;"
+            wildcard = "HDF5 file (*.hdf5);;aXis2000 NCB file (*.ncb);;TIFF file (.tif);;STK file (*.stk);;"
 
             filepath = QtGui.QFileDialog.getSaveFileName(self, 'Save processed stack', '', wildcard)
 
@@ -11547,6 +11677,9 @@ class MainFrame(QtGui.QMainWindow):
            
             elif extension == '.tif':    
                 self.stk.write_tif(filepath, self.stk.absdata, energies=self.stk.ev) 
+                
+            elif extension == '.stk':    
+                self.stk.write_stk(filepath) 
             
          
             QtGui.QApplication.restoreOverrideCursor()
@@ -11624,6 +11757,9 @@ class MainFrame(QtGui.QMainWindow):
             self.page1.button_i0histogram.setEnabled(False) 
             self.page1.button_prenorm.setEnabled(False)
             self.page1.button_refimgs.setEnabled(False)
+            self.page1.button_limitev.setEnabled(False)
+            self.page1.button_subregion.setEnabled(False)
+            self.page1.button_darksig.setEnabled(False)
             self.page1.button_save.setEnabled(False) 
             self.page1.button_savestack.setEnabled(False)
             self.page1.button_align.setEnabled(False)
@@ -11639,6 +11775,9 @@ class MainFrame(QtGui.QMainWindow):
             self.page1.button_i0histogram.setEnabled(True) 
             self.page1.button_prenorm.setEnabled(True)
             self.page1.button_refimgs.setEnabled(True)
+            self.page1.button_limitev.setEnabled(True)
+            self.page1.button_subregion.setEnabled(True)
+            self.page1.button_darksig.setEnabled(True)
             self.page1.button_save.setEnabled(True) 
             self.page1.button_savestack.setEnabled(True)  
             self.page1.button_align.setEnabled(True)  
@@ -11652,8 +11791,6 @@ class MainFrame(QtGui.QMainWindow):
              
              
         if self.common.i0_loaded == 0:
-            self.page1.button_limitev.setEnabled(False)
-            self.page1.button_subregion.setEnabled(False)
             self.page1.button_showi0.setEnabled(False) 
             self.page1.rb_flux.setEnabled(False)
             self.page1.rb_od.setEnabled(False)
@@ -11666,8 +11803,6 @@ class MainFrame(QtGui.QMainWindow):
                 self.page7.button_mufile.setEnabled(False)
                 self.page7.button_murand.setEnabled(False)
         else:
-            self.page1.button_limitev.setEnabled(True)
-            self.page1.button_subregion.setEnabled(True)
             self.page1.button_showi0.setEnabled(True)
             self.page1.rb_flux.setEnabled(True)
             self.page1.rb_od.setEnabled(True)   
