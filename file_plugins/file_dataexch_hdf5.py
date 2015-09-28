@@ -32,6 +32,9 @@ verbose = 0
 
 title = 'Exchange'
 extension = ['*.hdf','*.hdf5']
+read_types = ['spectrum','image','stack']
+write_types = ['spectrum','image','stack','results']
+
 
 def identify(filename):
 	try:

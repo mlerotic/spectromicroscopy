@@ -11261,7 +11261,7 @@ class MainFrame(QtGui.QMainWindow):
         #try:
         if True:
             if wildcard == False:
-                filepath, plugin = File_GUI.load()
+                filepath, plugin = File_GUI.SelectFile('read','stack')
                 if filepath is not None:
                     if plugin is None:
                         plugin = file_plugins.identify(filepath)

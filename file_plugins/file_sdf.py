@@ -22,6 +22,8 @@ from os.path import splitext, exists
 
 title = 'SDF'
 extension = ['*.hdr']
+read_types = ['spectrum','image','stack']
+write_types = ['spectrum','image','stack']
 
 def identify(filename):
 	try:
