@@ -33,10 +33,6 @@ def identify(filename):
 		print "Error in SDF plugin:", sys.exc_info()
 		return False
 
-def read(filepath, data_stk):
-    data_stk.read_sdf(filepath)
-    return
-
 #----------------------------------------------------------------------
 class HDR_FileParser:
   """Parse .hdr file for metadata."""
@@ -188,75 +184,70 @@ class HDR_FileParser:
 
 #----------------------------------------------------------------------
 #----------------------------------------------------------------------
-class sdfstk:
-    def __init__(self):
-        pass
+def read(self, filename):
+    HDR = HDR_FileParser(filename)
     
-#----------------------------------------------------------------------
-    def read_sdf(self, filename):
-        HDR = HDR_FileParser(filename)
-        
-        if HDR.hdr['ScanDefinition']['Flags'] == 'Image Stack':
-            if HDR.num_regions > 1:
-                if HDR.num_channels > 1:
-                    print "Only first region and first detector data will be loaded."
-                else:
-                    print "Only first region will be loaded."
-            elif HDR.num_channels > 1:
-                print "Only first detector data will be loaded."
+    if HDR.hdr['ScanDefinition']['Flags'] == 'Image Stack':
+        if HDR.num_regions > 1:
+            if HDR.num_channels > 1:
+                print "Only first region and first detector data will be loaded."
+            else:
+                print "Only first region will be loaded."
+        elif HDR.num_channels > 1:
+            print "Only first detector data will be loaded."
 
-            self.x_dist = numpy.array([float(i) for i in HDR.hdr['ScanDefinition']['Regions'][1]['PAxis']['Points'][1:] ])
-            self.y_dist = numpy.array([float(i) for i in HDR.hdr['ScanDefinition']['Regions'][1]['QAxis']['Points'][1:] ])
-            self.ev = numpy.array([float(i) for i in HDR.hdr['ScanDefinition']['StackAxis']['Points'][1:] ])
+        self.x_dist = numpy.array([float(i) for i in HDR.hdr['ScanDefinition']['Regions'][1]['PAxis']['Points'][1:] ])
+        self.y_dist = numpy.array([float(i) for i in HDR.hdr['ScanDefinition']['Regions'][1]['QAxis']['Points'][1:] ])
+        self.ev = numpy.array([float(i) for i in HDR.hdr['ScanDefinition']['StackAxis']['Points'][1:] ])
 
-            self.n_cols = numpy.array(len(self.y_dist))
-            self.n_rows = numpy.array(len(self.x_dist))
-            self.n_ev = numpy.array(len(self.ev))
+        self.n_cols = numpy.array(len(self.y_dist))
+        self.n_rows = numpy.array(len(self.x_dist))
+        self.n_ev = numpy.array(len(self.ev))
 
-            msec = float(HDR.hdr['ScanDefinition']['Dwell'])
-            self.data_dwell = numpy.ones((self.n_ev))*msec
+        msec = float(HDR.hdr['ScanDefinition']['Dwell'])
+        self.data_dwell = numpy.ones((self.n_ev))*msec
 
-            imagestack = numpy.empty((self.n_cols,self.n_rows,self.n_ev), numpy.int32)
-            for i in range(len(HDR.data_names[0][0])):
-                imagestack[:,:,i] = numpy.loadtxt(HDR.data_names[0][0][i], numpy.int32)
+        imagestack = numpy.empty((self.n_cols,self.n_rows,self.n_ev), numpy.int32)
+        for i in range(len(HDR.data_names[0][0])):
+            imagestack[:,:,i] = numpy.loadtxt(HDR.data_names[0][0][i], numpy.int32).T
 
-            self.absdata = numpy.empty((self.n_cols, self.n_rows, self.n_ev))
+        self.absdata = numpy.empty((self.n_cols, self.n_rows, self.n_ev))
 
-            self.absdata = numpy.reshape(imagestack, (self.n_cols, self.n_rows, self.n_ev), order='F')       
+        self.absdata = numpy.reshape(imagestack, (self.n_cols, self.n_rows, self.n_ev), order='F')       
 
 #             self.original_n_cols = self.n_cols.copy()
 #             self.original_n_rows = self.n_rows.copy()
 #             self.original_n_ev = self.n_ev.copy()
 #             self.original_ev = self.ev.copy()
 #             self.original_absdata = self.absdata.copy()
-        else:
-            print "Only Image Stack files are supported."
-      
-        return
+    else:
+        print "Only Image Stack files are supported."
     
-#----------------------------------------------------------------------
-    def read_sdf_i0(self, filename):
-        HDR = HDR_FileParser(filename)
-        
-        if 'ScanType' in HDR.hdr['ScanDefinition'] and HDR.hdr['ScanDefinition']['ScanType'] == 'Spectra':
-            Energies = HDR.hdr['ScanDefinition']['Regions'][1]['PAxis']['Points'][1:]
-            tempimage = numpy.loadtxt(HDR.data_names[0][0][0], numpy.float32)
-            Data = tempimage[:,1]
-        elif HDR.hdr['ScanDefinition']['Type'] == 'NEXAFS Line Scan':
-            Energies = HDR.hdr['ScanDefinition']['Regions'][1]['PAxis']['Points'][1:]
-            tempimage = numpy.loadtxt(HDR.data_names[0][0][0], numpy.int32)
-            Data = numpy.mean(tempimage,axis=0)
-        else:# Image Stack
-            Energies = HDR.hdr['ScanDefinition']['StackAxis']['Points'][1:]
-            tempimage = numpy.empty((HDR.data_size[0][0],HDR.data_size[0][1]), numpy.int32)
-            Data = numpy.empty((HDR.data_size[0][2]), numpy.int32)
-            for i in range(len(HDR.data_names[0][0])):
-                tempimage = numpy.loadtxt(HDR.data_names[0][0][i], numpy.int32)
-                Data[i] = numpy.mean(tempimage)
+    return
 
-        
-        msec = float(HDR.hdr['ScanDefinition']['Dwell'])#shouldn't this be needed?
-        self.i0_dwell = msec
-        self.evi0 = numpy.array([float(i) for i in Energies])
-        self.i0data = Data                
-        return
+#----------------------------------------------------------------------
+def read_sdf_i0(self, filename):
+    HDR = HDR_FileParser(filename)
+    
+    if 'ScanType' in HDR.hdr['ScanDefinition'] and HDR.hdr['ScanDefinition']['ScanType'] == 'Spectra':
+        Energies = HDR.hdr['ScanDefinition']['Regions'][1]['PAxis']['Points'][1:]
+        tempimage = numpy.loadtxt(HDR.data_names[0][0][0], numpy.float32)
+        Data = tempimage[:,1]
+    elif HDR.hdr['ScanDefinition']['Type'] == 'NEXAFS Line Scan':
+        Energies = HDR.hdr['ScanDefinition']['Regions'][1]['PAxis']['Points'][1:]
+        tempimage = numpy.loadtxt(HDR.data_names[0][0][0], numpy.int32)
+        Data = numpy.mean(tempimage,axis=0)
+    else:# Image Stack
+        Energies = HDR.hdr['ScanDefinition']['StackAxis']['Points'][1:]
+        tempimage = numpy.empty((HDR.data_size[0][0],HDR.data_size[0][1]), numpy.int32)
+        Data = numpy.empty((HDR.data_size[0][2]), numpy.int32)
+        for i in range(len(HDR.data_names[0][0])):
+            tempimage = numpy.loadtxt(HDR.data_names[0][0][i], numpy.int32)
+            Data[i] = numpy.mean(tempimage)
+
+    
+    msec = float(HDR.hdr['ScanDefinition']['Dwell'])#shouldn't this be needed?
+    self.i0_dwell = msec
+    self.evi0 = numpy.array([float(i) for i in Energies])
+    self.i0data = Data                
+    return
