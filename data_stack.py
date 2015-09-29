@@ -816,14 +816,8 @@ class data(file_stk.x1astk,file_dataexch_hdf5.h5, file_nexus_hdf5.h5data,
     
 #----------------------------------------------------------------------   
 #Apply image registration
-    def crop_registed_images(self, images, xshifts, yshifts):
-        
-        min_xshift = np.min(xshifts)
-        max_xshift = np.max(xshifts)
-        
-        min_yshift = np.min(yshifts)
-        max_yshift = np.max(yshifts)
-        
+    def crop_registed_images(self, images, min_xshift, max_xshift, min_yshift, max_yshift):
+                
         # if the image is moved to the right (positive) we need to crop the left side 
         xleft = np.ceil(max_xshift)
         if xleft < 0:

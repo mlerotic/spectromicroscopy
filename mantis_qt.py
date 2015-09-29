@@ -6542,7 +6542,7 @@ class PageStack(QtGui.QWidget):
         vbox1 = QtGui.QVBoxLayout()
         vbox1.setSpacing(0)
         
-        self.button_align = QtGui.QPushButton('Align images...')
+        self.button_align = QtGui.QPushButton('Align stack...')
         self.button_align.clicked.connect(self.OnAlignImgs)
         self.button_align.setEnabled(False)
         vbox1.addWidget(self.button_align) 
@@ -8735,6 +8735,12 @@ class ImageRegistration(QtGui.QDialog):
         self.xshifts = npy.zeros((self.stack.n_ev))
         self.yshifts = npy.zeros((self.stack.n_ev))
         
+        self.minxs = 0
+        self.maxxs = 0
+        
+        self.minys = 0
+        self.maxys = 0
+        
         self.showccorr = 0
         
         self.edgee = 0
@@ -9467,7 +9473,20 @@ class ImageRegistration(QtGui.QDialog):
         
         self.UpdateWidgets()
         
-            
+        
+        min_xshift = npy.min(self.xshifts)
+        max_xshift = npy.max(self.xshifts)
+        
+        min_yshift = npy.min(self.yshifts)
+        max_yshift = npy.max(self.yshifts)
+        
+        if min_xshift < self.minxs : self.minxs = min_xshift
+        if max_xshift > self.maxxs : self.maxxs = max_xshift
+
+        if min_yshift < self.minys : self.minys = min_yshift        
+        if max_yshift > self.maxys : self.maxys = max_yshift
+        
+                    
         QtGui.QApplication.restoreOverrideCursor()
         
 #----------------------------------------------------------------------            
@@ -9476,8 +9495,7 @@ class ImageRegistration(QtGui.QDialog):
         QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
         
         self.aligned_stack, self.xleft, self.xright, self.ybottom, self.ytop, = self.stack.crop_registed_images(self.aligned_stack, 
-                                                             self.xshifts,
-                                                             self.yshifts)
+                                                             self.minxs, self.maxxs, self.minys, self.maxys)
         
         
         self.iev = 0
@@ -9543,8 +9561,8 @@ class ImageRegistration(QtGui.QDialog):
         y = evt.ydata
         
         if (self.man_align == 2):      
-            xcorr = int(npy.floor(y))           
-            ycorr = int(npy.floor(x))  
+            xcorr = float(y)          
+            ycorr = float(x)
                     
             if xcorr<0 :
                 xcorr=0
@@ -9604,6 +9622,18 @@ class ImageRegistration(QtGui.QDialog):
         self.textctrl_ms2.setText('Y manual shift: ')
         
         self.UpdateWidgets()
+        
+        min_xshift = npy.min(self.xshifts)
+        max_xshift = npy.max(self.xshifts)
+        
+        min_yshift = npy.min(self.yshifts)
+        max_yshift = npy.max(self.yshifts)
+        
+        if min_xshift < self.minxs : self.minxs = min_xshift
+        if max_xshift > self.maxxs : self.maxxs = max_xshift
+
+        if min_yshift < self.minys : self.minys = min_yshift        
+        if max_yshift > self.maxys : self.maxys = max_yshift
         
 
         self.ShowImage()
