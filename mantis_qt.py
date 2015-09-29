@@ -11231,17 +11231,15 @@ class MainFrame(QtGui.QMainWindow):
         Browse for a stack file:
         """
 
-        #try:
-        if True:
-            filepath, plugin = File_GUI.SelectFile('read','stack')
-            if filepath is not None:
-                if self.common.stack_loaded == 1:
-                    self.new_stack_refresh()
-                    self.stk.new_data()
-                    self.anlz.delete_data()
-                file_plugins.load(filepath, stack_object=self.stk, plugin=plugin)
-                directory =  os.path.dirname(str(filepath))
-                self.page1.filename =  os.path.basename(str(filepath))
+        filepath, plugin = File_GUI.SelectFile('read','stack')
+        if filepath is not None:
+            if self.common.stack_loaded == 1:
+                self.new_stack_refresh()
+                self.stk.new_data()
+                self.anlz.delete_data()
+            file_plugins.load(filepath, stack_object=self.stk, plugin=plugin)
+            directory =  os.path.dirname(str(filepath))
+            self.page1.filename =  os.path.basename(str(filepath))
             
             #Update widgets 
             x=self.stk.n_cols
@@ -11285,19 +11283,6 @@ class MainFrame(QtGui.QMainWindow):
 
             QtGui.QApplication.restoreOverrideCursor()
                  
-#         except:
-#      
-#             self.common.stack_loaded = 0 
-#             self.common.i0_loaded = 0
-#             self.new_stack_refresh()
-#                                     
-#             QtGui.QApplication.restoreOverrideCursor()
-#             QtGui.QMessageBox.warning(self, 'Error', 'Image stack not loaded.')
-#     
-#             import sys
-#             print sys.exc_info()
-                   
-
         self.refresh_widgets()
 
 

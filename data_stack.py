@@ -38,18 +38,10 @@ import file_tif
 import data_struct
 
 #----------------------------------------------------------------------
-class data(file_stk.x1astk, file_xrm.xrm, file_dataexch_hdf5.h5,file_sdf.sdfstk):
+class data:
     def __init__(self, data_struct):
-        file_stk.x1astk.__init__(self)
-        file_dataexch_hdf5.h5.__init__(self)
-        #file_nexus_hdf5.h5data.__init__(self)
-        file_xrm.xrm.__init__(self)
-        file_sdf.sdfstk.__init__(self)
-        
         self.data_struct = data_struct
-        
         self.i0_dwell = None 
-        
         self.n_ev = 0
 
 #----------------------------------------------------------------------   
@@ -99,98 +91,6 @@ class data(file_stk.x1astk, file_xrm.xrm, file_dataexch_hdf5.h5,file_sdf.sdfstk)
         self.calculate_optical_density()
         
         self.fill_h5_struct_normalization()
-        
-        
-#----------------------------------------------------------------------   
-    def read_xrm_ReferenceImages(self, filenames):
-
-        
-        self.calculate_optical_density_from_refimgs(filenames)
-        
-        self.fill_h5_struct_normalization()
-        
-              
-
-#---------------------------------------------------------------------- 
-    def read_stk(self, filename):    
-        self.new_data()  
-        file_stk.x1astk.read_stk(self, filename)
-        
-        self.fill_h5_struct_from_stk()
-        
-        self.scale_bar()
-        
-#---------------------------------------------------------------------- 
-    def read_sdf(self, filename):    
-        self.new_data()  
-        file_sdf.sdfstk.read_sdf(self, filename)
-        
-        self.fill_h5_struct_from_stk()
-        
-        self.scale_bar()
-  
-#---------------------------------------------------------------------- 
-    def check_h5_format(self, filename):   
-        #format 1-data exchange, 2 - nexus 1 region
-        format = 1 
-        nregions = 1
-        
-        if file_dataexch_hdf5.h5.check_h5_format(self, filename):
-            format = 1
-        else:
-            nxsformat, nregions = file_nexus_hdf5.h5data.check_h5_format(self, filename)
-            if nxsformat:
-                format = 2
-
-            
-        return format, nregions
-  
-#---------------------------------------------------------------------- 
-    def read_h5(self, filename, format = 1, loadregion = 1):    
-        self.new_data()
-        if format == 1:
-            #file_dataexch_hdf5.h5.read_h5(self, filename, self.data_struct)
-            file_dataexch_hdf5.h5.read_h5(self, filename)
-        elif format == 2:
-            file_nexus_hdf5.h5data.read_h5(self, filename, self.data_struct, loadregion = loadregion)
-            self.fill_h5_struct_from_stk()
-        else:
-            return
-        
-#         if self.data_struct.spectromicroscopy.optical_density is not None: 
-#             #print 'reading optical density'
-#             self.i0data = self.data_struct.spectromicroscopy.normalization.white_spectrum 
-#             self.evi0 = self.data_struct.spectromicroscopy.normalization.white_spectrum_energy 
-#         
-#             self.od = self.data_struct.spectromicroscopy.optical_density
-#             
-#             self.od3d = self.od.copy()
-#             
-#             self.od3d = np.reshape(self.od3d, (self.n_cols, self.n_rows, self.n_ev), order='F')
-                    
-        if self.data_struct.spectromicroscopy.normalization.white_spectrum is not None:
-            self.calculate_optical_density()
-            self.fill_h5_struct_normalization()
-            
-            
-            
-        self.scale_bar()
-        
-#---------------------------------------------------------------------- 
-    def read_txrm(self, filename):    
-        self.new_data()  
-        file_xrm.xrm.read_txrm(self, filename, self.data_struct)
-        
-                
-        self.scale_bar()
-        
-#---------------------------------------------------------------------- 
-    def read_xrm(self, filename):    
-        self.new_data()  
-        file_xrm.xrm.read_xrm(self, filename, self.data_struct)
-        
-                
-        self.scale_bar()
         
         
 #---------------------------------------------------------------------- 
@@ -393,7 +293,7 @@ class data(file_stk.x1astk, file_xrm.xrm, file_dataexch_hdf5.h5,file_sdf.sdfstk)
         
         self.data_struct.exchange.data = self.absdata
         self.data_struct.exchange.data_signal = 1
-        self.data_struct.exchange.data_axes='x:y'
+        self.data_struct.exchange.data_axes='x:y:energy'
         
         self.data_struct.exchange.energy=self.ev
         self.data_struct.exchange.energy_units = 'ev'
