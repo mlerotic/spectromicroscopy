@@ -48,7 +48,7 @@ import henke
 
 from helpers import resource_path
 import file_plugins
-File_GUI = file_plugins.File_GUI()
+
 
 version = '2.0.9'
 
@@ -79,6 +79,43 @@ class common:
         self.filename = ''
 
         self.font = ''
+
+
+#----------------------------------------------------------------------
+class File_GUI():
+    """
+    Ask user to choose file and then use an appropriate plugin to read and return a data structure.
+    """
+    def __init__(self):
+        self.last_path = dict([a,dict([t,os.getcwd()] for t in file_plugins.data_types)] for a in file_plugins.actions)
+        self.last_filter = dict([a,dict([t,0] for t in file_plugins.data_types)] for a in file_plugins.actions)
+        self.supported_filters = file_plugins.supported_filters
+        self.filter_list = file_plugins.filter_list
+    
+    def SelectFile(self,action,data_type):
+        dlg=QtGui.QFileDialog(None)
+        dlg.setWindowTitle('Choose File')
+        dlg.setViewMode(QtGui.QFileDialog.Detail)
+        if action == "write":
+            dlg.setAcceptMode(QtGui.QFileDialog.AcceptSave)
+        dlg.setDirectory(self.last_path[action][data_type])
+        dlg.setFilters(self.filter_list[action][data_type])
+        dlg.selectFilter(self.filter_list[action][data_type][self.last_filter[action][data_type]])
+        if dlg.exec_(): #if not cancelled
+            self.last_path[action][data_type] = os.path.split(str(dlg.selectedFiles()[0]))[0]
+            chosen_plugin = None
+            for i,filt in enumerate(self.filter_list[action][data_type][1:-1]):
+                if filt==dlg.selectedFilter():
+                    chosen_plugin = file_plugins.plugins[i]
+                    break
+            if chosen_plugin is not None:
+                self.last_filter[action][data_type] = i+1
+            return (str(dlg.selectedFiles()[0]),chosen_plugin)
+        else:
+            print "cancelled"
+            return (None,None)
+
+File_GUI = File_GUI()
 
 """ ------------------------------------------------------------------------------------------------"""
 class PageNNMA(QtGui.QWidget):
@@ -10493,34 +10530,6 @@ class PageLoadData(QtGui.QWidget):
         self.button_multiload.clicked.connect( self.OnLoadMulti)
         vbox1.addWidget(self.button_multiload)
         
-        self.button_hdf5 = QtGui.QPushButton('  Load HDF5 Exchange Stack (*.hdf5) - APS  ')
-        self.button_hdf5.clicked.connect( self.OnLoadHDF5)
-        vbox1.addWidget(self.button_hdf5)
-        
-        #self.button_hdf5_2 = QtGui.QPushButton('  Load HDF5 Nexus Stack (*.hdf5) - DLS  ')
-        #self.button_hdf5_2.clicked.connect( self.OnLoadHDF5)
-        #vbox1.addWidget(self.button_hdf5_2)
-        
-        #self.button_sdf = QtGui.QPushButton('Load SDF Stack (*.hdr) - ALS, SLS, Bessy')
-        #self.button_sdf.clicked.connect( self.OnLoadSDF)   
-        #vbox1.addWidget(self.button_sdf)
-        
-        self.button_stk = QtGui.QPushButton('Load STK Stack (*.stk) - NSLS')
-        self.button_stk.clicked.connect( self.OnLoadSTK)   
-        vbox1.addWidget(self.button_stk)
-        
-        self.button_xrm = QtGui.QPushButton('Load XRM Image (*.xrm) - Xradia')
-        self.button_xrm.clicked.connect( self.OnLoadXRM)
-        vbox1.addWidget(self.button_xrm)
-        
-        self.button_txrm = QtGui.QPushButton('Load TXRM Stack (*.txrm) - Xradia')
-        self.button_txrm.clicked.connect( self.OnLoadTXRM)
-        vbox1.addWidget(self.button_txrm)    
-        
-        self.button_tif = QtGui.QPushButton( 'Load Multi-Page TIF Stack (*.tif)')
-        self.button_tif.clicked.connect( self.OnLoadTIF)
-        vbox1.addWidget(self.button_tif)      
-
         sizer1.setLayout(vbox1)
 
         #panel 2
@@ -10636,44 +10645,8 @@ class PageLoadData(QtGui.QWidget):
 #----------------------------------------------------------------------          
     def OnLoadMulti(self, event):
 
-        self.window().LoadStack(False)
+        self.window().LoadStack()
         
-#----------------------------------------------------------------------          
-    def OnLoadHDF5(self, event):
-
-        wildcard =  'HDF5 files (*.hdf5)'
-        self.window().LoadStack(wildcard)
-        
-#----------------------------------------------------------------------          
-    #def OnLoadSDF(self, event):
-
-        #wildcard =  "SDF files (*.hdr)" 
-        #self.window().LoadStack(wildcard)
-                
-#----------------------------------------------------------------------          
-    def OnLoadSTK(self, event):
-
-        wildcard =  "STK files (*.stk)" 
-        self.window().LoadStack(wildcard)
-        
-#----------------------------------------------------------------------          
-    def OnLoadTXRM(self, event):
-
-        wildcard =  "TXRM (*.txrm)" 
-        self.window().LoadStack(wildcard)
-
-#----------------------------------------------------------------------          
-    def OnLoadXRM(self, event):
-
-        wildcard =  "XRM (*.xrm)" 
-        self.window().LoadStack(wildcard)
-
-#----------------------------------------------------------------------          
-    def OnLoadTIF(self, event):
-
-        wildcard =  "TIF (*.tif)" 
-        self.window().LoadStack(wildcard)
-                
 #----------------------------------------------------------------------          
     def OnBuildStack(self, event):
 
@@ -11253,129 +11226,23 @@ class MainFrame(QtGui.QMainWindow):
         self.actionInfo.triggered.connect(self.onAbout)
         
 #----------------------------------------------------------------------
-    def LoadStack(self, wildcard = ''):
+    def LoadStack(self):
         """
         Browse for a stack file:
         """
 
         #try:
         if True:
-            if wildcard == False:
-                filepath, plugin = File_GUI.SelectFile('read','stack')
-                if filepath is not None:
-                    if plugin is None:
-                        plugin = file_plugins.identify(filepath)
-                    print filepath, '\t', plugin.title
-                    if self.common.stack_loaded == 1:
-                        self.new_stack_refresh()
-                        self.stk.new_data()
-                        self.anlz.delete_data()
-                    #plugin.read_old( filepath, self.stk)
-                    plugin.read(self.stk, filepath)
-                    directory =  os.path.dirname(str(filepath))
-                    self.page1.filename =  os.path.basename(str(filepath))
-            else:
-                filepath = QtGui.QFileDialog.getOpenFileName(self, 'Open file', '', wildcard)
-                
-
-                filepath = str(filepath)
-                if filepath == '':
-                    return
-                
-                
+            filepath, plugin = File_GUI.SelectFile('read','stack')
+            if filepath is not None:
+                if self.common.stack_loaded == 1:
+                    self.new_stack_refresh()
+                    self.stk.new_data()
+                    self.anlz.delete_data()
+                file_plugins.load(filepath, stack_object=self.stk, plugin=plugin)
                 directory =  os.path.dirname(str(filepath))
-                self.page4.DefaultDir = directory
                 self.page1.filename =  os.path.basename(str(filepath))
             
-                QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
-                basename, extension = os.path.splitext(self.page1.filename)      
-                
-                self.common.path = directory
-                self.common.filename = self.page1.filename
-                        
-                
-                if extension == '.hdr':            
-                    if self.common.stack_loaded == 1:
-                        self.new_stack_refresh()  
-                        self.stk.new_data()
-                        #self.stk.data_struct.delete_data()
-                        self.anlz.delete_data()    
-                    self.stk.read_sdf(filepath)        
-                            
-                
-                if extension == '.stk':            
-                    if self.common.stack_loaded == 1:
-                        self.new_stack_refresh()  
-                        self.stk.new_data()
-                        #self.stk.data_struct.delete_data()
-                        self.anlz.delete_data()       
-                    self.stk.read_stk(filepath)     
-                    
-
-                    
-                elif extension == '.hdf5':
-                    if self.common.stack_loaded == 1:
-                        self.new_stack_refresh()  
-                        self.stk.new_data()
-                        #self.stk.data_struct.delete_data()
-                        self.anlz.delete_data()                
-
-                    #format, nregions = self.stk.check_h5_format(filepath)
-                    
-                    ##If this is a multiregion stack check which region to load
-                    #self.loadregion = 0 #0-load all regions
-                    #if nregions > 1:
-                        #QtGui.QApplication.restoreOverrideCursor()
-                        #inputter = InputRegionDialog(self, nregions = nregions)
-                        #inputter.exec_()
-
-                        #QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
-
-                    #self.stk.read_h5(filepath, format = format, loadregion = self.loadregion)
-                    self.stk.read_h5(filepath, format = 1, loadregion = 0)
-
-                    
-                elif extension == '.txrm':            
-                    if self.common.stack_loaded == 1:
-                        self.new_stack_refresh()  
-                        self.stk.new_data()
-                        #self.stk.data_struct.delete_data()
-                        self.anlz.delete_data()  
-                            
-                    self.stk.read_txrm(filepath)        
-                    
-                                
-                elif extension == '.xrm':              
-                    if self.common.stack_loaded == 1:
-                        self.new_stack_refresh()  
-                        self.stk.new_data()
-                        #self.stk.data_struct.delete_data()
-                        self.anlz.delete_data()  
-                            
-                    self.stk.read_xrm(filepath)        
-                    
-                elif extension == '.tif':              
-                    if self.common.stack_loaded == 1:
-                        self.new_stack_refresh()  
-                        self.stk.new_data()
-                        #self.stk.data_struct.delete_data()
-                        self.anlz.delete_data()  
-                            
-                    self.stk.read_tiff(filepath)    
-                    self.page1.show_scale_bar = 0
-                    self.page1.add_scale_cb.setChecked(False)
-                    
-                elif extension == '.dpt':              
-                    if self.common.stack_loaded == 1:
-                        self.new_stack_refresh()  
-                        self.stk.new_data()
-                        self.anlz.delete_data()  
-                            
-                    self.stk.read_dpt(filepath)  
-                    self.common.i0_loaded = 1
-                                
-
-
             #Update widgets 
             x=self.stk.n_cols
             y=self.stk.n_rows
