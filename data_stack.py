@@ -56,6 +56,7 @@ class data(file_stk.x1astk,file_dataexch_hdf5.h5, file_nexus_hdf5.h5data,
         self.i0_dwell = None 
         
         self.n_ev = 0
+        
 
 #----------------------------------------------------------------------   
     def new_data(self):
@@ -743,11 +744,23 @@ class data(file_stk.x1astk,file_dataexch_hdf5.h5, file_nexus_hdf5.h5data,
     
 #----------------------------------------------------------------------   
 #Register images using Fourier Shift Theorem
-    def register_images(self, ref_image, image2, have_ref_img_fft = False):
+#EdgeEnhancement: 0 = no edge enhacement; 1 = sobel; 2 = prewitt
+    def register_images(self, ref_image, image2, have_ref_img_fft = False, edge_enhancement = 0):
         
         if have_ref_img_fft == False:
-            self.ref_fft = np.fft.fftshift(np.fft.fft2(np.fft.fftshift(ref_image)))
-        img2_fft = np.fft.fftshift(np.fft.fft2(np.fft.fftshift(image2)))
+            if edge_enhancement == 1:
+                self.ref_fft = np.fft.fftshift(np.fft.fft2(np.fft.fftshift(scipy.ndimage.filters.sobel(ref_image))))
+            elif edge_enhancement == 2:
+                self.ref_fft = np.fft.fftshift(np.fft.fft2(np.fft.fftshift(scipy.ndimage.filters.prewitt(ref_image))))  
+            else:
+                self.ref_fft = np.fft.fftshift(np.fft.fft2(np.fft.fftshift(ref_image)))              
+            
+        if edge_enhancement == 1:
+            img2_fft = np.fft.fftshift(np.fft.fft2(np.fft.fftshift(scipy.ndimage.filters.sobel(image2))))
+        if edge_enhancement == 2:
+            img2_fft = np.fft.fftshift(np.fft.fft2(np.fft.fftshift(scipy.ndimage.filters.prewitt(image2))))     
+        else:
+            img2_fft = np.fft.fftshift(np.fft.fft2(np.fft.fftshift(image2)))
         
         fr = (self.ref_fft*img2_fft.conjugate())/(np.abs(self.ref_fft)*np.abs(img2_fft))
         fr = np.fft.fftshift(np.fft.ifft2(np.fft.fftshift(fr)))
@@ -781,6 +794,7 @@ class data(file_stk.x1astk,file_dataexch_hdf5.h5, file_nexus_hdf5.h5data,
         xshift = xf - np.float(shape[0])/2.0
         yshift = yf - np.float(shape[1])/2.0
         
+                
                 
         return xshift, yshift, fr
     

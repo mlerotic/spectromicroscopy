@@ -48,7 +48,7 @@ import henke
 
 from helpers import resource_path
 
-version = '2.0.11'
+version = '2.1.0'
 
 Winsizex = 1000
 Winsizey = 700
@@ -8701,7 +8701,7 @@ class ImageRegistration(QtGui.QDialog):
         
         self.parent = parent
         
-        self.resize(850, 700)
+        self.resize(1050, 700)
         self.setWindowTitle('Stack Alignment')
         
         pal = QtGui.QPalette()
@@ -8737,6 +8737,8 @@ class ImageRegistration(QtGui.QDialog):
         
         self.showccorr = 0
         
+        self.edgee = 0
+        
         self.subregion = 0
         self.sr_x1 = 0
         self.sr_x2 = 0
@@ -8757,7 +8759,7 @@ class ImageRegistration(QtGui.QDialog):
         frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
    
-        self.absimgfig = Figure((3.0, 3.0))
+        self.absimgfig = Figure((4.0, 4.0))
         self.AbsImagePanel = FigureCanvas(self.absimgfig)
         self.AbsImagePanel.setParent(self)
         self.AbsImagePanel.mpl_connect('button_press_event', self.OnPointCorrimage)
@@ -8840,13 +8842,15 @@ class ImageRegistration(QtGui.QDialog):
         vbox9 = QtGui.QVBoxLayout()
         vbox9.setSpacing(0)
          
-        self.rb_auto = QtGui.QRadioButton( 'Automatic Alignment', self)
-        self.rb_man = QtGui.QRadioButton('Manual Alignment',self)
+        groupBox9 = QtGui.QGroupBox()
+        self.rb_auto = QtGui.QRadioButton( 'Automatic Alignment')
+        self.rb_man = QtGui.QRadioButton('Manual Alignment')
         self.rb_auto.setChecked(True)
         self.rb_auto.toggled.connect(self.Onrb_automanual)
          
         vbox9.addWidget(self.rb_auto)
         vbox9.addWidget(self.rb_man)
+        groupBox9.setLayout(vbox9)
  
                 
          
@@ -8859,15 +8863,33 @@ class ImageRegistration(QtGui.QDialog):
         self.button_refimg = QtGui.QPushButton('Set as Reference Image')
         self.button_refimg.clicked.connect(self.SetRefImage)
         vbox8.addWidget(self.button_refimg)
+        
+        self.button_refimgsave = QtGui.QPushButton('Save Reference Image')
+        self.button_refimgsave.clicked.connect(self.SaveRefImage)
+        self.button_refimgsave.setEnabled(False)
+        vbox8.addWidget(self.button_refimgsave)
+        
+        self.button_refimgsload = QtGui.QPushButton('Load Reference Image')
+        self.button_refimgsload.clicked.connect(self.LoadRefImage)
+        vbox8.addWidget(self.button_refimgsload)
+        
+        line = QtGui.QFrame()
+        line.setFrameShape(QtGui.QFrame.HLine)
+        line.setFrameShadow(QtGui.QFrame.Sunken) 
+        
+        
+        vbox8.addSpacing(5)
+        vbox8.addWidget(line) 
+        vbox8.addSpacing(5)  
+        
          
-        self.button_remove = QtGui.QPushButton('Remove image')
+        self.button_remove = QtGui.QPushButton('Remove image from stack')
         self.button_remove.clicked.connect(self.OnRemoveImage)    
         vbox8.addWidget(self.button_remove)
                
         sizer8.setLayout(vbox8)
  
-         
-         
+            
          
         #panel 4
         sizer4 = QtGui.QGroupBox('Automatic Alignment')
@@ -8878,7 +8900,7 @@ class ImageRegistration(QtGui.QDialog):
         self.button_register.clicked.connect(self.OnCalcRegistration)   
         self.button_register.setEnabled(False)     
         vbox4.addWidget(self.button_register)
-        vbox4.addStretch(1)
+        #vbox4.addStretch(1)
          
         self.button_subregion = QtGui.QPushButton('Select subregion on reference')
         self.button_subregion.clicked.connect(self.OnSelectSubregion)   
@@ -8890,6 +8912,25 @@ class ImageRegistration(QtGui.QDialog):
         self.button_delsubregion.setEnabled(False)     
         vbox4.addWidget(self.button_delsubregion)
         vbox4.addStretch(1)
+
+        groupBox4 = QtGui.QGroupBox()      
+        hbox43 = QtGui.QHBoxLayout()    
+        self.cb_edgeenh = QtGui.QCheckBox('Edge Enhancement', self) 
+        self.cb_edgeenh.stateChanged.connect(self.OnEdgeE)
+        hbox43.addWidget(self.cb_edgeenh)
+        
+        self.rb_sobel = QtGui.QRadioButton( 'Sobel')
+        self.rb_prewitt = QtGui.QRadioButton('Prewitt')
+        self.rb_prewitt.setChecked(True)
+        self.rb_sobel.setEnabled(False)
+        self.rb_prewitt.setEnabled(False)
+         
+        hbox43.addWidget(self.rb_prewitt) 
+        hbox43.addWidget(self.rb_sobel)
+        groupBox4.setLayout(hbox43)
+        
+        vbox4.addWidget(groupBox4)
+        
           
         hbox42 = QtGui.QHBoxLayout()
         text1 = QtGui.QLabel(self)
@@ -8924,7 +8965,7 @@ class ImageRegistration(QtGui.QDialog):
         frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
     
-        self.refimgfig = Figure((3.0, 3.0))
+        self.refimgfig = Figure((4.0, 4.0))
         self.RefImagePanel = FigureCanvas(self.refimgfig)
         self.RefImagePanel.setParent(self)
         self.RefImagePanel.setCursor(Qt.CrossCursor)
@@ -8988,10 +9029,7 @@ class ImageRegistration(QtGui.QDialog):
         self.button_saveimg.setEnabled(False)
         vbox7.addWidget(self.button_saveimg)
          
-        self.button_crop = QtGui.QPushButton('Crop aligned images')
-        self.button_crop.clicked.connect(self.OnCropShifts)   
-        self.button_crop.setEnabled(False)
-        vbox7.addWidget(self.button_crop)
+
  
         self.button_saveshifts = QtGui.QPushButton('Save image shifts')
         self.button_saveshifts.clicked.connect(self.OnSaveShifts)
@@ -9001,13 +9039,18 @@ class ImageRegistration(QtGui.QDialog):
         self.button_loadshifts = QtGui.QPushButton('Load image shifts')
         self.button_loadshifts.clicked.connect(self.OnLoadShifts)
         vbox7.addWidget(self.button_loadshifts)
+        
+        self.button_crop = QtGui.QPushButton('Crop aligned images')
+        self.button_crop.clicked.connect(self.OnCropShifts)   
+        self.button_crop.setEnabled(False)
+        vbox7.addWidget(self.button_crop)    
                  
-        self.button_accept = QtGui.QPushButton('Accept changes')
+        self.button_accept = QtGui.QPushButton('Apply Alignment')
         self.button_accept.clicked.connect(self.OnAccept)
         self.button_accept.setEnabled(False)
         vbox7.addWidget(self.button_accept)
          
-        self.button_close = QtGui.QPushButton('Dismiss changes')
+        self.button_close = QtGui.QPushButton('Dismiss')
         self.button_close.clicked.connect(self.close)
         vbox7.addWidget(self.button_close)
          
@@ -9023,7 +9066,7 @@ class ImageRegistration(QtGui.QDialog):
 
         vboxL.addWidget(sizer8)
         vboxL.addStretch(1)
-        vboxL.addLayout(vbox9)
+        vboxL.addWidget(groupBox9)
         vboxL.addStretch(1)
         vboxL.addWidget(sizer4)
         vboxL.addStretch(1)
@@ -9039,6 +9082,7 @@ class ImageRegistration(QtGui.QDialog):
          
         hboxRB.addLayout(vbox3)
         hboxRB.addLayout(vbox2)
+        hboxRB.addStretch(1)
         
         vboxR.addStretch(0.2)
         vboxR.addLayout(hboxRT)
@@ -9126,7 +9170,45 @@ class ImageRegistration(QtGui.QDialog):
         
         self.UpdateWidgets()
         
+        
+#----------------------------------------------------------------------        
+    def SaveRefImage(self):
+        
+        wildcard = "TIFF File (*.tif);;"
 
+        fileName = QtGui.QFileDialog.getSaveFileName(self, 'Save Reference Image', '', wildcard)
+
+        fileName = str(fileName)
+        if fileName == '':
+            return
+    
+        
+        from PIL import Image  
+        img1 = Image.fromarray(self.ref_image)
+        img1.save(fileName)
+        
+        
+#----------------------------------------------------------------------        
+    def LoadRefImage(self):
+        
+        wildcard = "TIFF File (*.tif);;"
+
+        fileName = QtGui.QFileDialog.getOpenFileName(self, 'Save Reference Image', '', wildcard)
+
+        fileName = str(fileName)
+        if fileName == '':
+            return
+        
+        from PIL import Image  
+        img = Image.open(fileName)
+        
+        self.ref_image = npy.array((img))
+        
+        self.ShowRefImage()
+        self.have_ref_image = 1
+        
+        self.UpdateWidgets()
+    
 #----------------------------------------------------------------------        
     def ShowRefImage(self):
 
@@ -9174,7 +9256,6 @@ class ImageRegistration(QtGui.QDialog):
 
         self.RefImagePanel.draw()
         
-        self.tc_refimg.setText('Reference image at energy: {0:5.2f} eV'.format(float(self.stack.ev[self.ref_image_index])))
 
 #----------------------------------------------------------------------          
     def Onrb_automanual(self, enabled):
@@ -9255,7 +9336,19 @@ class ImageRegistration(QtGui.QDialog):
             self.showccorr = 1
         else: 
             self.showccorr = 0
-
+            
+            
+#----------------------------------------------------------------------           
+    def OnEdgeE(self, state):
+        
+        if state == QtCore.Qt.Checked:
+            self.edgee = 1
+            self.rb_sobel.setEnabled(True)
+            self.rb_prewitt.setEnabled(True)
+        else: 
+            self.edgee = 0
+            self.rb_sobel.setEnabled(False)
+            self.rb_prewitt.setEnabled(False)
 
 #----------------------------------------------------------------------           
     def OnSetMaxShift(self, value):
@@ -9303,6 +9396,14 @@ class ImageRegistration(QtGui.QDialog):
         
         QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
         
+        #Get Edge enhancement info
+        edge = 0
+        if self.edgee > 0:
+            if self.rb_sobel.isChecked():
+                edge = 1
+            else:
+                edge = 2
+        
         #Subregion selection on a reference image
         if self.subregion == 0:
             self.sr_x1 = 0
@@ -9322,13 +9423,15 @@ class ImageRegistration(QtGui.QDialog):
                
             if i==0:     
                 xshift, yshift, ccorr = self.stack.register_images(referenceimage, img2, 
-                                                          have_ref_img_fft = False)   
+                                                          have_ref_img_fft = False,
+                                                          edge_enhancement = edge)   
             elif i==self.ref_image_index:
                 xshift = 0
                 yshift = 0       
             else:
                 xshift, yshift, ccorr = self.stack.register_images(referenceimage, img2, 
-                                                          have_ref_img_fft = True)
+                                                          have_ref_img_fft = True,
+                                                          edge_enhancement =  edge)
             
             #Limit the shifts to MAXSHIFT chosen by the user
             if (self.maxshift > 0):
@@ -9841,9 +9944,11 @@ class ImageRegistration(QtGui.QDialog):
             if self.have_ref_image == 1:
                 self.button_register.setEnabled(True)
                 self.button_subregion.setEnabled(True)
+                self.button_refimgsave.setEnabled(True)
             else:
                 self.button_register.setEnabled(False)
                 self.button_subregion.setEnabled(False)
+                self.button_refimgsave.setEnabled(False)
                 self.button_delsubregion.setEnabled(False)
             
             if self.regist_calculated == 1:
@@ -9864,8 +9969,10 @@ class ImageRegistration(QtGui.QDialog):
             
             if self.have_ref_image == 1:
                 self.button_manalign.setEnabled(True)
+                self.button_refimgsave.setEnabled(True)
             else:
                 self.button_manalign.setEnabled(False)
+                self.button_refimgsave.setEnabled(False)
             
             if self.regist_calculated == 1:
                 self.button_crop.setEnabled(True)
@@ -10157,7 +10264,7 @@ class SpectralROI(QtGui.QDialog):
     def OnSave(self, evt):
         #Save images
 
-        wildcard = "Portable Network Graphics (*.png);;Adobe PDF Files (*.pdf);;"
+        wildcard = "Portable Network Graphics (*.png);;Adobe PDF Files (*.pdf);;TIFF File (*.tif);;"
 
         fileName = QtGui.QFileDialog.getSaveFileName(self, 'Save OD Map', '', wildcard)
 
@@ -10169,30 +10276,35 @@ class SpectralROI(QtGui.QDialog):
         ext = ext[1:].lower() 
                                
 
-        
        
-        if ext != 'png' and ext != 'pdf': 
+        if ext != 'png' and ext != 'pdf' and ext != 'tif': 
             error_message = ( 
                   'Only the PNG and PDF image formats are supported.\n' 
                  'A file extension of `png\' or `pdf\' must be used.') 
             QtGui.QMessageBox.warning(self, 'Error', 'Error - Could not save file.') 
             return 
-   
-        try: 
-
-            matplotlib.rcParams['pdf.fonttype'] = 42
+        
+        
+        if ext == 'tif':
+            from PIL import Image  
+            img1 = Image.fromarray(self.odthickmap)
+            img1.save(fileName)
+        else:
             
-            fig = self.odmfig
-            fig.savefig(fileName)
-
-            
-        except IOError, e:
-            if e.strerror:
-                err = e.strerror 
-            else: 
-                err = e 
-   
-            QtGui.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % err) 
+            try: 
+                matplotlib.rcParams['pdf.fonttype'] = 42
+                
+                fig = self.odmfig
+                fig.savefig(fileName)
+    
+                
+            except IOError, e:
+                if e.strerror:
+                    err = e.strerror 
+                else: 
+                    err = e 
+       
+                QtGui.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % err) 
             
 
 
