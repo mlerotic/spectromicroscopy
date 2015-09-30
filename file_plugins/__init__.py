@@ -37,9 +37,9 @@ for data_type in data_types:
 
 
 
-def load(filename,stack_object=None,plugin=None):
+def load(filename,stack_object=None,plugin=None,selection=None):
     """
-    Use the plugin to read the file and return the data structure passed by the plugin.
+    Pass the load command over to the appropriate plugin so that it can import data from the named file.
     """
     if plugin is None:
         plugin = identify(filename)
@@ -48,10 +48,27 @@ def load(filename,stack_object=None,plugin=None):
     else:
         print "load", filename, "with the", plugin.title, "plugin."
         if stack_object is None:
-            return plugin.read(None,filename)
+            return plugin.read(None,filename,selection)
         else:
-            plugin.read(stack_object,filename)
+            plugin.read(stack_object,filename,selection)
             return
+
+def GetFileStructure(filename,plugin=None):
+    """
+    Use the plugin to skim-read the file and return the structure of the data.
+    Returns None if there is only a single data array (i.e. no choices to be made).
+    """
+    if plugin is None:
+        plugin = identify(filename)
+    if plugin is None:
+        return None
+    else:
+        print "get info from", filename, "with the", plugin.title, "plugin."
+        FileInfo = plugin.GetFileStructure(filename)
+        if FileInfo is not None:
+            print len(FileInfo), len(FileInfo[next(iter(FileInfo))])
+            print FileInfo
+        return FileInfo
     
 def identify(filename):
     """
