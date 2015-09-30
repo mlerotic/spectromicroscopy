@@ -29,6 +29,8 @@ from PyQt4.QtCore import Qt, QCoreApplication
 import Tkinter
 import FileDialog
 
+from PIL import Image  
+
 
 import matplotlib 
 from numpy import NAN
@@ -550,7 +552,7 @@ class PageNNMA(QtGui.QWidget):
             
 #----------------------------------------------------------------------    
     def Save(self, filename, path, spec_png = True, spec_pdf = False, spec_svg = False, spec_csv = False,
-             map_png = True, map_pdf = False, map_svg = False, 
+             map_png = True, map_pdf = False, map_svg = False, map_tif = False,
              costf_png = True, costf_pdf = False, costf_svg = False): 
         
         
@@ -720,7 +722,7 @@ class PageNNMA(QtGui.QWidget):
 
             ext = 'svg'
                 
-            if map_pdf:
+            if map_svg:
                 for i in range(self.nComponents):
               
                     mapimage = self.nnma.tRecon[i, :,:]
@@ -756,7 +758,7 @@ class PageNNMA(QtGui.QWidget):
                     fileName_img = self.SaveFileName+"_NNMA_" +str(i+1)+"."+ext
                     fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
             
-            if spec_pdf:
+            if spec_svg:
                 for i in range(self.nComponents):
                 
                     
@@ -779,6 +781,15 @@ class PageNNMA(QtGui.QWidget):
                 
                     fileName_spec = self.SaveFileName+"_NNMAspectrum_" +str(i+1)+"."+ext
                     fig.savefig(fileName_spec)         
+                    
+                    
+            if map_tif:
+                for i in range(self.nComponents):
+                    mapimage = self.nnma.tRecon[i, :,:]
+                    fileName_img = self.SaveFileName+"_NNMA_" +str(i+1)+".tif"
+                    img1 = Image.fromarray(mapimage)
+                    img1.save(fileName_img)  
+                                
                                 
         except IOError, e:
             if e.strerror:
@@ -986,7 +997,9 @@ class SaveWinP5(QtGui.QDialog):
         st5 = QtGui.QLabel(self)
         st5.setText('.csv')
         st5.setFont(fontb)        
-        
+        st9 = QtGui.QLabel(self)
+        st9.setText('.tif (data)')
+        st9.setFont(fontb)             
         
         st6 = QtGui.QLabel(self)
         st6.setText('_spectrum')
@@ -1004,6 +1017,7 @@ class SaveWinP5(QtGui.QDialog):
         self.cb21.setChecked(True)
         self.cb22 = QtGui.QCheckBox('', self)
         self.cb23 = QtGui.QCheckBox('', self)
+        self.cb24 = QtGui.QCheckBox('', self)
         
         st8 = QtGui.QLabel(self)
         st8.setText('_costfunction')   
@@ -1017,6 +1031,7 @@ class SaveWinP5(QtGui.QDialog):
         gridtop.addWidget(st3, 0, 2)
         gridtop.addWidget(st4, 0, 3)
         gridtop.addWidget(st5, 0, 4)
+        gridtop.addWidget(st9, 0, 5)
                                 
         gridtop.addWidget(st6, 1, 0)
         gridtop.addWidget(self.cb11, 1, 1)
@@ -1027,7 +1042,8 @@ class SaveWinP5(QtGui.QDialog):
         gridtop.addWidget(st7, 2, 0)
         gridtop.addWidget(self.cb21, 2, 1)
         gridtop.addWidget(self.cb22, 2, 2) 
-        gridtop.addWidget(self.cb23, 2, 3)  
+        gridtop.addWidget(self.cb23, 2, 3) 
+        gridtop.addWidget(self.cb24, 2, 5)  
         
         gridtop.addWidget(st8, 3, 0)
         gridtop.addWidget(self.cb31, 3, 1)
@@ -1114,6 +1130,7 @@ class SaveWinP5(QtGui.QDialog):
         im_pdf = self.cb21.isChecked()
         im_png = self.cb22.isChecked()
         im_svg = self.cb23.isChecked()
+        im_tif = self.cb24.isChecked()
         cf_pdf = self.cb31.isChecked()
         cf_png = self.cb32.isChecked()
         cf_svg = self.cb33.isChecked()
@@ -1127,6 +1144,7 @@ class SaveWinP5(QtGui.QDialog):
                                map_png = im_png, 
                                map_pdf = im_pdf,
                                map_svg = im_svg,
+                               map_tif = im_tif,
                                costf_png = cf_png, 
                                costf_pdf = cf_pdf,
                                costf_svg = cf_svg)        
@@ -3360,26 +3378,28 @@ class PageSpectral(QtGui.QWidget):
         
 #----------------------------------------------------------------------
     def Save(self, filename, path, spec_png = True, spec_pdf = False, spec_svg = False, spec_csv = False, 
-             img_png = True, img_pdf = False, img_svg = False):
+             img_png = True, img_pdf = False, img_svg = False, img_tif = False):
 
         self.SaveFileName = os.path.join(path,filename)
    
         try: 
             if img_png:
-                self.SaveMaps(png_pdf=1)
+                self.SaveMaps(imgformat=1)
             if img_pdf:
-                self.SaveMaps(png_pdf=2)
+                self.SaveMaps(imgformat=2)
             if img_svg:
-                self.SaveMaps(png_pdf=3)
+                self.SaveMaps(imgformat=3)  
+            if img_tif:
+                self.SaveMaps(imgformat=0, savetif=True)
                 
             if spec_png:    
-                self.SaveSpectra(png_pdf=1)
+                self.SaveSpectra(imgformat=1)
             if spec_pdf:
-                self.SaveSpectra(png_pdf=2)
+                self.SaveSpectra(imgformat=2)
             if spec_pdf:
-                self.SaveSpectra(png_pdf=3)
+                self.SaveSpectra(imgformat=3)
             if spec_csv:
-                self.SaveSpectra(savecsv = True)
+                self.SaveSpectra(imgformat=0, savecsv = True)
                 
                 
             
@@ -3392,7 +3412,7 @@ class PageSpectral(QtGui.QWidget):
 
             
 #----------------------------------------------------------------------
-    def SaveSpectra(self, png_pdf=1, savecsv = False):
+    def SaveSpectra(self, imgformat=1, savecsv = False):
         
         
         from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas   
@@ -3400,16 +3420,26 @@ class PageSpectral(QtGui.QWidget):
             
         colors=['#FF0000','#000000','#FFFFFF']
         spanclrmap=matplotlib.colors.LinearSegmentedColormap.from_list('spancm',colors)
+           
+        if savecsv:
+            for i in range (self.anlz.n_target_spectra):
+                #Save spectra 
+                tspectrum = self.anlz.target_spectra[i, :]
+                fileName_spec = self.SaveFileName+"_Tspectrum_" +str(i+1)+".csv"
+                cname = 'Tspectrum_' +str(i+1)
+                self.stk.write_csv(fileName_spec, self.stk.ev, tspectrum, cname = cname)
+                
+        if imgformat == 0:
+            return
         
-        if png_pdf == 1:
+        if imgformat == 1:
             ext = 'png'
-        elif png_pdf == 2:
+        elif imgformat == 2:
             ext = 'pdf'
-        elif png_pdf == 3:
+        elif imgformat == 3:
             ext = 'svg'
         suffix = "." + ext
-        
-        
+                        
         for i in range (self.anlz.n_target_spectra):
             #Save spectra 
             tspectrum = self.anlz.target_spectra[i, :]
@@ -3441,13 +3471,7 @@ class PageSpectral(QtGui.QWidget):
             fileName_spec = self.SaveFileName+"_Tspectrum_" +str(i+1)+"."+ext
             fig.savefig(fileName_spec)    
             
-            
-            if savecsv:
-                fileName_spec = self.SaveFileName+"_Tspectrum_" +str(i+1)+".csv"
-                cname = 'Tspectrum_' +str(i+1)
-                self.stk.write_csv(fileName_spec, self.stk.ev, tspectrum, cname = cname)
-                
-               
+  
                 
         #Save combined:
  
@@ -3486,7 +3510,7 @@ class PageSpectral(QtGui.QWidget):
         
                 
 #----------------------------------------------------------------------
-    def SaveMaps(self, png_pdf=1):            
+    def SaveMaps(self, imgformat=1, savetif = False):            
             
             
         from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas  
@@ -3495,57 +3519,74 @@ class PageSpectral(QtGui.QWidget):
         colors=['#FF0000','#000000','#FFFFFF']
         spanclrmap=matplotlib.colors.LinearSegmentedColormap.from_list('spancm',colors)
             
-        if png_pdf == 1:
-            ext = 'png'
-        elif png_pdf == 2:
-            ext = 'pdf'
-        elif png_pdf == 3:
-            ext = 'svg'
-        suffix = "." + ext                       
-                       
-            
-        for i in range (self.anlz.n_target_spectra):   
-              
-            #Save composition maps
-            if self.showraw == True:
-                tsmapimage = self.anlz.target_svd_maps[:,:,i]
-            else:
-                tsmapimage = self.anlz.target_pcafit_maps[:,:,i] 
-  
-            fig = matplotlib.figure.Figure(figsize =(PlotH, PlotH))
-            canvas = FigureCanvas(fig)
-            fig.clf()
-            axes = fig.gca()
-    
-            divider = make_axes_locatable(axes)
-            ax_cb = divider.new_horizontal(size="3%", pad=0.03)  
-
-            fig.add_axes(ax_cb)
-            axes.set_position([0.03,0.03,0.8,0.94])
-        
-        
-            min_val = npy.min(tsmapimage)
-            max_val = npy.max(tsmapimage)
-            bound = npy.max((npy.abs(min_val), npy.abs(max_val)))
-        
-            if self.show_scale_bar == 1:
-                um_string = ' $\mathrm{\mu m}$'
-                microns = '$'+self.stk.scale_bar_string+' $'+um_string
-                axes.text(self.stk.scale_bar_pixels_x+10,self.stk.n_cols-9, microns, horizontalalignment='left', verticalalignment='center',
-                              color = 'white', fontsize=14)
-                #Matplotlib has flipped scales so I'm using rows instead of cols!
-                p = matplotlib.patches.Rectangle((5,self.stk.n_cols-10), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
-                                            color = 'white', fill = True)
-                axes.add_patch(p)     
-     
-            im = axes.imshow(tsmapimage, cmap=spanclrmap, vmin = -bound, vmax = bound)
-            cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
-    
-            axes.axis("off") 
                 
-                   
-            fileName_img = self.SaveFileName+"_TSmap_" +str(i+1)+"."+ext               
-            fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
+        if imgformat > 0 :
+            
+            if imgformat == 1:
+                ext = 'png'
+            elif imgformat == 2:
+                ext = 'pdf'
+            elif imgformat == 3:
+                ext = 'svg'
+            suffix = "." + ext  
+        
+            for i in range (self.anlz.n_target_spectra):   
+                  
+                #Save composition maps
+                if self.showraw == True:
+                    tsmapimage = self.anlz.target_svd_maps[:,:,i]
+                else:
+                    tsmapimage = self.anlz.target_pcafit_maps[:,:,i] 
+      
+                fig = matplotlib.figure.Figure(figsize =(PlotH, PlotH))
+                canvas = FigureCanvas(fig)
+                fig.clf()
+                axes = fig.gca()
+        
+                divider = make_axes_locatable(axes)
+                ax_cb = divider.new_horizontal(size="3%", pad=0.03)  
+    
+                fig.add_axes(ax_cb)
+                axes.set_position([0.03,0.03,0.8,0.94])
+            
+            
+                min_val = npy.min(tsmapimage)
+                max_val = npy.max(tsmapimage)
+                bound = npy.max((npy.abs(min_val), npy.abs(max_val)))
+            
+                if self.show_scale_bar == 1:
+                    um_string = ' $\mathrm{\mu m}$'
+                    microns = '$'+self.stk.scale_bar_string+' $'+um_string
+                    axes.text(self.stk.scale_bar_pixels_x+10,self.stk.n_cols-9, microns, horizontalalignment='left', verticalalignment='center',
+                                  color = 'white', fontsize=14)
+                    #Matplotlib has flipped scales so I'm using rows instead of cols!
+                    p = matplotlib.patches.Rectangle((5,self.stk.n_cols-10), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
+                                                color = 'white', fill = True)
+                    axes.add_patch(p)     
+         
+                im = axes.imshow(tsmapimage, cmap=spanclrmap, vmin = -bound, vmax = bound)
+                cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
+        
+                axes.axis("off") 
+                    
+                       
+                fileName_img = self.SaveFileName+"_TSmap_" +str(i+1)+"."+ext               
+                fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
+                
+        else:
+            for i in range (self.anlz.n_target_spectra):   
+                  
+                #Save composition maps
+                if self.showraw == True:
+                    tsmapimage = self.anlz.target_svd_maps[:,:,i]
+                else:
+                    tsmapimage = self.anlz.target_pcafit_maps[:,:,i]     
+                    
+                fileName_img = self.SaveFileName+"_TSmap_" +str(i+1)+".tif"     
+                
+                img1 = Image.fromarray(tsmapimage)
+                img1.save(fileName_img)          
+                
             
 #----------------------------------------------------------------------        
     def OnEditSpectraListClick(self):
@@ -4364,7 +4405,9 @@ class SaveWinP4(QtGui.QDialog):
         st5 = QtGui.QLabel(self)
         st5.setText('.csv')
         st5.setFont(fontb)        
-        
+        st8 = QtGui.QLabel(self)
+        st8.setText('.tif (data)')
+        st8.setFont(fontb)          
         
         st6 = QtGui.QLabel(self)
         st6.setText('_spectrum')
@@ -4382,6 +4425,7 @@ class SaveWinP4(QtGui.QDialog):
         self.cb21.setChecked(True)
         self.cb22 = QtGui.QCheckBox('', self)
         self.cb23 = QtGui.QCheckBox('', self)
+        self.cb24 = QtGui.QCheckBox('', self)
         
 
         
@@ -4390,6 +4434,7 @@ class SaveWinP4(QtGui.QDialog):
         gridtop.addWidget(st3, 0, 2)
         gridtop.addWidget(st4, 0, 3)
         gridtop.addWidget(st5, 0, 4)
+        gridtop.addWidget(st8, 0, 5)
                                 
         gridtop.addWidget(st6, 1, 0)
         gridtop.addWidget(self.cb11, 1, 1)
@@ -4401,6 +4446,7 @@ class SaveWinP4(QtGui.QDialog):
         gridtop.addWidget(self.cb21, 2, 1)
         gridtop.addWidget(self.cb22, 2, 2) 
         gridtop.addWidget(self.cb23, 2, 3)  
+        gridtop.addWidget(self.cb24, 2, 5) 
         
 
                 
@@ -4484,6 +4530,7 @@ class SaveWinP4(QtGui.QDialog):
         im_pdf = self.cb21.isChecked()
         im_png = self.cb22.isChecked()
         im_svg = self.cb23.isChecked()
+        im_tif = self.cb24.isChecked()
 
         
         self.close() 
@@ -4494,7 +4541,8 @@ class SaveWinP4(QtGui.QDialog):
                                          spec_csv = sp_csv,
                                          img_png = im_png, 
                                          img_pdf = im_pdf,
-                                         img_svg = im_svg)
+                                         img_svg = im_svg,
+                                         img_tif = im_tif)
 
 
     
@@ -5043,8 +5091,8 @@ class PageCluster(QtGui.QWidget):
         
 #----------------------------------------------------------------------    
     def Save(self, filename, path, spec_png = True, spec_pdf = False, spec_svg = False, spec_csv = False,
-             img_png = True, img_pdf = False, img_svg = False, 
-             indimgs_png = True, indimgs_pdf = False, indimgs_svg = False,
+             img_png = True, img_pdf = False, img_svg = False, img_tif = False,
+             indimgs_png = True, indimgs_pdf = False, indimgs_svg = False, indimgs_tif = False,
              scatt_png = True, scatt_pdf = False, scatt_svg = False): 
         
         self.SaveFileName = os.path.join(path,filename)
@@ -5102,7 +5150,11 @@ class PageCluster(QtGui.QWidget):
                 fileName_caimg = self.SaveFileName+"_CAcimg."+ext       
                 fig.savefig(fileName_caimg, dpi=300, pad_inches = 0.0)
                             
-
+            if img_tif:
+                fileName_caimg = self.SaveFileName+"_CAcimg.tif"   
+                img1 = Image.fromarray(self.clusterimage)
+                img1.save(fileName_caimg)        
+                
                   
             ext = 'png'
             suffix = "." + ext
@@ -5307,7 +5359,20 @@ class PageCluster(QtGui.QWidget):
 
                 fileName_spec = self.SaveFileName+"_CAspectra"+"."+ext
                 fig.savefig(fileName_spec)  
-                               
+
+
+            if indimgs_tif:
+                for i in range (self.numclusters):
+              
+                    indvclusterimage = npy.zeros((self.anlz.stack.n_cols, self.anlz.stack.n_rows))+20.      
+                    ind = npy.where(self.anlz.cluster_indices == i)    
+                    colorcl = min(i,9)
+                    indvclusterimage[ind] = colorcl
+
+                    fileName_img = self.SaveFileName+"_CAimg_" +str(i+1)+".tif" 
+                    img1 = Image.fromarray(indvclusterimage)
+                    img1.save(fileName_img) 
+                        
                     
             if scatt_png:
                 self.SaveScatt(png_pdf = 1)
@@ -5602,7 +5667,9 @@ class SaveWinP3(QtGui.QDialog):
         st5 = QtGui.QLabel(self)
         st5.setText('.csv')
         st5.setFont(fontb)        
-        
+        st10 = QtGui.QLabel(self)
+        st10.setText('.tif (data)')
+        st10.setFont(fontb)                
         
         st6 = QtGui.QLabel(self)
         st6.setText('_spectrum')
@@ -5620,6 +5687,7 @@ class SaveWinP3(QtGui.QDialog):
         self.cb21.setChecked(True)
         self.cb22 = QtGui.QCheckBox('', self)
         self.cb23 = QtGui.QCheckBox('', self)
+        self.cb24 = QtGui.QCheckBox('', self)
         
         st8 = QtGui.QLabel(self)
         st8.setText('_individual_images')  
@@ -5628,6 +5696,7 @@ class SaveWinP3(QtGui.QDialog):
         self.cb31.setChecked(True) 
         self.cb32 = QtGui.QCheckBox('', self)
         self.cb33 = QtGui.QCheckBox('', self)
+        self.cb34 = QtGui.QCheckBox('', self)
 
         st9 = QtGui.QLabel(self)
         st9.setText('_scatter_plots')  
@@ -5643,6 +5712,7 @@ class SaveWinP3(QtGui.QDialog):
         gridtop.addWidget(st3, 0, 2)
         gridtop.addWidget(st4, 0, 3)
         gridtop.addWidget(st5, 0, 4)
+        gridtop.addWidget(st10, 0, 5)
                                 
         gridtop.addWidget(st6, 1, 0)
         gridtop.addWidget(self.cb11, 1, 1)
@@ -5654,11 +5724,13 @@ class SaveWinP3(QtGui.QDialog):
         gridtop.addWidget(self.cb21, 2, 1)
         gridtop.addWidget(self.cb22, 2, 2) 
         gridtop.addWidget(self.cb23, 2, 3)  
+        gridtop.addWidget(self.cb24, 2, 5) 
         
         gridtop.addWidget(st8, 3, 0)
         gridtop.addWidget(self.cb31, 3, 1)
         gridtop.addWidget(self.cb32, 3, 2)  
         gridtop.addWidget(self.cb33, 3, 3)
+        gridtop.addWidget(self.cb34, 3, 5)
         
         gridtop.addWidget(st9, 4, 0)
         gridtop.addWidget(self.cb41, 4, 1)
@@ -5746,9 +5818,11 @@ class SaveWinP3(QtGui.QDialog):
         im_pdf = self.cb21.isChecked()
         im_png = self.cb22.isChecked()
         im_svg = self.cb23.isChecked()
+        im_tif = self.cb24.isChecked()
         indim_pdf = self.cb31.isChecked()
         indim_png = self.cb32.isChecked()
         indim_svg = self.cb33.isChecked()
+        indim_tif = self.cb34.isChecked()
         scatt_pdf = self.cb41.isChecked()
         scatt_png = self.cb42.isChecked()
         scatt_svg = self.cb43.isChecked()
@@ -5762,9 +5836,11 @@ class SaveWinP3(QtGui.QDialog):
                                          img_png = im_png, 
                                          img_pdf = im_pdf,
                                          img_svg = im_svg,
+                                         img_tif = im_tif,
                                          indimgs_png = indim_png, 
                                          indimgs_pdf = indim_pdf,
                                          indimgs_svg = indim_svg,
+                                         indimgs_tif = indim_tif,
                                          scatt_png = scatt_png,
                                          scatt_pdf = scatt_pdf,
                                          scatt_svg = scatt_svg)   
@@ -6046,7 +6122,7 @@ class PagePCA(QtGui.QWidget):
             
 #----------------------------------------------------------------------    
     def Save(self, filename, path, spec_png = True, spec_pdf = False, spec_svg = False, spec_csv = False,
-             img_png = True, img_pdf = False, img_svg = False, 
+             img_png = True, img_pdf = False, img_svg = False, img_tif = False,
              evals_png = True, evals_pdf = False, evals_svg = False): 
         
         
@@ -6172,7 +6248,7 @@ class PagePCA(QtGui.QWidget):
             ext = 'svg'
             suffix = "." + ext        
                 
-            if img_pdf:
+            if img_svg:
                 for i in range (self.numsigpca):
               
                     self.pcaimage = self.anlz.pcaimages[:,:,i]
@@ -6193,7 +6269,7 @@ class PagePCA(QtGui.QWidget):
                     fileName_img = self.SaveFileName+"_PCA_" +str(i+1)+"."+ext
                     fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
             
-            if spec_pdf:
+            if spec_svg:
                 for i in range (self.numsigpca):
                 
                     self.pcaspectrum = self.anlz.eigenvecs[:,i]
@@ -6206,7 +6282,17 @@ class PagePCA(QtGui.QWidget):
                     axes.set_ylabel('Optical Density')
                 
                     fileName_spec = self.SaveFileName+"_PCAspectrum_" +str(i+1)+"."+ext
-                    fig.savefig(fileName_spec)         
+                    fig.savefig(fileName_spec)  
+                    
+            if img_tif:
+                for i in range (self.numsigpca):
+              
+                    self.pcaimage = self.anlz.pcaimages[:,:,i]
+                              
+                    fileName_img = self.SaveFileName+"_PCA_" +str(i+1)+".tif"
+
+                    img1 = Image.fromarray(self.pcaimage)
+                    img1.save(fileName_img)
                                 
         except IOError, e:
             if e.strerror:
@@ -6344,6 +6430,9 @@ class SaveWinP2(QtGui.QDialog):
         st4 = QtGui.QLabel(self)
         st4.setText('.svg')
         st4.setFont(fontb)
+        st9 = QtGui.QLabel(self)
+        st9.setText('.tif (data)')
+        st9.setFont(fontb)    
         st5 = QtGui.QLabel(self)
         st5.setText('.csv')
         st5.setFont(fontb)        
@@ -6365,6 +6454,7 @@ class SaveWinP2(QtGui.QDialog):
         self.cb21.setChecked(True)
         self.cb22 = QtGui.QCheckBox('', self)
         self.cb23 = QtGui.QCheckBox('', self)
+        self.cb24 = QtGui.QCheckBox('', self)
         
         st8 = QtGui.QLabel(self)
         st8.setText('_eigenvals')   
@@ -6377,6 +6467,7 @@ class SaveWinP2(QtGui.QDialog):
         gridtop.addWidget(st2, 0, 1)
         gridtop.addWidget(st3, 0, 2)
         gridtop.addWidget(st4, 0, 3)
+        gridtop.addWidget(st9, 0, 5)
         gridtop.addWidget(st5, 0, 4)
                                 
         gridtop.addWidget(st6, 1, 0)
@@ -6389,6 +6480,7 @@ class SaveWinP2(QtGui.QDialog):
         gridtop.addWidget(self.cb21, 2, 1)
         gridtop.addWidget(self.cb22, 2, 2) 
         gridtop.addWidget(self.cb23, 2, 3)  
+        gridtop.addWidget(self.cb24, 2, 5)  
         
         gridtop.addWidget(st8, 3, 0)
         gridtop.addWidget(self.cb31, 3, 1)
@@ -6475,6 +6567,7 @@ class SaveWinP2(QtGui.QDialog):
         im_pdf = self.cb21.isChecked()
         im_png = self.cb22.isChecked()
         im_svg = self.cb23.isChecked()
+        im_tif = self.cb24.isChecked()
         ev_pdf = self.cb31.isChecked()
         ev_png = self.cb32.isChecked()
         ev_svg = self.cb33.isChecked()
@@ -6488,6 +6581,7 @@ class SaveWinP2(QtGui.QDialog):
                                img_png = im_png, 
                                img_pdf = im_pdf,
                                img_svg = im_svg,
+                               img_tif = im_tif,
                                evals_png = ev_png, 
                                evals_pdf = ev_pdf,
                                evals_svg = ev_svg)        
@@ -7092,7 +7186,7 @@ class PageStack(QtGui.QWidget):
    
 #----------------------------------------------------------------------    
     def Save(self, filename, path, spec_png = True, spec_pdf = False, spec_svg = False, sp_csv = False, 
-             img_png = True, img_pdf = False, img_svg = False, img_all = False): 
+             img_png = True, img_pdf = False, img_svg = False, img_tif = False, img_all = False, img_all_tif = False): 
 
         self.SaveFileName = os.path.join(path,filename)
       
@@ -7139,6 +7233,24 @@ class PageStack(QtGui.QWidget):
                     fileName_img = self.SaveFileName+"_imnum_" +str(i+1)+"."+ext
                     fig.savefig(fileName_img,  dpi=ImgDpi, pad_inches = 0.0)
                 QtGui.QApplication.restoreOverrideCursor()
+                
+            #Save all images in the stack
+            if img_all_tif:
+                QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+     
+                for i in range (self.stk.n_ev):
+                    if self.showflux:
+                        #Show flux image      
+                        image = self.stk.absdata[:,:,i] 
+                    else:
+                        #Show OD image
+                        image = self.stk.od3d[:,:,i]
+                        
+                    fileName_img = self.SaveFileName+"_imnum_" +str(i+1)+".tif"
+                    img1 = Image.fromarray(image)
+                    img1.save(fileName_img)
+                                
+                QtGui.QApplication.restoreOverrideCursor()
                     
             ext = 'pdf'
             suffix = "." + ext
@@ -7170,8 +7282,16 @@ class PageStack(QtGui.QWidget):
                 fig = self.absimgfig
                 fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
                 
+            if img_tif:
+                fileName_img = self.SaveFileName+"_" +str(self.stk.ev[self.iev])+"eV.tif"
+                if self.showflux:     
+                    image = self.stk.absdata[:,:,self.iev] 
+                else:
+                    image = self.stk.od3d[:,:,self.iev]           
+                img1 = Image.fromarray(image)
+                img1.save(fileName_img)
 
-            
+                
         except IOError, e:
             if e.strerror:
                 err = e.strerror 
@@ -7900,6 +8020,9 @@ class SaveWinP1(QtGui.QDialog):
         st4 = QtGui.QLabel(self)
         st4.setText('.svg')
         st4.setFont(fontb)
+        st9 = QtGui.QLabel(self)
+        st9.setText('.tif (data)')
+        st9.setFont(fontb)
         st5 = QtGui.QLabel(self)
         st5.setText('.csv')
         st5.setFont(fontb)        
@@ -7927,16 +8050,21 @@ class SaveWinP1(QtGui.QDialog):
         
         self.cb23 = QtGui.QCheckBox('', self)
         
+        self.cb24 = QtGui.QCheckBox('', self)
+        
         st8 = QtGui.QLabel(self)
         st8.setText('all images')   
         
         self.cb32 = QtGui.QCheckBox('', self)
+        
+        self.cb34 = QtGui.QCheckBox('', self)
 
 
         gridtop.addWidget(st1, 0, 0)
         gridtop.addWidget(st2, 0, 1)
         gridtop.addWidget(st3, 0, 2)
         gridtop.addWidget(st4, 0, 3)
+        gridtop.addWidget(st9, 0, 5)
         gridtop.addWidget(st5, 0, 4)
                                 
         gridtop.addWidget(st6, 1, 0)
@@ -7948,10 +8076,12 @@ class SaveWinP1(QtGui.QDialog):
         gridtop.addWidget(st7, 2, 0)
         gridtop.addWidget(self.cb21, 2, 1)
         gridtop.addWidget(self.cb22, 2, 2) 
-        gridtop.addWidget(self.cb23, 2, 3)  
+        gridtop.addWidget(self.cb23, 2, 3) 
+        gridtop.addWidget(self.cb24, 2, 5)  
         
         gridtop.addWidget(st8, 3, 0)
         gridtop.addWidget(self.cb32, 3, 2)  
+        gridtop.addWidget(self.cb34, 3, 5)  
         
         vboxtop.addStretch(0.5)
         vboxtop.addLayout(gridtop)
@@ -8033,7 +8163,9 @@ class SaveWinP1(QtGui.QDialog):
         im_pdf = self.cb21.isChecked()
         im_png = self.cb22.isChecked()
         im_svg = self.cb23.isChecked()
+        im_tif = self.cb24.isChecked()
         im_all = self.cb32.isChecked()
+        im_all_tif = self.cb34.isChecked()
         
         self.close() 
         self.parent.page1.Save(self.filename, self.path,
@@ -8044,7 +8176,9 @@ class SaveWinP1(QtGui.QDialog):
                                          img_png = im_png, 
                                          img_pdf = im_pdf,
                                          img_svg = im_svg,
-                                         img_all = im_all)
+                                         img_tif = im_tif,
+                                         img_all = im_all,
+                                         img_all_tif = im_all_tif)
 
 
 
@@ -9189,7 +9323,6 @@ class ImageRegistration(QtGui.QDialog):
             return
     
         
-        from PIL import Image  
         img1 = Image.fromarray(self.ref_image)
         img1.save(fileName)
         
@@ -11671,7 +11804,8 @@ class MainFrame(QtGui.QMainWindow):
         try:
         #if True:
             if wildcard == False:
-                wildcard =  "HDF5 files (*.hdf5);;SDF files (*.hdr);;STK files (*.stk);;TXRM (*.txrm);;XRM (*.xrm);;TIF (*.tif);;FTIR (*.dpt)" 
+                #wildcard =  "HDF5 files (*.hdf5);;SDF files (*.hdr);;STK files (*.stk);;TXRM (*.txrm);;XRM (*.xrm);;TIF (*.tif);;FTIR (*.dpt)"
+                wildcard =  "HDF5 files (*.hdf5);;SDF files (*.hdr);;STK files (*.stk);;TXRM files (*.txrm);;XRM files (*.xrm);;TIF files (*.tif);;NCB files (*.ncb);;;;FTIR files (*.dpt);;"  
 
             filepath = QtGui.QFileDialog.getOpenFileName(self, 'Open file', '', wildcard)
             
