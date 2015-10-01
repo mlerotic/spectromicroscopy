@@ -916,6 +916,9 @@ class analyze:
         self.target_pcafit_maps = np.reshape(self.target_pcafit_maps, 
                                              (self.stack.n_cols, self.stack.n_rows, self.n_target_spectra), order='F')  
         
+        
+        self.original_fit_maps = self.target_pcafit_maps.copy()
+        
         #Find fit errors
         self.target_rms = (self.target_spectra-self.target_pcafit_spectra)**2
         self.target_rms = np.sqrt(np.sum(self.target_rms, axis=1)/self.stack.n_ev)
@@ -944,8 +947,20 @@ class analyze:
                                              (self.stack.n_cols, self.stack.n_rows, self.n_target_spectra), order='F') 
         
 
+        self.original_svd_maps = self.target_svd_maps.copy()
+        
+        
+#-----------------------------------------------------------------------------
+# Apply threshold on SVD or PCA maps
+    def svd_map_threshold(self, cutoff, svd = False, pca = False):
+        
+        if svd:
+            self.target_svd_maps = self.original_svd_maps.copy()
+            self.target_svd_maps.clip(min=cutoff, out=self.target_svd_maps)
 
-
+        if pca:
+            self.target_pcafit_maps = self.original_fit_maps.copy()
+            self.target_pcafit_maps.clip(min=cutoff, out=self.target_pcafit_maps)
 
 #-----------------------------------------------------------------------------
 # Find key energies by finding peaks and valleys in significant pca spectra

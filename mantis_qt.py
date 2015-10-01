@@ -3144,18 +3144,23 @@ class PageSpectral(QtGui.QWidget):
         self.button_loadtspec.setEnabled(False)
         vbox3.addWidget(self.button_loadtspec)
         self.button_addflat = QtGui.QPushButton('Add Flat Spectrum')
-        self.button_addflat.clicked.connect( self.OnFlatTSpec)
+        self.button_addflat.clicked.connect(self.OnFlatTSpec)
         self.button_addflat.setEnabled(False)
         vbox3.addWidget(self.button_addflat)
 
          
         self.button_showrgb = QtGui.QPushButton('Composite RGB image...')
-        self.button_showrgb.clicked.connect( self.OnCompositeRGB)   
+        self.button_showrgb.clicked.connect(self.OnCompositeRGB)   
         self.button_showrgb.setEnabled(False)
-        vbox3.addWidget(self.button_showrgb)        
+        vbox3.addWidget(self.button_showrgb)      
+        
+        self.button_histogram = QtGui.QPushButton('Histogram Value Cutoff...')
+        self.button_histogram.clicked.connect(self.OnHistogram)   
+        self.button_histogram.setEnabled(False)
+        vbox3.addWidget(self.button_histogram)     
  
         self.button_save = QtGui.QPushButton('Save Images...')
-        self.button_save.clicked.connect( self.OnSave)
+        self.button_save.clicked.connect(self.OnSave)
         self.button_save.setEnabled(False)
         vbox3.addWidget(self.button_save)
 
@@ -3240,11 +3245,7 @@ class PageSpectral(QtGui.QWidget):
        
         vbox4.addLayout(hbox4b)
         sizer4.setLayout(vbox4)
-         
-         
-
-
-         
+          
 
         hboxB.addLayout(vbox2)
         hboxB.addStretch(1)
@@ -3367,6 +3368,12 @@ class PageSpectral(QtGui.QWidget):
 
         compimgwin = ShowCompositeRBGmap(self.window(), self.com, self.anlz)
         compimgwin.show()
+        
+#----------------------------------------------------------------------
+    def OnHistogram(self, event):
+
+        hwin = ShowMapHistogram(self.window(), self.com, self.anlz)
+        hwin.show()
                 
 #----------------------------------------------------------------------
     def OnSave(self, event):
@@ -4349,6 +4356,128 @@ class ShowCompositeRBGmap(QtGui.QDialog):
         fig.savefig(SaveFileName, bbox_inches='tight', pad_inches = 0.0)
                 
    
+
+#---------------------------------------------------------------------- 
+class ShowMapHistogram(QtGui.QDialog):
+
+    def __init__(self, parent, common, analz):    
+        QtGui.QWidget.__init__(self, parent)
+        
+        self.parent = parent
+
+        
+        self.resize(600, 500)
+        self.setWindowTitle('Histogram')
+        
+        pal = QtGui.QPalette()
+        self.setAutoFillBackground(True)
+        pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
+        self.setPalette(pal)
+                
+        self.com = common 
+        self.anlz = analz
+      
+        vbox = QtGui.QVBoxLayout()
+               
+        frame = QtGui.QFrame()
+        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        fbox = QtGui.QHBoxLayout()
+   
+        self.histfig = Figure((6.0, 4.2))
+        self.HistogramPanel = FigureCanvas(self.histfig)
+        self.HistogramPanel.setParent(self)
+        self.HistogramPanel.mpl_connect('button_press_event', self.OnClick)
+        
+        
+        fbox.addWidget(self.HistogramPanel)
+        frame.setLayout(fbox)
+        vbox.addWidget(frame)
+        
+        
+                        
+        vbox1 = QtGui.QVBoxLayout()
+        sizer1 = QtGui.QGroupBox('Histogram Cutoff')
+        
+        st = QtGui.QLabel(self) 
+        st.setText('Select a cutoff value on the histogram. All the values bellow will be set to zero.')
+        
+        self.tl_cut = QtGui.QLabel(self) 
+        self.tl_cut.setText('Cutoff value: ')
+
+        vbox1.addWidget(st)
+        vbox1.addWidget(self.tl_cut)
+
+        sizer1.setLayout(vbox1)
+        vbox.addWidget(sizer1)
+                
+        hbox2 = QtGui.QHBoxLayout()
+        button_ok = QtGui.QPushButton('Accept')
+        button_ok.clicked.connect(self.OnAccept)
+        hbox2.addWidget(button_ok)
+                
+        button_cancel = QtGui.QPushButton('Cancel')
+        button_cancel.clicked.connect(self.close)
+        hbox2.addWidget(button_cancel)
+        
+        vbox.addLayout(hbox2)
+        
+        self.setLayout(vbox)
+        
+        self.draw_histogram()
+
+
+
+        
+#----------------------------------------------------------------------        
+    def draw_histogram(self):
+        
+     
+        fig = self.histfig
+        fig.clf()
+        fig.add_axes((0.15,0.15,0.75,0.75))
+        self.axes = fig.gca()
+
+        #target_svd_maps;target_pcafit_maps
+        if self.parent.page4.showraw == True:
+            self.histogram = self.anlz.original_svd_maps
+        else:
+            self.histogram = self.anlz.original_fit_maps
+            
+        
+        histdata = npy.reshape(self.histogram, (self.anlz.stack.n_cols*self.anlz.stack.n_rows*self.anlz.n_target_spectra), order='F')
+        
+        self.n, self.bins, patches = self.axes.hist(histdata, 200, normed=1, facecolor='green', alpha=0.75)
+        
+        self.axes.set_xlabel('Thickness per Pixel in Spectral Maps')
+        self.axes.set_ylabel('Percentage of Pixels')
+        
+        self.HistogramPanel.draw()
+        
+        
+
+#----------------------------------------------------------------------        
+    def OnClick(self, evt):
+        
+        x1 = evt.xdata
+        
+        if x1 == None:
+            return
+        
+        self.tl_cut.setText('Cutoff value: '+str(x1))
+        
+        self.histmin = x1
+
+
+        
+#----------------------------------------------------------------------        
+    def OnAccept(self, evt):
+        
+        if self.parent.page4.showraw == True:
+            self.anlz.svd_map_threshold(self.histmin, svd=True)
+        else:
+            self.anlz.svd_map_threshold(self.histmin, pca=True)
+        self.parent.page4.loadTargetMap()
+        self.close()
 
 
 #---------------------------------------------------------------------- 
@@ -12227,12 +12356,14 @@ class MainFrame(QtGui.QMainWindow):
             self.page4.button_movespup.setEnabled(False)
             self.page4.button_save.setEnabled(False)
             self.page4.button_showrgb.setEnabled(False) 
+            self.page4.button_histogram.setEnabled(False) 
         else:
             self.page4.button_removespec.setEnabled(True)
             self.page4.button_movespdown.setEnabled(True)
             self.page4.button_movespup.setEnabled(True)
             self.page4.button_save.setEnabled(True) 
             self.page4.button_showrgb.setEnabled(True)    
+            self.page4.button_histogram.setEnabled(True) 
             
         if self.page6 != None:
             if self.common.cluster_calculated == 0:   
