@@ -65,9 +65,9 @@ def GetFileStructure(filename,plugin=None):
     else:
         print "get info from", filename, "with the", plugin.title, "plugin."
         FileInfo = plugin.GetFileStructure(filename)
-        if FileInfo is not None:
-            print len(FileInfo), len(FileInfo[next(iter(FileInfo))])
-            print FileInfo
+        #if FileInfo is not None:
+            #print len(FileInfo), len(FileInfo[next(iter(FileInfo))])
+            #print FileInfo
         return FileInfo
     
 def identify(filename):

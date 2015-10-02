@@ -221,9 +221,9 @@ class File_GUI():
             self.addStretch(1)
             self.addWidget(QtGui.QLabel('Channels:'))
             self.channel_combobox = QtGui.QComboBox()
-            self.channel_combobox.currentIndexChanged.connect(self.setIndex)
             for c in contents:
                 self.channel_combobox.addItem(c)
+            self.channel_combobox.currentIndexChanged.connect(self.setIndex)
             self.addWidget(self.channel_combobox)
             self.addStretch(1)
             Data_Size_Label = QtGui.QLabel('Points: '+str(contents.data_shape))
@@ -236,15 +236,10 @@ class File_GUI():
         
         def setChecked(self,value=True):
             self.radioButton.setChecked(value)
-            #print "clicked", self.index, self.channel_combobox.currentIndex()
             self.parent().parent().selection = (self.index,self.channel_combobox.currentIndex())
 
         def setIndex(self):
-            #print "index", self.channel_combobox.currentIndex()
-            #print self.parent().parent().selection
-            #print self.index, self.parent().parent().selection[0]
             if self.index == self.parent().parent().selection[0]:
-                #print "update channel"
                 self.parent().parent().selection = (self.index,self.channel_combobox.currentIndex())
 
         def isEnabled(self):
@@ -11460,6 +11455,7 @@ class MainFrame(QtGui.QMainWindow):
 
             self.page1.ResetDisplaySettings()
             self.page1.loadImage()
+            print (x,y), (self.ix,self.iy), self.stk.absdata.shape
             self.page1.loadSpectrum(self.ix, self.iy)
             self.page1.textctrl.setText(self.page1.filename)
             
