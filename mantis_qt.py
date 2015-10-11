@@ -47,7 +47,7 @@ import henke
 
 from helpers import resource_path
 
-version = '2.1.0'
+version = '2.1.01'
 
 Winsizex = 1000
 Winsizey = 700
@@ -3172,6 +3172,7 @@ class PageSpectral(QtGui.QWidget):
 
         sb = QtGui.QGroupBox('Spectrum')
         vbox41 = QtGui.QVBoxLayout()
+        vbox41.setSpacing(10)
 
         self.textctrl_sp1 =  QtGui.QLabel(self)
         vbox41.addWidget(self.textctrl_sp1)
@@ -3837,7 +3838,7 @@ class PageSpectral(QtGui.QWidget):
         
         
         self.textctrl_sp1.setText('Common Name: '+ 
-                                    self.anlz.tspec_names[self.i_tspec-1]+'\n')
+                                    self.anlz.tspec_names[self.i_tspec-1])
         if self.com.pca_calculated == 1:       
             self.textctrl_sp2.setText('RMS Error: '+ str('{0:7.5f}').format(self.anlz.target_rms[self.i_tspec-1]))
             
@@ -4361,6 +4362,10 @@ class ShowMapHistogram(QtGui.QDialog):
         QtGui.QWidget.__init__(self, parent)
         
         self.parent = parent
+        
+        self.limit = 1
+        
+        self.histmax = None
 
         
         self.resize(600, 500)
@@ -4396,21 +4401,38 @@ class ShowMapHistogram(QtGui.QDialog):
         sizer1 = QtGui.QGroupBox('Histogram Cutoff')
         
         st = QtGui.QLabel(self) 
-        st.setText('Select a cutoff value on the histogram. All the values bellow will be set to zero.')
-        
-        self.tl_cut = QtGui.QLabel(self) 
-        self.tl_cut.setText('Cutoff value: ')
-
+        st.setText('Select a cutoff values on the histogram. All the values outside the defined limits will be set to cutoff limit value.')
+     
         vbox1.addWidget(st)
-        vbox1.addWidget(self.tl_cut)
+           
+        hbox1 = QtGui.QHBoxLayout()
+        self.rb_min = QtGui.QRadioButton( 'Lower Limit', self)
+        self.rb_max = QtGui.QRadioButton('Upper Limit',self)
+        self.rb_min.setChecked(True)
+        self.rb_min.toggled.connect(self.OnRb_limit)
+        
+
+        hbox1.addWidget(self.rb_min)
+        hbox1.addWidget(self.rb_max)
+        hbox1.addStretch (1)
+        vbox1.addLayout(hbox1)
+        
+        self.tl_cutmin = QtGui.QLabel(self) 
+        self.tl_cutmin.setText('Lower Cutoff Value: ')
+        vbox1.addWidget(self.tl_cutmin)
+        
+        self.tl_cutmax = QtGui.QLabel(self) 
+        self.tl_cutmax.setText('Upper Cutoff Value: ')
+        vbox1.addWidget(self.tl_cutmax)
 
         sizer1.setLayout(vbox1)
         vbox.addWidget(sizer1)
                 
         hbox2 = QtGui.QHBoxLayout()
-        button_ok = QtGui.QPushButton('Accept')
-        button_ok.clicked.connect(self.OnAccept)
-        hbox2.addWidget(button_ok)
+        self.button_ok = QtGui.QPushButton('Accept')
+        self.button_ok.clicked.connect(self.OnAccept)
+        self.button_ok.setEnabled(False)
+        hbox2.addWidget(self.button_ok)
                 
         button_cancel = QtGui.QPushButton('Cancel')
         button_cancel.clicked.connect(self.close)
@@ -4460,19 +4482,37 @@ class ShowMapHistogram(QtGui.QDialog):
         if x1 == None:
             return
         
-        self.tl_cut.setText('Cutoff value: '+str(x1))
+        if self.limit == 1:
+            self.tl_cutmin.setText('Lower Cutoff Value: '+str(x1))
         
-        self.histmin = x1
+            self.histmin = x1
+            
+        else:
+            self.tl_cutmax.setText('Upper Cutoff Value: '+str(x1))
+        
+            self.histmax = x1
+            
+        self.button_ok.setEnabled(True)
 
 
+#----------------------------------------------------------------------          
+    def OnRb_limit(self, enabled):
+        
+        state = enabled      
+      
+        if state:
+            self.limit = 1
+        else:        
+            self.limit = 2
+        
         
 #----------------------------------------------------------------------        
     def OnAccept(self, evt):
         
         if self.parent.page4.showraw == True:
-            self.anlz.svd_map_threshold(self.histmin, svd=True)
+            self.anlz.svd_map_threshold(self.histmin, self.histmax, svd=True)
         else:
-            self.anlz.svd_map_threshold(self.histmin, pca=True)
+            self.anlz.svd_map_threshold(self.histmin, self.histmax, pca=True)
         self.parent.page4.loadTargetMap()
         self.close()
 

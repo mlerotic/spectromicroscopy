@@ -527,7 +527,6 @@ class analyze:
 
 
 
-
         Metric = np.zeros((nclusters))
 
         # Start by picking a percentage of the pixels at random,
@@ -952,15 +951,19 @@ class analyze:
         
 #-----------------------------------------------------------------------------
 # Apply threshold on SVD or PCA maps
-    def svd_map_threshold(self, cutoff, svd = False, pca = False):
+    def svd_map_threshold(self, cutoff1, cutoff2 = None, svd = False, pca = False):
         
         if svd:
             self.target_svd_maps = self.original_svd_maps.copy()
-            self.target_svd_maps.clip(min=cutoff, out=self.target_svd_maps)
+            self.target_svd_maps.clip(min=cutoff1, out=self.target_svd_maps)
+            if cutoff2 != None:
+                self.target_svd_maps.clip(max=cutoff2, out=self.target_svd_maps)
 
         if pca:
             self.target_pcafit_maps = self.original_fit_maps.copy()
-            self.target_pcafit_maps.clip(min=cutoff, out=self.target_pcafit_maps)
+            self.target_pcafit_maps.clip(min=cutoff1, out=self.target_pcafit_maps)
+            if cutoff2 != None:
+                self.target_pcafit_maps.clip(max=cutoff2, out=self.target_pcafit_maps)
 
 #-----------------------------------------------------------------------------
 # Find key energies by finding peaks and valleys in significant pca spectra
