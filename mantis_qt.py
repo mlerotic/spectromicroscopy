@@ -28,6 +28,9 @@ from PyQt4.QtCore import Qt, QCoreApplication
 
 from PIL import Image  
 
+import Tkinter
+import FileDialog
+
 
 import matplotlib 
 from numpy import NAN
