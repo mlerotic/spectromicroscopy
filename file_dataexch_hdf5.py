@@ -408,11 +408,12 @@ class h5:
 
         # Close
         f.close()
-
+        
+        
         self.absdata = data_struct.exchange.data
         
         datadim = np.int32(self.absdata.shape)
-        
+
         
         self.n_cols = datadim[0].copy()
         self.n_rows =  datadim[1].copy()

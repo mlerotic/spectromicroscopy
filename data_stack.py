@@ -562,10 +562,10 @@ class data(file_stk.x1astk,file_dataexch_hdf5.h5, file_nexus_hdf5.h5data,
 #----------------------------------------------------------------------   
     def scale_bar(self): 
            
-        x_start = np.amin(self.y_dist)
-        x_stop = np.amax(self.y_dist)
+        x_start = np.amin(self.x_dist)
+        x_stop = np.amax(self.x_dist)
         
-        onepixsize = np.abs(self.y_dist[1]-self.y_dist[0])
+        onepixsize = np.abs(self.x_dist[1]-self.x_dist[0])
                 
         bar_microns = 0.2*np.abs(x_stop-x_start)
         
@@ -586,7 +586,7 @@ class data(file_stk.x1astk,file_dataexch_hdf5.h5, file_nexus_hdf5.h5data,
         self.scale_bar_string = bar_string
 
 
-        self.scale_bar_pixels_x = int(0.5+float(self.n_rows)*
+        self.scale_bar_pixels_x = int(0.5+float(self.n_cols)*
                        float(bar_microns)/float(abs(x_stop-x_start)))
         
         self.scale_bar_pixels_y = int(0.01*self.n_rows)
@@ -780,6 +780,7 @@ class data(file_stk.x1astk,file_dataexch_hdf5.h5, file_nexus_hdf5.h5data,
             yc=1
         if yc == shape[1]-1:
             yc = shape[1]-2
+            
             
         #Use peak fit to find the shifts 
         xpts = [xc-1,xc,xc+1]

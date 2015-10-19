@@ -121,21 +121,22 @@ class Cncb:
 
             
         xstep = (x_stop-x_start)/(self.n_cols-1)
-        self.y_dist = np.arange(x_start,x_stop+xstep, xstep)
+        self.x_dist = np.arange(x_start,x_stop+xstep, xstep)
         
         ystep = (y_stop-y_start)/(self.n_rows-1)
-        self.x_dist = np.arange(y_start,y_stop+ystep, ystep)              
+        self.y_dist = np.arange(y_start,y_stop+ystep, ystep)              
 
    
         self.absdata = np.empty((self.n_cols, self.n_rows, self.n_ev))
                 
         self.absdata = np.reshape(image_stack, (self.n_cols, self.n_rows, self.n_ev), order='F')    
         
+        
         #Transpose the array to show correct orientation
-        self.absdata = np.transpose(self.absdata, axes=(1,0,2))
-        t = self.n_cols
-        self.n_cols = self.n_rows
-        self.n_rows = t
+#         self.absdata = np.transpose(self.absdata, axes=(1,0,2))
+#         t = self.n_cols
+#         self.n_cols = self.n_rows
+#         self.n_rows = t
         
 
   

@@ -82,7 +82,7 @@ class h5data:
                 dsdata = counter1Grp['data']
                 self.absdata = dsdata[...]
                 self.absdata = np.transpose(self.absdata, axes=(2,1,0))
-                self.absdata = np.rot90(self.absdata)
+
                 
                 if 'E' in counter1Grp:
                     dseng = counter1Grp['E']
@@ -96,13 +96,13 @@ class h5data:
                     dsx = counter1Grp['sample_y']        
                 elif 'Y' in counter1Grp:
                     dsx = counter1Grp['Y']                                         
-                self.x_dist = dsx[...]       
+                self.y_dist = dsx[...]       
                 
                 if 'sample_x' in counter1Grp:
                     dsy = counter1Grp['sample_x']      
                 elif 'X' in counter1Grp:
                     dsy = counter1Grp['X']                       
-                self.y_dist = dsy[...]          
+                self.x_dist = dsy[...]          
                 
                 dsdd = counter1Grp['count_time']                           
                 self.data_dwell = dsdd[...]    
@@ -130,7 +130,6 @@ class h5data:
                 dsdata = counter1Grp['data']
                 self.absdata = dsdata[...]
                 self.absdata = np.transpose(self.absdata, axes=(2,1,0))
-                self.absdata = np.rot90(self.absdata)
                 
                 dseng = counter1Grp['photon_energy']                           
                 self.ev = dseng[...]
@@ -138,10 +137,10 @@ class h5data:
                 #The image was rotated to show correct orientation so we have
                 #to swap x and y distance    
                 dsx = counter1Grp['sample_y']                           
-                self.x_dist = dsx[...]       
+                self.y_dist = dsx[...]       
                 
                 dsy = counter1Grp['sample_x']                           
-                self.y_dist = dsy[...]          
+                self.x_dist = dsy[...]          
                 
                 dsdd = counter1Grp['count_time']                           
                 self.data_dwell = dsdd[...]    
@@ -169,7 +168,7 @@ class h5data:
             
             for i in range(1,n_regions+1):
                 if 'entry{0}'.format(i) in f:      
-                    entryGrp = f['entry{0}'.format(i)]     
+                    entry1Grp = f['entry{0}'.format(i)]     
                        
                     if 'Counter1' in  entry1Grp:
                         counter1Grp = entry1Grp['Counter1']
@@ -182,7 +181,6 @@ class h5data:
                     dsdata = counter1Grp['data']
                     idata = dsdata[...]
                     idata = np.transpose(idata, axes=(2,1,0))
-                    idata = np.rot90(idata)
                     adata.append(idata)
                     
                     dims = np.int32(idata.shape)
@@ -191,9 +189,9 @@ class h5data:
                     inr = dims[1]
                     self.n_ev = dims[2]
                     
-                    if inr > nr:
-                        nr = inr
-                    nc += inc
+                    if inc > nc:
+                        nc = inc
+                    nr += inr
                     idimc.append(inc)
                     idimr.append(inr)
                     
@@ -202,11 +200,11 @@ class h5data:
     
                     #The image was rotated to show correct orientation so we have
                     #to swap x and y distance  
-                    dsx = counter1Grp['sample_y']                           
-                    xd.append(dsx[...])      
+                    dsy = counter1Grp['sample_y']                           
+                    yd.append(dsy[...])      
                     
-                    dsy = counter1Grp['sample_x']                           
-                    yd.append(dsy[...])          
+                    dsx = counter1Grp['sample_x']                           
+                    xd.append(dsx[...])          
                     
                     dsdd = counter1Grp['count_time']                           
                     self.data_dwell = dsdd[...]   
@@ -221,14 +219,15 @@ class h5data:
             for i in range(n_regions):
 #                 self.absdata[0:idimc[i],thisr:idimr[i]+thisr, :] = adata[i]
 #                 thisr+=idimr[i]
-                self.absdata[thisr:idimc[i]+thisr,0:idimr[i], :] = adata[i]
-                thisr+=idimc[i]
+                self.absdata[0:idimc[i],thisr:idimr[i]+thisr, :] = adata[i]
+                thisr+=idimr[i]
                 
             thisr = 0
             for i in range(n_regions):            
                 if nc == idimc[i]:
                     self.x_dist = xd[i]
                 self.y_dist[thisr:idimr[i]+thisr]=yd[i]
+                thisr+=idimr[i]
                 
             
                           

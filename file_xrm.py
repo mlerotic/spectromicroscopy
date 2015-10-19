@@ -487,6 +487,7 @@ class xrm:
                 return
                     
             self.absdata[:,:,i-1] = np.reshape(imgdata, (self.n_cols, self.n_rows), order='F')
+            
                 
         
         if verbose: print 'Finished reading images'
@@ -731,6 +732,7 @@ class xrm:
             self.absdata[:,:,i-1] = np.reshape(imgdata, (self.n_cols, self.n_rows), order='F')
                 
         ole.close()
+        
                 
         #Fill the data structure with data: 
         ds.implements = 'information:exchange:spectromicroscopy'

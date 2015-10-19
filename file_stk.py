@@ -37,7 +37,7 @@ class x1astk:
         self.n_rows = data[1]
         self.n_ev = data[2]
         
-        print 'self.n_cols, self.n_rows, self.n_ev', self.n_cols, self.n_rows, self.n_ev
+        #print 'self.n_cols, self.n_rows, self.n_ev', self.n_cols, self.n_rows, self.n_ev
         
         self.x_dist = np.fromfile(f, np.float32, self.n_cols)
         self.x_dist.byteswap(True)   
@@ -61,7 +61,7 @@ class x1astk:
         self.absdata = np.empty((self.n_cols, self.n_rows, self.n_ev))
                 
         self.absdata = np.reshape(imagestack, (self.n_cols, self.n_rows, self.n_ev), order='F')       
-
+        
         f.close()
         
       
