@@ -20,6 +20,15 @@ from __future__ import division
 
 import numpy as np
 import os
+import re
+
+verbose = 0
+
+#----------------------------------------------------------------------  
+def natural_sort(l): 
+    convert = lambda text: int(text) if text.isdigit() else text.lower() 
+    alphanum_key = lambda key: [ convert(c) for c in re.split('([0-9]+)', key) ] 
+    return sorted(l, key = alphanum_key)
 
 #----------------------------------------------------------------------
 class Cncb:
@@ -85,7 +94,6 @@ class Cncb:
 
         
         
-        
         if scale < 0 :
             dataformat = np.float32
         else:
@@ -132,13 +140,6 @@ class Cncb:
         self.absdata = np.reshape(image_stack, (self.n_cols, self.n_rows, self.n_ev), order='F')    
         
         
-        #Transpose the array to show correct orientation
-#         self.absdata = np.transpose(self.absdata, axes=(1,0,2))
-#         t = self.n_cols
-#         self.n_cols = self.n_rows
-#         self.n_rows = t
-        
-
   
         return
     
@@ -217,3 +218,149 @@ class Cncb:
         f.close()
         
         return
+
+#----------------------------------------------------------------------          
+    def read_ncb_data(self, filename): 
+        
+        #print 'Reading stack:', filename
+        
+        basename, extension = os.path.splitext(filename) 
+        dat_fn = basename + '.dat'
+        
+
+        f = open(str(dat_fn),'r')
+        lines = f.readlines()
+        temp = lines[0].split()
+        
+        self.n_cols = int(temp[0])
+        self.n_rows = int(temp[1])
+        scale = float(temp[2])
+    
+        if verbose:
+            print 'self.n_cols, self.n_rows, scale', self.n_cols, self.n_rows, scale
+        
+        temp = lines[1].split()
+        x_start = float(temp[0])
+        x_stop = float(temp[1])
+        
+        temp = lines[2].split()
+        y_start = float(temp[0])
+        y_stop = float(temp[1])
+
+        self.n_theta = int(lines[3])
+
+        #print self.n_ev
+        
+    
+        angles = np.zeros((self.n_theta))
+        self.data_dwell = np.zeros((self.n_theta))
+        filename_list = []
+        for i in range(self.n_theta):
+            angles[i] = float(lines[4+i])
+            
+        #print self.ev
+
+        for i in range(self.n_theta):
+            angles[i] = float(lines[4+i])
+
+        try:
+            for i in range(self.n_theta):
+                temp = lines[4+self.n_ev+i].split()
+                
+                filename_list.append(temp[0])
+                self.data_dwell[i] = float(temp[2])
+        except:
+            self.data_dwell = np.ones((self.n_theta))
+
+    
+        f.close()
+
+        
+        
+        if scale < 0 :
+            dataformat = np.float32
+        else:
+            dataformat = np.int16
+            
+        #print 'data format', dataformat
+            
+        f = open(str(filename),'rb')
+        big_array = np.fromfile(f, dataformat, self.n_cols*self.n_rows*self.n_theta)
+        f.close()    
+        
+        
+        if scale > 0 and scale != 1 :
+            image_stack = big_array.astype(np.float)/scale
+            if verbose: print "data rescaled by ", 1./scale
+        else:
+            image_stack = big_array.astype(np.float)
+
+
+        if (x_start > x_stop) :
+            image_stack = image_stack[::-1,:,:]
+            t = x_start 
+            x_start = x_stop 
+            x_stop = t
+            if verbose: print 'x data reversed'
+
+        if (y_start > y_stop) :
+            image_stack = image_stack[:,::-1,:]
+            t = y_start 
+            y_start = y_stop 
+            y_stop = t
+            if verbose: print 'y data reversed'
+
+            
+        xstep = (x_stop-x_start)/(self.n_cols-1)
+        self.x_dist = np.arange(x_start,x_stop+xstep, xstep)
+        
+        ystep = (y_stop-y_start)/(self.n_rows-1)
+        self.y_dist = np.arange(y_start,y_stop+ystep, ystep)              
+ 
+        image_stack = np.reshape(image_stack, (self.n_cols, self.n_rows, self.n_theta), order='F') 
+   
+        return image_stack, angles
+
+
+#----------------------------------------------------------------------
+    def read_ncb4D(self, filenames):
+        
+        if verbose: print 'First energy stack:', filenames[0]
+        
+        
+        data_files = natural_sort(filenames)
+
+        neng = len(data_files)
+        if verbose: print 'Number of energies ', neng
+        
+        self.stack4D = []
+        theta = []
+        
+        for i in range(neng):     
+            #Read the data
+            thisstack, thistheta = self.read_ncb_data(data_files[i])
+                    
+            #Check if we have negative angles, if yes convert to 0-360deg
+            for ith in range(len(thistheta)):
+                if thistheta[ith] < 0:
+                    thistheta[ith] = thistheta[ith] + 360
+                    
+            self.stack4D.append(thisstack)
+            theta.append(thistheta)
+            
+            dims = thisstack.shape
+        
+        
+        self.stack4D = np.array(self.stack4D)
+        self.stack4D = np.transpose(self.stack4D, axes=(1,2,0,3))
+        
+        self.theta = theta[0]
+        self.n_theta = len(theta)
+        
+                
+        self.absdata = self.stack4D[:,:,:,0]
+        
+        self.data_dwell = np.ones((neng))
+        
+        return 
+        

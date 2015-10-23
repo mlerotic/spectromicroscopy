@@ -68,6 +68,7 @@ class common:
     def __init__(self):
         
         self.stack_loaded = 0
+        self.stack_4d = 0
         self.i0_loaded = 0
         self.pca_calculated = 0
         self.cluster_calculated = 0
@@ -11154,6 +11155,7 @@ class PageLoadData(QtGui.QWidget):
         self.filename = " "
         
         self.iev = 0
+        self.itheta = 0
         
         self.initMatplotlib()
 
@@ -11192,6 +11194,10 @@ class PageLoadData(QtGui.QWidget):
         self.button_ncb = QtGui.QPushButton( 'Load aXis2000 NCB Stack (*.ncb, *.dat)')
         self.button_ncb.clicked.connect( self.OnLoadNCB)
         vbox1.addWidget(self.button_ncb)     
+        
+        self.button_4d = QtGui.QPushButton( 'Load 4D stack (*.hdf5, *.ncb)')
+        self.button_4d.clicked.connect( self.OnLoad4D)
+        vbox1.addWidget(self.button_4d) 
 
         sizer1.setLayout(vbox1)
 
@@ -11248,7 +11254,8 @@ class PageLoadData(QtGui.QWidget):
         
         
 
-        hbox51 = QtGui.QHBoxLayout()
+        gridsizertop = QtGui.QGridLayout()
+        
         
         frame = QtGui.QFrame()
         frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
@@ -11260,7 +11267,7 @@ class PageLoadData(QtGui.QWidget):
         
         fbox.addWidget(self.AbsImagePanel)
         frame.setLayout(fbox)
-        hbox51.addWidget(frame)
+        gridsizertop.addWidget(frame, 0, 0, QtCore .Qt. AlignLeft)
         
 
         self.slider_eng = QtGui.QScrollBar(QtCore.Qt.Vertical)
@@ -11268,11 +11275,26 @@ class PageLoadData(QtGui.QWidget):
         self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
         self.slider_eng.setRange(0, 100)
         
-        hbox51.addWidget(self.slider_eng)        
+        gridsizertop.addWidget(self.slider_eng, 0, 1, QtCore .Qt. AlignLeft)
+         
 
         
-        vbox5.addLayout(hbox51)
+        self.slider_theta = QtGui.QScrollBar(QtCore.Qt.Horizontal)
+        self.slider_theta.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.slider_theta.valueChanged[int].connect(self.OnScrollTheta)
+        self.slider_theta.setRange(0, 100)     
+        self.slider_theta.setVisible(False)  
+        self.tc_imagetheta = QtGui.QLabel(self)
+        self.tc_imagetheta.setText("4D Data Angle: ")
+        self.tc_imagetheta.setVisible(False)
+        hbox51 = QtGui.QHBoxLayout()
+        hbox51.addWidget(self.tc_imagetheta) 
+        hbox51.addWidget(self.slider_theta)
+        gridsizertop.addLayout(hbox51, 1, 0)
         
+
+        vbox5.addLayout(gridsizertop)
+        vbox5.addStretch(1)
         
        
         vboxtop = QtGui.QVBoxLayout()
@@ -11350,6 +11372,12 @@ class PageLoadData(QtGui.QWidget):
 
         wildcard =  "NCB (*.ncb)" 
         self.window().LoadStack(wildcard)
+        
+#----------------------------------------------------------------------          
+    def OnLoad4D(self, event):
+
+        wildcard =  "HDF5 files (*.hdf5);;NCB (*.ncb)" 
+        self.window().LoadStack4D(wildcard)
                 
 #----------------------------------------------------------------------          
     def OnBuildStack(self, event):
@@ -11360,6 +11388,16 @@ class PageLoadData(QtGui.QWidget):
     def OnScrollEng(self, value):
         self.iev = value
 
+        if self.com.stack_loaded == 1:
+            self.ShowImage()
+            
+#----------------------------------------------------------------------            
+    def OnScrollTheta(self, value):
+        self.itheta = value
+
+        self.stk.absdata = self.stk.stack4D[:,:,:,self.itheta]
+        self.tc_imagetheta.setText("4D Data Angle: "+str(self.stk.theta[self.itheta]))
+        
         if self.com.stack_loaded == 1:
             self.ShowImage()
             
@@ -11399,7 +11437,7 @@ class PageLoadData(QtGui.QWidget):
         self.AbsImagePanel.draw()
          
         self.tc_imageeng.setText('Image at energy: {0:5.2f} eV'.format(float(self.stk.ev[self.iev])))
-        
+
 
         
 #----------------------------------------------------------------------        
@@ -11976,8 +12014,8 @@ class MainFrame(QtGui.QMainWindow):
         Browse for a stack file:
         """
 
-        #try:
-        if True:
+        try:
+        #if True:
             if wildcard == False:
                 #wildcard =  "HDF5 files (*.hdf5);;SDF files (*.hdr);;STK files (*.stk);;TXRM (*.txrm);;XRM (*.xrm);;TIF (*.tif);;FTIR (*.dpt)"
                 wildcard =  "HDF5 files (*.hdf5);;SDF files (*.hdr);;STK files (*.stk);;TXRM files (*.txrm);;XRM files (*.xrm);;TIF files (*.tif);;NCB files (*.ncb);;;;FTIR files (*.dpt);;"  
@@ -12138,17 +12176,17 @@ class MainFrame(QtGui.QMainWindow):
 
             QtGui.QApplication.restoreOverrideCursor()
                  
-#         except:
-#        
-#             self.common.stack_loaded = 0 
-#             self.common.i0_loaded = 0
-#             self.new_stack_refresh()
-#                                       
-#             QtGui.QApplication.restoreOverrideCursor()
-#             QtGui.QMessageBox.warning(self, 'Error', 'Image stack not loaded.')
-#       
-#             import sys
-#             print sys.exc_info()
+        except:
+        
+            self.common.stack_loaded = 0 
+            self.common.i0_loaded = 0
+            self.new_stack_refresh()
+                                       
+            QtGui.QApplication.restoreOverrideCursor()
+            QtGui.QMessageBox.warning(self, 'Error', 'Image stack not loaded.')
+       
+            import sys
+            print sys.exc_info()
                    
         
         self.refresh_widgets()
@@ -12184,6 +12222,132 @@ class MainFrame(QtGui.QMainWindow):
             QtGui.QMessageBox.warning(self,'Error',"Error could not build stack list")
             import sys; print sys.exc_info()
             
+            
+#----------------------------------------------------------------------
+    def LoadStack4D(self, wildcard = ''):
+        """
+        Browse for a stack file:
+        """
+
+        #try:
+        if True:
+            if wildcard == False:
+                #wildcard =  "HDF5 files (*.hdf5);;SDF files (*.hdr);;STK files (*.stk);;TXRM (*.txrm);;XRM (*.xrm);;TIF (*.tif);;FTIR (*.dpt)"
+                wildcard =  "HDF5 files (*.hdf5);;NCB files (*.ncb);;"  
+
+            filepath = QtGui.QFileDialog.getOpenFileNames(self, 'Open files', '', wildcard)
+
+            
+            if filepath == '':
+                return
+            
+            filenames = []
+            for name in filepath:
+                filenames.append(str(name))
+                       
+            
+            directory =  os.path.dirname(str(filenames[0]))
+            self.page4.DefaultDir = directory
+            self.page1.filename =  os.path.basename(str(filenames[0]))
+        
+            QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+            basename, extension = os.path.splitext(self.page1.filename)      
+            
+            self.common.path = directory
+            self.common.filename = self.page1.filename
+            
+
+            if extension == '.hdf5':
+                if self.common.stack_loaded == 1:
+                    self.new_stack_refresh()  
+                    self.stk.new_data()
+                    #self.stk.data_struct.delete_data()
+                    self.anlz.delete_data()                
+ 
+ 
+                self.stk.read_h5(filenames[0])
+            
+                            
+            elif extension == '.ncb':              
+                if self.common.stack_loaded == 1:
+                    self.new_stack_refresh()  
+                    self.stk.new_data()
+                    #self.stk.data_struct.delete_data()
+                    self.anlz.delete_data()       
+                self.stk.read_ncb4D(filenames)    
+                #Get energy list
+                wildcard =  "Text file (*.txt);;"  
+                engfilepath = QtGui.QFileDialog.getOpenFileName(self, 'Open file', '', wildcard)
+                self.stk.read_ncb4Denergy(str(engfilepath))
+                
+            
+            #Update widgets 
+            
+            self.common.stack_4d = 1
+        
+            x=self.stk.n_cols
+            y=self.stk.n_rows  
+            self.page1.imgrgb = npy.zeros(x*y*3,dtype = "uint8")        
+            self.page1.maxval = npy.amax(self.stk.absdata)
+            
+            
+            self.ix = int(x/2)
+            self.iy = int(y/2)
+            
+            self.page1.ix = self.ix
+            self.page1.iy = self.iy
+            
+            self.iev = int(self.stk.n_ev/2)
+            self.page0.slider_eng.setRange(0,self.stk.n_ev-1)
+            self.page0.iev = self.iev
+            self.page0.slider_eng.setValue(self.iev)
+                     
+            self.page1.slider_eng.setRange(0,self.stk.n_ev-1)
+            self.page1.iev = self.iev
+            self.page1.slider_eng.setValue(self.iev)
+            
+            self.page0.slider_theta.setVisible(True)  
+            self.page0.tc_imagetheta.setVisible(True)
+            self.itheta = 0
+            self.page0.slider_theta.setRange(0,self.stk.n_theta-1)
+            self.page0.itheta = self.itheta
+            self.page0.slider_theta.setValue(self.itheta)
+            self.page0.tc_imagetheta.setText("4D Data Angle: "+str(self.stk.theta[self.itheta]))
+            
+            
+
+            self.common.stack_loaded = 1
+            
+            if self.stk.data_struct.spectromicroscopy.normalization.white_spectrum is not None:
+                self.common.i0_loaded = 1
+            
+            
+            self.page1.ResetDisplaySettings()
+            self.page1.loadImage()
+            self.page1.loadSpectrum(self.ix, self.iy)
+            self.page1.textctrl.setText(self.page1.filename)
+            
+            self.page0.ShowInfo(self.page1.filename, directory)
+            
+            self.page5.updatewidgets()
+
+            QtGui.QApplication.restoreOverrideCursor()
+                 
+#         except:
+#         
+#             self.common.stack_loaded = 0 
+#             self.common.i0_loaded = 0
+#             self.new_stack_refresh()
+#                                        
+#             QtGui.QApplication.restoreOverrideCursor()
+#             QtGui.QMessageBox.warning(self, 'Error', 'Image stack not loaded.')
+#        
+#             import sys
+#             print sys.exc_info()
+                   
+        
+        self.refresh_widgets()
+            
 #----------------------------------------------------------------------
     def OnSaveProcessedStack(self, event):
         self.SaveProcessedStack()
@@ -12196,8 +12360,8 @@ class MainFrame(QtGui.QMainWindow):
         Browse for .hdf5 file or .ncb or tiff or .stk
         """
         
-        try:
-        #if True:
+        #try:
+        if True:
             wildcard = "HDF5 file (*.hdf5);;aXis2000 NCB file (*.ncb);;TIFF file (.tif);;STK file (*.stk);;"
 
             filepath = QtGui.QFileDialog.getSaveFileName(self, 'Save processed stack', '', wildcard)
@@ -12228,11 +12392,11 @@ class MainFrame(QtGui.QMainWindow):
          
             QtGui.QApplication.restoreOverrideCursor()
 
-        except:
-      
-            QtGui.QApplication.restoreOverrideCursor()
-                 
-            QtGui.QMessageBox.warning(self, 'Error', 'Could not save processed stack file.')
+#         except:
+#       
+#             QtGui.QApplication.restoreOverrideCursor()
+#                  
+#             QtGui.QMessageBox.warning(self, 'Error', 'Could not save processed stack file.')
                    
 
         self.refresh_widgets()
@@ -12268,8 +12432,10 @@ class MainFrame(QtGui.QMainWindow):
             self.common.path = directory
             self.common.filename = self.page1.filename
             
-                
-            self.stk.write_results_h5(filepath, self.data_struct, self.anlz)    
+            if self.common.stack_4d == 0:
+                self.stk.write_results_h5(filepath, self.data_struct, self.anlz)   
+            else:
+                self.stk.write_4D_h5(filepath, self.data_struct)   
             QtGui.QApplication.restoreOverrideCursor()
 
         except:
@@ -12436,10 +12602,13 @@ class MainFrame(QtGui.QMainWindow):
         self.common.cluster_calculated = 0
         self.common.spec_anl_calculated = 0
         self.common.xpf_loaded = 0
+        self.common.stack_4d = 0
         
         self.refresh_widgets()
         
-               
+        #page 0
+        self.page0.slider_theta.setVisible(False)  
+        self.page0.tc_imagetheta.setVisible(False)               
         
         #page 1
         self.page1.rb_flux.setChecked(True)

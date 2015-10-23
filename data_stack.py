@@ -56,6 +56,7 @@ class data(file_stk.x1astk,file_dataexch_hdf5.h5, file_nexus_hdf5.h5data,
         self.i0_dwell = None 
         
         self.n_ev = 0
+        self.ntheta = 0
         
 
 #----------------------------------------------------------------------   
@@ -81,6 +82,10 @@ class data(file_stk.x1astk,file_dataexch_hdf5.h5, file_nexus_hdf5.h5data,
         
         self.xshifts = 0
         self.yshifts = 0
+        
+        self.stack4D = 0
+        self.n_theta = 0
+        self.theta = 0
         
 
         self.data_struct.spectromicroscopy.normalization.white_spectrum = None
@@ -220,6 +225,59 @@ class data(file_stk.x1astk,file_dataexch_hdf5.h5, file_nexus_hdf5.h5data,
         
         self.scale_bar()
         
+#---------------------------------------------------------------------- 
+    def read_ncb4D(self, filenames):    
+        self.new_data()  
+        file_ncb.Cncb.read_ncb4D(self, filenames)
+        
+        now = datetime.datetime.now()
+        
+        self.data_struct.implements = 'information:exchange:spectromicroscopy'
+        self.data_struct.version = '1.0'
+        
+        self.data_struct.information.file_creation_datetime = now.strftime("%Y-%m-%dT%H:%M")
+        self.data_struct.information.comment = 'Converted in Mantis'
+        
+        
+        self.data_struct.exchange.data = self.stack4D
+        self.data_struct.exchange.data_signal = 1
+        self.data_struct.exchange.data_axes='x:y:energy:theta'
+        
+        self.data_struct.exchange.theta = self.theta
+        self.data_struct.exchange.theta_units = 'degrees'
+        
+        
+        self.data_struct.exchange.x = self.x_dist
+        self.data_struct.exchange.y = self.y_dist
+        
+        
+        self.scale_bar()
+
+#---------------------------------------------------------------------- 
+    def read_ncb4Denergy(self, filename):    
+        
+        f = open(str(filename),'rU')
+        
+        elist = []  
+    
+        for line in f:
+            if line.startswith('*'):
+                if 'Common name' in line:
+                    spectrum_common_name = line.split(':')[-1].strip()
+
+            else:
+                e, = [float (x) for x in line.split()] 
+                elist.append(e)
+                
+        self.ev = np.array(elist)
+        
+                
+        f.close()
+
+        self.n_ev = self.ev.size
+        self.data_struct.exchange.energy=self.ev
+        self.data_struct.exchange.energy_units = 'ev'
+        
         
 #---------------------------------------------------------------------- 
     def read_tiff(self, filename):    
@@ -338,7 +396,7 @@ class data(file_stk.x1astk,file_dataexch_hdf5.h5, file_nexus_hdf5.h5data,
         self.data_struct.version = '1.0'
         
         self.data_struct.information.file_creation_datetime = now.strftime("%Y-%m-%dT%H:%M")
-        self.data_struct.information.comment = 'Converted from .stk'
+        self.data_struct.information.comment = 'Converted in Mantis'
         
         
         self.data_struct.exchange.data = self.absdata

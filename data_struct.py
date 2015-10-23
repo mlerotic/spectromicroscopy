@@ -213,6 +213,9 @@ class exchange(object):
     energy = Descr()  
     energy_units = Descr()
     
+    theta = Descr()  
+    theta_units = Descr()
+    
     white_data = Descr()
     white_data_units = Descr()
     dark_data = Descr()

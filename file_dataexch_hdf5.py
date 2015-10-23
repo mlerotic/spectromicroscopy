@@ -54,6 +54,8 @@ class h5:
 #----------------------------------------------------------------------
     def read_h5(self, filename, data_struct):
         
+        have4d = 0
+        
        
         # Open HDF5 file
         f = h5py.File(filename, 'r') 
@@ -360,6 +362,12 @@ class h5:
                 energy = exchangeGrp['energy']
                 data_struct.exchange.energy = energy[...]
                 data_struct.exchange.energy_units= energy.attrs['units']
+
+            if 'theta' in exchangeGrp:
+                th = exchangeGrp['theta']
+                data_struct.exchange.theta = th[...]
+                data_struct.exchange.theta_units = th.attrs['units']  
+                have4d = 1              
             
             if 'white_data' in exchangeGrp:
                 wd = exchangeGrp['white_data']
@@ -410,7 +418,14 @@ class h5:
         f.close()
         
         
-        self.absdata = data_struct.exchange.data
+        
+        if have4d == 0:
+            self.absdata = data_struct.exchange.data
+        else:
+            self.stack4D = data_struct.exchange.data
+            self.theta = data_struct.exchange.theta
+            self.n_theta = len(self.theta)
+            self.absdata = self.stack4D[:,:,:,0]
         
         datadim = np.int32(self.absdata.shape)
 
@@ -757,6 +772,10 @@ class h5:
             ds = exchangeGrp.create_dataset('energy', data = data_struct.exchange.energy)
             ds.attrs['units'] = data_struct.exchange.energy_units
     
+        if data_struct.exchange.theta is not None:        
+            ds = exchangeGrp.create_dataset('theta', data = data_struct.exchange.theta)
+            ds.attrs['units'] = data_struct.exchange.theta_units
+            
         # /exchange/white_data
         if data_struct.exchange.white_data is not None:        
             ds = exchangeGrp.create_dataset('white_data', data = data_struct.exchange.white_data)
@@ -885,7 +904,3 @@ class h5:
             
             
             
-            
-            
-            
-        
