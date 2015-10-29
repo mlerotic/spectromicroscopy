@@ -6776,6 +6776,7 @@ class PageStack(QtGui.QWidget):
         self.ix = 0
         self.iy = 0
         self.iev = 50  
+        self.itheta = 0
         self.showflux = True
         self.show_colorbar = 0
         
@@ -7068,16 +7069,14 @@ class PageStack(QtGui.QWidget):
         
 
         #panel 4     
-        vbox4 = QtGui.QVBoxLayout()
+        #vbox4 = QtGui.QVBoxLayout()
+        gridsizer4 = QtGui.QGridLayout() 
         
         self.tc_imageeng = QtGui.QLabel(self)
         self.tc_imageeng.setText("Image at energy: ")
-        vbox4.addWidget(self.tc_imageeng)
+        gridsizer4.addWidget(self.tc_imageeng, 0, 0, QtCore .Qt. AlignLeft)
         
-        
-        hbox41 = QtGui.QHBoxLayout()
-        
-        
+
         frame = QtGui.QFrame()
         frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
@@ -7088,25 +7087,33 @@ class PageStack(QtGui.QWidget):
         self.AbsImagePanel.mpl_connect('button_press_event', self.OnPointAbsimage)
         fbox.addWidget(self.AbsImagePanel)
         frame.setLayout(fbox)
-        hbox41.addWidget(frame)        
+        gridsizer4.addWidget(frame, 1, 0, QtCore .Qt. AlignLeft)
        
 
         self.slider_eng = QtGui.QScrollBar(QtCore.Qt.Vertical)
         self.slider_eng.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
         self.slider_eng.setRange(0, 100)
-        hbox41.addWidget(self.slider_eng)
+        gridsizer4.addWidget(self.slider_eng, 1, 1, QtCore .Qt. AlignLeft)
 
-        
-        vbox4.addLayout(hbox41)
+        self.slider_theta = QtGui.QScrollBar(QtCore.Qt.Horizontal)
+        self.slider_theta.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.slider_theta.valueChanged[int].connect(self.OnScrollTheta)
+        self.slider_theta.setRange(0, 100)     
+        self.slider_theta.setVisible(False)  
+        self.tc_imagetheta = QtGui.QLabel(self)
+        self.tc_imagetheta.setText("4D Data Angle: ")
+        self.tc_imagetheta.setVisible(False)
+        hbox41 = QtGui.QHBoxLayout()
+        hbox41.addWidget(self.tc_imagetheta) 
+        hbox41.addWidget(self.slider_theta)
+        gridsizer4.addLayout(hbox41, 2, 0)
         
 
-        #panel 5     
-        vbox5 = QtGui.QVBoxLayout()
-        
+        #panel 5             
         self.tc_spec = QtGui.QLabel(self)
         self.tc_spec.setText("Spectrum ")
-        vbox5.addWidget(self.tc_spec)
+        gridsizer4.addWidget(self.tc_spec, 0, 2, QtCore.Qt.AlignLeft)
         
         frame = QtGui.QFrame()
         frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
@@ -7119,7 +7126,8 @@ class PageStack(QtGui.QWidget):
 
         fbox.addWidget(self.SpectrumPanel)
         frame.setLayout(fbox)
-        vbox5.addWidget(frame)                 
+        gridsizer4.addWidget(frame, 1, 2,  QtCore.Qt.AlignLeft)             
+    
     
         vboxtop = QtGui.QVBoxLayout()
         
@@ -7131,9 +7139,7 @@ class PageStack(QtGui.QWidget):
         
         hboxbott = QtGui.QHBoxLayout()
         hboxbott2 = QtGui.QHBoxLayout()
-        hboxbott2.addLayout(vbox4)
-        hboxbott2.addStretch(1)
-        hboxbott2.addLayout(vbox5)
+        hboxbott2.addLayout(gridsizer4)
         hboxbott.addLayout(hboxbott2)
               
         vboxtop.addStretch (1)
@@ -7152,8 +7158,7 @@ class PageStack(QtGui.QWidget):
     def OnI0FFile(self, event):
 
             
-        try:
-                       
+        try:  
             wildcard = "I0 CSV files (*.csv);; I0 files (*.xas);;SDF I0 files (*.hdr)"
             
             filepath = QtGui.QFileDialog.getOpenFileName(self, 'Open file', '', wildcard)
@@ -7251,6 +7256,11 @@ class PageStack(QtGui.QWidget):
         plot.show()
         
         self.com.i0_loaded = 1
+        
+        if self.com.stack_4d == 1:
+            self.stk.od3d = self.stk.od4D[:,:,:,self.itheta]
+            self.stk.od = self.stk.od3d.copy()
+            self.stk.od = npy.reshape(self.stk.od, (self.stk.n_cols*self.stk.n_rows, self.stk.n_ev), order='F')      
          
         self.loadSpectrum(self.ix, self.iy)
         self.loadImage()
@@ -7563,6 +7573,23 @@ class PageStack(QtGui.QWidget):
         if self.com.stack_loaded == 1:
             self.loadImage()
             self.loadSpectrum(self.ix, self.iy)      
+            
+#----------------------------------------------------------------------            
+    def OnScrollTheta(self, value):
+        self.itheta = value
+
+        self.stk.absdata = self.stk.stack4D[:,:,:,self.itheta]
+        if self.com.i0_loaded:
+            self.stk.od3d = self.stk.od4D[:,:,:,self.itheta]
+            self.stk.od = self.stk.od3d.copy()
+            n_pixels = self.stk.n_cols*self.stk.n_rows
+            self.stk.od = npy.reshape(self.stk.od, (n_pixels, self.stk.n_ev), order='F')        
+            
+        self.tc_imagetheta.setText("4D Data Angle: "+str(self.stk.theta[self.itheta]))
+        
+        if self.com.stack_loaded == 1:
+            self.loadImage()
+            self.loadSpectrum(self.ix, self.iy)  
 
 #----------------------------------------------------------------------  
     def OnPointSpectrum(self, evt):
@@ -11256,14 +11283,17 @@ class PageLoadData(QtGui.QWidget):
 
         gridsizertop = QtGui.QGridLayout()
         
-        
         frame = QtGui.QFrame()
         frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
    
-        self.absimgfig = Figure((PlotH*.9, PlotH*.9))
+        self.absimgfig = Figure((PlotH, PlotH))
+
+        
+       
         self.AbsImagePanel = FigureCanvas(self.absimgfig)
         self.AbsImagePanel.setParent(self)
+        
         
         fbox.addWidget(self.AbsImagePanel)
         frame.setLayout(fbox)
@@ -11276,8 +11306,7 @@ class PageLoadData(QtGui.QWidget):
         self.slider_eng.setRange(0, 100)
         
         gridsizertop.addWidget(self.slider_eng, 0, 1, QtCore .Qt. AlignLeft)
-         
-
+        
         
         self.slider_theta = QtGui.QScrollBar(QtCore.Qt.Horizontal)
         self.slider_theta.setFocusPolicy(QtCore.Qt.StrongFocus)
@@ -11322,6 +11351,8 @@ class PageLoadData(QtGui.QWidget):
         vboxtop.setContentsMargins(50,50,50,50)
         self.setLayout(vboxtop)
 
+
+    
 #----------------------------------------------------------------------   
     def initMatplotlib(self):  
                
@@ -11897,6 +11928,8 @@ class MainFrame(QtGui.QMainWindow):
         super(MainFrame, self).__init__()
         
         self.initUI()
+        
+
 
 #----------------------------------------------------------------------          
     def initUI(self):   
@@ -12313,8 +12346,15 @@ class MainFrame(QtGui.QMainWindow):
             self.page0.itheta = self.itheta
             self.page0.slider_theta.setValue(self.itheta)
             self.page0.tc_imagetheta.setText("4D Data Angle: "+str(self.stk.theta[self.itheta]))
-            
-            
+
+
+            self.page1.slider_theta.setVisible(True)  
+            self.page1.tc_imagetheta.setVisible(True)
+            self.page1.slider_theta.setRange(0,self.stk.n_theta-1)
+            self.page1.itheta = self.itheta
+            self.page1.slider_theta.setValue(self.itheta)
+            self.page1.tc_imagetheta.setText("4D Data Angle: "+str(self.stk.theta[self.itheta]))
+                        
 
             self.common.stack_loaded = 1
             
@@ -12415,6 +12455,7 @@ class MainFrame(QtGui.QMainWindow):
         """
 
         try:
+
             wildcard = "HDF5 files (*.hdf5)"
 
             filepath = QtGui.QFileDialog.getSaveFileName(self, 'Save as .hdf5', '', wildcard)
@@ -12432,16 +12473,14 @@ class MainFrame(QtGui.QMainWindow):
             self.common.path = directory
             self.common.filename = self.page1.filename
             
-            if self.common.stack_4d == 0:
-                self.stk.write_results_h5(filepath, self.data_struct, self.anlz)   
-            else:
-                self.stk.write_4D_h5(filepath, self.data_struct)   
+
+            self.stk.write_results_h5(filepath, self.data_struct, self.anlz)   
+
             QtGui.QApplication.restoreOverrideCursor()
 
         except:
-  
+   
             QtGui.QApplication.restoreOverrideCursor()
-             
             QtGui.QMessageBox.warning(self, 'Error', 'Could not save HDF5 file.')
                    
 

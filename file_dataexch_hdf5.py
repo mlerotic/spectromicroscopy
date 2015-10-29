@@ -392,9 +392,9 @@ class h5:
                 data_struct.spectromicroscopy.positions_units = pos.attrs['units']
                 data_struct.spectromicroscopy.positions_names = pos.attrs['names']
                 
-            if 'optical_density' in spectromicroscopyGrp:
-                od = spectromicroscopyGrp['optical_density']
-                self.data_struct.spectromicroscopy.optical_density = od[...]    
+#             if 'optical_density' in spectromicroscopyGrp:
+#                 od = spectromicroscopyGrp['optical_density']
+#                 self.data_struct.spectromicroscopy.optical_density = od[...]    
             
             
             

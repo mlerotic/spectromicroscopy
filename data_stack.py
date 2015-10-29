@@ -56,7 +56,7 @@ class data(file_stk.x1astk,file_dataexch_hdf5.h5, file_nexus_hdf5.h5data,
         self.i0_dwell = None 
         
         self.n_ev = 0
-        self.ntheta = 0
+        self.n_theta = 0
         
 
 #----------------------------------------------------------------------   
@@ -83,9 +83,10 @@ class data(file_stk.x1astk,file_dataexch_hdf5.h5, file_nexus_hdf5.h5data,
         self.xshifts = 0
         self.yshifts = 0
         
-        self.stack4D = 0
+        self.stack4D = None
         self.n_theta = 0
         self.theta = 0
+        self.od4D = 0
         
 
         self.data_struct.spectromicroscopy.normalization.white_spectrum = None
@@ -419,7 +420,10 @@ class data(file_stk.x1astk,file_dataexch_hdf5.h5, file_nexus_hdf5.h5data,
         self.data_struct.spectromicroscopy.normalization.white_spectrum_energy = self.evi0
         self.data_struct.spectromicroscopy.normalization.white_spectrum_energy_units = 'eV'
         
-        self.data_struct.spectromicroscopy.optical_density = self.od
+        if self.stack4D is None:
+            self.data_struct.spectromicroscopy.optical_density = self.od
+        else:
+            self.data_struct.spectromicroscopy.optical_density = self.od4D
         
     
 #----------------------------------------------------------------------   
@@ -436,23 +440,43 @@ class data(file_stk.x1astk,file_dataexch_hdf5.h5, file_nexus_hdf5.h5data,
 
         self.evi0hist = self.ev.copy()
 
-        self.i0datahist = np.zeros(self.n_ev)
 
+        
         i0_indices = np.where((fluxmin<self.averageflux)&(self.averageflux<fluxmax))
-        if np.any(i0_indices):
-            invnumel = 1./self.averageflux[i0_indices].shape[0]
-            for ie in range(self.n_ev):  
-                thiseng_abs = self.absdata[:,:,ie]
-                self.i0datahist[ie] = np.sum(thiseng_abs[i0_indices])*invnumel
-
 
         self.evi0 = self.ev.copy()
-        self.i0data = self.i0datahist 
-         
+        
         self.i0_dwell = self.data_dwell.copy()
- 
-        self.calculate_optical_density()   
-         
+                
+        if self.stack4D is None:
+            self.i0datahist = np.zeros((self.n_ev))
+            self.i0data = self.i0datahist 
+            if np.any(i0_indices):
+                invnumel = 1./self.averageflux[i0_indices].shape[0]
+                for ie in range(self.n_ev):  
+                    thiseng_abs = self.absdata[:,:,ie]
+                    self.i0datahist[ie] = np.sum(thiseng_abs[i0_indices])*invnumel
+
+        
+            self.calculate_optical_density()   
+            
+        else:
+            self.i0datahist = np.zeros((self.n_ev, self.n_theta))
+            self.i0data = self.i0datahist 
+            self.od4D = np.zeros((self.n_cols, self.n_rows, self.n_ev, self.n_theta))
+            
+            if np.any(i0_indices):
+                invnumel = 1./self.averageflux[i0_indices].shape[0]
+            else:
+                return
+            
+            for i in range(self.n_theta):
+                for ie in range(self.n_ev):  
+                    thiseng_abs = self.stack4D[:,:,ie, i]
+                    self.i0datahist[ie,i] = np.sum(thiseng_abs[i0_indices])*invnumel
+                        
+            self.calculate_optical_density_4D() 
+                
         self.fill_h5_struct_normalization()
         
         return    
@@ -475,6 +499,9 @@ class data(file_stk.x1astk,file_dataexch_hdf5.h5, file_nexus_hdf5.h5data,
         n_pixels = self.n_cols*self.n_rows
         #Optical density matrix is rearranged into n_pixelsxn_ev
         self.od = np.reshape(self.od, (n_pixels, self.n_ev), order='F')
+        
+        if self.stack4D is not None:
+            self.od4D = self.stack4D.copy()
         
         self.fill_h5_struct_normalization()
         
@@ -516,7 +543,11 @@ class data(file_stk.x1astk,file_dataexch_hdf5.h5, file_nexus_hdf5.h5data,
 #----------------------------------------------------------------------   
 # Normalize the data: calculate optical density matrix D 
     def calculate_optical_density(self):
-
+        
+        if self.stack4D is not None:
+            self.calculate_optical_density_4D()
+            return
+            
         n_pixels = self.n_cols*self.n_rows
         self.od = np.empty((self.n_cols, self.n_rows, self.n_ev))
         
@@ -550,12 +581,68 @@ class data(file_stk.x1astk,file_dataexch_hdf5.h5, file_nexus_hdf5.h5data,
              
         self.od3d = self.od.copy()
          
+        #Optical density matrix is rearranged into n_pixelsxn_ev
+        self.od = np.reshape(self.od, (n_pixels, self.n_ev), order='F')
+        
+
+        return
  
+#----------------------------------------------------------------------   
+# Normalize the data: calculate optical density matrix D 
+    def calculate_optical_density_4D(self):
+
+        n_pixels = self.n_cols*self.n_rows
+        self.od4D = np.zeros((self.n_cols, self.n_rows, self.n_ev, self.n_theta))
+        
+        #little hack to deal with rounding errors
+        self.evi0[self.evi0.size-1] += 0.001
+        
+        self.i0data = np.array(self.i0data)
+        i0dims = self.i0data.shape
+
+        
+        for ith in range(self.n_theta):
+            self.od = np.empty((self.n_cols, self.n_rows, self.n_ev))
+            
+            if len(i0dims) == 2:
+                self.i0data = self.i0datahist[:,ith]
+        
+            if len(self.evi0) > 2:
+                fi0int = scipy.interpolate.interp1d(self.evi0, self.i0data, kind='cubic', bounds_error=False, fill_value=0.0)      
+            else:
+                fi0int = scipy.interpolate.interp1d(self.evi0,self.i0data, bounds_error=False, fill_value=0.0)      
+            i0 = fi0int(self.ev)
+            
+             
+            if (self.data_dwell is not None) and (self.i0_dwell is not None):
+     
+                i0 = i0*(self.data_dwell/self.i0_dwell)
+            
+            #zero out all negative values in the image stack
+            negative_indices = np.where(self.stack4D <= 0)
+            if negative_indices:
+                self.stack4D[negative_indices] = 0.01
+                                
+     
+            for i in range(self.n_ev):
+                self.od[:,:,i] = - np.log(self.stack4D[:,:,i,ith]/i0[i])
+             
+            #clean up the result
+            nan_indices = np.where(np.isfinite(self.od) == False)
+            if nan_indices:
+                self.od[nan_indices] = 0
+                 
+        
+            self.od4D[:,:,:,ith] = self.od[:,:,:]
+            
+                    
+                    
+        self.od3d = self.od.copy()
+         
         #Optical density matrix is rearranged into n_pixelsxn_ev
         self.od = np.reshape(self.od, (n_pixels, self.n_ev), order='F')
 
-        return
-    
+        return   
 
 #----------------------------------------------------------------------   
 # Normalize the data: calculate optical density matrix D 
