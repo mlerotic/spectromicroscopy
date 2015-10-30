@@ -123,8 +123,7 @@ class File_GUI():
 
         def __init__(self,filepath=None,filestruct=None):
             super(File_GUI.DataChoiceDialog, self).__init__()
-            self.path = None
-            self.filename = None
+            self.filepath = filepath
             self.selection = None
             #self.setGeometry(300, 300, 290, 150)
             self.setWindowTitle('Choose Dataset')
@@ -138,10 +137,7 @@ class File_GUI():
             
             # Add the widgets to the first row
             hbox1.addWidget(QtGui.QLabel("Path:"))
-            if self.path is None:
-                self.Path_text = QtGui.QLabel("")
-            else:
-                self.Path_text = QtGui.QLabel(self.path)
+            self.Path_text = QtGui.QLabel("")
             hbox1.addWidget(self.Path_text,stretch=1)
             self.MainSizer.addLayout(hbox1)
             
@@ -175,11 +171,11 @@ class File_GUI():
             #self.show()
             
             if filepath is not None:
-                self.path, self.filename = os.path.split(str(filepath))
-                self.Path_text.setText(self.path)
-                self.File_text.setText(self.filename)
+                path, filename = os.path.split(str(self.filepath))
+                self.Path_text.setText(path)
+                self.File_text.setText(filename)
                 if filestruct is None:
-                    self.contents = file_plugins.GetFileStructure(str(filepath))
+                    self.contents = file_plugins.GetFileStructure(str(self.filepath))
                 else:
                     self.contents = filestruct
                 self.Entry_info.UpdateInfo(self.contents)
@@ -187,22 +183,27 @@ class File_GUI():
 
         def OnAccept(self):
             self.selection = self.Entry_info.selection
-            self.close()
+            self.accept()
 
         def OnBrowse(self):
-            if self.path is None:
+            if self.filepath is None:
                 start_path = ''
             else:
-                start_path = self.path
+                start_path, filename = os.path.split(str(self.filepath))
             FileChoice = QtGui.QFileDialog.getOpenFileName(self, "Choose a file", start_path, filter='HDF (*.hdf5);;*.*')
             if FileChoice == '':
                 return
-            self.path, self.filename = os.path.split(str(FileChoice))
-            
-            self.Path_text.setText(self.path)
-            self.File_text.setText(self.filename)
+            path, filename = os.path.split(str(FileChoice))
+            self.filepath = str(FileChoice)
+            self.Path_text.setText(path)
+            self.File_text.setText(filename)
             self.contents = file_plugins.GetFileStructure(str(FileChoice))
-            self.Entry_info.UpdateInfo(self.contents)
+            print "self.contents", self.contents
+            if self.contents is None or self.contents == (0,0):
+                self.selection = (0,0)
+                self.accept()
+            else:
+                self.Entry_info.UpdateInfo(self.contents)
             
 
     #-------------------------------------
@@ -11408,17 +11409,21 @@ class MainFrame(QtGui.QMainWindow):
             if plugin is None:
                 plugin = file_plugins.identify(filepath)
             FileStruct = file_plugins.GetFileStructure(filepath, plugin=plugin)
+            FileInternalSelection = (0,0)
             if FileStruct is not None:
                 dlg = File_GUI.DataChoiceDialog(filepath=filepath, filestruct=FileStruct)
-                dlg.exec_()
-                print "output is", dlg.selection
-                
+                if not dlg.exec_():
+                    return # do nothing if GUI is cancelled
+                FileInternalSelection = dlg.selection
+                if dlg.filepath != filepath:
+                    filepath = dlg.filepath
+                    plugin = file_plugins.identify(dlg.filepath)
             
             if self.common.stack_loaded == 1:
                 self.new_stack_refresh()
                 self.stk.new_data()
                 self.anlz.delete_data()
-            file_plugins.load(filepath, stack_object=self.stk, plugin=plugin,selection=dlg.selection)
+            file_plugins.load(filepath, stack_object=self.stk, plugin=plugin,selection=FileInternalSelection)
             directory =  os.path.dirname(str(filepath))
             self.page1.filename =  os.path.basename(str(filepath))
             
@@ -11455,7 +11460,7 @@ class MainFrame(QtGui.QMainWindow):
 
             self.page1.ResetDisplaySettings()
             self.page1.loadImage()
-            print (x,y), (self.ix,self.iy), self.stk.absdata.shape
+            #print (x,y), (self.ix,self.iy), self.stk.absdata.shape
             self.page1.loadSpectrum(self.ix, self.iy)
             self.page1.textctrl.setText(self.page1.filename)
             

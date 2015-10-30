@@ -55,14 +55,12 @@ def read_old( filepath, data_stk):
     data_stk.read_h5(filepath)
     return
 
-#def read(filepath, stk):
-    #read_h5(filepath)
-    #print 'new_stack.absdata.shape =', new_stack.absdata.shape
-    #return new_stack
+def GetFileStructure(FileName):
+    return None
 
 
 #----------------------------------------------------------------------
-def read(self, filename):
+def read(self, filename, selection=None):
     
     #new_stack = data_stack.data(data_struct)
     # Open HDF5 file
