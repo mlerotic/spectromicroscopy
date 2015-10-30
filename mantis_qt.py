@@ -199,7 +199,7 @@ class File_GUI():
             self.File_text.setText(filename)
             self.contents = file_plugins.GetFileStructure(str(FileChoice))
             print "self.contents", self.contents
-            if self.contents is None or self.contents == (0,0):
+            if self.contents is None:
                 self.selection = (0,0)
                 self.accept()
             else:

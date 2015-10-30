@@ -18,6 +18,7 @@
 
 import re, numpy, sys
 from os.path import splitext, exists
+from collections import OrderedDict
 
 
 title = 'SDF'
@@ -26,12 +27,29 @@ read_types = ['spectrum','image','stack']
 write_types = ['spectrum','image','stack']
 
 def identify(filename):
-	try:
-		HDR = HDR_FileParser(filename)
-		return HDR.num_regions>0 # return true if file contains at least one region
-	except:
-		print "Error in SDF plugin:", sys.exc_info()
-		return False
+    try:
+        HDR = HDR_FileParser(filename)
+        return HDR.num_regions>0 # return true if file contains at least one region
+    except:
+        print "Error in SDF plugin:", sys.exc_info()
+        return False
+
+def GetFileStructure(FileName):
+    HDR = HDR_FileParser(FileName)
+    if HDR.num_regions<2 and HDR.num_channels<2:
+        return None # exit if only one choice
+    D = OrderedDict()
+    for i,R in enumerate(['Region_'+str(r) for r in range(HDR.num_regions)]):
+        D[R] = OrderedDict()
+        D[R].definition = 'SDF'
+        D[R].scan_type = HDR.hdr['ScanDefinition']['Type']
+        D[R].data_shape = HDR.data_size[i]
+        D[R].data_axes = [HDR.hdr['ScanDefinition']['Regions'][1]['PAxis']['Name'],HDR.hdr['ScanDefinition']['Regions'][1]['QAxis']['Name'],HDR.hdr['ScanDefinition']['StackAxis']['Name']]
+        for ch in range(1,HDR.num_channels+1):
+            D[R][HDR.hdr['Channels'][ch]['Name']] = OrderedDict()
+    return D
+
+
 
 #----------------------------------------------------------------------
 class HDR_FileParser:
@@ -156,11 +174,11 @@ class HDR_FileParser:
       DataNames = [DataNames2]
     else:
       print "WARNING! Unknown flag:", DataFlag
-    for num_R in range(len(DataNames)):#Check that names correspond to existing files
-      for num_Ch in range(len(DataNames[num_R])):
-        for num_E in range(len(DataNames[num_R][num_Ch])):
-          if exists(DataNames[num_R][num_Ch][num_E]) == False:
-            print "WARNING! Data file doesn't exist:", DataNames[num_R][num_Ch][num_E]
+    #for num_R in range(len(DataNames)):#Check that names correspond to existing files
+      #for num_Ch in range(len(DataNames[num_R])):
+        #for num_E in range(len(DataNames[num_R][num_Ch])):
+          #if exists(DataNames[num_R][num_Ch][num_E]) == False:
+            #print "WARNING! Data file doesn't exist:", DataNames[num_R][num_Ch][num_E]
     return DataNames
  
 #----------------------------------------------------------------------
@@ -184,20 +202,13 @@ class HDR_FileParser:
 
 #----------------------------------------------------------------------
 #----------------------------------------------------------------------
-def read(self, filename):
+def read(self, filename,selection=None):
     HDR = HDR_FileParser(filename)
     
     if HDR.hdr['ScanDefinition']['Flags'] == 'Image Stack':
-        if HDR.num_regions > 1:
-            if HDR.num_channels > 1:
-                print "Only first region and first detector data will be loaded."
-            else:
-                print "Only first region will be loaded."
-        elif HDR.num_channels > 1:
-            print "Only first detector data will be loaded."
-
-        self.x_dist = numpy.array([float(i) for i in HDR.hdr['ScanDefinition']['Regions'][1]['PAxis']['Points'][1:] ])
-        self.y_dist = numpy.array([float(i) for i in HDR.hdr['ScanDefinition']['Regions'][1]['QAxis']['Points'][1:] ])
+        
+        self.x_dist = numpy.array([float(i) for i in HDR.hdr['ScanDefinition']['Regions'][selection[0]+1]['PAxis']['Points'][1:] ])
+        self.y_dist = numpy.array([float(i) for i in HDR.hdr['ScanDefinition']['Regions'][selection[0]+1]['QAxis']['Points'][1:] ])
         self.ev = numpy.array([float(i) for i in HDR.hdr['ScanDefinition']['StackAxis']['Points'][1:] ])
 
         self.n_cols = numpy.array(len(self.y_dist))
@@ -208,8 +219,11 @@ def read(self, filename):
         self.data_dwell = numpy.ones((self.n_ev))*msec
 
         imagestack = numpy.empty((self.n_cols,self.n_rows,self.n_ev), numpy.int32)
-        for i in range(len(HDR.data_names[0][0])):
-            imagestack[:,:,i] = numpy.loadtxt(HDR.data_names[0][0][i], numpy.int32).T
+        for i in range(len(HDR.data_names[selection[0]][selection[1]])):
+            try:
+                imagestack[:,:,i] = numpy.loadtxt(HDR.data_names[selection[0]][selection[1]][i], numpy.int32).T
+            except IOError:
+                imagestack[:,:,i] = numpy.nan
 
         self.absdata = numpy.empty((self.n_cols, self.n_rows, self.n_ev))
 
