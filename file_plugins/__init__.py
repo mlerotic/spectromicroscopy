@@ -1,4 +1,40 @@
 # -*- coding: utf-8 -*-
+# 
+#   This file is part of Mantis, a Multivariate ANalysis Tool for Spectromicroscopy.
+# 
+#   Copyright (C) 2015 Benjamin Watts, Paul Scherrer Institute
+#   License: GNU GPL v3
+#
+#   Mantis is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or
+#   any later version.
+#
+#   Mantis is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details <http://www.gnu.org/licenses/>.
+
+"""
+The file_plugins system is exposed to general code through the functions defined here in __init__.py:
+
+identify(filename)                  : Returns an instance of the plugin that claims to deal with the file at the URL 'filename'.
+GetFileStructure(filename)          : Returns a structure describing the internal organisation of the file, indicating sets of data available to choose from.
+load(filename,stack_object,..)      : Loads data from the URL 'filename' into the object (data_stack type) 'stack_object'. The plugin used can be stated or determined automatically, using 'identify'.
+
+Further functions for writing files via the plugins need to be written yet. To access the system, you should import the module ('import file_plugins') and then access the above functions as attributes of the module (e.g. 'file_plugins.load('data.hdf5',data_stk)' ).
+
+Each file plugin should be included here in the 'file_plugins' directory. Each plugin should define the following:
+
+title                           : A short string naming the plugin.
+extension                       : A list of strings indicating the file extensions that the plugin handles (e.g. ['*.txt']).
+read_types                      : A list of strings indicating the data types that the plugin will read (e.g. ['spectrum','image','stack']).
+write_types                     : A list of strings indicating the data types that the plugin will write (e.g. ['spectrum','image','stack']).
+identify(filename)              : Returns boolean indicating if the plugin can read the file at URL 'filename'.
+GetFileStructure(filename)      : Returns a structure describing the internal organisation of the file, indicating sets of data available to choose from.
+read(filename,stack_object,..)  : Loads data from the URL 'filename' into the object (data_stack type) 'stack_object'.
+
+"""
 
 import pkgutil, imp, os
 
@@ -48,9 +84,9 @@ def load(filename,stack_object=None,plugin=None,selection=None):
     else:
         print "load", filename, "with the", plugin.title, "plugin."
         if stack_object is None:
-            return plugin.read(None,filename,selection)
+            return plugin.read(filename,None,selection)
         else:
-            plugin.read(stack_object,filename,selection)
+            plugin.read(filename,stack_object,selection)
             return
 
 def GetFileStructure(filename,plugin=None):

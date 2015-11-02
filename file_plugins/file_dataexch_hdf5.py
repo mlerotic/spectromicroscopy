@@ -2,7 +2,7 @@
 # 
 #   This file is part of Mantis, a Multivariate ANalysis Tool for Spectromicroscopy.
 # 
-#   Copyright (C) 2011 Mirna Lerotic - 2nd Look, Nicholas Schwarz
+#   Copyright (C) 2011 Mirna Lerotic - 2nd Look, Nicholas Schwarz, Benjamin Watts
 #   http://2ndlookconsulting.com
 #   License: GNU GPL v3
 #
@@ -60,7 +60,7 @@ def GetFileStructure(FileName):
 
 
 #----------------------------------------------------------------------
-def read(self, filename, selection=None):
+def read(filename, self, selection=None):
     
     #new_stack = data_stack.data(data_struct)
     # Open HDF5 file

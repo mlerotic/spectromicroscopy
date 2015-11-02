@@ -2,7 +2,7 @@
 # 
 #   This file is part of Mantis, a Multivariate ANalysis Tool for Spectromicroscopy.
 # 
-#   Copyright (C) 2011 Benjamin Watts, Paul Scherrer Institut
+#   Copyright (C) 2015 Benjamin Watts, Paul Scherrer Institut
 #   License: GNU GPL v3
 #
 #   Mantis is free software: you can redistribute it and/or modify
@@ -202,7 +202,7 @@ class HDR_FileParser:
 
 #----------------------------------------------------------------------
 #----------------------------------------------------------------------
-def read(self, filename,selection=None):
+def read(filename, self, selection=None):
     HDR = HDR_FileParser(filename)
     
     if HDR.hdr['ScanDefinition']['Flags'] == 'Image Stack':

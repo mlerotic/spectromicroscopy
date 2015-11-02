@@ -40,7 +40,7 @@ def identify(filename):
     except:
         return False
 
-def read(stack_object,FileName,selection=(0,0)):
+def read(FileName,stack_object,selection=(0,0)):
     D = GetFileStructure(FileName)
     entry = D.keys()[selection[0]]
     detector = D[entry].keys()[selection[1]]
