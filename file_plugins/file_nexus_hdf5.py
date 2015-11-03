@@ -45,7 +45,12 @@ def read(FileName,stack_object,selection=(0,0)):
     entry = D.keys()[selection[0]]
     detector = D[entry].keys()[selection[1]]
     F = h5py.File(FileName, 'r')
-    stack_object.ev = numpy.array(F[entry][detector]['energy'])
+    if 'energy' in list(F[entry][detector]):
+        stack_object.ev = numpy.array(F[entry][detector]['energy'])
+    elif 'photon_energy' in list(F[entry][detector]):
+        stack_object.ev = numpy.array(F[entry][detector]['photon_energy'])
+    else:
+        print "Can't find photon energy!"
     stack_object.x_dist = numpy.array(F[entry][detector]['sample_x'])
     stack_object.y_dist = numpy.array(F[entry][detector]['sample_y'])
     stack_object.data_dwell = numpy.array(F[entry][detector]['count_time'])
@@ -56,7 +61,13 @@ def read(FileName,stack_object,selection=(0,0)):
         axes_list = list(F[entry][detector].attrs['axes'])
         axes_order = [axes_list.index('sample_x'),axes_list.index('sample_y'),axes_list.index('energy')]
     else: # Old version from before the specification was finalised
-        axes_order = [F[entry][detector]['sample_x'].attrs['axis']-1,F[entry][detector]['sample_y'].attrs['axis']-1,F[entry][detector]['energy'].attrs['axis']-1]
+        if 'energy' in list(F[entry][detector]):
+            energy_axis = F[entry][detector]['energy'].attrs['axis']
+        elif 'photon_energy' in list(F[entry][detector]):
+            energy_axis = F[entry][detector]['photon_energy'].attrs['axis']
+        else:
+            print "Can't find photon energy!"
+        axes_order = [F[entry][detector]['sample_x'].attrs['axis']-1,F[entry][detector]['sample_y'].attrs['axis']-1,energy_axis-1]
     stack_object.absdata = numpy.transpose(numpy.array(F[entry][detector]['data']),axes=axes_order)
     
     
