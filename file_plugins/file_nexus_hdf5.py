@@ -99,10 +99,11 @@ def GetFileStructure(FileName):
                 channel_zero = D[entry].keys()[0]
                 if 'stxm_scan_type' in F[entry][channel_zero]:
                     D[entry].scan_type = F[entry][channel_zero]['stxm_scan_type'][0]
+                signal_name = 'data'
                 if 'signal' in F[entry][channel_zero].attrs:
                     signal_name = F[entry][channel_zero].attrs['signal']
-                    if signal_name in F[entry][channel_zero]:
-                        D[entry].data_shape = F[entry][channel_zero][signal_name].shape
+                if signal_name in F[entry][channel_zero]:
+                    D[entry].data_shape = F[entry][channel_zero][signal_name].shape
                 if 'axes' in F[entry][channel_zero].attrs:
                     D[entry].data_axes = F[entry][channel_zero].attrs['axes']
     F.close()
