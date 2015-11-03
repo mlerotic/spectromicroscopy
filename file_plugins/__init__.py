@@ -36,7 +36,7 @@ read(filename,stack_object,..)  : Loads data from the URL 'filename' into the ob
 
 """
 
-import pkgutil, imp, os
+import pkgutil, imp, os, data_stack, numpy
 
 # These variables declare the options that each plugin can claim the ability to handle
 actions = ['read','write']
@@ -83,10 +83,35 @@ def load(filename,stack_object=None,plugin=None,selection=None):
         return None
     else:
         print "load", filename, "with the", plugin.title, "plugin."
-        if stack_object is None:
-            return plugin.read(filename,None,selection)
+        if selection is None or len(selection) == 1:
+            if stack_object is None:
+                return plugin.read(filename,None,selection[0]) #should this ever be used?
+            else:
+                plugin.read(filename,stack_object,selection[0])
+                return
         else:
-            plugin.read(filename,stack_object,selection)
+            plugin.read(filename,stack_object,selection[0])
+            temp_stack = data_stack.data(stack_object.data_struct)
+            print selection[0], stack_object.absdata.shape
+            full_stack = stack_object.absdata.copy()
+            for s in selection[1:]:
+                plugin.read(filename,temp_stack,s)
+                print "raw", full_stack.shape, temp_stack.absdata.shape
+                if full_stack.shape[1] > temp_stack.absdata.shape[1]:
+                    print "pad temp", full_stack.shape[1], temp_stack.absdata.shape[1]
+                    temp_stack.absdata = numpy.pad(temp_stack.absdata,((0,0),(0,full_stack.shape[1]-temp_stack.absdata.shape[1]),(0,0)), mode='constant',constant_values=0)
+                    #print temp_stack.absdata.shape
+                elif full_stack.shape[1] < temp_stack.absdata.shape[1]:
+                    print "pad full", full_stack.shape[1], temp_stack.absdata.shape[1]
+                    full_stack = numpy.pad(full_stack,((0,0),(0,temp_stack.absdata.shape[1]-full_stack.shape[1]),(0,0)), mode='constant',constant_values=0)
+                    #print full_stack.shape
+                print "concat", full_stack.shape, temp_stack.absdata.shape
+                full_stack = numpy.vstack((full_stack,temp_stack.absdata))
+            stack_object.absdata = full_stack
+            stack_object.x_dist = numpy.arange(full_stack.shape[0])
+            stack_object.y_dist = numpy.arange(full_stack.shape[1])
+            stack_object.n_cols = len(stack_object.x_dist)
+            stack_object.n_rows = len(stack_object.y_dist)
             return
 
 def GetFileStructure(filename,plugin=None):

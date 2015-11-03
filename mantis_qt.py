@@ -125,7 +125,6 @@ class File_GUI():
             super(File_GUI.DataChoiceDialog, self).__init__()
             self.filepath = filepath
             self.selection = None
-            #self.setGeometry(300, 300, 290, 150)
             self.setWindowTitle('Choose Dataset')
             
             # A vertical box layout containing rows
@@ -182,7 +181,7 @@ class File_GUI():
 
 
         def OnAccept(self):
-            self.selection = self.Entry_info.selection
+            self.selection = self.Entry_info.GetSelection()
             self.accept()
 
         def OnBrowse(self):
@@ -194,9 +193,8 @@ class File_GUI():
             self.Path_text.setText(path)
             self.File_text.setText(filename)
             self.contents = file_plugins.GetFileStructure(str(filepath),plugin=plugin)
-            #print "self.contents", self.contents
             if self.contents is None:
-                self.selection = (0,0)
+                self.selection = [(0,0)]
                 self.accept()
             else:
                 self.Entry_info.UpdateInfo(self.contents)
@@ -212,15 +210,14 @@ class File_GUI():
             self.populate(name,contents)
             
         def populate(self,name,contents):
-            self.radioButton = QtGui.QRadioButton(name+' ('+str(contents.definition)+':'+str(contents.scan_type)+')')
-            self.radioButton.clicked.connect(self.setChecked)
-            self.addWidget(self.radioButton)
+            self.checkbox = QtGui.QCheckBox(name+' ('+str(contents.definition)+':'+str(contents.scan_type)+')')
+            self.checkbox.clicked.connect(self.setChecked)
+            self.addWidget(self.checkbox)
             self.addStretch(1)
             self.addWidget(QtGui.QLabel('Channels:'))
             self.channel_combobox = QtGui.QComboBox()
             for c in contents:
                 self.channel_combobox.addItem(c)
-            self.channel_combobox.currentIndexChanged.connect(self.setIndex)
             self.addWidget(self.channel_combobox)
             self.addStretch(1)
             Data_Size_Label = QtGui.QLabel('Points: '+str(contents.data_shape))
@@ -228,19 +225,14 @@ class File_GUI():
                 Data_Size_Label.setToolTip(' | '.join(contents.data_axes))
             self.addWidget(Data_Size_Label)
             if not self.valid_flag:
-                self.radioButton.setEnabled(False)
+                self.checkbox.setEnabled(False)
                 self.channel_combobox.setEnabled(False)
         
         def setChecked(self,value=True):
-            self.radioButton.setChecked(value)
-            self.parent().parent().selection = (self.index,self.channel_combobox.currentIndex())
-
-        def setIndex(self):
-            if self.index == self.parent().parent().selection[0]:
-                self.parent().parent().selection = (self.index,self.channel_combobox.currentIndex())
+            self.checkbox.setChecked(value)
 
         def isEnabled(self):
-            return self.radioButton.isEnabled()
+            return self.checkbox.isEnabled()
 
         def isValid(self):
             return self.valid_flag
@@ -252,6 +244,9 @@ class File_GUI():
                 #return True
             #else:
                 #return False
+        
+        def GetStatus(self):
+            return (self.checkbox.isChecked(),self.channel_combobox.currentIndex())
 
     #---------------------------------------
     class EntryInfoBox(QtGui.QGroupBox):
@@ -283,9 +278,16 @@ class File_GUI():
                     entryCheckBox.setChecked(True)
                     self.valid_entry_flag = True
                     self.parent().button_ok.setEnabled(True)
-            
+        
+        def GetSelection(self):
+            selection = []
+            for i in range(self.vbox.count()):
+                status = self.vbox.itemAt(i).GetStatus()
+                if status[0]:
+                    selection.append((i,status[1])) # (region,detector)
+            return selection
 
-File_GUI = File_GUI()
+File_GUI = File_GUI() #Create instance so that object can remember things (e.g. last path)
 """ ------------------------------------------------------------------------------------------------"""
 class PageNNMA(QtGui.QWidget):
     def __init__(self, common, data_struct, stack, anlz, nnma):
@@ -11405,7 +11407,7 @@ class MainFrame(QtGui.QMainWindow):
             if plugin is None:
                 plugin = file_plugins.identify(filepath)
             FileStruct = file_plugins.GetFileStructure(filepath, plugin=plugin)
-            FileInternalSelection = (0,0)
+            FileInternalSelection = [(0,0)]
             if FileStruct is not None:
                 dlg = File_GUI.DataChoiceDialog(filepath=filepath, filestruct=FileStruct)
                 if not dlg.exec_():
