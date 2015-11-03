@@ -211,8 +211,8 @@ def read(filename, self, selection=None):
         self.y_dist = numpy.array([float(i) for i in HDR.hdr['ScanDefinition']['Regions'][selection[0]+1]['QAxis']['Points'][1:] ])
         self.ev = numpy.array([float(i) for i in HDR.hdr['ScanDefinition']['StackAxis']['Points'][1:] ])
 
-        self.n_cols = numpy.array(len(self.y_dist))
-        self.n_rows = numpy.array(len(self.x_dist))
+        self.n_cols = numpy.array(len(self.x_dist))
+        self.n_rows = numpy.array(len(self.y_dist))
         self.n_ev = numpy.array(len(self.ev))
 
         msec = float(HDR.hdr['ScanDefinition']['Dwell'])
@@ -225,9 +225,9 @@ def read(filename, self, selection=None):
             except IOError:
                 imagestack[:,:,i] = numpy.nan
 
-        self.absdata = numpy.empty((self.n_cols, self.n_rows, self.n_ev))
+        self.absdata = numpy.empty((self.n_cols,self.n_rows, self.n_ev))
 
-        self.absdata = numpy.reshape(imagestack, (self.n_cols, self.n_rows, self.n_ev), order='F')       
+        self.absdata = numpy.reshape(imagestack, (self.n_cols,self.n_rows, self.n_ev), order='F')       
 
 #             self.original_n_cols = self.n_cols.copy()
 #             self.original_n_rows = self.n_rows.copy()
