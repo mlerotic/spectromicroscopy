@@ -186,19 +186,15 @@ class File_GUI():
             self.accept()
 
         def OnBrowse(self):
-            if self.filepath is None:
-                start_path = ''
-            else:
-                start_path, filename = os.path.split(str(self.filepath))
-            FileChoice = QtGui.QFileDialog.getOpenFileName(self, "Choose a file", start_path, filter='HDF (*.hdf5);;*.*')
-            if FileChoice == '':
+            filepath, plugin = File_GUI.SelectFile('read','stack')
+            if filepath is None:
                 return
-            path, filename = os.path.split(str(FileChoice))
-            self.filepath = str(FileChoice)
+            path, filename = os.path.split(str(filepath))
+            self.filepath = str(filepath)
             self.Path_text.setText(path)
             self.File_text.setText(filename)
-            self.contents = file_plugins.GetFileStructure(str(FileChoice))
-            print "self.contents", self.contents
+            self.contents = file_plugins.GetFileStructure(str(filepath),plugin=plugin)
+            #print "self.contents", self.contents
             if self.contents is None:
                 self.selection = (0,0)
                 self.accept()
