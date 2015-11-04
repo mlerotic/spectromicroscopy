@@ -92,20 +92,13 @@ def load(filename,stack_object=None,plugin=None,selection=None):
         else:
             plugin.read(filename,stack_object,selection[0])
             temp_stack = data_stack.data(stack_object.data_struct)
-            print selection[0], stack_object.absdata.shape
             full_stack = stack_object.absdata.copy()
             for s in selection[1:]:
                 plugin.read(filename,temp_stack,s)
-                print "raw", full_stack.shape, temp_stack.absdata.shape
                 if full_stack.shape[1] > temp_stack.absdata.shape[1]:
-                    print "pad temp", full_stack.shape[1], temp_stack.absdata.shape[1]
                     temp_stack.absdata = numpy.pad(temp_stack.absdata,((0,0),(0,full_stack.shape[1]-temp_stack.absdata.shape[1]),(0,0)), mode='constant',constant_values=0)
-                    #print temp_stack.absdata.shape
                 elif full_stack.shape[1] < temp_stack.absdata.shape[1]:
-                    print "pad full", full_stack.shape[1], temp_stack.absdata.shape[1]
                     full_stack = numpy.pad(full_stack,((0,0),(0,temp_stack.absdata.shape[1]-full_stack.shape[1]),(0,0)), mode='constant',constant_values=0)
-                    #print full_stack.shape
-                print "concat", full_stack.shape, temp_stack.absdata.shape
                 full_stack = numpy.vstack((full_stack,temp_stack.absdata))
             stack_object.absdata = full_stack
             stack_object.x_dist = numpy.arange(full_stack.shape[0])

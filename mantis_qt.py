@@ -182,7 +182,10 @@ class File_GUI():
 
         def OnAccept(self):
             self.selection = self.Entry_info.GetSelection()
-            self.accept()
+            if len(self.selection) == 0:
+                self.close() #accepting with no regions selected is the same as clicking 'cancel'
+            else:
+                self.accept()
 
         def OnBrowse(self):
             filepath, plugin = File_GUI.SelectFile('read','stack')
