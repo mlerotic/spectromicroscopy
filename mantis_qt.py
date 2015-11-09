@@ -12210,14 +12210,14 @@ class MainFrame(QtGui.QMainWindow):
             QtGui.QApplication.restoreOverrideCursor()
                  
         except:
-        
+         
             self.common.stack_loaded = 0 
             self.common.i0_loaded = 0
             self.new_stack_refresh()
-                                       
+                                        
             QtGui.QApplication.restoreOverrideCursor()
             QtGui.QMessageBox.warning(self, 'Error', 'Image stack not loaded.')
-       
+        
             import sys
             print sys.exc_info()
                    

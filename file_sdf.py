@@ -187,8 +187,8 @@ class sdfstk:
             self.y_dist = numpy.array([float(i) for i in HDR.hdr['ScanDefinition']['Regions'][1]['QAxis']['Points'][1:] ])
             self.ev = numpy.array([float(i) for i in HDR.hdr['ScanDefinition']['StackAxis']['Points'][1:] ])
 
-            self.n_cols = numpy.array(len(self.y_dist))
-            self.n_rows = numpy.array(len(self.x_dist))
+            self.n_cols = numpy.array(len(self.x_dist))
+            self.n_rows = numpy.array(len(self.y_dist))
             self.n_ev = numpy.array(len(self.ev))
 
             msec = float(HDR.hdr['ScanDefinition']['Dwell'])
@@ -196,12 +196,12 @@ class sdfstk:
 
             imagestack = numpy.empty((self.n_cols,self.n_rows,self.n_ev), numpy.int32)
             for i in range(len(HDR.data_names[0][0])):
-                imagestack[:,:,i] = numpy.loadtxt(HDR.data_names[0][0][i], numpy.int32)
+                imagestack[:,:,i] = numpy.loadtxt(HDR.data_names[0][0][i], numpy.int32).T
 
             self.absdata = numpy.empty((self.n_cols, self.n_rows, self.n_ev))
 
-            self.absdata = numpy.reshape(imagestack, (self.n_cols, self.n_rows, self.n_ev), order='F')       
-
+            self.absdata = numpy.reshape(imagestack, (self.n_cols, self.n_rows, self.n_ev), order='F')     
+            
 
         else:
             print "Only Image Stack files are supported."
