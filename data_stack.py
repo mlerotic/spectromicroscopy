@@ -980,8 +980,10 @@ class data(file_stk.x1astk,file_dataexch_hdf5.h5, file_nexus_hdf5.h5data,
         if ytop > (self.n_rows):
             ytop = self.n_rows
             
-            
-        cropped_stack = images[xleft:xright, ybottom:ytop, :]
+        if self.stack4D is not None:
+            cropped_stack = images[xleft:xright, ybottom:ytop, :, :]
+        else:
+            cropped_stack = images[xleft:xright, ybottom:ytop, :]
         
         return cropped_stack, xleft, xright, ybottom, ytop
 

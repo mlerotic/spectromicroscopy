@@ -36,7 +36,7 @@ import matplotlib
 from numpy import NAN
 matplotlib.rcParams['backend.qt4'] = 'PyQt4'
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg as NavigationToolbar
+from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 from mpl_toolkits.axes_grid import make_axes_locatable
 matplotlib.interactive( True )
@@ -9037,7 +9037,7 @@ class ImageRegistration(QtGui.QDialog):
         
         self.parent = parent
         
-        self.resize(1050, 700)
+        self.resize(1050, 750)
         self.setWindowTitle('Stack Alignment')
         
         pal = QtGui.QPalette()
@@ -9052,7 +9052,9 @@ class ImageRegistration(QtGui.QDialog):
         self.regist_calculated = 0
         
         self.iev = 0
+        self.itheta = 0
         self.ref_image_index = 0
+        self.ref_image_index_theta = 0
         self.ref_image = 0
         
         self.man_align = 0
@@ -9062,14 +9064,27 @@ class ImageRegistration(QtGui.QDialog):
         self.maxshift = 0
         self.auto = True
         
-        self.man_xs = npy.zeros((self.stack.n_ev))
-        self.man_ys = npy.zeros((self.stack.n_ev))
+        self.xleft = 0
+        self.xright = self.stack.n_cols
+        self.ybottom = 0
+        self.ytop = self.stack.n_rows
         
-        self.aligned_stack = self.stack.absdata.copy()
+
         
+        if self.com.stack_4d == 0:
+            self.aligned_stack = self.stack.absdata.copy()
+            self.man_xs = npy.zeros((self.stack.n_ev))
+            self.man_ys = npy.zeros((self.stack.n_ev))    
+            self.xshifts = npy.zeros((self.stack.n_ev))
+            self.yshifts = npy.zeros((self.stack.n_ev))        
+        else:
+            self.aligned_stack = self.stack.stack4D.copy()
+            self.man_xs = npy.zeros((self.stack.n_ev,self.stack.n_theta))
+            self.man_ys = npy.zeros((self.stack.n_ev,self.stack.n_theta))    
+            self.xshifts = npy.zeros((self.stack.n_ev,self.stack.n_theta))
+            self.yshifts = npy.zeros((self.stack.n_ev,self.stack.n_theta))        
         
-        self.xshifts = npy.zeros((self.stack.n_ev))
-        self.yshifts = npy.zeros((self.stack.n_ev))
+
         
         self.minxs = 0
         self.maxxs = 0
@@ -9095,7 +9110,7 @@ class ImageRegistration(QtGui.QDialog):
         self.tc_imageeng = QtGui.QLabel(self)
         self.tc_imageeng.setText("Image at energy: ")
        
-        hbox11 = QtGui.QHBoxLayout()
+        gridsizertop = QtGui.QGridLayout()
         
         frame = QtGui.QFrame()
         frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
@@ -9110,7 +9125,7 @@ class ImageRegistration(QtGui.QDialog):
         
         fbox.addWidget(self.AbsImagePanel)
         frame.setLayout(fbox)
-        hbox11.addWidget(frame)
+        gridsizertop.addWidget(frame, 0, 0, QtCore .Qt. AlignLeft)
         
 
         self.slider_eng = QtGui.QScrollBar(QtCore.Qt.Vertical)
@@ -9119,10 +9134,25 @@ class ImageRegistration(QtGui.QDialog):
         self.slider_eng.setRange(0, self.stack.n_ev-1)
         self.slider_eng.setValue(self.iev)
         
-        hbox11.addWidget(self.slider_eng)        
+        gridsizertop.addWidget(self.slider_eng, 0, 1, QtCore .Qt. AlignLeft)      
+        
+        self.slider_theta = QtGui.QScrollBar(QtCore.Qt.Horizontal)
+        self.slider_theta.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.slider_theta.valueChanged[int].connect(self.OnScrollTheta)
+        self.slider_theta.setRange(0, self.stack.n_theta-1)     
+          
+        self.tc_imagetheta = QtGui.QLabel(self)
+        self.tc_imagetheta.setText("4D Data Angle: ")
+        if self.com.stack_4d == 0 : 
+            self.tc_imagetheta.setVisible(False)
+            self.slider_theta.setVisible(False)
+        hbox51 = QtGui.QHBoxLayout()
+        hbox51.addWidget(self.tc_imagetheta) 
+        hbox51.addWidget(self.slider_theta)
+        gridsizertop.addLayout(hbox51, 1, 0) 
       
         vbox1.addWidget(self.tc_imageeng)        
-        vbox1.addLayout(hbox11)
+        vbox1.addLayout(gridsizertop)
 
         self.tc_shift1 = QtGui.QLabel(self)
         self.tc_shift2 = QtGui.QLabel(self)
@@ -9130,9 +9160,12 @@ class ImageRegistration(QtGui.QDialog):
         vbox1.addWidget(self.tc_shift2)
         vbox1.addStretch(1)
         
-          
-        self.tc_shift1.setText('X shift: {0:5.2f} pixels'.format(self.xshifts[self.iev]))
-        self.tc_shift2.setText('Y shift: {0:5.2f} pixels'.format(self.yshifts[self.iev]))
+        if self.com.stack_4d == 0:
+            self.tc_shift1.setText('X shift: {0:5.2f} pixels'.format(self.xshifts[self.iev]))
+            self.tc_shift2.setText('Y shift: {0:5.2f} pixels'.format(self.yshifts[self.iev]))
+        else:
+            self.tc_shift1.setText('X shift: {0:5.2f} pixels'.format(self.xshifts[self.iev,self.itheta]))
+            self.tc_shift2.setText('Y shift: {0:5.2f} pixels'.format(self.yshifts[self.iev,self.itheta]))            
         
         
         #panel 2        
@@ -9448,10 +9481,10 @@ class ImageRegistration(QtGui.QDialog):
 #----------------------------------------------------------------------        
     def ShowImage(self):
         
-               
-        image = self.aligned_stack[:,:,self.iev]
-        
-        #image = self.aligned_stack[0:200,0:200,self.iev]
+        if self.com.stack_4d == 0:
+            image = self.aligned_stack[:,:,self.iev]
+        else:
+            image = self.aligned_stack[:,:,self.iev,self.itheta]
             
             
         fig = self.absimgfig
@@ -9480,14 +9513,21 @@ class ImageRegistration(QtGui.QDialog):
         
         self.tc_imageeng.setText('Image at energy: {0:5.2f} eV'.format(float(self.stack.ev[self.iev])))
         
-        self.tc_shift1.setText('X shift: {0:5.2f} pixels'.format(self.xshifts[self.iev]))
-        self.tc_shift2.setText('Y shift: {0:5.2f} pixels'.format(self.yshifts[self.iev]))
+        if self.com.stack_4d == 0:
+            self.tc_shift1.setText('X shift: {0:5.2f} pixels'.format(self.xshifts[self.iev]))
+            self.tc_shift2.setText('Y shift: {0:5.2f} pixels'.format(self.yshifts[self.iev]))
+        else:
+            self.tc_shift1.setText('X shift: {0:5.2f} pixels'.format(self.xshifts[self.iev,self.itheta]))
+            self.tc_shift2.setText('Y shift: {0:5.2f} pixels'.format(self.yshifts[self.iev,self.itheta]))  
 
         
         if (self.man_align == 2):                  
-            self.textctrl_ms1.setText('X manual shift:  {0:5.2f}  pixels'.format(self.man_xs[self.iev]))
-            self.textctrl_ms2.setText('Y manual shift:  {0:5.2f}  pixels'.format(self.man_ys[self.iev]))
-            
+            if self.com.stack_4d == 0:
+                self.textctrl_ms1.setText('X manual shift:  {0:5.2f}  pixels'.format(self.man_xs[self.iev]))
+                self.textctrl_ms2.setText('Y manual shift:  {0:5.2f}  pixels'.format(self.man_ys[self.iev]))
+            else:
+                self.textctrl_ms1.setText('X manual shift:  {0:5.2f}  pixels'.format(self.man_xs[self.iev,self.itheta]))
+                self.textctrl_ms2.setText('Y manual shift:  {0:5.2f}  pixels'.format(self.man_ys[self.iev,self.itheta]))            
 
         
         
@@ -9497,15 +9537,25 @@ class ImageRegistration(QtGui.QDialog):
             
         self.ShowImage()
             
+#----------------------------------------------------------------------            
+    def OnScrollTheta(self, value):
+        self.itheta = value
 
+        self.tc_imagetheta.setText("4D Data Angle: "+str(self.stack.theta[self.itheta]))
+        
+        self.ShowImage()
+            
 #----------------------------------------------------------------------        
     def SetRefImage(self):
         
         self.ref_image_index = self.iev
+        self.ref_image_index_theta = self.itheta
                
-        self.ref_image = self.aligned_stack[:,:,self.iev].copy()
-        
-        #self.ref_image = self.aligned_stack[0:200,0:200,self.iev].copy()
+        if self.com.stack_4d == 0:
+            self.ref_image = self.aligned_stack[:,:,self.iev].copy()
+        else:
+            self.ref_image = self.aligned_stack[:,:,self.iev,self.itheta].copy()
+
         
         self.ShowRefImage()
         self.have_ref_image = 1
@@ -9610,12 +9660,22 @@ class ImageRegistration(QtGui.QDialog):
         else:        
             self.auto = False
             
-        self.man_xs = npy.zeros((self.stack.n_ev))
-        self.man_ys = npy.zeros((self.stack.n_ev))
+
         
-        self.aligned_stack = self.stack.absdata.copy()      
-        self.xshifts = npy.zeros((self.stack.n_ev))
-        self.yshifts = npy.zeros((self.stack.n_ev))
+        if self.com.stack_4d == 0:
+            self.aligned_stack = self.stack.absdata.copy()  
+            self.man_xs = npy.zeros((self.stack.n_ev))
+            self.man_ys = npy.zeros((self.stack.n_ev))
+            self.xshifts = npy.zeros((self.stack.n_ev))
+            self.yshifts = npy.zeros((self.stack.n_ev))
+        else:
+            self.aligned_stack = self.stack.stack4D.copy()
+            self.man_xs = npy.zeros((self.stack.n_ev,self.stack.n_theta))
+            self.man_ys = npy.zeros((self.stack.n_ev,self.stack.n_theta))    
+            self.xshifts = npy.zeros((self.stack.n_ev,self.stack.n_theta))
+            self.yshifts = npy.zeros((self.stack.n_ev,self.stack.n_theta))   
+                        
+
         
         if self.have_ref_image == 1:
             fig = self.shiftsfig
@@ -9699,9 +9759,14 @@ class ImageRegistration(QtGui.QDialog):
 #----------------------------------------------------------------------        
     def OnRemoveImage(self, event):
         
+
         self.stack.absdata = npy.delete(self.stack.absdata, self.iev, axis=2)  
-        
+            
         self.aligned_stack = npy.delete(self.aligned_stack, self.iev, axis=2)
+        
+        if self.com.stack_4d == 1:
+            self.stack.stack4D = npy.delete(self.stack.stack4D, self.iev, axis=2)  
+
         
         self.stack.n_ev = self.stack.n_ev - 1
         self.stack.ev = npy.delete(self.stack.ev, self.iev) 
@@ -9710,7 +9775,10 @@ class ImageRegistration(QtGui.QDialog):
         self.xshifts = npy.delete(self.xshifts, self.iev) 
         self.yshifts = npy.delete(self.yshifts, self.iev) 
         
-        self.stack.data_struct.exchange.data = self.stack.absdata
+        if self.com.stack_4d == 0:
+            self.stack.data_struct.exchange.data = self.stack.absdata
+        else:
+            self.stack.data_struct.exchange.data = self.stack.stack4D
         self.stack.data_struct.exchange.energy = self.stack.ev
         
         if self.com.i0_loaded == 1:
@@ -9734,6 +9802,10 @@ class ImageRegistration(QtGui.QDialog):
 
 #----------------------------------------------------------------------            
     def OnCalcRegistration(self, event):
+        
+        if self.com.stack_4d == 1:
+            self.CalcRegistration4D()
+            return
         
         QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
         
@@ -9801,6 +9873,104 @@ class ImageRegistration(QtGui.QDialog):
                 self.aligned_stack[:,:,i] = shifted_img
 
                 
+        self.regist_calculated = 1
+        self.iev = 0
+        self.ShowImage()
+        self.slider_eng.setValue(self.iev)
+        
+        self.UpdateWidgets()
+        
+        
+        min_xshift = npy.min(self.xshifts)
+        max_xshift = npy.max(self.xshifts)
+        
+        min_yshift = npy.min(self.yshifts)
+        max_yshift = npy.max(self.yshifts)
+        
+        if min_xshift < self.minxs : self.minxs = min_xshift
+        if max_xshift > self.maxxs : self.maxxs = max_xshift
+
+        if min_yshift < self.minys : self.minys = min_yshift        
+        if max_yshift > self.maxys : self.maxys = max_yshift
+        
+                    
+        QtGui.QApplication.restoreOverrideCursor()
+        
+#----------------------------------------------------------------------            
+    def CalcRegistration4D(self):
+        
+        QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+        
+        #Get Edge enhancement info
+        edge = 0
+        if self.edgee > 0:
+            if self.rb_sobel.isChecked():
+                edge = 1
+            else:
+                edge = 2
+        
+        #Subregion selection on a reference image
+        if self.subregion == 0:
+            self.sr_x1 = 0
+            self.sr_x2 = 0
+            self.sr_y1 = 0
+            self.sr_y2 = 0            
+            referenceimage = self.ref_image            
+        else:    
+            referenceimage = self.ref_image[self.sr_x1:self.sr_x2, self.sr_y2:self.sr_y1]  
+
+        temptheta = self.itheta
+        for j in range(self.stack.n_theta):
+            self.itheta = j
+            for i in range(self.stack.n_ev):
+            
+
+                if self.subregion == 0:
+                    img2 = self.aligned_stack[:,:,i,j]  
+                else:
+                    img2 = self.aligned_stack[self.sr_x1:self.sr_x2, self.sr_y2:self.sr_y1, i, j]  
+                   
+                if i==0 and j==0:     
+                    xshift, yshift, ccorr = self.stack.register_images(referenceimage, img2, 
+                                                              have_ref_img_fft = False,
+                                                              edge_enhancement = edge)   
+                elif i==self.ref_image_index and j==self.ref_image_index_theta:
+                    xshift = 0
+                    yshift = 0       
+                else:
+                    xshift, yshift, ccorr = self.stack.register_images(referenceimage, img2, 
+                                                              have_ref_img_fft = True,
+                                                              edge_enhancement =  edge)
+                
+                #Limit the shifts to MAXSHIFT chosen by the user
+                if (self.maxshift > 0):
+                    if (abs(xshift) > self.maxshift):
+                            xshift = npy.sign(xshift)*self.maxshift
+                    if (abs(yshift) > self.maxshift):
+                            yshift = npy.sign(yshift)*self.maxshift
+                
+                self.xshifts[i,j] = xshift
+                self.yshifts[i,j] = yshift
+                self.PlotShifts()
+                
+                if self.showccorr == 1:
+                    self.ShowCrossCorrelation(ccorr, xshift, yshift)    
+                    
+                QCoreApplication.processEvents()
+                    
+                    
+        #Apply shifts
+        for i in range(self.stack.n_ev):
+            for j in range(self.stack.n_theta):
+                img = self.aligned_stack[:,:,i,j]
+                if (abs(self.xshifts[i,j])>0.02) or (abs(self.yshifts[i,j])>0.02):
+                    shifted_img = self.stack.apply_image_registration(img, 
+                                                                      self.xshifts[i,j], 
+                                                                      self.yshifts[i,j])
+                    self.aligned_stack[:,:,i,j] = shifted_img
+    
+                    
+        self.itheta = temptheta 
         self.regist_calculated = 1
         self.iev = 0
         self.ShowImage()
@@ -9908,13 +10078,21 @@ class ImageRegistration(QtGui.QDialog):
             if ycorr>self.stack.n_rows :
                 ycorr=self.stack.n_rows 
                 
-        
-            self.man_xs[self.iev] = self.man_xref - xcorr
-            self.man_ys[self.iev] = -1.0*(self.man_yref - ycorr)
-                
             
-            self.textctrl_ms1.setText('X manual shift:  {0:5.2f}  pixels\n'.format(self.man_xs[self.iev]))
-            self.textctrl_ms2.setText('Y manual shift:  {0:5.2f}  pixels'.format(self.man_ys[self.iev]))
+            if self.com.stack_4d == 0:
+                self.man_xs[self.iev] = self.man_xref - xcorr
+                self.man_ys[self.iev] = -1.0*(self.man_yref - ycorr)
+                    
+                
+                self.textctrl_ms1.setText('X manual shift:  {0:5.2f}  pixels\n'.format(self.man_xs[self.iev]))
+                self.textctrl_ms2.setText('Y manual shift:  {0:5.2f}  pixels'.format(self.man_ys[self.iev]))
+            else:
+                self.man_xs[self.iev, self.itheta] = self.man_xref - xcorr
+                self.man_ys[self.iev, self.itheta] = -1.0*(self.man_yref - ycorr)
+                    
+                
+                self.textctrl_ms1.setText('X manual shift:  {0:5.2f}  pixels\n'.format(self.man_xs[self.iev, self.itheta]))
+                self.textctrl_ms2.setText('Y manual shift:  {0:5.2f}  pixels'.format(self.man_ys[self.iev, self.itheta]))                
             
             self.iev = self.iev + 1
             if self.iev > (self.stack.n_ev-1):
@@ -9929,23 +10107,46 @@ class ImageRegistration(QtGui.QDialog):
 #----------------------------------------------------------------------            
     def OnApplyManShifts(self):
         
-        for i in range(self.stack.n_ev):
+        
+        if self.com.stack_4d == 0:
+            for i in range(self.stack.n_ev):
+                
+                img = self.aligned_stack[:,:,i]
+                if (abs(self.man_xs[i])>0.02) or (abs(self.man_ys[i])>0.02):
+                    shifted_img = self.stack.apply_image_registration(img, 
+                                                                      self.man_xs[i], 
+                                                                      self.man_ys[i])
+                    self.aligned_stack[:,:,i] = shifted_img
+                    
+                    self.xshifts[i] = self.xshifts[i] + self.man_xs[i]
+                    self.yshifts[i] = self.yshifts[i] + self.man_ys[i]
+                    
+                
+    
+                    
+                self.man_xs[i] = 0
+                self.man_ys[i] = 0
             
-            img = self.aligned_stack[:,:,i]
-            if (abs(self.man_xs[i])>0.02) or (abs(self.man_ys[i])>0.02):
-                shifted_img = self.stack.apply_image_registration(img, 
-                                                                  self.man_xs[i], 
-                                                                  self.man_ys[i])
-                self.aligned_stack[:,:,i] = shifted_img
+        else:
+            for i in range(self.stack.n_ev):
+                for j in range(self.stack.n_theta):
                 
-                self.xshifts[i] = self.xshifts[i] + self.man_xs[i]
-                self.yshifts[i] = self.yshifts[i] + self.man_ys[i]
-                
-            
-
-                
-            self.man_xs[i] = 0
-            self.man_ys[i] = 0
+                    img = self.aligned_stack[:,:,i,j]
+                    if (abs(self.man_xs[i])>0.02) or (abs(self.man_ys[i])>0.02):
+                        shifted_img = self.stack.apply_image_registration(img, 
+                                                                          self.man_xs[i,j], 
+                                                                          self.man_ys[i,j])
+                        self.aligned_stack[:,:,i,j] = shifted_img
+                        
+                        self.xshifts[i,j] = self.xshifts[i,j] + self.man_xs[i,j]
+                        self.yshifts[i,j] = self.yshifts[i,j] + self.man_ys[i,j]
+                        
+                    
+        
+                        
+                    self.man_xs[i,j] = 0
+                    self.man_ys[i,j] = 0            
+        
                 
         self.regist_calculated = 1
         self.man_align = 0
@@ -9979,7 +10180,12 @@ class ImageRegistration(QtGui.QDialog):
 #----------------------------------------------------------------------            
     def OnAccept(self):
         
-        self.stack.absdata = self.aligned_stack  
+        if self.com.stack_4d == 0:
+            self.stack.absdata = self.aligned_stack  
+        else:
+            self.stack.stack4D = self.aligned_stack  
+            self.stack.absdata = self.stack.stack4D[:,:,:,self.itheta]
+            
         
         datadim = npy.int32(self.stack.absdata.shape)
         
@@ -9990,19 +10196,33 @@ class ImageRegistration(QtGui.QDialog):
         self.stack.yshifts = self.yshifts
                       
         if self.com.i0_loaded == 1:
-            #Resize optical density
-            for i in range(self.stack.n_ev):
-                
-                img = self.stack.od3d[:,:,i]
-                shifted_img = self.stack.apply_image_registration(img, self.xshifts[i], self.yshifts[i])         
-                self.stack.od3d[:,:,i] = shifted_img
-                
-            self.stack.od3d = self.stack.od3d[self.xleft:self.xright, self.ybottom:self.ytop, :] 
-        
-            self.stack.od = self.stack.od3d.copy()
-            self.stack.od = npy.reshape(self.stack.od, (self.stack.n_cols*self.stack.n_rows, self.stack.n_ev), order='F')            
+            if self.com.stack_4d == 0:
+                #Resize optical density
+                for i in range(self.stack.n_ev):
+                    
+                    img = self.stack.od3d[:,:,i]
+                    shifted_img = self.stack.apply_image_registration(img, self.xshifts[i], self.yshifts[i])         
+                    self.stack.od3d[:,:,i] = shifted_img
+                    
+    
+                self.stack.od3d = self.stack.od3d[self.xleft:self.xright, self.ybottom:self.ytop, :] 
+            
+                self.stack.od = self.stack.od3d.copy()
+                self.stack.od = npy.reshape(self.stack.od, (self.stack.n_cols*self.stack.n_rows, self.stack.n_ev), order='F')            
 
-        
+            else:
+                #Resize optical density for 4D stack
+                    
+                for i in range(self.stack.n_ev):
+                    for j in range(self.stack.n_theta):
+                        img = self.stack.od4d[:,:,i,j]
+                        shifted_img = self.stack.apply_image_registration(img, self.xshifts[i,j], self.yshifts[i,j])         
+                        self.stack.od4D[:,:,i,j] = shifted_img                        
+
+                self.stack.od3d = self.stack.od4D[:,:,:,self.itheta]
+                self.stack.od = self.stack.od3d.copy()
+                n_pixels = self.stack.n_cols*self.stack.n_rows
+                self.stack.od = npy.reshape(self.stack.od, (n_pixels, self.stack.n_ev), order='F')         
 
         self.stack.data_struct.exchange.data = self.stack.absdata
         self.stack.data_struct.exchange.energy = self.stack.ev
@@ -10030,7 +10250,7 @@ class ImageRegistration(QtGui.QDialog):
         
         
 #----------------------------------------------------------------------          
-    def PlotShifts(self):
+    def PlotShifts(self, ):
         
         fig = self.shiftsfig
         fig.clf()
@@ -10044,9 +10264,12 @@ class ImageRegistration(QtGui.QDialog):
         axes.set_xlabel('Photon Energy [eV]')
         axes.set_ylabel('Shifts (x-red, y-green) [pixels]')
 
-        plot = axes.plot(self.stack.ev,self.xshifts, color='green')
-        plot = axes.plot(self.stack.ev,self.yshifts, color='red')
-        
+        if self.com.stack_4d == 0:
+            plot = axes.plot(self.stack.ev,self.xshifts, color='green')
+            plot = axes.plot(self.stack.ev,self.yshifts, color='red')
+        else:
+            plot = axes.plot(self.stack.ev,self.xshifts[:,self.itheta], color='green')
+            plot = axes.plot(self.stack.ev,self.yshifts[:,self.itheta], color='red')        
         
         self.ShiftsPanel.draw()
         
@@ -11289,8 +11512,6 @@ class PageLoadData(QtGui.QWidget):
    
         self.absimgfig = Figure((PlotH, PlotH))
 
-        
-       
         self.AbsImagePanel = FigureCanvas(self.absimgfig)
         self.AbsImagePanel.setParent(self)
         
@@ -12518,15 +12739,22 @@ class MainFrame(QtGui.QMainWindow):
             self.page1.button_resetdisplay.setEnabled(False) 
             self.page1.button_despike.setEnabled(False)   
             self.page1.button_displaycolor.setEnabled(False)
-            self.actionSave.setEnabled(False)           
+            self.actionSave.setEnabled(False)      
+                 
         else:
             self.page1.button_i0ffile.setEnabled(True)
             self.page1.button_i0histogram.setEnabled(True) 
             self.page1.button_prenorm.setEnabled(True)
-            self.page1.button_refimgs.setEnabled(True)
-            self.page1.button_limitev.setEnabled(True)
-            self.page1.button_subregion.setEnabled(True)
-            self.page1.button_darksig.setEnabled(True)
+            if self.common.stack_4d == 0: 
+                self.page1.button_refimgs.setEnabled(True)
+                self.page1.button_limitev.setEnabled(True)
+                self.page1.button_subregion.setEnabled(True)
+                self.page1.button_darksig.setEnabled(True)
+            else:
+                self.page1.button_refimgs.setEnabled(False)
+                self.page1.button_limitev.setEnabled(False)
+                self.page1.button_subregion.setEnabled(False)
+                self.page1.button_darksig.setEnabled(False)                
             self.page1.button_save.setEnabled(True) 
             self.page1.button_savestack.setEnabled(True)  
             self.page1.button_align.setEnabled(True)  
