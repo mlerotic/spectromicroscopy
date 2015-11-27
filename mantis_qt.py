@@ -6239,7 +6239,10 @@ class PagePCA(QtGui.QWidget):
 #----------------------------------------------------------------------
     def CalcPCA(self):
  
-        self.anlz.calculate_pca()
+        if self.com.stack_4d == 0:
+            self.anlz.calculate_pca()
+        else:
+            self.anlz.calculate_pca_4D()
      
         #Scree plot criterion
         self.numsigpca = self.anlz.numsigpca
