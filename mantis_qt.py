@@ -102,15 +102,24 @@ class PageTomo(QtGui.QWidget):
         self.com = common
         self.anlz = anlz
         
+        self.tr = tomo_reconstruction.Ctomo(self.stack)
+        
+        self.tomo_calculated = 0
+        
         #Data type 0-energies; 1-spectral components
         self.datatype = 0
         
         self.datanames = []
         
-
+        self.select1 = 0
         
+
         self.icomp = 0
-        self.itheta = 0
+        self.islice = 0
+        
+        self.maxIters = 100
+        self.beta = 0.5
+        self.samplethick = 0
         
 
         #panel 1
@@ -135,7 +144,7 @@ class PageTomo(QtGui.QWidget):
 
         
         button_calc1 = QtGui.QPushButton( 'Calculate This Dataset')
-        #button_calc1.clicked.connect( self.OnCalculateTomo)
+        button_calc1.clicked.connect( self.OnCalcTomo1)
         vbox2.addWidget(button_calc1)
         
         hbox21 = QtGui.QHBoxLayout()
@@ -143,13 +152,21 @@ class PageTomo(QtGui.QWidget):
         hbox21.addWidget(tc1)
         tc1.setText('Choose Tomo Dataset: ')
         self.combonames = QtGui.QComboBox(self)
+        self.combonames.activated[int].connect(self.OnSelect1Comp)
         hbox21.addWidget(self.combonames)
         
         vbox2.addLayout(hbox21)
         
         button_calcall = QtGui.QPushButton( 'Calculate Full 4D Data')
         #button_calcall.clicked.connect( self.OnCalculateTomo)
+        button_calcall.setEnabled(False)
         vbox2.addWidget(button_calcall)
+        
+        
+        button_save = QtGui.QPushButton( 'Save as .mrc')
+        #button_save.clicked.connect( self.OnCalculateTomo)
+        button_save.setEnabled(False)
+        vbox2.addWidget(button_save)
         
         line = QtGui.QFrame()
         line.setFrameShape(QtGui.QFrame.HLine)
@@ -159,7 +176,51 @@ class PageTomo(QtGui.QWidget):
         vbox2.addStretch(1)
         vbox2.addWidget(line) 
         vbox2.addStretch(1)  
+ 
+        hbox22 = QtGui.QHBoxLayout()
+        text1 = QtGui.QLabel(self)
+        text1.setText('Number of iterations')
+        hbox22.addWidget(text1)
+        hbox22.addStretch(1)
+        self.ntc_niterations = QtGui.QLineEdit(self)
+        self.ntc_niterations.setFixedWidth(65)
+        self.ntc_niterations.setValidator(QtGui.QDoubleValidator(0, 99999, 2, self))
+        self.ntc_niterations.setAlignment(QtCore.Qt.AlignRight)   
+        self.ntc_niterations.setText(str(self.maxIters))
+        hbox22.addWidget(self.ntc_niterations)  
+  
+        vbox2.addLayout(hbox22) 
+          
+                
+        hbox23 = QtGui.QHBoxLayout()
+        tc1 = QtGui.QLabel(self)
+        tc1.setText("CS Parameter Beta")  
+        hbox23.addWidget(tc1)      
+        self.ntc_beta = QtGui.QLineEdit(self)
+        self.ntc_beta.setFixedWidth(65)
+        self.ntc_beta.setValidator(QtGui.QDoubleValidator(0, 99999, 2, self))
+        self.ntc_beta.setAlignment(QtCore.Qt.AlignRight)         
+        hbox23.addStretch(1)
+        self.ntc_beta.setText(str(self.beta))
+        hbox23.addWidget(self.ntc_beta) 
         
+        vbox2.addLayout(hbox23) 
+        
+        
+        hbox24 = QtGui.QHBoxLayout()
+        text1 = QtGui.QLabel(self)
+        text1.setText('Sample Thickness')
+        hbox24.addWidget(text1)
+        hbox24.addStretch(1)
+        self.ntc_samplethick = QtGui.QLineEdit(self)
+        self.ntc_samplethick.setFixedWidth(65)
+        self.ntc_samplethick.setValidator(QtGui.QDoubleValidator(0, 99999, 2, self))
+        self.ntc_samplethick.setAlignment(QtCore.Qt.AlignRight)   
+        self.ntc_samplethick.setText(str(self.samplethick))
+        hbox24.addWidget(self.ntc_samplethick)  
+  
+        vbox2.addLayout(hbox24) 
+      
         
         sizer2.setLayout(vbox2)
         
@@ -207,10 +268,9 @@ class PageTomo(QtGui.QWidget):
         #panel 5     
         vbox5 = QtGui.QVBoxLayout()
         
-        self.tc_imageeng = QtGui.QLabel(self)
-        self.tc_imageeng.setText("Dataset: ")
-        vbox5.addWidget(self.tc_imageeng)
-        
+        self.tc_imagecomp = QtGui.QLabel(self)
+        self.tc_imagecomp.setText("Dataset: ")
+        vbox5.addWidget(self.tc_imagecomp)
         
 
         gridsizertop = QtGui.QGridLayout()
@@ -219,7 +279,7 @@ class PageTomo(QtGui.QWidget):
         frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
    
-        self.absimgfig = Figure((PlotH, PlotH))
+        self.absimgfig = Figure((PlotH*1.25, PlotH*1.25))
 
         self.AbsImagePanel = FigureCanvas(self.absimgfig)
         self.AbsImagePanel.setParent(self)
@@ -230,12 +290,12 @@ class PageTomo(QtGui.QWidget):
         gridsizertop.addWidget(frame, 0, 0, QtCore .Qt. AlignLeft)
         
 
-        self.slider_eng = QtGui.QScrollBar(QtCore.Qt.Vertical)
-        self.slider_eng.setFocusPolicy(QtCore.Qt.StrongFocus)
-        #self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
-        self.slider_eng.setRange(0, 100)
+        self.slider_slice = QtGui.QScrollBar(QtCore.Qt.Vertical)
+        self.slider_slice.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.slider_slice.valueChanged[int].connect(self.OnScrollSlice)
+        self.slider_slice.setRange(0, 100)
         
-        gridsizertop.addWidget(self.slider_eng, 0, 1, QtCore .Qt. AlignLeft)
+        gridsizertop.addWidget(self.slider_slice, 0, 1, QtCore .Qt. AlignLeft)
         
         
         self.slider_theta = QtGui.QScrollBar(QtCore.Qt.Horizontal)
@@ -274,7 +334,7 @@ class PageTomo(QtGui.QWidget):
         
         vboxtop.addStretch (0.5)
         vboxtop.addLayout(hboxtop)
-        vboxtop.addStretch (0.5)
+        vboxtop.addStretch (0.9)
 #         vboxtop.addWidget(sizer3)
 #         vboxtop.addStretch (0.5)
 #         vboxtop.addWidget(sizer4)
@@ -288,7 +348,7 @@ class PageTomo(QtGui.QWidget):
 #----------------------------------------------------------------------          
     def OnLoadTomoEng(self, event):
         
-        self.tomodata = self.stack.od3d
+        self.tomodata = self.stack.od4D
         
         for i in range(self.stack.n_ev):
             self.datanames.append(str(self.stack.ev[i]))
@@ -299,7 +359,89 @@ class PageTomo(QtGui.QWidget):
 #----------------------------------------------------------------------          
     def OnCalcTomo1(self, event):
         
-        tr = tomo_reconstruction.Ctomo(self.stack)
+        
+        value = self.ntc_niterations.text()
+        self.maxIters = int(value)  
+        value = self.ntc_beta.text()      
+        self.beta = float(value)        
+        value = self.ntc_samplethick.text()
+        self.samplethick = int(value) 
+
+                
+        self.tr.calc_tomo1(self.tomodata[:,:,self.select1,:], 
+                           self.stack.theta,
+                           self.maxIters,
+                           self.beta,
+                           self.samplethick)
+        
+        self.tomo_calculated = 1
+        
+        dims = self.tr.tomorec.shape
+        
+        self.islice = int(dims[2]/2)
+        
+        self.slider_slice.setRange(0, dims[2]-1)
+        
+        self.tc_imagecomp.setText('Dataset: '+self.datanames[self.select1])
+        
+        self.ShowImage()
+        
+#----------------------------------------------------------------------           
+    def OnSelect1Comp(self, value):
+        item = value
+        self.select1 = item
+
+        print self.select1
+        
+        
+#----------------------------------------------------------------------            
+    def OnScrollSlice(self, value):
+        self.islice = value
+
+        self.ShowImage()
+        
+        
+#----------------------------------------------------------------------        
+    def ShowImage(self):
+        
+        if self.tomo_calculated == 0:
+            return
+        
+        image = self.tr.tomorec[:,:,self.islice].copy() 
+
+        fig = self.absimgfig
+        fig.clf()
+        fig.add_axes(((0.0,0.0,1.0,1.0)))
+        axes = fig.gca()
+        fig.patch.set_alpha(1.0)
+         
+        im = axes.imshow(npy.rot90(image), cmap=matplotlib.cm.get_cmap("gray")) 
+         
+#         if self.window().page1.show_scale_bar == 1:
+#             #Show Scale Bar
+#             if self.com.white_scale_bar == 1:
+#                 sbcolor = 'white'
+#             else:
+#                 sbcolor = 'black'
+#             startx = int(self.stk.n_cols*0.05)
+#             starty = self.stk.n_rows-int(self.stk.n_rows*0.05)-self.stk.scale_bar_pixels_y
+#             um_string = ' $\mathrm{\mu m}$'
+#             microns = '$'+self.stk.scale_bar_string+' $'+um_string
+#             axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center',
+#                       color = sbcolor, fontsize=14)
+#             #Matplotlib has flipped scales so I'm using rows instead of cols!
+#             p = matplotlib.patches.Rectangle((startx,starty), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
+#                                    color = sbcolor, fill = True)
+#             axes.add_patch(p)
+             
+        
+        axes.axis("off")      
+        self.AbsImagePanel.draw()
+         
+        
+
+        
+        
         
 
 """ ------------------------------------------------------------------------------------------------"""

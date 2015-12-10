@@ -5,7 +5,7 @@
 #   http://2ndlookconsulting.com
 #   License: GNU GPL v3
 #
-#   Originally part of tomotv, code licensed under both BSD license.
+#   Originally part of tomotv, code licensed under BSD license.
 #   Website: https://github.com/emmanuelle/tomo-tv
 #
 #   Mantis is free software: you can redistribute it and/or modify
