@@ -47,10 +47,11 @@ import data_stack
 import analyze
 import nnma
 import henke
+import tomo_reconstruction
 
 from helpers import resource_path
 
-version = '2.1.01'
+version = '2.1.02'
 
 Winsizex = 1000
 Winsizey = 700
@@ -61,6 +62,8 @@ PlotW = PlotH*1.61803
 ImgDpi = 40
 
 verbose = True
+
+showtomotab = 1
 
 
 #----------------------------------------------------------------------
@@ -82,6 +85,222 @@ class common:
         self.filename = ''
 
         self.font = ''
+        
+        
+""" ------------------------------------------------------------------------------------------------"""
+class PageTomo(QtGui.QWidget):
+    def __init__(self, common, data_struct, stack, anlz):
+        super(PageTomo, self).__init__()
+
+        self.initUI(common, data_struct, stack, anlz)
+        
+#----------------------------------------------------------------------          
+    def initUI(self, common, data_struct, stack, anlz): 
+
+        self.data_struct = data_struct
+        self.stack = stack
+        self.com = common
+        self.anlz = anlz
+        
+        #Data type 0-energies; 1-spectral components
+        self.datatype = 0
+        
+        self.datanames = []
+        
+
+        
+        self.icomp = 0
+        self.itheta = 0
+        
+
+        #panel 1
+        sizer1 = QtGui.QGroupBox('Tomo Data')
+        vbox1 = QtGui.QVBoxLayout()
+        
+        self.button_spcomp = QtGui.QPushButton('Load Tomo Data for Spectral Components')
+        #self.button_spcomp.clicked.connect( self.OnLoadHDF5)
+        self.button_spcomp.setEnabled(False)
+        vbox1.addWidget(self.button_spcomp)
+        
+        self.button_engdata = QtGui.QPushButton('Load Tomo Data for each Energy')
+        self.button_engdata.clicked.connect( self.OnLoadTomoEng)
+        vbox1.addWidget(self.button_engdata)
+        
+
+        sizer1.setLayout(vbox1)
+
+        #panel 2
+        sizer2 = QtGui.QGroupBox('Compressed Sensing Reconstruction')
+        vbox2 = QtGui.QVBoxLayout()
+
+        
+        button_calc1 = QtGui.QPushButton( 'Calculate This Dataset')
+        #button_calc1.clicked.connect( self.OnCalculateTomo)
+        vbox2.addWidget(button_calc1)
+        
+        hbox21 = QtGui.QHBoxLayout()
+        tc1 = QtGui.QLabel(self)
+        hbox21.addWidget(tc1)
+        tc1.setText('Choose Tomo Dataset: ')
+        self.combonames = QtGui.QComboBox(self)
+        hbox21.addWidget(self.combonames)
+        
+        vbox2.addLayout(hbox21)
+        
+        button_calcall = QtGui.QPushButton( 'Calculate Full 4D Data')
+        #button_calcall.clicked.connect( self.OnCalculateTomo)
+        vbox2.addWidget(button_calcall)
+        
+        line = QtGui.QFrame()
+        line.setFrameShape(QtGui.QFrame.HLine)
+        line.setFrameShadow(QtGui.QFrame.Sunken) 
+        
+
+        vbox2.addStretch(1)
+        vbox2.addWidget(line) 
+        vbox2.addStretch(1)  
+        
+        
+        sizer2.setLayout(vbox2)
+        
+        
+        sizer1.setLayout(vbox1)
+
+        #panel 3
+        sizer3 = QtGui.QGroupBox('ROI')
+        vbox3 = QtGui.QVBoxLayout()
+
+        
+        button_roi = QtGui.QPushButton( 'Load ROI')
+        #button_roi.clicked.connect( self.OnCalculateTomo)
+        button_roi.setEnabled(False)
+        vbox3.addWidget(button_roi)
+        
+        sizer3.setLayout(vbox3)
+
+
+#         #panel 3
+#         sizer3 = QtGui.QGroupBox('File')
+#         vbox3 = QtGui.QVBoxLayout()
+#  
+#   
+#         self.tc_file = QtGui.QLabel(self)
+#         vbox3.addWidget(self.tc_file)
+#         self.tc_file.setText('File name')
+#         
+#         vbox3.setContentsMargins(20,20,20,30)
+#         sizer3.setLayout(vbox3)
+#         
+# 
+#         #panel 4
+#         sizer4 = QtGui.QGroupBox('Path')
+#         vbox4 = QtGui.QVBoxLayout()
+#   
+#         self.tc_path = QtGui.QLabel(self)
+#         vbox4.addWidget(self.tc_path)
+#         self.tc_path.setText('D:/')
+#        
+#         vbox4.setContentsMargins(20,20,20,30)
+#         sizer4.setLayout(vbox4)
+                
+ 
+        #panel 5     
+        vbox5 = QtGui.QVBoxLayout()
+        
+        self.tc_imageeng = QtGui.QLabel(self)
+        self.tc_imageeng.setText("Dataset: ")
+        vbox5.addWidget(self.tc_imageeng)
+        
+        
+
+        gridsizertop = QtGui.QGridLayout()
+        
+        frame = QtGui.QFrame()
+        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        fbox = QtGui.QHBoxLayout()
+   
+        self.absimgfig = Figure((PlotH, PlotH))
+
+        self.AbsImagePanel = FigureCanvas(self.absimgfig)
+        self.AbsImagePanel.setParent(self)
+        
+        
+        fbox.addWidget(self.AbsImagePanel)
+        frame.setLayout(fbox)
+        gridsizertop.addWidget(frame, 0, 0, QtCore .Qt. AlignLeft)
+        
+
+        self.slider_eng = QtGui.QScrollBar(QtCore.Qt.Vertical)
+        self.slider_eng.setFocusPolicy(QtCore.Qt.StrongFocus)
+        #self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
+        self.slider_eng.setRange(0, 100)
+        
+        gridsizertop.addWidget(self.slider_eng, 0, 1, QtCore .Qt. AlignLeft)
+        
+        
+        self.slider_theta = QtGui.QScrollBar(QtCore.Qt.Horizontal)
+        self.slider_theta.setFocusPolicy(QtCore.Qt.StrongFocus)
+        #self.slider_theta.valueChanged[int].connect(self.OnScrollTheta)
+        self.slider_theta.setRange(0, 100)     
+        self.slider_theta.setVisible(False)  
+        self.tc_imagetheta = QtGui.QLabel(self)
+        self.tc_imagetheta.setText("4D Data Angle: ")
+        self.tc_imagetheta.setVisible(False)
+        hbox51 = QtGui.QHBoxLayout()
+        hbox51.addWidget(self.tc_imagetheta) 
+        hbox51.addWidget(self.slider_theta)
+        gridsizertop.addLayout(hbox51, 1, 0)
+        
+
+        vbox5.addLayout(gridsizertop)
+        vbox5.addStretch(1)
+        
+       
+        vboxtop = QtGui.QVBoxLayout()
+        
+        hboxtop = QtGui.QHBoxLayout()
+        vboxt1 = QtGui.QVBoxLayout()
+        vboxt1.addWidget(sizer1)
+        vboxt1.addStretch (1)
+        vboxt1.addWidget(sizer2)
+        vboxt1.addStretch (1)
+        vboxt1.addWidget(sizer3)
+        
+        hboxtop.addStretch (0.5)
+        hboxtop.addLayout(vboxt1)
+        hboxtop.addStretch (0.5)
+        hboxtop.addLayout(vbox5)
+        hboxtop.addStretch (0.5)
+        
+        vboxtop.addStretch (0.5)
+        vboxtop.addLayout(hboxtop)
+        vboxtop.addStretch (0.5)
+#         vboxtop.addWidget(sizer3)
+#         vboxtop.addStretch (0.5)
+#         vboxtop.addWidget(sizer4)
+#         vboxtop.addStretch (0.5)
+
+        vboxtop.setContentsMargins(50,50,50,50)
+        self.setLayout(vboxtop)
+        
+        
+        
+#----------------------------------------------------------------------          
+    def OnLoadTomoEng(self, event):
+        
+        self.tomodata = self.stack.od3d
+        
+        for i in range(self.stack.n_ev):
+            self.datanames.append(str(self.stack.ev[i]))
+        
+        self.combonames.clear()
+        self.combonames.addItems(self.datanames)
+        
+#----------------------------------------------------------------------          
+    def OnCalcTomo1(self, event):
+        
+        tr = tomo_reconstruction.Ctomo(self.stack)
+        
 
 """ ------------------------------------------------------------------------------------------------"""
 class PageNNMA(QtGui.QWidget):
@@ -12187,23 +12406,35 @@ class MainFrame(QtGui.QMainWindow):
         self.page4 = PageSpectral(self.common, self.data_struct, self.stk, self.anlz)
         self.page5 = PagePeakID(self.common, self.data_struct, self.stk, self.anlz)
         self.page6 = PageXrayPeakFitting(self.common, self.data_struct, self.stk, self.anlz)
-        self.page7 = None
+        self.page7 = PageNNMA(self.common, self.data_struct, self.stk, self.anlz, self.nnma)
+        
         
         tabs.addTab(self.page0,"Load Data")
         tabs.addTab(self.page1,"Preprocess Data")
         tabs.addTab(self.page2,"PCA")
         tabs.addTab(self.page3,"Cluster Analysis")
         tabs.addTab(self.page4,"Spectral Maps")
+        tabs.addTab(self.page7, "NNMA Analysis")
         tabs.addTab(self.page5,"Peak ID")
         tabs.addTab(self.page6, "XrayPeakFitting")  
-        tabs.tabBar().setTabTextColor(6, QtGui.QColor('purple'))  
-        
+         
+        if showtomotab:
+            self.page8 = PageTomo(self.common, self.data_struct, self.stk, self.anlz)
+            tabs.addTab(self.page8, "Tomography")  
+            
+                    
         tabs.tabBar().setTabTextColor(0, QtGui.QColor('green'))
         tabs.tabBar().setTabTextColor(1, QtGui.QColor('green'))
         tabs.tabBar().setTabTextColor(2, QtGui.QColor('darkRed'))
         tabs.tabBar().setTabTextColor(3, QtGui.QColor('darkRed'))
-        tabs.tabBar().setTabTextColor(4, QtGui.QColor('darkRed'))        
-        tabs.tabBar().setTabTextColor(5, QtGui.QColor('purple'))
+        tabs.tabBar().setTabTextColor(4, QtGui.QColor('darkRed'))  
+        tabs.tabBar().setTabTextColor(5, QtGui.QColor('darkRed'))      
+        tabs.tabBar().setTabTextColor(6, QtGui.QColor('purple'))
+        tabs.tabBar().setTabTextColor(7, QtGui.QColor('purple')) 
+        if showtomotab:
+            tabs.tabBar().setTabTextColor(8, QtGui.QColor('darkblue')) 
+
+       
         
         
         # Only add "expert" pages if option "--key" is given in command line
@@ -12219,8 +12450,8 @@ class MainFrame(QtGui.QMainWindow):
 #                 self.page7 = PageNNMA(self.common, self.data_struct, self.stk, self.anlz, self.nnma)
 #                 tabs.addTab(self.page7, "NNMA Analysis")
 
-        self.page7 = PageNNMA(self.common, self.data_struct, self.stk, self.anlz, self.nnma)
-        tabs.addTab(self.page7, "NNMA Analysis")
+        
+        
 
     
         layout = QVBoxLayout()
