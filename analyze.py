@@ -157,6 +157,15 @@ class analyze:
         self.eigenvals4D = []
         self.eigenvecs4D = []
         self.variance4D = []
+        self.pcaimagebounds4D = []
+        
+        
+        self.target_svd_maps4D = []
+        self.original_svd_maps4D = []
+        self.target_pcafit_maps4D = []
+        self.original_fit_maps4D = []
+        self.target_pcafit_coeffs4D = []
+        self.target_pcafit_spectra4D = []
 
         
         
@@ -1133,6 +1142,13 @@ class analyze:
             self.tspectrum_loaded = 0
             self.n_target_spectra = 0
             
+            self.target_svd_maps4D = []
+            self.original_svd_maps4D = []
+            self.target_pcafit_maps4D = []
+            self.original_fit_maps4D = []
+            self.target_pcafit_coeffs4D = []
+            self.target_pcafit_spectra4D = []
+            
 #-----------------------------------------------------------------------------          
     def move_spectrum(self, old_position, new_position):   
         
@@ -1283,12 +1299,31 @@ class analyze:
             self.target_svd_maps.clip(min=cutoff1, out=self.target_svd_maps)
             if cutoff2 != None:
                 self.target_svd_maps.clip(max=cutoff2, out=self.target_svd_maps)
+                
+            if len(self.target_svd_maps4D) > 0:
+                self.target_svd_maps4D = copy.deepcopy(self.original_svd_maps4D)
+                if cutoff2 != None:
+                    maxclip = cutoff2
+                else:
+                    maxclip = np.amax(self.target_svd_maps4D)
+                self.target_svd_maps4D = np.clip(self.target_svd_maps4D, cutoff1, maxclip)
 
+                
         if pca:
             self.target_pcafit_maps = self.original_fit_maps.copy()
             self.target_pcafit_maps.clip(min=cutoff1, out=self.target_pcafit_maps)
             if cutoff2 != None:
                 self.target_pcafit_maps.clip(max=cutoff2, out=self.target_pcafit_maps)
+                
+            if len(self.target_pcafit_maps) > 0:
+                self.target_pcafit_maps4D = copy.deepcopy(self.original_fit_maps4D)
+                if cutoff2 != None:
+                    maxclip = cutoff2
+                else:
+                    maxclip = np.amax(self.target_pcafit_maps4D)                
+                self.target_pcafit_maps4D = np.clip(self.target_pcafit_maps4D, cutoff1, maxclip)
+
+              
 
 #-----------------------------------------------------------------------------
 # Find key energies by finding peaks and valleys in significant pca spectra

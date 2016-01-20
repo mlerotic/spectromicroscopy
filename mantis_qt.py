@@ -3781,8 +3781,8 @@ class PageSpectral(QtGui.QWidget):
     def OnCalc4D(self, event):
         
         
-        if True:
-        #try:
+        #if True:
+        try:
 
             QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor)) 
             self.anlz.calculate_targetmaps_4D()
@@ -3816,9 +3816,9 @@ class PageSpectral(QtGui.QWidget):
         
             QtGui.QApplication.restoreOverrideCursor()
             
-#         except:
-#             QtGui.QApplication.restoreOverrideCursor()  
-#             QtGui.QMessageBox.warning(self, 'Error', 'Could not calculate 4D spectra.')
+        except:
+            QtGui.QApplication.restoreOverrideCursor()  
+            QtGui.QMessageBox.warning(self, 'Error', 'Could not calculate 4D spectra.')
  
                                                         
         self.window().refresh_widgets()
@@ -4140,11 +4140,15 @@ class PageSpectral(QtGui.QWidget):
         self.slider_tspec.setValue(self.i_tspec)
             
         if self.anlz.tspectrum_loaded == 1:
+            if self.com.spec_anl4D_calculated == 1:
+                self.anlz.calculate_targetmaps_4D()
+                
             self.loadTSpectrum()
             self.loadTargetMap()  
             self.ShowSpectraList()  
         else:
             self.com.spec_anl_calculated = 0
+            self.com.spec_anl4D_calculated = 0
             self.ClearWidgets()
         
         QtGui.QApplication.restoreOverrideCursor()
@@ -4157,6 +4161,10 @@ class PageSpectral(QtGui.QWidget):
             
             self.i_tspec += 1
             self.slider_tspec.setValue(self.i_tspec)
+            
+            if self.com.spec_anl4D_calculated == 1:
+                self.anlz.calculate_targetmaps_4D()
+                
             self.loadTSpectrum()
             self.loadTargetMap()  
             self.ShowSpectraList()
@@ -4167,6 +4175,9 @@ class PageSpectral(QtGui.QWidget):
         
         if self.i_tspec > 1:
             self.anlz.move_spectrum(self.i_tspec-1, self.i_tspec-2)      
+            
+            if self.com.spec_anl4D_calculated == 1:
+                self.anlz.calculate_targetmaps_4D()
             
             self.i_tspec -= 1
             self.slider_tspec.setValue(self.i_tspec)
@@ -4202,6 +4213,10 @@ class PageSpectral(QtGui.QWidget):
         
         self.textctrl_sp1.setText('Common Name: \n')
         self.textctrl_sp2.setText('RMS Error: ')
+        
+        self.itheta = 0
+        self.slider_theta.setVisible(False)  
+        self.tc_imagetheta.setVisible(False)
         
         self.window().refresh_widgets()
             
@@ -4922,7 +4937,10 @@ class ShowMapHistogram(QtGui.QDialog):
         
         self.setLayout(vbox)
         
-        self.draw_histogram()
+        if len(self.anlz.original_svd_maps4D) == 0:
+            self.draw_histogram()
+        else:
+            self.draw_histogram4D()
 
 
 
@@ -4952,7 +4970,31 @@ class ShowMapHistogram(QtGui.QDialog):
         
         self.HistogramPanel.draw()
         
+
+#----------------------------------------------------------------------        
+    def draw_histogram4D(self):
         
+     
+        fig = self.histfig
+        fig.clf()
+        fig.add_axes((0.15,0.15,0.75,0.75))
+        self.axes = fig.gca()
+
+        #target_svd_maps;target_pcafit_maps
+        if self.parent.page4.showraw == True:
+            self.histogram = self.anlz.original_svd_maps4D
+        else:
+            self.histogram = self.anlz.original_fit_maps4D
+            
+        
+        histdata = npy.reshape(self.histogram, (self.anlz.stack.n_cols*self.anlz.stack.n_rows*self.anlz.n_target_spectra*self.anlz.stack.n_theta), order='F')
+        
+        self.n, self.bins, patches = self.axes.hist(histdata, 200, normed=1, facecolor='green', alpha=0.75)
+        
+        self.axes.set_xlabel('Thickness per Pixel in Spectral Maps')
+        self.axes.set_ylabel('Percentage of Pixels')
+        
+        self.HistogramPanel.draw()        
 
 #----------------------------------------------------------------------        
     def OnClick(self, evt):
