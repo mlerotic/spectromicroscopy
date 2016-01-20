@@ -151,6 +151,11 @@ class analyze:
         self.n_xrayfitsp = 0
         self.xfspec_names = []
         self.xfitpars = []
+        
+        self.pcaimages4D = []
+        self.eigenvals4D = []
+        self.eigenvecs4D = []
+        self.variance4D = []
 
         
         
@@ -1194,6 +1199,48 @@ class analyze:
         self.original_svd_maps = self.target_svd_maps.copy()
         
         
+        
+#----------------------------------------------------------------------   
+# Calculate composition maps for 4D data 
+    def calculate_targetmaps_4D(self):
+        
+        n_pix = self.stack.n_cols*self.stack.n_rows
+        
+        self.target_svd_maps4D = []
+        self.original_svd_maps4D = []
+        self.target_pcafit_maps4D = []
+        self.original_fit_maps4D = []
+        self.target_pcafit_coeffs4D = []
+        self.target_pcafit_spectra4D = []
+        
+        tempod = self.stack.od.copy()
+        
+        for jth in range(self.stack.n_theta):
+            
+            
+            od3d = self.stack.od4D[:,:,:,jth]
+            od = od3d.copy()
+            
+            self.stack.od = np.reshape(od, (n_pix, self.stack.n_ev), order='F')   
+            
+            if len(self.eigenvecs4D) > 0:
+                self.eigenvecs = self.eigenvecs4D[jth]
+                self.fit_target_spectra()
+                
+            self.calc_svd_maps()  
+            
+            self.target_svd_maps4D.append(self.target_svd_maps)
+            self.original_svd_maps4D.append(self.original_svd_maps)
+            if len(self.eigenvecs4D) > 0:
+                self.target_pcafit_maps4D.append(self.target_pcafit_maps)
+                self.original_fit_maps4D.append(self.original_fit_maps)
+                self.target_pcafit_coeffs4D.append(self.target_pcafit_coeffs)
+                self.target_pcafit_spectra4D.append(self.target_pcafit_spectra)
+            
+        
+        self.stack.od = tempod   
+            
+            
 #-----------------------------------------------------------------------------
 # Apply threshold on SVD or PCA maps
     def svd_map_threshold(self, cutoff1, cutoff2 = None, svd = False, pca = False):
