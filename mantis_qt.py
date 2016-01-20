@@ -6744,7 +6744,8 @@ class PagePCA(QtGui.QWidget):
             self.anlz.pcaimages = self.anlz.pcaimages4D[self.itheta]
             self.anlz.eigenvals = self.anlz.eigenvals4D[self.itheta]
             self.anlz.eigenvecs = self.anlz.eigenvecs4D[self.itheta]
-            self.anlz.variance = self.anlz.variance4D[self.itheta]          
+            self.anlz.variance = self.anlz.variance4D[self.itheta]  
+            self.anlz.pcaimagebounds = self.anlz.pcaimagebounds4D[self.itheta]        
 
             QtGui.QApplication.restoreOverrideCursor()
         except:
@@ -6784,6 +6785,8 @@ class PagePCA(QtGui.QWidget):
         self.loadPCAImage()
         self.loadPCASpectrum()
         self.showEvals()
+        
+        self.slidershow.setValue(self.selpca)
                    
         
 #----------------------------------------------------------------------
@@ -6799,6 +6802,8 @@ class PagePCA(QtGui.QWidget):
         # cumulative variance
         var = self.anlz.variance[:self.numsigpca].sum()
         self.vartc.setText(str(var.round(decimals=2)*100)+'%')
+        
+        
         
 
         
@@ -6844,6 +6849,7 @@ class PagePCA(QtGui.QWidget):
         self.anlz.eigenvals = self.anlz.eigenvals4D[self.itheta]
         self.anlz.eigenvecs = self.anlz.eigenvecs4D[self.itheta]
         self.anlz.variance = self.anlz.variance4D[self.itheta]
+        self.anlz.pcaimagebounds = self.anlz.pcaimagebounds4D[self.itheta]
         
         self.tc_imagetheta.setText("4D Data Angle: "+'{0:5.2f}\t'.format(self.stk.theta[self.itheta]))
 

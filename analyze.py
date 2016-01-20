@@ -19,6 +19,7 @@
 from __future__ import division
 
 import os
+import copy
 import numpy as np
 import scipy.interpolate
 import scipy.spatial
@@ -269,6 +270,7 @@ class analyze:
         self.eigenvals4D = []
         self.eigenvecs4D = []
         self.variance4D = []
+        self.pcaimagebounds4D = []
         
         for jth in range(self.stack.n_theta):
             
@@ -355,6 +357,7 @@ class analyze:
             self.eigenvals4D.append(self.eigenvals)
             self.eigenvecs4D.append(self.eigenvecs)
             self.variance4D.append(self.variance)
+            self.pcaimagebounds4D.append(self.pcaimagebounds)
 
         return  
     
@@ -365,28 +368,58 @@ class analyze:
         if ipc == 0:
             return
 
-        temp = self.pcaimages.copy()
-        self.pcaimages[:,:, ipc] = temp[:,:, ipc-1]
-        self.pcaimages[:,:, ipc-1] = temp[:,:, ipc]
+        if len(self.pcaimages4D) == 0:
+            temp = self.pcaimages.copy()
+            self.pcaimages[:,:, ipc] = temp[:,:, ipc-1]
+            self.pcaimages[:,:, ipc-1] = temp[:,:, ipc]
+            
+            temp = self.pcaimagebounds.copy()
+            self.pcaimagebounds[ipc] = temp[ipc-1]
+            self.pcaimagebounds[ipc-1] = temp[ipc]
+            
+            temp = self.eigenvals.copy()
+            self.eigenvals[ipc] = temp[ipc-1]
+            self.eigenvals[ipc-1] = temp[ipc]        
+            
+            temp = self.eigenvecs.copy()
+            self.eigenvecs[:, ipc] = temp[:, ipc-1]
+            self.eigenvecs[:, ipc-1] = temp[:, ipc]
+                    
+            temp = self.variance.copy()
+            self.variance[ipc] = temp[ipc-1]
+            self.variance[ipc-1] = temp[ipc]     
         
-        temp = self.pcaimagebounds.copy()
-        self.pcaimagebounds[ipc] = temp[ipc-1]
-        self.pcaimagebounds[ipc-1] = temp[ipc]
-        
-        temp = self.eigenvals.copy()
-        self.eigenvals[ipc] = temp[ipc-1]
-        self.eigenvals[ipc-1] = temp[ipc]        
-        
-        temp = self.eigenvecs.copy()
-        self.eigenvecs[:, ipc] = temp[:, ipc-1]
-        self.eigenvecs[:, ipc-1] = temp[:, ipc]
+        else:        
+            
+            for jth in range(self.stack.n_theta):
                 
-        temp = self.variance.copy()
-        self.variance[ipc] = temp[ipc-1]
-        self.variance[ipc-1] = temp[ipc]           
+                temp = self.pcaimages4D[jth].copy()
+                self.pcaimages4D[jth][:,:, ipc] = temp[:,:, ipc-1]
+                self.pcaimages4D[jth][:,:, ipc-1] = temp[:,:, ipc]
+                               
+                temp = self.pcaimagebounds4D[jth].copy()
+                self.pcaimagebounds4D[jth][ipc] = temp[ipc-1]
+                self.pcaimagebounds4D[jth][ipc-1] = temp[ipc]
+                
+                temp = self.eigenvals4D[jth].copy()            
+                self.eigenvals4D[jth][ipc] = temp[ipc-1]
+                self.eigenvals4D[jth][ipc-1] = temp[ipc]        
+                
+                temp = self.eigenvecs4D[jth].copy()
+                self.eigenvecs4D[jth][:, ipc] = temp[:, ipc-1]
+                self.eigenvecs4D[jth][:, ipc-1] = temp[:, ipc]
+                
+                temp = self.variance4D[jth].copy()        
+                self.variance4D[jth][ipc] = temp[ipc-1]
+                self.variance4D[jth][ipc-1] = temp[ipc]                    
+        
+              
             
         if self.n_target_spectra > 1:
             self.fit_target_spectra()
+            
+            if len(self.target_svd_maps4D) > 0:
+                self.calculate_targetmaps_4D()
                     
 
 #----------------------------------------------------------------------   
