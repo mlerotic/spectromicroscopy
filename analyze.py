@@ -261,6 +261,9 @@ class analyze:
         n_pix = self.stack.n_cols*self.stack.n_rows
         
         self.pcaimages4D = []
+        self.eigenvals4D = []
+        self.eigenvecs4D = []
+        self.variance4D = []
         
         for jth in range(self.stack.n_theta):
             
@@ -344,6 +347,9 @@ class analyze:
                 
                 
             self.pcaimages4D.append(self.pcaimages)
+            self.eigenvals4D.append(self.eigenvals)
+            self.eigenvecs4D.append(self.eigenvecs)
+            self.variance4D.append(self.variance)
 
         return  
     

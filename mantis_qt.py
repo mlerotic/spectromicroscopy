@@ -6396,6 +6396,7 @@ class PagePCA(QtGui.QWidget):
         
         self.selpca = 1       
         self.numsigpca = 2
+        self.itheta = 0
         
         #panel 1        
         vbox1 = QtGui.QVBoxLayout()
@@ -6425,6 +6426,24 @@ class PagePCA(QtGui.QWidget):
 
         
         hbox11.addWidget(self.slidershow)
+        
+        
+        
+        self.slider_theta = QtGui.QScrollBar(QtCore.Qt.Horizontal)
+        self.slider_theta.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.slider_theta.valueChanged[int].connect(self.OnScrollTheta)
+        self.slider_theta.setRange(0, 100)  
+        self.slider_theta.setMinimumWidth(250)   
+        self.slider_theta.setVisible(False)  
+        self.tc_imagetheta = QtGui.QLabel(self)
+        self.tc_imagetheta.setText("4D Data Angle: ")
+        self.tc_imagetheta.setVisible(False)
+        hbox51 = QtGui.QHBoxLayout()
+        hbox51.addWidget(self.tc_imagetheta) 
+        hbox51.addStretch(1)
+        hbox51.addWidget(self.slider_theta)
+        hbox51.addStretch(1)
+        vbox1.addLayout(hbox51)
 
         vbox1.addLayout(hbox11)
         
@@ -6473,7 +6492,20 @@ class PagePCA(QtGui.QWidget):
         self.button_movepcup.clicked.connect( self.OnMovePCUP)     
         self.button_movepcup.setEnabled(False)   
         vbox21.addWidget(self.button_movepcup)
-                
+        
+
+#         line = QtGui.QFrame()
+#         line.setFrameShape(QtGui.QFrame.HLine)
+#         line.setFrameShadow(QtGui.QFrame.Sunken)         
+#         vbox21.addWidget(line) 
+
+        
+        self.button_calcpca4D = QtGui.QPushButton('Calculate PCA for all angles')
+        self.button_calcpca4D.clicked.connect( self.OnCalcPCA4D)     
+        self.button_calcpca4D.setEnabled(False)   
+        self.button_calcpca4D.setVisible(False) 
+        vbox21.addWidget(self.button_calcpca4D)       
+                 
         
         sizer2.setLayout(vbox21)
         vbox2.addStretch(1)
@@ -6551,8 +6583,6 @@ class PagePCA(QtGui.QWidget):
         scrollmax = npy.min([self.stk.n_ev, 20])
         self.slidershow.setMaximum(scrollmax)
 
-
-
         try: 
             self.CalcPCA()
             self.calcpca = True
@@ -6565,6 +6595,52 @@ class PagePCA(QtGui.QWidget):
             self.com.pca_calculated = 0
             QtGui.QApplication.restoreOverrideCursor()
             QtGui.QMessageBox.warning(self, 'Error', 'PCA not calculated.')
+        
+        self.window().refresh_widgets()
+        
+        
+#----------------------------------------------------------------------
+    def OnCalcPCA4D(self, event):
+       
+        QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+        self.calcpca = False  
+        self.selpca = 1       
+        self.numsigpca = 2
+        self.slidershow.setValue(self.selpca)
+        
+        scrollmax = npy.min([self.stk.n_ev, 20])
+        self.slidershow.setMaximum(scrollmax)
+
+
+
+        try: 
+            self.CalcPCA4D()
+            self.calcpca = True
+            self.loadPCAImage()
+            self.loadPCASpectrum()
+            self.showEvals()
+            self.com.pca_calculated = 1
+            
+            self.slider_theta.setVisible(True)  
+            self.tc_imagetheta.setVisible(True)
+            self.slider_theta.setRange(0, self.stk.n_theta-1)
+            self.itheta = 0
+            self.slider_theta.setValue(self.itheta)
+            self.tc_imagetheta.setText("4D Data Angle: "+str(self.stk.theta[self.itheta]))  
+            
+            self.anlz.pcaimages = self.anlz.pcaimages4D[self.itheta]
+            self.anlz.eigenvals = self.anlz.eigenvals4D[self.itheta]
+            self.anlz.eigenvecs = self.anlz.eigenvecs4D[self.itheta]
+            self.anlz.variance = self.anlz.variance4D[self.itheta]          
+
+            QtGui.QApplication.restoreOverrideCursor()
+        except:
+            self.com.pca_calculated = 0
+            QtGui.QApplication.restoreOverrideCursor()
+            QtGui.QMessageBox.warning(self, 'Error', 'PCA not calculated.')
+            
+            
+
         
         self.window().refresh_widgets()
 
@@ -6600,11 +6676,8 @@ class PagePCA(QtGui.QWidget):
 #----------------------------------------------------------------------
     def CalcPCA(self):
  
-        if self.com.stack_4d == 0:
-            self.anlz.calculate_pca()
-        else:
-            self.anlz.calculate_pca_4D()
-     
+        self.anlz.calculate_pca()
+
         #Scree plot criterion
         self.numsigpca = self.anlz.numsigpca
         
@@ -6616,6 +6689,21 @@ class PagePCA(QtGui.QWidget):
         
 
         
+#----------------------------------------------------------------------
+    def CalcPCA4D(self):
+ 
+        if self.com.stack_4d == 1:
+            self.anlz.calculate_pca_4D()
+        else:
+            return
+     
+        #Scree plot criterion
+        self.numsigpca = self.anlz.numsigpca        
+        self.npcaspin.setValue(self.numsigpca)
+      
+        # cumulative variance
+        var = self.anlz.variance[:self.numsigpca].sum()
+        self.vartc.setText(str(var.round(decimals=2)*100)+'%')        
 
  
 #----------------------------------------------------------------------        
@@ -6627,7 +6715,27 @@ class PagePCA(QtGui.QWidget):
             self.loadPCASpectrum()
 
 
- 
+#----------------------------------------------------------------------            
+    def OnScrollTheta(self, value):
+        
+        if self.calcpca == False:
+            return
+        
+        self.itheta = value
+        
+        self.anlz.pcaimages = self.anlz.pcaimages4D[self.itheta]
+        self.anlz.eigenvals = self.anlz.eigenvals4D[self.itheta]
+        self.anlz.eigenvecs = self.anlz.eigenvecs4D[self.itheta]
+        self.anlz.variance = self.anlz.variance4D[self.itheta]
+        
+        self.tc_imagetheta.setText("4D Data Angle: "+'{0:5.2f}\t'.format(self.stk.theta[self.itheta]))
+
+        var = self.anlz.variance[:self.numsigpca].sum()
+        self.vartc.setText(str(var.round(decimals=2)*100)+'%')         
+        
+        self.loadPCAImage()
+        self.loadPCASpectrum()
+        self.showEvals()
             
 #----------------------------------------------------------------------  
     def OnPointEvalsImage(self, evt):
@@ -11809,6 +11917,11 @@ class PageLoadData(QtGui.QWidget):
         self.button_ncb.clicked.connect( self.OnLoadNCB)
         vbox1.addWidget(self.button_ncb)     
         
+        line = QtGui.QFrame()
+        line.setFrameShape(QtGui.QFrame.HLine)
+        line.setFrameShadow(QtGui.QFrame.Sunken) 
+        vbox1.addWidget(line) 
+        
         self.button_4d = QtGui.QPushButton( 'Load 4D stack (*.hdf5, *.ncb)')
         self.button_4d.clicked.connect( self.OnLoad4D)
         vbox1.addWidget(self.button_4d) 
@@ -12951,6 +13064,9 @@ class MainFrame(QtGui.QMainWindow):
             self.page1.itheta = self.itheta
             self.page1.slider_theta.setValue(self.itheta)
             self.page1.tc_imagetheta.setText("4D Data Angle: "+str(self.stk.theta[self.itheta]))
+            
+            
+            self.page2.button_calcpca4D.setVisible(True) 
                         
 
             self.common.stack_loaded = 1
@@ -13150,6 +13266,7 @@ class MainFrame(QtGui.QMainWindow):
             self.page1.button_reseti0.setEnabled(False)
             self.page1.button_saveod.setEnabled(False)
             self.page2.button_calcpca.setEnabled(False)
+            self.page2.button_calcpca4D.setEnabled(False)
             self.page4.button_loadtspec.setEnabled(False)
             self.page4.button_addflat.setEnabled(False)
             self.page5.button_save.setEnabled(False)
@@ -13164,6 +13281,7 @@ class MainFrame(QtGui.QMainWindow):
             self.page1.button_reseti0.setEnabled(True)
             self.page1.button_saveod.setEnabled(True)
             self.page2.button_calcpca.setEnabled(True) 
+            self.page2.button_calcpca4D.setEnabled(True) 
             self.page4.button_loadtspec.setEnabled(True)
             self.page4.button_addflat.setEnabled(True)   
             self.page5.button_save.setEnabled(True)
