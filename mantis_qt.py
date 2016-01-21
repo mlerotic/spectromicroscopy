@@ -173,6 +173,11 @@ class PageTomo(QtGui.QWidget):
         self.button_save.setEnabled(False)
         vbox2.addWidget(self.button_save)
         
+        self.button_saveall = QtGui.QPushButton( 'Save All as .mrc')
+        self.button_saveall.clicked.connect( self.OnSaveAll)
+        self.button_saveall.setEnabled(False)
+        vbox2.addWidget(self.button_saveall)
+        
         line = QtGui.QFrame()
         line.setFrameShape(QtGui.QFrame.HLine)
         line.setFrameShadow(QtGui.QFrame.Sunken) 
@@ -353,6 +358,20 @@ class PageTomo(QtGui.QWidget):
 #----------------------------------------------------------------------          
     def OnLoadTomoEng(self, event):
         
+        self.fulltomorecdata = []        
+        self.tomo_calculated = 0
+        self.full_tomo_calculated = 0
+
+        fig = self.absimgfig
+        fig.clf()
+        self.AbsImagePanel.draw()   
+        
+        self.button_save.setEnabled(False)
+        self.button_save.setEnabled(False)
+        self.tc_comp.setText('Component: ')
+        self.slider_comp.setEnabled(False)
+        
+        
         self.tomodata = self.stack.od4D
         
         for i in range(self.stack.n_ev):
@@ -372,6 +391,19 @@ class PageTomo(QtGui.QWidget):
         
 #----------------------------------------------------------------------          
     def OnLoadTomoComponents(self, event):
+        
+        self.fulltomorecdata = []        
+        self.tomo_calculated = 0
+        self.full_tomo_calculated = 0
+
+        fig = self.absimgfig
+        fig.clf()
+        self.AbsImagePanel.draw()   
+        
+        self.button_save.setEnabled(False)
+        self.button_save.setEnabled(False)
+        self.tc_comp.setText('Component: ')
+        self.slider_comp.setEnabled(False)
         
         self.ncomponents = self.anlz.n_target_spectra
         
@@ -445,6 +477,7 @@ class PageTomo(QtGui.QWidget):
         self.slider_comp.setEnabled(True)
         self.slider_comp.setValue(self.icomp)
         self.button_save.setEnabled(True)
+        self.button_saveall.setEnabled(True)
           
         
         self.ShowImage()
@@ -567,6 +600,29 @@ class PageTomo(QtGui.QWidget):
                 
         self.tr.save_mrc(SaveFileName, data)        
         
+        
+#----------------------------------------------------------------------    
+    def OnSaveAll(self, event): 
+        
+        
+        wildcard = "Mrc files (*.mrc);;"
+
+        SaveFileName = QtGui.QFileDialog.getSaveFileName(self, 'Save Tomo Reconstructions', '', wildcard)
+
+        SaveFileName = str(SaveFileName)
+        if SaveFileName == '':
+            return
+        
+        
+        basename, extension = os.path.splitext(SaveFileName)  
+
+        for i in range(self.ncomponents):
+            data = self.fulltomorecdata[i]        
+        
+            savefn = basename + '_'+self.datanames[i]+extension
+                
+            self.tr.save_mrc(savefn, data)        
+        
 #----------------------------------------------------------------------        
     def ShowImage(self):
         
@@ -628,6 +684,7 @@ class PageTomo(QtGui.QWidget):
         self.button_engdata.setEnabled(False)
         self.button_calc1.setEnabled(False)
         self.button_calcall.setEnabled(False)
+        self.button_save.setEnabled(False)
         self.button_save.setEnabled(False)
         
         self.tc_imagecomp.setText("Dataset: ")
