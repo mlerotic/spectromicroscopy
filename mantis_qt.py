@@ -107,17 +107,15 @@ class PageTomo(QtGui.QWidget):
         self.tr = tomo_reconstruction.Ctomo(self.stack)
         
         self.fulltomorecdata = []
+        self.ncomponents = 0
         
         self.tomo_calculated = 0
-        self.full_tomo_calculated = 1
-        
-        #Data type 0-energies; 1-spectral components
-        self.datatype = 0
+        self.full_tomo_calculated = 0
+        self.energiesloaded = 0
         
         self.datanames = []
         
-        self.select1 = 0
-        
+        self.select1 = 0        
 
         self.icomp = 0
         self.islice = 0
@@ -132,12 +130,13 @@ class PageTomo(QtGui.QWidget):
         vbox1 = QtGui.QVBoxLayout()
         
         self.button_spcomp = QtGui.QPushButton('Load Tomo Data for Spectral Components')
-        #self.button_spcomp.clicked.connect( self.OnLoadHDF5)
+        self.button_spcomp.clicked.connect( self.OnLoadTomoComponents)
         self.button_spcomp.setEnabled(False)
         vbox1.addWidget(self.button_spcomp)
         
         self.button_engdata = QtGui.QPushButton('Load Tomo Data for each Energy')
         self.button_engdata.clicked.connect( self.OnLoadTomoEng)
+        self.button_engdata.setEnabled(False)
         vbox1.addWidget(self.button_engdata)
         
 
@@ -148,9 +147,10 @@ class PageTomo(QtGui.QWidget):
         vbox2 = QtGui.QVBoxLayout()
 
         
-        button_calc1 = QtGui.QPushButton( 'Calculate This Dataset')
-        button_calc1.clicked.connect( self.OnCalcTomo1)
-        vbox2.addWidget(button_calc1)
+        self.button_calc1 = QtGui.QPushButton( 'Calculate One Dataset')
+        self.button_calc1.clicked.connect( self.OnCalcTomo1)
+        self.button_calc1.setEnabled(False)
+        vbox2.addWidget(self.button_calc1)
         
         hbox21 = QtGui.QHBoxLayout()
         tc1 = QtGui.QLabel(self)
@@ -162,16 +162,16 @@ class PageTomo(QtGui.QWidget):
         
         vbox2.addLayout(hbox21)
         
-        self.button_calcall = QtGui.QPushButton( 'Calculate Full 4D Data')
+        self.button_calcall = QtGui.QPushButton( 'Calculate All Datasets')
         self.button_calcall.clicked.connect( self.OnCalcTomoFull)
         self.button_calcall.setEnabled(False)
         vbox2.addWidget(self.button_calcall)
         
         
-        button_save = QtGui.QPushButton( 'Save as .mrc')
-        #button_save.clicked.connect( self.OnCalculateTomo)
-        button_save.setEnabled(False)
-        vbox2.addWidget(button_save)
+        self.button_save = QtGui.QPushButton( 'Save as .mrc')
+        self.button_save.clicked.connect( self.OnSave)
+        self.button_save.setEnabled(False)
+        vbox2.addWidget(self.button_save)
         
         line = QtGui.QFrame()
         line.setFrameShape(QtGui.QFrame.HLine)
@@ -288,6 +288,7 @@ class PageTomo(QtGui.QWidget):
 
         self.AbsImagePanel = FigureCanvas(self.absimgfig)
         self.AbsImagePanel.setParent(self)
+        self.AbsImagePanel.mpl_connect('button_press_event', self.OnPointImage)
         
         
         fbox.addWidget(self.AbsImagePanel)
@@ -356,6 +357,8 @@ class PageTomo(QtGui.QWidget):
         
         for i in range(self.stack.n_ev):
             self.datanames.append(str(self.stack.ev[i]))
+            
+        self.ncomponents = self.stack.n_ev
         
         self.combonames.clear()
         self.combonames.addItems(self.datanames)
@@ -363,15 +366,28 @@ class PageTomo(QtGui.QWidget):
         self.tc_imagecomp.setText("Dataset: Energies")
         
         self.button_calcall.setEnabled(True)
+        self.button_calc1.setEnabled(True)
+        self.energiesloaded = 1
         
         
 #----------------------------------------------------------------------          
     def OnLoadTomoComponents(self, event):
         
-        self.tomodata = self.stack.od4D
+        self.ncomponents = self.anlz.n_target_spectra
         
-        for i in range(self.stack.n_ev):
-            self.datanames.append(str(self.stack.ev[i]))
+        self.tomodata = npy.zeros((self.stack.n_cols, self.stack.n_rows, self.ncomponents, self.stack.n_theta))
+        
+        
+        for i in range (self.stack.n_theta):   
+            if self.window().page4.showraw == True:
+                self.tomodata[:,:,:,i] = self.anlz.target_svd_maps4D[i]
+            else:
+                self.tomodata[:,:,:,i] = self.anlz.target_pcafit_maps[i]
+         
+       
+        for i in range(self.ncomponents):
+            self.datanames.append(str(self.anlz.tspec_names[i]))
+            
         
         self.combonames.clear()
         self.combonames.addItems(self.datanames)
@@ -379,6 +395,8 @@ class PageTomo(QtGui.QWidget):
         self.tc_imagecomp.setText("Dataset: Spectral Components")
         
         self.button_calcall.setEnabled(True)
+        self.button_calc1.setEnabled(True)
+        self.energiesloaded = 0
         
         
 #----------------------------------------------------------------------          
@@ -396,9 +414,9 @@ class PageTomo(QtGui.QWidget):
         
         self.fulltomorecdata = []
 
-        for i in range(self.stack.n_ev):
+        for i in range(self.ncomponents):
             
-            print 'Progress ',i+1,' / ',self.stack.n_ev
+            print 'Progress ',i+1,' / ',self.ncomponents
                 
             self.tr.calc_tomo1(self.tomodata[:,:,i,:], 
                                self.stack.theta,
@@ -410,7 +428,9 @@ class PageTomo(QtGui.QWidget):
             
         self.tr.tomorec = self.fulltomorecdata[self.icomp]
         
+        
         self.full_tomo_calculated = 1
+        self.tomo_calculated = 1
         
         dims = self.tr.tomorec.shape
         
@@ -420,8 +440,11 @@ class PageTomo(QtGui.QWidget):
         
         self.tc_comp.setText('Component: '+self.datanames[self.icomp])
         
-        self.slider_comp.setRange(0, self.stack.n_ev-1)
+        self.slider_slice.setValue(self.islice)
+        self.slider_comp.setRange(0, self.ncomponents-1)
         self.slider_comp.setEnabled(True)
+        self.slider_comp.setValue(self.icomp)
+        self.button_save.setEnabled(True)
           
         
         self.ShowImage()
@@ -453,10 +476,12 @@ class PageTomo(QtGui.QWidget):
         dims = self.tr.tomorec.shape
         
         self.islice = int(dims[2]/2)
-        
+        self.slider_slice.setValue(self.islice)
         self.slider_slice.setRange(0, dims[2]-1)
         
         self.tc_comp.setText('Component: '+self.datanames[self.select1])
+        self.slider_comp.setRange(0, 0)
+        self.button_save.setEnabled(True)
         
         self.ShowImage()
         
@@ -467,8 +492,6 @@ class PageTomo(QtGui.QWidget):
     def OnSelect1Comp(self, value):
         item = value
         self.select1 = item
-
-        print self.select1
         
         
 #----------------------------------------------------------------------            
@@ -488,6 +511,61 @@ class PageTomo(QtGui.QWidget):
 
         self.ShowImage()
         
+
+#----------------------------------------------------------------------  
+    def OnPointImage(self, evt):
+
+        
+        if self.energiesloaded == 0 or self.full_tomo_calculated == 0:
+            return
+        
+        x = evt.xdata
+        y = evt.ydata
+        
+
+        if (x == None) or (y == None):
+            return
+        
+     
+        ix = int(npy.floor(x))           
+        iy = self.stack.n_rows-1-int(npy.floor(y))  
+                
+        if ix<0 :
+            ix=0
+        if ix>self.stack.n_cols-1 :
+            ix=self.stack.n_cols-1
+        if iy<0 :
+            iy=0
+        if iy>self.stack.n_rows-1 :
+            iy=self.stack.n_rows-1
+            
+        spectrum = []
+
+        for i in range(self.ncomponents):
+            spectrum.append(self.fulltomorecdata[i][ix,iy,self.islice])
+            
+        title = 'Point [{0:d}, {0:d}, {0:d}'.format(ix,iy,self.islice)
+                
+        plot = PlotFrame(self, self.stack.ev, spectrum, title=title)
+        plot.show()
+
+
+#----------------------------------------------------------------------    
+    def OnSave(self, event): 
+        
+        
+        wildcard = "Mrc files (*.mrc);;"
+
+        SaveFileName = QtGui.QFileDialog.getSaveFileName(self, 'Save Tomo Reconstructions', '', wildcard)
+
+        SaveFileName = str(SaveFileName)
+        if SaveFileName == '':
+            return
+        
+        
+        data = self.tr.tomorec
+                
+        self.tr.save_mrc(SaveFileName, data)        
         
 #----------------------------------------------------------------------        
     def ShowImage(self):
@@ -527,8 +605,37 @@ class PageTomo(QtGui.QWidget):
         self.AbsImagePanel.draw()
          
         
-
+#----------------------------------------------------------------------        
+    def NewStackClear(self):
         
+        self.tr = tomo_reconstruction.Ctomo(self.stack)
+        
+        self.fulltomorecdata = []
+        self.ncomponents = 0
+        
+        self.tomo_calculated = 0
+        self.full_tomo_calculated = 0
+        self.energiesloaded = 0
+        
+        self.datanames = []     
+        
+        
+        fig = self.absimgfig
+        fig.clf()
+        self.AbsImagePanel.draw()   
+        
+        self.button_spcomp.setEnabled(False)
+        self.button_engdata.setEnabled(False)
+        self.button_calc1.setEnabled(False)
+        self.button_calcall.setEnabled(False)
+        self.button_save.setEnabled(False)
+        
+        self.tc_imagecomp.setText("Dataset: ")
+        self.tc_comp.setText('Component: ')
+        
+        self.slider_comp.setEnabled(False)
+        
+        self.combonames.clear()
         
         
 
@@ -13555,6 +13662,8 @@ class MainFrame(QtGui.QMainWindow):
                 self.page7.button_calcnnma.setEnabled(False)
                 self.page7.button_mufile.setEnabled(False)
                 self.page7.button_murand.setEnabled(False)
+            if showtomotab:
+                self.page8.button_engdata.setEnabled(False)
         else:
             self.page1.button_showi0.setEnabled(True)
             self.page1.rb_flux.setEnabled(True)
@@ -13570,7 +13679,8 @@ class MainFrame(QtGui.QMainWindow):
                 self.page7.button_calcnnma.setEnabled(True)
                 self.page7.button_mufile.setEnabled(True)
                 self.page7.button_murand.setEnabled(True)             
-             
+            if showtomotab:
+                self.page8.button_engdata.setEnabled(True)    
              
         if self.common.pca_calculated == 0:      
             self.page2.button_savepca.setEnabled(False)
@@ -13611,6 +13721,8 @@ class MainFrame(QtGui.QMainWindow):
             self.page4.button_showrgb.setEnabled(False) 
             self.page4.button_histogram.setEnabled(False) 
             self.page4.button_calc4d.setEnabled(False)
+            if showtomotab:
+                self.page8.button_spcomp.setEnabled(False)
         else:
             self.page4.button_removespec.setEnabled(True)
             self.page4.button_movespdown.setEnabled(True)
@@ -13619,6 +13731,8 @@ class MainFrame(QtGui.QMainWindow):
             self.page4.button_showrgb.setEnabled(True)    
             self.page4.button_histogram.setEnabled(True) 
             self.page4.button_calc4d.setEnabled(True)
+            if showtomotab:
+                self.page8.button_spcomp.setEnabled(True)
             
         if self.page6 != None:
             if self.common.cluster_calculated == 0:   
@@ -13749,6 +13863,10 @@ class MainFrame(QtGui.QMainWindow):
             fig.clf()
             self.page6.SpectrumPanel.draw()
             self.page6.slider_spec.setEnabled(False)
+            
+        #page8
+        if showtomotab:
+            self.page8.NewStackClear()
         
                 
 """ ------------------------------------------------------------------------------------------------"""

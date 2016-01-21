@@ -45,6 +45,8 @@ class Ctomo:
 
         self.stack = stkdata
         
+        self.tomorec = []
+        
         
         
 #----------------------------------------------------------------------   
@@ -138,5 +140,12 @@ class Ctomo:
         
         return
     
-    
+
+        
+#----------------------------------------------------------------------   
+# Save mrc
+    def save_mrc(self, path, data):    
+        
+        write_mrc(data, path)
+
         
