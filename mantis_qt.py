@@ -577,7 +577,7 @@ class PageTomo(QtGui.QWidget):
         for i in range(self.ncomponents):
             spectrum.append(self.fulltomorecdata[i][ix,iy,self.islice])
             
-        title = 'Point [{0:d}, {0:d}, {0:d}'.format(ix,iy,self.islice)
+        title = 'Point [{0:d}, {0:d}, {0:d}]'.format(ix,iy,self.islice)
                 
         plot = PlotFrame(self, self.stack.ev, spectrum, title=title)
         plot.show()
