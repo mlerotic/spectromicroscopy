@@ -52,10 +52,8 @@ class Ctomo:
     def calc_tomo1(self, tomodata, theta, maxiter, beta, samplethickness):
         
 
-        
-
         print 'Compressed sensing TV regression'
-        print 'Angles ', theta
+        #print 'Angles ', theta
         print 'TV beta ', beta
         print 'MAX iterations ', maxiter
         print "Sample thickness ", samplethickness
@@ -65,19 +63,15 @@ class Ctomo:
             if theta[i] < 0:
                 theta[i] = theta[i] + 360
         #print 'Angles in 0-360 range: ', theta
-               
-        
+                      
         nang = len(theta)
         #print 'Number of angles ', nang
                 
         dims = tomodata.shape
-        print 'Dimensions ', dims, tomodata.dtype
-         
+        #print 'Dimensions ', dims, tomodata.dtype        
     
         stack = np.swapaxes(tomodata, 0, 1)
 
-
-        print 'Calculating compressed sensing reconstruction'
 
         theta = np.deg2rad(theta)
         
@@ -90,9 +84,10 @@ class Ctomo:
         
         initx0 = np.zeros((nrows,nrows), dtype=np.float32)
         
- 
+        t1 = time()
+        
         for j in range(ncols):
-            print j, ' of ', ncols
+            #print j, ' of ', ncols
         #             for j in range(1):
             #j=ncols/2
             R = stack[j,:, :].T
@@ -112,34 +107,34 @@ class Ctomo:
         
             
             # Reconstruction
-            t1 = time()
+            
             #res, energies = fista_tv(proj, 5, 100, proj_operator) 
             res, engs = gfb_tv(proj, beta, maxiter, H=proj_operator, x0=initx0)
 
-            t2 = time()
-            print "reconstruction done in %f s" %(t2 - t1)     
+    
         
             recondata.append(res[-1])
             initx0 = res[-1]
             
-                
+        t2 = time()
+        print "reconstruction done in %f s" %(t2 - t1)                
                 
         #Save the 3D tomo reconstruction to a HDF5 file
         recondata=np.array(recondata)
         dims = recondata.shape
-        print 'final dims', dims
+        #print 'final dims', dims
         
         #Crop the data is sample thickness is defined
         if (samplethickness > 0) and (samplethickness<dims[2]-2):
             recondata = recondata[:,:,dims[2]/2-samplethickness/2:dims[2]/2+samplethickness/2]
-                
+               
         
         recondata = np.swapaxes(recondata, 0, 1)
         
         self.tomorec = recondata
         
 
-        write_mrc(recondata, 'testMantistomo.mrc')
+#         write_mrc(recondata, 'testMantistomo.mrc')
         
         return
     

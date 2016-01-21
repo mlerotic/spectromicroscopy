@@ -106,7 +106,10 @@ class PageTomo(QtGui.QWidget):
         
         self.tr = tomo_reconstruction.Ctomo(self.stack)
         
+        self.fulltomorecdata = []
+        
         self.tomo_calculated = 0
+        self.full_tomo_calculated = 1
         
         #Data type 0-energies; 1-spectral components
         self.datatype = 0
@@ -159,10 +162,10 @@ class PageTomo(QtGui.QWidget):
         
         vbox2.addLayout(hbox21)
         
-        button_calcall = QtGui.QPushButton( 'Calculate Full 4D Data')
-        #button_calcall.clicked.connect( self.OnCalculateTomo)
-        button_calcall.setEnabled(False)
-        vbox2.addWidget(button_calcall)
+        self.button_calcall = QtGui.QPushButton( 'Calculate Full 4D Data')
+        self.button_calcall.clicked.connect( self.OnCalcTomoFull)
+        self.button_calcall.setEnabled(False)
+        vbox2.addWidget(self.button_calcall)
         
         
         button_save = QtGui.QPushButton( 'Save as .mrc')
@@ -300,17 +303,16 @@ class PageTomo(QtGui.QWidget):
         gridsizertop.addWidget(self.slider_slice, 0, 1, QtCore .Qt. AlignLeft)
         
         
-        self.slider_theta = QtGui.QScrollBar(QtCore.Qt.Horizontal)
-        self.slider_theta.setFocusPolicy(QtCore.Qt.StrongFocus)
-        #self.slider_theta.valueChanged[int].connect(self.OnScrollTheta)
-        self.slider_theta.setRange(0, 100)     
-        self.slider_theta.setVisible(False)  
-        self.tc_imagetheta = QtGui.QLabel(self)
-        self.tc_imagetheta.setText("4D Data Angle: ")
-        self.tc_imagetheta.setVisible(False)
+        self.slider_comp = QtGui.QScrollBar(QtCore.Qt.Horizontal)
+        self.slider_comp.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.slider_comp.valueChanged[int].connect(self.OnScrollComp)
+        self.slider_comp.setRange(0, 100)    
+        self.slider_comp.setEnabled(True) 
+        self.tc_comp = QtGui.QLabel(self)
+        self.tc_comp.setText("Component: ")
         hbox51 = QtGui.QHBoxLayout()
-        hbox51.addWidget(self.tc_imagetheta) 
-        hbox51.addWidget(self.slider_theta)
+        hbox51.addWidget(self.tc_comp) 
+        hbox51.addWidget(self.slider_comp)
         gridsizertop.addLayout(hbox51, 1, 0)
         
 
@@ -358,8 +360,78 @@ class PageTomo(QtGui.QWidget):
         self.combonames.clear()
         self.combonames.addItems(self.datanames)
         
+        self.tc_imagecomp.setText("Dataset: Energies")
+        
+        self.button_calcall.setEnabled(True)
+        
+        
+#----------------------------------------------------------------------          
+    def OnLoadTomoComponents(self, event):
+        
+        self.tomodata = self.stack.od4D
+        
+        for i in range(self.stack.n_ev):
+            self.datanames.append(str(self.stack.ev[i]))
+        
+        self.combonames.clear()
+        self.combonames.addItems(self.datanames)
+        
+        self.tc_imagecomp.setText("Dataset: Spectral Components")
+        
+        self.button_calcall.setEnabled(True)
+        
+        
+#----------------------------------------------------------------------          
+    def OnCalcTomoFull(self, event):
+        
+        QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+        
+        
+        value = self.ntc_niterations.text()
+        self.maxIters = int(value)  
+        value = self.ntc_beta.text()      
+        self.beta = float(value)        
+        value = self.ntc_samplethick.text()
+        self.samplethick = int(value) 
+        
+        self.fulltomorecdata = []
+
+        for i in range(self.stack.n_ev):
+            
+            print 'Progress ',i+1,' / ',self.stack.n_ev
+                
+            self.tr.calc_tomo1(self.tomodata[:,:,i,:], 
+                               self.stack.theta,
+                               self.maxIters,
+                               self.beta,
+                               self.samplethick)
+            
+            self.fulltomorecdata.append(self.tr.tomorec.copy())
+            
+        self.tr.tomorec = self.fulltomorecdata[self.icomp]
+        
+        self.full_tomo_calculated = 1
+        
+        dims = self.tr.tomorec.shape
+        
+        self.islice = int(dims[2]/2)
+        
+        self.slider_slice.setRange(0, dims[2]-1)
+        
+        self.tc_comp.setText('Component: '+self.datanames[self.icomp])
+        
+        self.slider_comp.setRange(0, self.stack.n_ev-1)
+        self.slider_comp.setEnabled(True)
+          
+        
+        self.ShowImage()
+        
+        QtGui.QApplication.restoreOverrideCursor()    
+        
 #----------------------------------------------------------------------          
     def OnCalcTomo1(self, event):
+        
+        QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
         
         
         value = self.ntc_niterations.text()
@@ -384,10 +456,13 @@ class PageTomo(QtGui.QWidget):
         
         self.slider_slice.setRange(0, dims[2]-1)
         
-        self.tc_imagecomp.setText('Dataset: '+self.datanames[self.select1])
+        self.tc_comp.setText('Component: '+self.datanames[self.select1])
         
         self.ShowImage()
         
+        QtGui.QApplication.restoreOverrideCursor()    
+        
+       
 #----------------------------------------------------------------------           
     def OnSelect1Comp(self, value):
         item = value
@@ -399,6 +474,17 @@ class PageTomo(QtGui.QWidget):
 #----------------------------------------------------------------------            
     def OnScrollSlice(self, value):
         self.islice = value
+
+        self.ShowImage()
+        
+        
+#----------------------------------------------------------------------            
+    def OnScrollComp(self, value):
+        self.icomp = value
+        
+        self.tr.tomorec = self.fulltomorecdata[self.icomp]
+                
+        self.tc_comp.setText('Component: '+self.datanames[self.icomp])
 
         self.ShowImage()
         
@@ -858,6 +944,7 @@ class PageNNMA(QtGui.QWidget):
 #----------------------------------------------------------------------          
     def OnCalcNNMA(self, event):
         
+        QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
 
         value = self.ntc_niterations.text()
         self.maxIters = int(value)  
@@ -892,6 +979,8 @@ class PageNNMA(QtGui.QWidget):
         self.ShowSpectrum()
         self.ShowCostFunction()
         self.updatewidgets()
+        
+        QtGui.QApplication.restoreOverrideCursor()    
         
         
         
@@ -9422,6 +9511,13 @@ class LimitEv(QtGui.QDialog):
         self.stack.fill_h5_struct_from_stk()
         if self.com.i0_loaded == 1: 
             self.stack.fill_h5_struct_normalization()
+            
+            
+        if self.com.stack_4d == 1:
+            self.stack.stack4D = self.stack.stack4D[:,:,self.limitevmin:self.limitevmax+1,:]
+            if self.com.i0_loaded == 1:   
+                self.stack.od4D = self.stack.od4D[:,:,self.limitevmin:self.limitevmax+1,:]            
+
         
         #Fix the slider on Page 1! 
         self.parent.page1.slider_eng.setRange(0,self.stack.n_ev-1)
@@ -13423,14 +13519,13 @@ class MainFrame(QtGui.QMainWindow):
             self.page1.button_i0ffile.setEnabled(True)
             self.page1.button_i0histogram.setEnabled(True) 
             self.page1.button_prenorm.setEnabled(True)
+            self.page1.button_limitev.setEnabled(True)
             if self.common.stack_4d == 0: 
                 self.page1.button_refimgs.setEnabled(True)
-                self.page1.button_limitev.setEnabled(True)
                 self.page1.button_subregion.setEnabled(True)
                 self.page1.button_darksig.setEnabled(True)
             else:
                 self.page1.button_refimgs.setEnabled(False)
-                self.page1.button_limitev.setEnabled(False)
                 self.page1.button_subregion.setEnabled(False)
                 self.page1.button_darksig.setEnabled(False)                
             self.page1.button_save.setEnabled(True) 
