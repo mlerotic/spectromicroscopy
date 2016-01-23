@@ -20,6 +20,7 @@ from __future__ import division
 
 import numpy as np
 import scipy.interpolate
+import os
 
 
 
@@ -30,21 +31,14 @@ write_types = ['spectrum','image','stack']
 
 
 def identify(filename):
+        
     try:
-        stk_format = True
-        try:
-            f = open(str(filename),'rb')
-            data = np.fromfile(f, np.int32, 3)
-            data.byteswap(True)
-            
-            n_cols = int(data[0])
-            n_rows = int(data[1])
-            n_ev = int(data[2])           
-    
-            f.close()
-        except:
-            stk_format = False
-        return stk_format
+        #Binary file - the only way to check if the file is ok to check the extension
+        bn, extension = os.path.splitext(filename) 
+        if extension.lower() == '.stk':
+            return True
+        else:
+            return False
     except:
         return False
 
