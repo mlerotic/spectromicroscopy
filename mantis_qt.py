@@ -51,7 +51,7 @@ import tomo_reconstruction
 
 from helpers import resource_path
 
-version = '2.1.02'
+version = '2.2.01'
 
 Winsizex = 1000
 Winsizey = 700
