@@ -88,6 +88,8 @@ def read(filename, self, selection=None):
 
     f.close()
     
+    self.fill_h5_struct_from_stk()
+    
   
     return
 

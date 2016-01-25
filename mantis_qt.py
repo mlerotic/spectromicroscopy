@@ -48,6 +48,7 @@ import henke
 
 from helpers import resource_path
 import file_plugins
+from file_plugins import file_xrm
 
 
 version = '2.0.9'
@@ -10545,7 +10546,7 @@ class PlotFrame(QtGui.QDialog):
         dim = self.datax.shape
         n=dim[0]
         for ie in range(n):
-            print>>f, '%.6f, %.6f' %(self.datax[ie], self.datay[ie])
+            print>>f, '{0:06.2f}, {1:06f}'.format(self.datax[ie], self.datay[ie])
         
         f.close()
     
@@ -11005,8 +11006,7 @@ class StackListFrame(QtGui.QDialog):
             
             try: 
                 from netCDF4 import Dataset
-                import file_sm_netcdf
-                self.sm = file_sm_netcdf.sm(data_struct)
+                from file_plugins import file_sm_netcdf
             
             except:
                 QtGui.QMessageBox.warning(self, 'Error', "Could not import netCDF4 library.")
@@ -11019,7 +11019,7 @@ class StackListFrame(QtGui.QDialog):
                 filename = self.sm_files[i]
                 file = os.path.join(filepath, filename)
             
-                filever, ncols, nrows, iev = self.sm.read_sm_header(file)
+                filever, ncols, nrows, iev = file_sm_netcdf.read_sm_header(file)
             
                 
                 if filever > 0:  
@@ -11044,9 +11044,6 @@ class StackListFrame(QtGui.QDialog):
         if self.xrm_files:        
             
             self.filetype = 'xrm'
-            
-            import file_xrm
-            self.xrm = file_xrm.xrm()
 
             count = 0
         
@@ -11055,7 +11052,7 @@ class StackListFrame(QtGui.QDialog):
                 filename = self.xrm_files[i]
                 file = os.path.join(filepath, filename)
 
-                ncols, nrows, iev = self.xrm.read_xrm_fileinfo(file)
+                ncols, nrows, iev = file_xrm.read_xrm_fileinfo(file)
   
                 if ncols > 0:                       
                     self.filelist.insertRow(count)
@@ -11089,9 +11086,10 @@ class StackListFrame(QtGui.QDialog):
         
 
         if self.filetype == 'sm':
-            self.sm.read_sm_list(filelist, self.filepath, self.data_struct)
+            from file_plugins import file_sm_netcdf
+            file_sm_netcdf.read_sm_list(self,filelist, self.filepath, self.data_struct)
         elif self.filetype == 'xrm':
-            self.xrm.read_xrm_list(filelist, self.filepath, self.data_struct)
+            file_xrm.read_xrm_list(self,filelist, self.filepath, self.data_struct)
         else:
             print 'Wrong file type'
             return
@@ -11419,6 +11417,9 @@ class MainFrame(QtGui.QMainWindow):
                 if dlg.filepath != filepath:
                     filepath = dlg.filepath
                     plugin = file_plugins.identify(dlg.filepath)
+                    
+                    
+            QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
             
             if self.common.stack_loaded == 1:
                 self.new_stack_refresh()
@@ -11427,6 +11428,8 @@ class MainFrame(QtGui.QMainWindow):
             file_plugins.load(filepath, stack_object=self.stk, plugin=plugin,selection=FileInternalSelection)
             directory =  os.path.dirname(str(filepath))
             self.page1.filename =  os.path.basename(str(filepath))
+            
+#             self.stk.fill_h5_struct_from_stk()
             
             #Update widgets 
             x=self.stk.n_cols

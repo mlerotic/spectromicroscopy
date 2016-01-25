@@ -229,6 +229,7 @@ def read(filename, self, selection=None):
 
         self.absdata = numpy.reshape(imagestack, (self.n_cols,self.n_rows, self.n_ev), order='F')       
 
+        self.fill_h5_struct_from_stk()
 
     else:
         print "Only Image Stack files are supported."

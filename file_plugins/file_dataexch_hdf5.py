@@ -460,6 +460,12 @@ def read(filename, self, selection=None):
     self.data_dwell = None
     self.i0_dwell = None
     
+    self.fill_h5_struct_from_stk()
+    
+    if self.data_struct.spectromicroscopy.normalization.white_spectrum is not None:
+		self.calculate_optical_density()
+		self.fill_h5_struct_normalization()
+    
 
     
     if verbose: 

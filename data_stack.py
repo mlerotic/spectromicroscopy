@@ -28,13 +28,8 @@ import h5py
 import datetime 
 import os
 
-import file_stk
-from file_plugins import file_dataexch_hdf5
+from file_plugins import file_stk
 from file_plugins import file_sdf
-#import file_nexus_hdf5
-import file_xrm
-#import file_sdf
-import file_tif
 import data_struct
 
 #----------------------------------------------------------------------
@@ -76,12 +71,11 @@ class data:
 #----------------------------------------------------------------------   
     def read_stk_i0(self, filename, extension):
         if extension == '.xas':
-            file_stk.x1astk.read_stk_i0_xas(self,filename)
+            file_stk.read_stk_i0_xas(self,filename)
         elif extension == '.csv':
-            file_stk.x1astk.read_stk_i0_csv(self,filename)
+            file_stk.read_stk_i0_csv(self,filename)
             
         self.calculate_optical_density()
-        
         self.fill_h5_struct_normalization()
         
         
@@ -92,95 +86,7 @@ class data:
         
         self.fill_h5_struct_normalization()
         
-        
-#---------------------------------------------------------------------- 
-    def read_tiff(self, filename):    
-        self.new_data()  
-        
-        tiffstack = file_tif.TiffStackWrapper(filename)
-        mode = tiffstack.get_mode()
-        if mode == 'I;16B':
-            imgmode = 16
-        else:
-            imgmode = 8
-        
-        frame0 = tiffstack.get_frame(0)
-        imgstack = np.array((frame0))
-          
-        haveimg = True
-        it = 1
-        while haveimg:
-            frame = tiffstack.get_frame(it)
-            if frame == None:
-                haveimg = False
-            else:
-                it+=1
-                imgstack = np.dstack((imgstack,frame))
                 
-        if imgmode == 16:
-            imgstack = imgstack.astype(np.uint16)
-        else:
-            imgstack = imgstack.astype(np.uint8)
-            
-        self.n_cols = imgstack.shape[0]
-        self.n_rows = imgstack.shape[1]
-        self.n_ev = imgstack.shape[2]
-        
-        
-        pixelsize = 1
-        #Since we do not have a scanning microscope we fill the x_dist and y_dist from pixel_size
-        self.x_dist = np.arange(np.float(self.n_cols))*pixelsize
-        self.y_dist = np.arange(np.float(self.n_rows))*pixelsize
-
-        #Read energies from file
-        basename, extension = os.path.splitext(filename) 
-        engfilename = basename+'.txt'
-        f = open(str(engfilename),'r')
-        
-        elist = []   
-    
-        for line in f:
-            if line.startswith("*"):
-                pass
-            else:
-                e = float(line)
-                elist.append(e)
-                
-        self.ev = np.array(elist)
-                
-        f.close()
-        
-        
-        
-        msec = np.ones((self.n_ev))
-         
-        self.data_dwell = msec
-                       
-        self.absdata = imgstack
-                
-        #Check if the energies are consecutive, if they are not sort the data
-        sort = 0
-        for i in range(self.n_ev - 1):
-            if self.ev[i] > self.ev[i+1]:
-                sort = 1
-                break
-        if sort == 1:
-            sortind = np.argsort(self.ev)
-            self.ev = self.ev[sortind]
-            self.absdata = self.absdata[:,:,sortind]
-
-        
-#         self.original_n_cols = imgstack.shape[0]
-#         self.original_n_rows = imgstack.shape[1]
-#         self.original_n_ev = imgstack.shape[2]
-#         self.original_ev = self.ev.copy()
-#         self.original_absdata = self.absdata.copy()
-
-       
-        self.fill_h5_struct_from_stk()
-         
-        self.scale_bar()
-        
 
 #---------------------------------------------------------------------- 
     def read_dpt(self, filename):    
@@ -396,6 +302,7 @@ class data:
         
         #little hack to deal with rounding errors
         self.evi0[self.evi0.size-1] += 0.001
+        self.evi0[0] -= 0.001
         
         if len(self.evi0) > 2:
             fi0int = scipy.interpolate.interp1d(self.evi0,self.i0data, kind='cubic', bounds_error=False, fill_value=0.0)      
@@ -411,7 +318,7 @@ class data:
         negative_indices = np.where(self.absdata <= 0)
         if negative_indices:
             self.absdata[negative_indices] = 0.01
-                            
+            
  
         for i in range(self.n_ev):
             self.od[:,:,i] = - np.log(self.absdata[:,:,i]/i0[i])
@@ -447,7 +354,7 @@ class data:
         refimgs = np.empty((self.n_cols, self.n_rows, self.n_ev))
         refimgs_ev = []
         for i in range(len(files)):
-            ncols, nrows, iev, imgdata = file_xrm.xrm.read_xrm_fileinfo(self, files[i], readimgdata = True)
+            ncols, nrows, iev, imgdata = file_xrm.read_xrm_fileinfo(files[i], readimgdata = True)
             refimgs[:,:,i] = np.reshape(imgdata, (ncols, nrows), order='F')
             refimgs_ev.append(iev)
  
@@ -558,7 +465,7 @@ class data:
         print>>f, '* Address: '
         print>>f, '*--------------------------------------------------------------'
         for ie in range(self.n_ev):
-            print>>f, '\t%.6f\t%.6f' %(evdata[ie], data[ie])
+            print>>f, '\t {0:06.2f}, {1:06f}'.format(evdata[ie], data[ie])
         
         f.close()
     
@@ -594,7 +501,7 @@ class data:
         print>>f, '* Address: '
         print>>f, '*--------------------------------------------------------------'
         for ie in range(self.n_ev):
-            print>>f, '%.6f, %.6f' %(evdata[ie], data[ie])
+            print>>f, '{0:06.2f}, {1:06f}'.format(evdata[ie], data[ie])
         
         f.close()
     

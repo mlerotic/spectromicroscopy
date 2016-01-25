@@ -72,6 +72,8 @@ def read(FileName,stack_object,selection=(0,0)):
     
     
     F.close()
+    
+    stack_object.fill_h5_struct_from_stk()
 
 
 def GetFileStructure(FileName):

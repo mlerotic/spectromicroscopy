@@ -62,6 +62,8 @@ def read(filename, self, selection=None):
         read_xrm(filename, self)
     elif extension == '.txrm':
         read_txrm(filename, self)
+        
+    self.fill_h5_struct_from_stk()
     
  
 #----------------------------------------------------------------------
