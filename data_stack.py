@@ -30,6 +30,9 @@ import os
 
 from file_plugins import file_stk
 from file_plugins import file_sdf
+from file_plugins import file_xrm
+import file_bim
+import file_ncb
 import data_struct
 
 #----------------------------------------------------------------------
@@ -38,6 +41,9 @@ class data:
         self.data_struct = data_struct
         self.i0_dwell = None 
         self.n_ev = 0
+        self.n_theta = 0
+        self.stack4D = None
+        
 
 #----------------------------------------------------------------------   
     def new_data(self):
@@ -47,6 +53,8 @@ class data:
                
         self.x_dist = 0       
         self.y_dist = 0
+        
+        self.i0_dwell = None 
 
         self.ev = 0         
         self.absdata = 0
@@ -61,12 +69,17 @@ class data:
         self.xshifts = 0
         self.yshifts = 0
         
+        self.stack4D = None
+        self.n_theta = 0
+        self.theta = 0
+        self.od4D = 0
+        
 
         self.data_struct.spectromicroscopy.normalization.white_spectrum = None
         self.data_struct.spectromicroscopy.normalization.white_spectrum_energy = None
         self.data_struct.spectromicroscopy.normalization.white_spectrum_energy_units = None
         
-        self.data_struct.spectromicroscopy.optical_density = None      
+        self.data_struct.spectromicroscopy.optical_density = None        
            
 #----------------------------------------------------------------------   
     def read_stk_i0(self, filename, extension):
@@ -81,12 +94,80 @@ class data:
         
 #----------------------------------------------------------------------   
     def read_sdf_i0(self, filename):
-        file_sdf.sdfstk.read_sdf_i0(self,filename)
+        file_sdf.read_sdf_i0(self,filename)
         self.calculate_optical_density()
         
         self.fill_h5_struct_normalization()
         
                 
+    def read_bim(self, filename):    
+
+        file_bim.Cbim.read_bim(self, filename)
+        self.fill_h5_struct_from_stk()        
+                
+        self.scale_bar()
+        
+#---------------------------------------------------------------------- 
+    def read_ncb(self, filename):    
+        self.new_data()  
+        file_ncb.Cncb.read_ncb(self, filename)
+
+        self.fill_h5_struct_from_stk()
+        self.scale_bar()
+        
+#---------------------------------------------------------------------- 
+    def read_ncb4D(self, filenames):    
+        self.new_data()  
+        file_ncb.Cncb.read_ncb4D(self, filenames)
+        
+        now = datetime.datetime.now()
+        
+        self.data_struct.implements = 'information:exchange:spectromicroscopy'
+        self.data_struct.version = '1.0'
+        
+        self.data_struct.information.file_creation_datetime = now.strftime("%Y-%m-%dT%H:%M")
+        self.data_struct.information.comment = 'Converted in Mantis'
+        
+        
+        self.data_struct.exchange.data = self.stack4D
+        self.data_struct.exchange.data_signal = 1
+        self.data_struct.exchange.data_axes='x:y:energy:theta'
+        
+        self.data_struct.exchange.theta = self.theta
+        self.data_struct.exchange.theta_units = 'degrees'
+        
+        
+        self.data_struct.exchange.x = self.x_dist
+        self.data_struct.exchange.y = self.y_dist
+        
+        
+        self.scale_bar()
+
+#---------------------------------------------------------------------- 
+    def read_ncb4Denergy(self, filename):    
+        
+        f = open(str(filename),'rU')
+        
+        elist = []  
+    
+        for line in f:
+            if line.startswith('*'):
+                if 'Common name' in line:
+                    spectrum_common_name = line.split(':')[-1].strip()
+
+            else:
+                e, = [float (x) for x in line.split()] 
+                elist.append(e)
+                
+        self.ev = np.array(elist)
+        
+                
+        f.close()
+
+        self.n_ev = self.ev.size
+        self.data_struct.exchange.energy=self.ev
+        self.data_struct.exchange.energy_units = 'ev'
+        
 
 #---------------------------------------------------------------------- 
     def read_dpt(self, filename):    
@@ -194,7 +275,7 @@ class data:
         self.data_struct.version = '1.0'
         
         self.data_struct.information.file_creation_datetime = now.strftime("%Y-%m-%dT%H:%M")
-        self.data_struct.information.comment = 'Converted from .stk'
+        self.data_struct.information.comment = 'Converted in Mantis'
         
         
         self.data_struct.exchange.data = self.absdata
@@ -217,7 +298,10 @@ class data:
         self.data_struct.spectromicroscopy.normalization.white_spectrum_energy = self.evi0
         self.data_struct.spectromicroscopy.normalization.white_spectrum_energy_units = 'eV'
         
-        self.data_struct.spectromicroscopy.optical_density = self.od
+        if self.stack4D is None:
+            self.data_struct.spectromicroscopy.optical_density = self.od
+        else:
+            self.data_struct.spectromicroscopy.optical_density = self.od4D
         
     
 #----------------------------------------------------------------------   
@@ -234,23 +318,43 @@ class data:
 
         self.evi0hist = self.ev.copy()
 
-        self.i0datahist = np.zeros(self.n_ev)
 
+        
         i0_indices = np.where((fluxmin<self.averageflux)&(self.averageflux<fluxmax))
-        if np.any(i0_indices):
-            invnumel = 1./self.averageflux[i0_indices].shape[0]
-            for ie in range(self.n_ev):  
-                thiseng_abs = self.absdata[:,:,ie]
-                self.i0datahist[ie] = np.sum(thiseng_abs[i0_indices])*invnumel
-
 
         self.evi0 = self.ev.copy()
-        self.i0data = self.i0datahist 
-         
+        
         self.i0_dwell = self.data_dwell
- 
-        self.calculate_optical_density()   
-         
+                
+        if self.stack4D is None:
+            self.i0datahist = np.zeros((self.n_ev))
+            self.i0data = self.i0datahist 
+            if np.any(i0_indices):
+                invnumel = 1./self.averageflux[i0_indices].shape[0]
+                for ie in range(self.n_ev):  
+                    thiseng_abs = self.absdata[:,:,ie]
+                    self.i0datahist[ie] = np.sum(thiseng_abs[i0_indices])*invnumel
+
+        
+            self.calculate_optical_density()   
+            
+        else:
+            self.i0datahist = np.zeros((self.n_ev, self.n_theta))
+            self.i0data = self.i0datahist 
+            self.od4D = np.zeros((self.n_cols, self.n_rows, self.n_ev, self.n_theta))
+            
+            if np.any(i0_indices):
+                invnumel = 1./self.averageflux[i0_indices].shape[0]
+            else:
+                return
+            
+            for i in range(self.n_theta):
+                for ie in range(self.n_ev):  
+                    thiseng_abs = self.stack4D[:,:,ie, i]
+                    self.i0datahist[ie,i] = np.sum(thiseng_abs[i0_indices])*invnumel
+                        
+            self.calculate_optical_density_4D() 
+                
         self.fill_h5_struct_normalization()
         
         return    
@@ -274,6 +378,9 @@ class data:
         #Optical density matrix is rearranged into n_pixelsxn_ev
         self.od = np.reshape(self.od, (n_pixels, self.n_ev), order='F')
         
+        if self.stack4D is not None:
+            self.od4D = self.stack4D.copy()
+        
         self.fill_h5_struct_normalization()
         
         return
@@ -294,9 +401,31 @@ class data:
         return  
     
 #----------------------------------------------------------------------   
+    def reset_i0(self):
+        
+
+        self.i0_dwell = None 
+
+        self.i0data = 0
+        self.evi0 = 0
+        
+        self.od = 0
+        self.od3d = 0
+        
+        self.data_struct.spectromicroscopy.normalization.white_spectrum = None
+        self.data_struct.spectromicroscopy.normalization.white_spectrum_energy = None
+        self.data_struct.spectromicroscopy.normalization.white_spectrum_energy_units = None
+        
+        self.data_struct.spectromicroscopy.optical_density = None      
+    
+#----------------------------------------------------------------------   
 # Normalize the data: calculate optical density matrix D 
     def calculate_optical_density(self):
-
+        
+        if self.stack4D is not None:
+            self.calculate_optical_density_4D()
+            return
+            
         n_pixels = self.n_cols*self.n_rows
         self.od = np.empty((self.n_cols, self.n_rows, self.n_ev))
         
@@ -309,6 +438,7 @@ class data:
         else:
             fi0int = scipy.interpolate.interp1d(self.evi0,self.i0data, bounds_error=False, fill_value=0.0)      
         i0 = fi0int(self.ev)
+        
          
         if (self.data_dwell is not None) and (self.i0_dwell is not None):
  
@@ -330,12 +460,68 @@ class data:
              
         self.od3d = self.od.copy()
          
+        #Optical density matrix is rearranged into n_pixelsxn_ev
+        self.od = np.reshape(self.od, (n_pixels, self.n_ev), order='F')
+        
+
+        return
  
+#----------------------------------------------------------------------   
+# Normalize the data: calculate optical density matrix D 
+    def calculate_optical_density_4D(self):
+
+        n_pixels = self.n_cols*self.n_rows
+        self.od4D = np.zeros((self.n_cols, self.n_rows, self.n_ev, self.n_theta))
+        
+        #little hack to deal with rounding errors
+        self.evi0[self.evi0.size-1] += 0.001
+        
+        self.i0data = np.array(self.i0data)
+        i0dims = self.i0data.shape
+
+        
+        for ith in range(self.n_theta):
+            self.od = np.empty((self.n_cols, self.n_rows, self.n_ev))
+            
+            if len(i0dims) == 2:
+                self.i0data = self.i0datahist[:,ith]
+        
+            if len(self.evi0) > 2:
+                fi0int = scipy.interpolate.interp1d(self.evi0, self.i0data, kind='cubic', bounds_error=False, fill_value=0.0)      
+            else:
+                fi0int = scipy.interpolate.interp1d(self.evi0,self.i0data, bounds_error=False, fill_value=0.0)      
+            i0 = fi0int(self.ev)
+            
+             
+            if (self.data_dwell is not None) and (self.i0_dwell is not None):
+     
+                i0 = i0*(self.data_dwell/self.i0_dwell)
+            
+            #zero out all negative values in the image stack
+            negative_indices = np.where(self.stack4D <= 0)
+            if negative_indices:
+                self.stack4D[negative_indices] = 0.01
+                                
+     
+            for i in range(self.n_ev):
+                self.od[:,:,i] = - np.log(self.stack4D[:,:,i,ith]/i0[i])
+             
+            #clean up the result
+            nan_indices = np.where(np.isfinite(self.od) == False)
+            if nan_indices:
+                self.od[nan_indices] = 0
+                 
+        
+            self.od4D[:,:,:,ith] = self.od[:,:,:]
+            
+                    
+                    
+        self.od3d = self.od.copy()
+         
         #Optical density matrix is rearranged into n_pixelsxn_ev
         self.od = np.reshape(self.od, (n_pixels, self.n_ev), order='F')
 
-        return
-    
+        return   
 
 #----------------------------------------------------------------------   
 # Normalize the data: calculate optical density matrix D 
@@ -400,10 +586,10 @@ class data:
 #----------------------------------------------------------------------   
     def scale_bar(self): 
            
-        x_start = np.amin(self.y_dist)
-        x_stop = np.amax(self.y_dist)
+        x_start = np.amin(self.x_dist)
+        x_stop = np.amax(self.x_dist)
         
-        onepixsize = np.abs(self.y_dist[1]-self.y_dist[0])
+        onepixsize = np.abs(self.x_dist[1]-self.x_dist[0])
                 
         bar_microns = 0.2*np.abs(x_stop-x_start)
         
@@ -424,7 +610,7 @@ class data:
         self.scale_bar_string = bar_string
 
 
-        self.scale_bar_pixels_x = int(0.5+float(self.n_rows)*
+        self.scale_bar_pixels_x = int(0.5+float(self.n_cols)*
                        float(bar_microns)/float(abs(x_stop-x_start)))
         
         self.scale_bar_pixels_y = int(0.01*self.n_rows)
@@ -582,11 +768,23 @@ class data:
     
 #----------------------------------------------------------------------   
 #Register images using Fourier Shift Theorem
-    def register_images(self, ref_image, image2, have_ref_img_fft = False):
+#EdgeEnhancement: 0 = no edge enhacement; 1 = sobel; 2 = prewitt
+    def register_images(self, ref_image, image2, have_ref_img_fft = False, edge_enhancement = 0):
         
         if have_ref_img_fft == False:
-            self.ref_fft = np.fft.fftshift(np.fft.fft2(np.fft.fftshift(ref_image)))
-        img2_fft = np.fft.fftshift(np.fft.fft2(np.fft.fftshift(image2)))
+            if edge_enhancement == 1:
+                self.ref_fft = np.fft.fftshift(np.fft.fft2(np.fft.fftshift(scipy.ndimage.filters.sobel(ref_image))))
+            elif edge_enhancement == 2:
+                self.ref_fft = np.fft.fftshift(np.fft.fft2(np.fft.fftshift(scipy.ndimage.filters.prewitt(ref_image))))  
+            else:
+                self.ref_fft = np.fft.fftshift(np.fft.fft2(np.fft.fftshift(ref_image)))              
+            
+        if edge_enhancement == 1:
+            img2_fft = np.fft.fftshift(np.fft.fft2(np.fft.fftshift(scipy.ndimage.filters.sobel(image2))))
+        if edge_enhancement == 2:
+            img2_fft = np.fft.fftshift(np.fft.fft2(np.fft.fftshift(scipy.ndimage.filters.prewitt(image2))))     
+        else:
+            img2_fft = np.fft.fftshift(np.fft.fft2(np.fft.fftshift(image2)))
         
         fr = (self.ref_fft*img2_fft.conjugate())/(np.abs(self.ref_fft)*np.abs(img2_fft))
         fr = np.fft.fftshift(np.fft.ifft2(np.fft.fftshift(fr)))
@@ -607,6 +805,7 @@ class data:
         if yc == shape[1]-1:
             yc = shape[1]-2
             
+            
         #Use peak fit to find the shifts 
         xpts = [xc-1,xc,xc+1]
         ypts = fr[xpts,yc]     
@@ -620,6 +819,7 @@ class data:
         xshift = xf - np.float(shape[0])/2.0
         yshift = yf - np.float(shape[1])/2.0
         
+                
                 
         return xshift, yshift, fr
     
@@ -641,14 +841,8 @@ class data:
     
 #----------------------------------------------------------------------   
 #Apply image registration
-    def crop_registed_images(self, images, xshifts, yshifts):
-        
-        min_xshift = np.min(xshifts)
-        max_xshift = np.max(xshifts)
-        
-        min_yshift = np.min(yshifts)
-        max_yshift = np.max(yshifts)
-        
+    def crop_registed_images(self, images, min_xshift, max_xshift, min_yshift, max_yshift):
+                
         # if the image is moved to the right (positive) we need to crop the left side 
         xleft = np.ceil(max_xshift)
         if xleft < 0:
@@ -665,8 +859,10 @@ class data:
         if ytop > (self.n_rows):
             ytop = self.n_rows
             
-            
-        cropped_stack = images[xleft:xright, ybottom:ytop, :]
+        if self.stack4D is not None:
+            cropped_stack = images[xleft:xright, ybottom:ytop, :, :]
+        else:
+            cropped_stack = images[xleft:xright, ybottom:ytop, :]
         
         return cropped_stack, xleft, xright, ybottom, ytop
 

@@ -29,6 +29,7 @@ import data_struct
 def read_sm_header(filename):
     
     try:
+        print filename
         f = netCDF4.Dataset(filename, 'r', format='NETCDF4')
 
         

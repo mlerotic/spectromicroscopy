@@ -19,6 +19,7 @@
 from __future__ import division
 
 import os
+import copy
 import numpy as np
 import scipy.interpolate
 import scipy.spatial
@@ -151,6 +152,20 @@ class analyze:
         self.n_xrayfitsp = 0
         self.xfspec_names = []
         self.xfitpars = []
+        
+        self.pcaimages4D = []
+        self.eigenvals4D = []
+        self.eigenvecs4D = []
+        self.variance4D = []
+        self.pcaimagebounds4D = []
+        
+        
+        self.target_svd_maps4D = []
+        self.original_svd_maps4D = []
+        self.target_pcafit_maps4D = []
+        self.original_fit_maps4D = []
+        self.target_pcafit_coeffs4D = []
+        self.target_pcafit_spectra4D = []
 
         
         
@@ -254,6 +269,107 @@ class analyze:
 
         return    
 
+#----------------------------------------------------------------------   
+# Calculate pca 
+    def calculate_pca_4D(self):
+        #covariance matrix
+        n_pix = self.stack.n_cols*self.stack.n_rows
+        
+        self.pcaimages4D = []
+        self.eigenvals4D = []
+        self.eigenvecs4D = []
+        self.variance4D = []
+        self.pcaimagebounds4D = []
+        
+        for jth in range(self.stack.n_theta):
+            
+            od3d = self.stack.od4D[:,:,:,jth]
+            od = od3d.copy()
+            
+            od = np.reshape(od, (n_pix, self.stack.n_ev), order='F')               
+
+    
+            
+            #normalize od spectra - not used in pca_gui.pro
+            #norms = np.apply_along_axis(np.linalg.norm, 1, od)
+            odn = np.zeros((n_pix, self.stack.n_ev))
+            for i in range(n_pix):
+                odn[i,:] = od[i,:]/np.linalg.norm(od[i,:])
+                
+           
+            covmatrix = np.dot(od.T,od)
+      
+            self.pcaimages = np.zeros((self.stack.n_cols, self.stack.n_rows, self.stack.n_ev))
+            self.pcaimagebounds = np.zeros((self.stack.n_ev))
+            
+    
+            try:
+    
+                self.eigenvals, self.eigenvecs = np.linalg.eigh(covmatrix)
+    
+                #sort the eigenvals and eigenvecs       
+                perm = np.argsort(-np.abs(self.eigenvals))
+                self.eigenvals = self.eigenvals[perm]
+                self.eigenvecs = self.eigenvecs[:,perm]
+                
+                self.pcaimages = np.dot(od,self.eigenvecs)
+    
+                #calculate eigenimages
+                self.pcaimages = np.reshape(self.pcaimages, (self.stack.n_cols, self.stack.n_rows, self.stack.n_ev), order='F')
+    
+                #Find bounds for displaying color-tables
+                for i in range(self.stack.n_ev):
+                    min_val = np.amin(self.pcaimages[:,:,i])
+                    max_val = np.amax(self.pcaimages[:,:,i])
+                    self.pcaimagebounds[i] = np.amax((np.abs(min_val), np.abs(max_val)))
+    
+                
+                #calculate variance captured by the pca components
+                self.variance = self.eigenvals.copy()
+                
+                totalvar = self.variance.sum()
+                
+                self.variance = self.variance/totalvar
+                
+                #Scree plot - find an elbow in the curve - between 1 and 20 components
+                maxpoints = min(25, self.stack.n_ev-1)
+                #Find a line between first (x1, y1) and last point (x2, y2) and calculate distances:
+                y2 = np.log(self.eigenvals[maxpoints])
+                x2 = maxpoints
+                y1 = np.log(self.eigenvals[0])
+                x1 = 0
+                
+                #Calculate distances between all the points and the line x1 and x2 are points on the line and x0 are eigenvals
+                distance = np.zeros((maxpoints))
+                for i in range(maxpoints):
+                    y0 = np.log(self.eigenvals[i])
+                    x0=i
+                    distance[i] = np.abs((x2-x1)*(y1-y0)-(x1-x0)*(y2-y1))/np.math.sqrt((x2-x1)**2+(y2-y1)**2)  
+                
+                #Point with the largest distance is the "elbow"
+                sigpca = np.argmax(distance)
+    
+                self.numsigpca = sigpca + 1
+                
+    
+                            
+            except:
+                print "pca not converging"
+                
+            self.pca_calculated = 1
+            
+            if self.n_target_spectra > 1:
+                self.fit_target_spectra()
+                
+                
+            self.pcaimages4D.append(self.pcaimages)
+            self.eigenvals4D.append(self.eigenvals)
+            self.eigenvecs4D.append(self.eigenvecs)
+            self.variance4D.append(self.variance)
+            self.pcaimagebounds4D.append(self.pcaimagebounds)
+
+        return  
+    
 #---------------------------------------------------------------------- 
 # Move PC up
     def move_pc_up(self, ipc):
@@ -261,28 +377,58 @@ class analyze:
         if ipc == 0:
             return
 
-        temp = self.pcaimages.copy()
-        self.pcaimages[:,:, ipc] = temp[:,:, ipc-1]
-        self.pcaimages[:,:, ipc-1] = temp[:,:, ipc]
+        if len(self.pcaimages4D) == 0:
+            temp = self.pcaimages.copy()
+            self.pcaimages[:,:, ipc] = temp[:,:, ipc-1]
+            self.pcaimages[:,:, ipc-1] = temp[:,:, ipc]
+            
+            temp = self.pcaimagebounds.copy()
+            self.pcaimagebounds[ipc] = temp[ipc-1]
+            self.pcaimagebounds[ipc-1] = temp[ipc]
+            
+            temp = self.eigenvals.copy()
+            self.eigenvals[ipc] = temp[ipc-1]
+            self.eigenvals[ipc-1] = temp[ipc]        
+            
+            temp = self.eigenvecs.copy()
+            self.eigenvecs[:, ipc] = temp[:, ipc-1]
+            self.eigenvecs[:, ipc-1] = temp[:, ipc]
+                    
+            temp = self.variance.copy()
+            self.variance[ipc] = temp[ipc-1]
+            self.variance[ipc-1] = temp[ipc]     
         
-        temp = self.pcaimagebounds.copy()
-        self.pcaimagebounds[ipc] = temp[ipc-1]
-        self.pcaimagebounds[ipc-1] = temp[ipc]
-        
-        temp = self.eigenvals.copy()
-        self.eigenvals[ipc] = temp[ipc-1]
-        self.eigenvals[ipc-1] = temp[ipc]        
-        
-        temp = self.eigenvecs.copy()
-        self.eigenvecs[:, ipc] = temp[:, ipc-1]
-        self.eigenvecs[:, ipc-1] = temp[:, ipc]
+        else:        
+            
+            for jth in range(self.stack.n_theta):
                 
-        temp = self.variance.copy()
-        self.variance[ipc] = temp[ipc-1]
-        self.variance[ipc-1] = temp[ipc]           
+                temp = self.pcaimages4D[jth].copy()
+                self.pcaimages4D[jth][:,:, ipc] = temp[:,:, ipc-1]
+                self.pcaimages4D[jth][:,:, ipc-1] = temp[:,:, ipc]
+                               
+                temp = self.pcaimagebounds4D[jth].copy()
+                self.pcaimagebounds4D[jth][ipc] = temp[ipc-1]
+                self.pcaimagebounds4D[jth][ipc-1] = temp[ipc]
+                
+                temp = self.eigenvals4D[jth].copy()            
+                self.eigenvals4D[jth][ipc] = temp[ipc-1]
+                self.eigenvals4D[jth][ipc-1] = temp[ipc]        
+                
+                temp = self.eigenvecs4D[jth].copy()
+                self.eigenvecs4D[jth][:, ipc] = temp[:, ipc-1]
+                self.eigenvecs4D[jth][:, ipc-1] = temp[:, ipc]
+                
+                temp = self.variance4D[jth].copy()        
+                self.variance4D[jth][ipc] = temp[ipc-1]
+                self.variance4D[jth][ipc-1] = temp[ipc]                    
+        
+              
             
         if self.n_target_spectra > 1:
             self.fit_target_spectra()
+            
+            if len(self.target_svd_maps4D) > 0:
+                self.calculate_targetmaps_4D()
                     
 
 #----------------------------------------------------------------------   
@@ -432,7 +578,153 @@ class analyze:
         
         return int(nclusters)
         
+#----------------------------------------------------------------------   
+# Find clusters 
+    def calculate_clusters_4D(self, nclusters, remove1stpca = 0, sigmasplit = 0, pcscalingfactor = 0.0):
+        #Reduced data matrix od_reduced(n_pixels,n_significant_components)
+        #od_reduced = np.zeros((self.stack.n_cols, self.stack.n_rows, self.numsigpca))
+       
+        self.nclusters = nclusters
+               
+        npixels = self.stack.n_cols * self.stack.n_rows
+       
+        inverse_n_pixels = 1./float(npixels)
+        inverse_n_pixels_less_one =  1./float(npixels-1)
+        
+        dc_offsets = np.zeros((self.numsigpca))
+        #rms_deviations = np.zeros((self.numsigpca))
+        od_reduced = np.zeros((self.stack.n_cols, self.stack.n_rows,self.numsigpca))
+       
+        for i in range(self.numsigpca):
+
+            eimage = self.pcaimages[:,:,i]
+
+            dc_offsets[i] = np.sum(eimage)*inverse_n_pixels
+            # Since we're looking at deviations from an average,
+            # we divide by (N-1).
+            #rms_deviations[i] = np.sqrt(np.sum((eimage-dc_offsets[i])**2)*inverse_n_pixels_less_one)
+
+            # The straightforward thing is to do
+            #   d_reduced[i,0:(n_pixels-1)] = eimage
+            # However, things work much better if we subtract the
+            # DC offsets from each eigenimage.  One could also divide
+            # by rms_deviations, but that seems to overweight
+            # the sensitivity to weaker components too much.    
+            rms_gamma = pcscalingfactor
+            od_reduced[:,:,i] = (eimage-dc_offsets[i]) *(self.eigenvals[0]/self.eigenvals[i])**rms_gamma
+
+       
     
+        if remove1stpca == 0 :
+            #od_reduced = od_reduced[:,:,0:self.numsigpca]
+            od_reduced = np.reshape(od_reduced, (npixels,self.numsigpca), order='F')
+        else:
+            od_reduced = od_reduced[:,:,1:self.numsigpca]
+            od_reduced = np.reshape(od_reduced, (npixels,self.numsigpca-1), order='F')
+       
+
+        indx = np.zeros(npixels)
+
+        clustercentroids, indx = kmeans2(od_reduced, nclusters, iter=200, minit = 'points' )
+        
+       
+        #calculate cluster distances
+        self.cluster_distances = np.zeros((self.stack.n_cols*self.stack.n_rows))
+        for i in range(npixels):
+            clind = indx[i]
+            self.cluster_distances[i] = scipy.spatial.distance.euclidean(od_reduced[i,:],clustercentroids[clind,:])          
+           
+        self.cluster_distances = np.reshape(self.cluster_distances, (self.stack.n_cols, self.stack.n_rows), order='F')
+                    
+     
+        indx = np.reshape(indx, (self.stack.n_cols, self.stack.n_rows), order='F')
+        self.clustersizes = np.zeros((nclusters,), dtype=np.int)
+       
+        for i in range(nclusters):
+            clind = np.where(indx == i)
+            self.clustersizes[i] = indx[clind].shape[0]
+                   
+        #sort the data with the cluster with the most members first  
+        count_indices = np.argsort(self.clustersizes)
+        count_indices = count_indices[::-1]
+               
+        self.cluster_indices = np.zeros((self.stack.n_cols, self.stack.n_rows), dtype=np.int)
+             
+        self.clusterspectra = np.zeros((nclusters, self.stack.n_ev))
+               
+        for i in range(nclusters):
+            clind = np.where(indx == count_indices[i])
+            self.cluster_indices[clind] = i
+            self.clustersizes[i] = self.cluster_indices[clind].shape[0]
+
+            for ie in range(self.stack.n_ev):  
+                thiseng_od = self.stack.od3d[:,:,ie]
+                self.clusterspectra[i,ie] = np.sum(thiseng_od[clind])/self.clustersizes[i]
+     
+        #Calculate SSE Sum of Squared errors
+        indx = np.reshape(self.cluster_indices, (npixels), order='F')
+        self.sse = np.zeros((npixels))
+        for i in range(npixels):
+            clind = indx[i]
+            self.sse[i] = np.sum(np.square(self.stack.od[i,:]-self.clusterspectra[clind,:]))         
+           
+        self.sse = np.reshape(self.sse, (self.stack.n_cols, self.stack.n_rows), order='F')
+        
+
+
+        if (sigmasplit ==1):
+            #Check the validity of cluster analysis and if needed add another cluster
+            new_cluster_indices = self.cluster_indices.copy()
+            new_nclusters = nclusters
+            recalc_clusters = False
+            
+            for i in range(nclusters):
+                clind = np.where(self.cluster_indices == i)
+                cl_sse_mean = np.mean(self.sse[clind])
+                cl_see_std = np.std(self.sse[clind])
+                #print i, cl_sse_mean, cl_see_std 
+                
+                sigma9 = cl_sse_mean+9*cl_see_std
+                maxsse = np.max(self.sse[clind])
+                if (maxsse > sigma9): 
+                    #print 'have new cluster', max, sigma6
+                    recalc_clusters = True
+                    sse_helper = np.zeros((self.stack.n_cols, self.stack.n_rows), dtype=np.int)
+                    sse_helper[clind] = self.sse[clind]
+                    newcluster_ind = np.where(sse_helper > sigma9)
+                    new_cluster_indices[newcluster_ind] = new_nclusters
+                    new_nclusters += 1
+                            
+            
+            if recalc_clusters == True:
+                nclusters = new_nclusters
+                self.cluster_indices = new_cluster_indices
+                self.clusterspectra = np.zeros((nclusters, self.stack.n_ev))
+                self.clustersizes = np.zeros((nclusters,), dtype=np.int)
+                for i in range(nclusters):
+                    clind = np.where(self.cluster_indices == i)
+                    self.clustersizes[i] = self.cluster_indices[clind].shape[0]
+                    if self.clustersizes[i]>0:
+                        for ie in range(self.stack.n_ev):  
+                            thiseng_od = self.stack.od3d[:,:,ie]
+                            self.clusterspectra[i,ie] = np.sum(thiseng_od[clind])/self.clustersizes[i]
+             
+                #Calculate SSE Sum of Squared errors
+                indx = np.reshape(self.cluster_indices, (npixels), order='F')
+                self.sse = np.zeros((npixels))
+                for i in range(npixels):
+                    clind = indx[i]
+                    self.sse[i] = np.sqrt(np.sum(np.square(self.stack.od[i,:]-self.clusterspectra[clind,:])))         
+                   
+                self.sse = np.reshape(self.sse, (self.stack.n_cols, self.stack.n_rows), order='F')
+        
+        
+        self.cluster_distances = self.sse
+        
+        self.clusters_calculated = 1
+        
+        return int(nclusters)
+       
 #----------------------------------------------------------------------   
 # Find clusters 
     def calculate_clusters_kmeansangle(self, nclusters, remove1stpca = 0, sigmasplit = 0, 
@@ -524,7 +816,6 @@ class analyze:
         if cosinemeasure:
             for i in range(nclusters):
                 cluster_weights[:, i] = cluster_weights[:, i]/np.linalg.norm(cluster_weights[:,i])
-
 
 
 
@@ -851,6 +1142,13 @@ class analyze:
             self.tspectrum_loaded = 0
             self.n_target_spectra = 0
             
+            self.target_svd_maps4D = []
+            self.original_svd_maps4D = []
+            self.target_pcafit_maps4D = []
+            self.original_fit_maps4D = []
+            self.target_pcafit_coeffs4D = []
+            self.target_pcafit_spectra4D = []
+            
 #-----------------------------------------------------------------------------          
     def move_spectrum(self, old_position, new_position):   
         
@@ -916,6 +1214,9 @@ class analyze:
         self.target_pcafit_maps = np.reshape(self.target_pcafit_maps, 
                                              (self.stack.n_cols, self.stack.n_rows, self.n_target_spectra), order='F')  
         
+        
+        self.original_fit_maps = self.target_pcafit_maps.copy()
+        
         #Find fit errors
         self.target_rms = (self.target_spectra-self.target_pcafit_spectra)**2
         self.target_rms = np.sqrt(np.sum(self.target_rms, axis=1)/self.stack.n_ev)
@@ -944,8 +1245,85 @@ class analyze:
                                              (self.stack.n_cols, self.stack.n_rows, self.n_target_spectra), order='F') 
         
 
+        self.original_svd_maps = self.target_svd_maps.copy()
+        
+        
+        
+#----------------------------------------------------------------------   
+# Calculate composition maps for 4D data 
+    def calculate_targetmaps_4D(self):
+        
+        n_pix = self.stack.n_cols*self.stack.n_rows
+        
+        self.target_svd_maps4D = []
+        self.original_svd_maps4D = []
+        self.target_pcafit_maps4D = []
+        self.original_fit_maps4D = []
+        self.target_pcafit_coeffs4D = []
+        self.target_pcafit_spectra4D = []
+        
+        tempod = self.stack.od.copy()
+        
+        for jth in range(self.stack.n_theta):
+            
+            
+            od3d = self.stack.od4D[:,:,:,jth]
+            od = od3d.copy()
+            
+            self.stack.od = np.reshape(od, (n_pix, self.stack.n_ev), order='F')   
+            
+            if len(self.eigenvecs4D) > 0:
+                self.eigenvecs = self.eigenvecs4D[jth]
+                self.fit_target_spectra()
+                
+            self.calc_svd_maps()  
+            
+            self.target_svd_maps4D.append(self.target_svd_maps)
+            self.original_svd_maps4D.append(self.original_svd_maps)
+            if len(self.eigenvecs4D) > 0:
+                self.target_pcafit_maps4D.append(self.target_pcafit_maps)
+                self.original_fit_maps4D.append(self.original_fit_maps)
+                self.target_pcafit_coeffs4D.append(self.target_pcafit_coeffs)
+                self.target_pcafit_spectra4D.append(self.target_pcafit_spectra)
+            
+        
+        self.stack.od = tempod   
+            
+            
+#-----------------------------------------------------------------------------
+# Apply threshold on SVD or PCA maps
+    def svd_map_threshold(self, cutoff1, cutoff2 = None, svd = False, pca = False):
+        
+        if svd:
+            self.target_svd_maps = self.original_svd_maps.copy()
+            self.target_svd_maps.clip(min=cutoff1, out=self.target_svd_maps)
+            if cutoff2 != None:
+                self.target_svd_maps.clip(max=cutoff2, out=self.target_svd_maps)
+                
+            if len(self.target_svd_maps4D) > 0:
+                self.target_svd_maps4D = copy.deepcopy(self.original_svd_maps4D)
+                if cutoff2 != None:
+                    maxclip = cutoff2
+                else:
+                    maxclip = np.amax(self.target_svd_maps4D)
+                self.target_svd_maps4D = np.clip(self.target_svd_maps4D, cutoff1, maxclip)
 
+                
+        if pca:
+            self.target_pcafit_maps = self.original_fit_maps.copy()
+            self.target_pcafit_maps.clip(min=cutoff1, out=self.target_pcafit_maps)
+            if cutoff2 != None:
+                self.target_pcafit_maps.clip(max=cutoff2, out=self.target_pcafit_maps)
+                
+            if len(self.target_pcafit_maps) > 0:
+                self.target_pcafit_maps4D = copy.deepcopy(self.original_fit_maps4D)
+                if cutoff2 != None:
+                    maxclip = cutoff2
+                else:
+                    maxclip = np.amax(self.target_pcafit_maps4D)                
+                self.target_pcafit_maps4D = np.clip(self.target_pcafit_maps4D, cutoff1, maxclip)
 
+              
 
 #-----------------------------------------------------------------------------
 # Find key energies by finding peaks and valleys in significant pca spectra
