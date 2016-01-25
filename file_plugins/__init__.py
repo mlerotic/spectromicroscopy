@@ -48,13 +48,17 @@ for m in pkgutil.iter_modules(path=__path__):
     print "Loading file plugin:", m[1], "...",
     try:
         details = imp.find_module(m[1],__path__)
-        # could add checks here to enforce presence of required functions in plugin
-        plugins.append(imp.load_module(m[1],*details))
-        print "("+plugins[-1].title+") Success!"
+        # check if there is a read() function in plugin
+        if 'read' in dir(imp.load_module(m[1],*details)):
+            plugins.append(imp.load_module(m[1],*details))
+            print "("+plugins[-1].title+") Success!"
+        else:
+            print 'Not a valid plugin - skipping.'
+
     except ImportError as e:
         print "prerequisites not satisfied:", e
 
-# Go through set of plugins and assmeble lists of supported file types for each action and data type
+# Go through set of plugins and assemble lists of supported file types for each action and data type
 supported_filters = dict([a,dict([t,[]] for t in data_types)] for a in actions)
 filter_list = dict([a,dict([t,[]] for t in data_types)] for a in actions)
 for P in plugins:
