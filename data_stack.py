@@ -31,8 +31,9 @@ import os
 from file_plugins import file_stk
 from file_plugins import file_sdf
 from file_plugins import file_xrm
+from file_plugins import file_ncb
+from file_plugins import file_dataexch_hdf5
 import file_bim
-import file_ncb
 import data_struct
 
 #----------------------------------------------------------------------
@@ -99,7 +100,7 @@ class data:
         
         self.fill_h5_struct_normalization()
         
-                
+#----------------------------------------------------------------------                 
     def read_bim(self, filename):    
 
         file_bim.Cbim.read_bim(self, filename)
@@ -107,18 +108,23 @@ class data:
                 
         self.scale_bar()
         
-#---------------------------------------------------------------------- 
-    def read_ncb(self, filename):    
-        self.new_data()  
-        file_ncb.Cncb.read_ncb(self, filename)
+#----------------------------------------------------------------------          
+    def read_h54D(self, filename):    
 
-        self.fill_h5_struct_from_stk()
+
+        file_dataexch_hdf5.read(filename, self)
+
+        if self.data_struct.spectromicroscopy.normalization.white_spectrum is not None:
+            
+            self.calculate_optical_density()
+            self.fill_h5_struct_normalization()           
+
         self.scale_bar()
-        
+            
 #---------------------------------------------------------------------- 
     def read_ncb4D(self, filenames):    
         self.new_data()  
-        file_ncb.Cncb.read_ncb4D(self, filenames)
+        file_ncb.read_ncb4D(self, filenames)
         
         now = datetime.datetime.now()
         

@@ -11261,7 +11261,7 @@ class ImageRegistration(QtGui.QDialog):
                 for j in range(self.stack.n_theta):
                 
                     img = self.aligned_stack[:,:,i,j]
-                    if (abs(self.man_xs[i])>0.02) or (abs(self.man_ys[i])>0.02):
+                    if (abs(self.man_xs[i,j])>0.02) or (abs(self.man_ys[i,j])>0.02):
                         shifted_img = self.stack.apply_image_registration(img, 
                                                                           self.man_xs[i,j], 
                                                                           self.man_ys[i,j])
@@ -11344,19 +11344,23 @@ class ImageRegistration(QtGui.QDialog):
                     
                 for i in range(self.stack.n_ev):
                     for j in range(self.stack.n_theta):
-                        img = self.stack.od4d[:,:,i,j]
+                        img = self.stack.od4D[:,:,i,j]
                         shifted_img = self.stack.apply_image_registration(img, self.xshifts[i,j], self.yshifts[i,j])         
-                        self.stack.od4D[:,:,i,j] = shifted_img                        
+                        self.stack.od4D[:,:,i,j] = shifted_img       
+                        
+                self.stack.od4D = self.stack.od4D[self.xleft:self.xright, self.ybottom:self.ytop, :, :]                  
 
                 self.stack.od3d = self.stack.od4D[:,:,:,self.itheta]
                 self.stack.od = self.stack.od3d.copy()
                 n_pixels = self.stack.n_cols*self.stack.n_rows
-                self.stack.od = npy.reshape(self.stack.od, (n_pixels, self.stack.n_ev), order='F')         
+                self.stack.od = npy.reshape(self.stack.od, (n_pixels, self.stack.n_ev), order='F')      
+                
+            self.stack.data_struct.spectromicroscopy.optical_density = self.stack.od   
 
         self.stack.data_struct.exchange.data = self.stack.absdata
         self.stack.data_struct.exchange.energy = self.stack.ev
         
-        self.stack.data_struct.spectromicroscopy.optical_density = self.stack.od
+
         
         self.stack.data_struct.spectromicroscopy.xshifts = self.xshifts
         self.stack.data_struct.spectromicroscopy.yshifts = self.yshifts
@@ -12547,11 +12551,6 @@ class PageLoadData(QtGui.QWidget):
         vbox1.addWidget(self.button_multiload)
         
         
-        self.button_ncb = QtGui.QPushButton( 'Load aXis2000 NCB Stack (*.ncb, *.dat)')
-        self.button_ncb.setEnabled(False)
-        self.button_ncb.clicked.connect( self.OnLoadNCB)
-        vbox1.addWidget(self.button_ncb)     
-        
         line = QtGui.QFrame()
         line.setFrameShape(QtGui.QFrame.HLine)
         line.setFrameShadow(QtGui.QFrame.Sunken) 
@@ -12559,7 +12558,6 @@ class PageLoadData(QtGui.QWidget):
         
         self.button_4d = QtGui.QPushButton( 'Load 4D stack (*.hdf5, *.ncb)')
         self.button_4d.clicked.connect( self.OnLoad4D)
-        self.button_4d.setEnabled(False)
         vbox1.addWidget(self.button_4d) 
 
         sizer1.setLayout(vbox1)
@@ -12701,11 +12699,6 @@ class PageLoadData(QtGui.QWidget):
 
         self.window().LoadStack()
         
-#----------------------------------------------------------------------          
-    def OnLoadNCB(self, event):
-
-        wildcard =  "NCB (*.ncb)" 
-        self.window().LoadStack(wildcard)
         
 #----------------------------------------------------------------------          
     def OnLoad4D(self, event):
@@ -13523,11 +13516,10 @@ class MainFrame(QtGui.QMainWindow):
                 if self.common.stack_loaded == 1:
                     self.new_stack_refresh()  
                     self.stk.new_data()
-                    #self.stk.data_struct.delete_data()
                     self.anlz.delete_data()                
  
  
-                self.stk.read_h5(filenames[0])
+                self.stk.read_h54D(filenames[0])
             
                             
             elif extension == '.ncb':              
@@ -13593,7 +13585,7 @@ class MainFrame(QtGui.QMainWindow):
             
             if self.stk.data_struct.spectromicroscopy.normalization.white_spectrum is not None:
                 self.common.i0_loaded = 1
-            
+                
             
             self.page1.ResetDisplaySettings()
             self.page1.loadImage()

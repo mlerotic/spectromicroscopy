@@ -37,18 +37,18 @@ write_types = ['spectrum','image','stack','results']
 
 
 def identify(filename):
-	try:
-		# Open HDF5 file
-		aps_format = False
-		# Open HDF5 file
-		f = h5py.File(filename, 'r')   
-		#Check is exchange is in the file
-		if 'exchange' in f:      
-			aps_format = True
-		f.close()
-		return aps_format
-	except:
-		return False
+    try:
+        # Open HDF5 file
+         aps_format = False
+         # Open HDF5 file
+         f = h5py.File(filename, 'r')   
+         #Check is exchange is in the file
+         if 'exchange' in f:      
+             aps_format = True
+         f.close()
+         return aps_format
+    except:
+        return False
 
 
 def read_old( filepath, data_stk):
@@ -61,6 +61,8 @@ def GetFileStructure(FileName):
 
 #----------------------------------------------------------------------
 def read(filename, self, selection=None):
+    
+    have4d = 0
     
     #new_stack = data_stack.data(data_struct)
     # Open HDF5 file
@@ -368,6 +370,13 @@ def read(filename, self, selection=None):
             energy = exchangeGrp['energy']
             data_struct.exchange.energy = energy[...]
             data_struct.exchange.energy_units= energy.attrs['units']
+            
+            
+        if 'theta' in exchangeGrp:
+            th = exchangeGrp['theta']
+            data_struct.exchange.theta = th[...]
+            data_struct.exchange.theta_units = th.attrs['units']  
+            have4d = 1   
         
         if 'white_data' in exchangeGrp:
             wd = exchangeGrp['white_data']
@@ -392,9 +401,9 @@ def read(filename, self, selection=None):
             data_struct.spectromicroscopy.positions_units = pos.attrs['units']
             data_struct.spectromicroscopy.positions_names = pos.attrs['names']
             
-        if 'optical_density' in spectromicroscopyGrp:
-            od = spectromicroscopyGrp['optical_density']
-            self.data_struct.spectromicroscopy.optical_density = od[...]    
+#         if 'optical_density' in spectromicroscopyGrp:
+#             od = spectromicroscopyGrp['optical_density']
+#             self.data_struct.spectromicroscopy.optical_density = od[...]    
         
         
         
@@ -417,7 +426,15 @@ def read(filename, self, selection=None):
     # Close
     f.close()
 
-    self.absdata = data_struct.exchange.data
+    if have4d == 0:
+        self.absdata = data_struct.exchange.data
+    else:
+        self.stack4D = data_struct.exchange.data
+        self.theta = data_struct.exchange.theta
+        self.n_theta = len(self.theta)
+        self.absdata = self.stack4D[:,:,:,0]
+        
+        
     datadim = np.int32(self.absdata.shape)
     
     
@@ -463,12 +480,11 @@ def read(filename, self, selection=None):
     self.fill_h5_struct_from_stk()
     
     if self.data_struct.spectromicroscopy.normalization.white_spectrum is not None:
-		self.calculate_optical_density()
-		self.fill_h5_struct_normalization()
+        self.calculate_optical_density()
+        self.fill_h5_struct_normalization()
     
-
     
-    if verbose: 
+    if verbose == 1: 
         print  'filename ', filename
         #print 'File creation date ', data_struct.file_creation_datetime
         print 'Data array shape: ', self.absdata.shape
@@ -768,6 +784,10 @@ def write_h5(self, filename, data_struct):
     if data_struct.exchange.energy is not None:        
         ds = exchangeGrp.create_dataset('energy', data = data_struct.exchange.energy)
         ds.attrs['units'] = data_struct.exchange.energy_units
+        
+    if data_struct.exchange.theta is not None:        
+        ds = exchangeGrp.create_dataset('theta', data = data_struct.exchange.theta)
+        ds.attrs['units'] = data_struct.exchange.theta_units
 
     # /exchange/white_data
     if data_struct.exchange.white_data is not None:        
@@ -896,34 +916,6 @@ def write_results_h5(self, filename, data_struct, anlz):
             
             
             
-            
-            
-            
-            
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 #----------------------------------------------------------------------
@@ -950,6 +942,8 @@ class h5:
     
 #----------------------------------------------------------------------
     def read_h5(self, filename):#, data_struct):
+        
+        have4d = 0
        
         # Open HDF5 file
         f = h5py.File(filename, 'r') 
@@ -1256,7 +1250,13 @@ class h5:
                 energy = exchangeGrp['energy']
                 data_struct.exchange.energy = energy[...]
                 data_struct.exchange.energy_units= energy.attrs['units']
-            
+                
+            if 'theta' in exchangeGrp:
+                th = exchangeGrp['theta']
+                data_struct.exchange.theta = th[...]
+                data_struct.exchange.theta_units = th.attrs['units']  
+                have4d = 1   
+                
             if 'white_data' in exchangeGrp:
                 wd = exchangeGrp['white_data']
                 data_struct.exchange.white_data = wd[...]
@@ -1280,9 +1280,9 @@ class h5:
                 data_struct.spectromicroscopy.positions_units = pos.attrs['units']
                 data_struct.spectromicroscopy.positions_names = pos.attrs['names']
                 
-            if 'optical_density' in spectromicroscopyGrp:
-                od = spectromicroscopyGrp['optical_density']
-                self.data_struct.spectromicroscopy.optical_density = od[...]    
+#             if 'optical_density' in spectromicroscopyGrp:
+#                 od = spectromicroscopyGrp['optical_density']
+#                 self.data_struct.spectromicroscopy.optical_density = od[...]    
             
             
             
@@ -1305,7 +1305,14 @@ class h5:
         # Close
         f.close()
 
-        self.absdata = data_struct.exchange.data
+        if have4d == 0:
+            self.absdata = data_struct.exchange.data
+        else:
+            self.stack4D = data_struct.exchange.data
+            self.theta = data_struct.exchange.theta
+            self.n_theta = len(self.theta)
+            self.absdata = self.stack4D[:,:,:,0]
+        
         
         datadim = np.int32(self.absdata.shape)
         
@@ -1346,12 +1353,12 @@ class h5:
         self.i0data = data_struct.spectromicroscopy.normalization.white_spectrum           
         self.evi0 = data_struct.spectromicroscopy.normalization.white_spectrum_energy
         
-        self.data_dwell = None
-        self.i0_dwell = None
+        self.data_dwell = np.ones((self.n_ev))
+        self.i0_dwell = np.ones((self.n_ev))
         
 
         
-        if False: 
+        if verbose == 1: 
             print  'filename ', filename
             #print 'File creation date ', data_struct.file_creation_datetime
             print 'Data array shape: ', self.absdata.shape
@@ -1651,6 +1658,10 @@ class h5:
         if data_struct.exchange.energy is not None:        
             ds = exchangeGrp.create_dataset('energy', data = data_struct.exchange.energy)
             ds.attrs['units'] = data_struct.exchange.energy_units
+            
+        if data_struct.exchange.theta is not None:        
+            ds = exchangeGrp.create_dataset('theta', data = data_struct.exchange.theta)
+            ds.attrs['units'] = data_struct.exchange.theta_units
     
         # /exchange/white_data
         if data_struct.exchange.white_data is not None:        
