@@ -508,6 +508,7 @@ class PageTomo(QtGui.QWidget):
                            self.samplethick)
         
         self.tomo_calculated = 1
+        self.full_tomo_calculated = 0
         
         dims = self.tr.tomorec.shape
         
@@ -540,6 +541,9 @@ class PageTomo(QtGui.QWidget):
 #----------------------------------------------------------------------            
     def OnScrollComp(self, value):
         self.icomp = value
+        
+        if self.full_tomo_calculated == 0:
+            return
         
         self.tr.tomorec = self.fulltomorecdata[self.icomp]
                 
