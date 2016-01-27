@@ -12703,8 +12703,7 @@ class PageLoadData(QtGui.QWidget):
 #----------------------------------------------------------------------          
     def OnLoad4D(self, event):
 
-        wildcard =  "HDF5 files (*.hdf5);;NCB (*.ncb)" 
-        self.window().LoadStack4D(wildcard)
+        self.window().LoadStack4D()
                 
 #----------------------------------------------------------------------          
     def OnBuildStack(self, event):
@@ -13479,16 +13478,12 @@ class MainFrame(QtGui.QMainWindow):
             
             
 #----------------------------------------------------------------------
-    def LoadStack4D(self, wildcard = ''):
-        """
-        Browse for a stack file:
-        """
+    def LoadStack4D(self):
 
-        #try:
-        if True:
-            if wildcard == False:
-                #wildcard =  "HDF5 files (*.hdf5);;SDF files (*.hdr);;STK files (*.stk);;TXRM (*.txrm);;XRM (*.xrm);;TIF (*.tif);;FTIR (*.dpt)"
-                wildcard =  "HDF5 files (*.hdf5);;NCB files (*.ncb);;"  
+        try:
+        #if True:
+
+            wildcard =  "Supported 4D formats (*.hdf5 *.ncb);;HDF5 files (*.hdf5);;NCB files (*.ncb);;"  
 
             filepath = QtGui.QFileDialog.getOpenFileNames(self, 'Open files', '', wildcard)
 
@@ -13598,17 +13593,17 @@ class MainFrame(QtGui.QMainWindow):
 
             QtGui.QApplication.restoreOverrideCursor()
                  
-#         except:
-#         
-#             self.common.stack_loaded = 0 
-#             self.common.i0_loaded = 0
-#             self.new_stack_refresh()
-#                                        
-#             QtGui.QApplication.restoreOverrideCursor()
-#             QtGui.QMessageBox.warning(self, 'Error', 'Image stack not loaded.')
-#        
-#             import sys
-#             print sys.exc_info()
+        except:
+         
+            self.common.stack_loaded = 0 
+            self.common.i0_loaded = 0
+            self.new_stack_refresh()
+                                        
+            QtGui.QApplication.restoreOverrideCursor()
+            QtGui.QMessageBox.warning(self, 'Error', 'Image stack not loaded.')
+        
+            import sys
+            print sys.exc_info()
                    
         
         self.refresh_widgets()
