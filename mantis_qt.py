@@ -12551,12 +12551,7 @@ class PageLoadData(QtGui.QWidget):
         vbox1.addWidget(self.button_multiload)
         
         
-        line = QtGui.QFrame()
-        line.setFrameShape(QtGui.QFrame.HLine)
-        line.setFrameShadow(QtGui.QFrame.Sunken) 
-        vbox1.addWidget(line) 
-        
-        self.button_4d = QtGui.QPushButton( 'Load 4D stack (*.hdf5, *.ncb)')
+        self.button_4d = QtGui.QPushButton( 'Load 4D stack TOMO-XANES')
         self.button_4d.clicked.connect( self.OnLoad4D)
         vbox1.addWidget(self.button_4d) 
 
@@ -12566,17 +12561,9 @@ class PageLoadData(QtGui.QWidget):
         sizer2 = QtGui.QGroupBox('Build a stack from a set of files')
         vbox2 = QtGui.QVBoxLayout()
 
-        button_sm = QtGui.QPushButton( 'Build a stack from a set of NetCDF (*.sm) files')
+        button_sm = QtGui.QPushButton( '  Select a directory with stack files  ')
         button_sm.clicked.connect( self.OnBuildStack)
         vbox2.addWidget(button_sm)
-        
-        button_xrm_list = QtGui.QPushButton( 'Build a stack from a set of XRM (*.xrm) files')
-        button_xrm_list.clicked.connect( self.OnBuildStack)
-        vbox2.addWidget(button_xrm_list)
-        
-        button_bim_list = QtGui.QPushButton( 'Build a stack from a set of BIM (*.bim) files')
-        button_bim_list.clicked.connect( self.OnBuildStack)
-        vbox2.addWidget(button_bim_list)
         
         sizer2.setLayout(vbox2)
 
@@ -12662,9 +12649,11 @@ class PageLoadData(QtGui.QWidget):
         
         hboxtop = QtGui.QHBoxLayout()
         vboxt1 = QtGui.QVBoxLayout()
+        vboxt1.addStretch (1)
         vboxt1.addWidget(sizer1)
         vboxt1.addStretch (1)
         vboxt1.addWidget(sizer2)
+        vboxt1.addStretch (1)
         
         hboxtop.addStretch (0.5)
         hboxtop.addLayout(vboxt1)
