@@ -52,6 +52,7 @@ import tomo_reconstruction
 from helpers import resource_path
 import file_plugins
 from file_plugins import file_xrm
+from file_plugins import file_bim
 
 
 version = '2.2.01'
@@ -12966,8 +12967,7 @@ class StackListFrame(QtGui.QDialog):
             
             self.filetype = 'bim'
             
-            import file_bim
-            self.Cbim = file_bim.Cbim()
+            
 
             count = 0
         
@@ -12976,7 +12976,7 @@ class StackListFrame(QtGui.QDialog):
                 filename = self.bim_files[i]
                 thisfile = os.path.join(filepath, filename)
             
-                ncols, nrows, iev = self.Cbim.read_bim_info(thisfile)
+                ncols, nrows, iev = file_bim.read_bim_info(thisfile)
 
                 if ncols >0 :
                     self.filelist.insertRow(count)
@@ -13012,11 +13012,11 @@ class StackListFrame(QtGui.QDialog):
 
         if self.filetype == 'sm':
             from file_plugins import file_sm_netcdf
-            file_sm_netcdf.read_sm_list(self,filelist, self.filepath, self.data_struct)
+            file_sm_netcdf.read_sm_list(self, filelist, self.filepath, self.data_struct)
         elif self.filetype == 'xrm':
-            file_xrm.read_xrm_list(self,filelist, self.filepath, self.data_struct)
+            file_xrm.read_xrm_list(self, filelist, self.filepath, self.data_struct)
         elif self.filetype == 'bim':
-            self.Cbim.read_bim_list(filelist, self.filepath, self.data_struct)
+            file_bim.read_bim_list(self, filelist, self.filepath, self.data_struct)
         else:
             print 'Wrong file type'
             return
@@ -13371,22 +13371,6 @@ class MainFrame(QtGui.QMainWindow):
             directory =  os.path.dirname(str(filepath))
             self.page1.filename =  os.path.basename(str(filepath))
                 
-                
-#             elif extension == '.bim':              
-#                 if self.common.stack_loaded == 1:
-#                     self.new_stack_refresh()  
-#                     self.stk.new_data()
-#                     #self.stk.data_struct.delete_data()
-#                     self.anlz.delete_data()       
-#                 self.stk.read_bim(filepath)     
-#                 
-#             elif extension == '.ncb':              
-#                 if self.common.stack_loaded == 1:
-#                     self.new_stack_refresh()  
-#                     self.stk.new_data()
-#                     #self.stk.data_struct.delete_data()
-#                     self.anlz.delete_data()       
-#                 self.stk.read_ncb(filepath)     
             
         
             #Update widgets 

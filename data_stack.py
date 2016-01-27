@@ -33,7 +33,7 @@ from file_plugins import file_sdf
 from file_plugins import file_xrm
 from file_plugins import file_ncb
 from file_plugins import file_dataexch_hdf5
-import file_bim
+
 import data_struct
 
 #----------------------------------------------------------------------
@@ -100,13 +100,6 @@ class data:
         
         self.fill_h5_struct_normalization()
         
-#----------------------------------------------------------------------                 
-    def read_bim(self, filename):    
-
-        file_bim.Cbim.read_bim(self, filename)
-        self.fill_h5_struct_from_stk()        
-                
-        self.scale_bar()
         
 #----------------------------------------------------------------------          
     def read_h54D(self, filename):    
