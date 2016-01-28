@@ -502,7 +502,7 @@ def read(filename, self, selection=None):
     return
 
 #----------------------------------------------------------------------
-def write_h5(self, filename, data_struct):
+def write_h5(filename, data_struct):
     
     # Open HDF5 file
     f = h5py.File(filename, 'w')
@@ -816,8 +816,8 @@ def write_h5(self, filename, data_struct):
         ds = spectromicroscopyGrp.create_dataset('xshifts', data = data_struct.spectromicroscopy.xshifts)
     if data_struct.spectromicroscopy.yshifts is not None:
         ds = spectromicroscopyGrp.create_dataset('yshifts', data = data_struct.spectromicroscopy.yshifts)
-    if self.data_struct.spectromicroscopy.optical_density is not None:         
-        ds = spectromicroscopyGrp.create_dataset('optical_density', data = self.data_struct.spectromicroscopy.optical_density)
+    if data_struct.spectromicroscopy.optical_density is not None:         
+        ds = spectromicroscopyGrp.create_dataset('optical_density', data = data_struct.spectromicroscopy.optical_density)
 
     # /spectromicroscopy/normalization
     normalizationGrp = spectromicroscopyGrp.create_group('normalization')
@@ -842,7 +842,7 @@ def write_h5(self, filename, data_struct):
 
 
 #----------------------------------------------------------------------
-def write_results_h5(self, filename, data_struct, anlz):
+def write_results_h5(filename, data_struct, anlz):
     
     test_file = 0
     #Check if file exists
@@ -856,7 +856,7 @@ def write_results_h5(self, filename, data_struct, anlz):
     #Try to save new hdf5 file
     if test_file == 0:
         #try:
-        self.write_h5(filename, data_struct)
+        write_h5(filename, data_struct)
         #except:
         #    print 'Error: Could not open nor create HDF5 file ', filename
         #    return -1

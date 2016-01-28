@@ -18,7 +18,7 @@
 
 import sys
 import os
-import numpy as npy
+import numpy as np
 import time
 import getopt
 
@@ -39,6 +39,7 @@ from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 from mpl_toolkits.axes_grid import make_axes_locatable
+from matplotlib.widgets import LassoSelector
 matplotlib.interactive( True )
 matplotlib.rcParams['svg.fonttype'] = 'none'
 
@@ -53,6 +54,7 @@ from helpers import resource_path
 import file_plugins
 from file_plugins import file_xrm
 from file_plugins import file_bim
+from file_plugins import file_dataexch_hdf5
 
 
 version = '2.2.01'
@@ -70,6 +72,8 @@ verbose = True
 showtomotab = 1
 
 
+
+            
 #----------------------------------------------------------------------
 class common:
     def __init__(self):
@@ -119,12 +123,15 @@ class PageTomo(QtGui.QWidget):
         
         self.datanames = []
         
+        self.haveROI = 0
+        self.ROIvol = []
+        
         self.select1 = 0        
 
         self.icomp = 0
         self.islice = 0
         
-        self.maxIters = 100
+        self.maxIters = 10
         self.beta = 0.5
         self.samplethick = 0
         
@@ -246,10 +253,10 @@ class PageTomo(QtGui.QWidget):
         vbox3 = QtGui.QVBoxLayout()
 
         
-        button_roi = QtGui.QPushButton( 'Load ROI')
-        #button_roi.clicked.connect( self.OnCalculateTomo)
-        button_roi.setEnabled(False)
-        vbox3.addWidget(button_roi)
+        self.button_roi = QtGui.QPushButton( 'Select ROI')
+        self.button_roi.clicked.connect( self.OnSelectROI)
+        self.button_roi.setEnabled(False)
+        vbox3.addWidget(self.button_roi)
         
         sizer3.setLayout(vbox3)
 
@@ -411,7 +418,7 @@ class PageTomo(QtGui.QWidget):
         
         self.ncomponents = self.anlz.n_target_spectra
         
-        self.tomodata = npy.zeros((self.stack.n_cols, self.stack.n_rows, self.ncomponents, self.stack.n_theta))
+        self.tomodata = np.zeros((self.stack.n_cols, self.stack.n_rows, self.ncomponents, self.stack.n_theta))
         
         
         for i in range (self.stack.n_theta):   
@@ -474,6 +481,8 @@ class PageTomo(QtGui.QWidget):
         
         self.slider_slice.setRange(0, dims[2]-1)
         
+        self.ROIvol =  [[]]* dims[2]
+        
         self.tc_comp.setText('Component: '+self.datanames[self.icomp])
         
         self.slider_slice.setValue(self.islice)
@@ -482,6 +491,7 @@ class PageTomo(QtGui.QWidget):
         self.slider_comp.setValue(self.icomp)
         self.button_save.setEnabled(True)
         self.button_saveall.setEnabled(True)
+        self.button_roi.setEnabled(True)
           
         
         self.ShowImage()
@@ -513,6 +523,8 @@ class PageTomo(QtGui.QWidget):
         
         dims = self.tr.tomorec.shape
         
+        self.ROIvol = [[]]* dims[2]
+        
         self.islice = int(dims[2]/2)
         self.slider_slice.setValue(self.islice)
         self.slider_slice.setRange(0, dims[2]-1)
@@ -520,6 +532,7 @@ class PageTomo(QtGui.QWidget):
         self.tc_comp.setText('Component: '+self.datanames[self.select1])
         self.slider_comp.setRange(0, 0)
         self.button_save.setEnabled(True)
+        self.button_roi.setEnabled(True)
         
         self.ShowImage()
         
@@ -568,8 +581,8 @@ class PageTomo(QtGui.QWidget):
             return
         
      
-        ix = int(npy.floor(x))           
-        iy = self.stack.n_rows-1-int(npy.floor(y))  
+        ix = int(np.floor(x))           
+        iy = self.stack.n_rows-1-int(np.floor(y))  
                 
         if ix<0 :
             ix=0
@@ -589,7 +602,59 @@ class PageTomo(QtGui.QWidget):
                 
         plot = PlotFrame(self, self.stack.ev, spectrum, title=title)
         plot.show()
+        
+#---------------------------------------------------------------------- 
 
+    def OnSelectLasso(self,verts):
+#         self.lasso.disconnect_events()
+#         path = matplotlib.path.Path(verts)
+#         self.ind = np.nonzero(path.contains_points(self.xys))[0]
+#         print 'Selected '+str(len(self.ind))+' points'
+#         
+#         indices = path.contains_points(self.xys)
+#         
+#         mask = np.array([ path.contains_point((j,i)) for i in range(self.stack.n_rows) for j in range(self.stack.n_cols)]).reshape(self.stack.n_cols,self.stack.n_rows)
+#         
+#         self.ROIvol[:,:,self.islice] = mask
+#         
+#         print np.sum(self.ROIvol)
+
+        path = matplotlib.path.Path(verts)
+        #find pixels inside the polygon 
+
+        ROIpix = np.zeros((self.stack.n_cols,self.stack.n_rows))    
+        
+        for i in range(self.stack.n_cols):
+            for j in range(self.stack.n_rows):
+                Pinside = path.contains_point((i,j))
+                if Pinside == True:
+                    ROIpix[i, self.stack.n_rows-1-j] = 255
+              
+
+
+        ROIpix = np.ma.array(ROIpix)
+        
+        ROIpix_masked =  np.ma.masked_values(ROIpix, 0)
+        
+        
+        self.ROIvol[self.islice] = ROIpix_masked
+        
+        self.haveROI = 1
+        
+        self.ShowImage()
+        
+
+
+
+
+#----------------------------------------------------------------------           
+    def OnSelectROI(self, event):
+        
+        lineprops = dict(color='red', linestyle='-', linewidth = 1, alpha=1)
+
+
+        self.lasso = LassoSelector(self.axes, onselect=self.OnSelectLasso, useblit=False, lineprops=lineprops)
+        
 
 #----------------------------------------------------------------------    
     def OnSave(self, event): 
@@ -645,7 +710,10 @@ class PageTomo(QtGui.QWidget):
         axes = fig.gca()
         fig.patch.set_alpha(1.0)
          
-        im = axes.imshow(npy.rot90(image), cmap=matplotlib.cm.get_cmap("gray")) 
+        im = axes.imshow(np.rot90(image), cmap=matplotlib.cm.get_cmap("gray")) 
+        
+        if self.haveROI == 1:
+            im_red = axes.imshow(np.rot90(self.ROIvol[self.islice]), cmap=matplotlib.cm.get_cmap("autumn")) 
          
 #         if self.window().page1.show_scale_bar == 1:
 #             #Show Scale Bar
@@ -667,6 +735,9 @@ class PageTomo(QtGui.QWidget):
         
         axes.axis("off")      
         self.AbsImagePanel.draw()
+        self.axes = axes
+        
+        self.xys = np.dstack(np.meshgrid(np.arange(self.stack.n_cols), np.arange(self.stack.n_rows))).reshape(-1,2)
          
         
 #----------------------------------------------------------------------        
@@ -683,6 +754,9 @@ class PageTomo(QtGui.QWidget):
         
         self.datanames = []     
         
+        self.ROIvol = []
+        self.haveROI = 0
+        
         
         fig = self.absimgfig
         fig.clf()
@@ -694,6 +768,7 @@ class PageTomo(QtGui.QWidget):
         self.button_calcall.setEnabled(False)
         self.button_save.setEnabled(False)
         self.button_save.setEnabled(False)
+        self.button_roi.setEnabled(False)
         
         self.tc_imagecomp.setText("Dataset: ")
         self.tc_comp.setText('Component: ')
@@ -1290,7 +1365,7 @@ class PageNNMA(QtGui.QWidget):
 
                 
             kNNMA = len(self.filenames)
-            muInit = npy.zeros((self.stk.n_ev, kNNMA))
+            muInit = np.zeros((self.stk.n_ev, kNNMA))
                                    
             for i in range(kNNMA):
                 thisfn = os.path.basename(str(self.filenames[i]))
@@ -1301,7 +1376,7 @@ class PageNNMA(QtGui.QWidget):
                     spectrum_evdata, spectrum_data, _spectrum_common_name = self.stk.read_xas(self.filenames[i])
                                         
                 # Map this spectrum onto our energy range - interpolate to ev
-                init_spectrum = npy.interp(self.stk.ev, spectrum_evdata, spectrum_data)      
+                init_spectrum = np.interp(self.stk.ev, spectrum_evdata, spectrum_data)      
 
                 muInit[:, i] = init_spectrum[:]
                 
@@ -1441,9 +1516,9 @@ class PageNNMA(QtGui.QWidget):
                     fig.add_axes(ax_cb)
                     axes.set_position([0.03,0.03,0.8,0.94])   
         
-                    min_val = npy.min(mapimage)
-                    max_val = npy.max(mapimage)
-                    bound = npy.max((npy.abs(min_val), npy.abs(max_val)))
+                    min_val = np.min(mapimage)
+                    max_val = np.max(mapimage)
+                    bound = np.max((np.abs(min_val), np.abs(max_val)))
         
                     if self.show_scale_bar == 1:
                         um_string = ' $\mathrm{\mu m}$'
@@ -1455,7 +1530,7 @@ class PageNNMA(QtGui.QWidget):
                                                color = 'white', fill = True)
                         axes.add_patch(p)     
      
-                    im = axes.imshow(npy.rot90(mapimage), cmap=spanclrmap, vmin = -bound, vmax = bound)
+                    im = axes.imshow(np.rot90(mapimage), cmap=spanclrmap, vmin = -bound, vmax = bound)
                     _cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
     
                     axes.axis("off") 
@@ -1510,9 +1585,9 @@ class PageNNMA(QtGui.QWidget):
                     fig.add_axes(ax_cb)
                     axes.set_position([0.03,0.03,0.8,0.94])   
         
-                    min_val = npy.min(mapimage)
-                    max_val = npy.max(mapimage)
-                    bound = npy.max((npy.abs(min_val), npy.abs(max_val)))
+                    min_val = np.min(mapimage)
+                    max_val = np.max(mapimage)
+                    bound = np.max((np.abs(min_val), np.abs(max_val)))
         
                     if self.show_scale_bar == 1:
                         um_string = ' $\mathrm{\mu m}$'
@@ -1524,7 +1599,7 @@ class PageNNMA(QtGui.QWidget):
                                                color = 'white', fill = True)
                         axes.add_patch(p)     
      
-                    im = axes.imshow(npy.rot90(mapimage), cmap=spanclrmap, vmin = -bound, vmax = bound)
+                    im = axes.imshow(np.rot90(mapimage), cmap=spanclrmap, vmin = -bound, vmax = bound)
                     _cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
     
                     axes.axis("off") 
@@ -1572,9 +1647,9 @@ class PageNNMA(QtGui.QWidget):
                     fig.add_axes(ax_cb)
                     axes.set_position([0.03,0.03,0.8,0.94])   
         
-                    min_val = npy.min(mapimage)
-                    max_val = npy.max(mapimage)
-                    bound = npy.max((npy.abs(min_val), npy.abs(max_val)))
+                    min_val = np.min(mapimage)
+                    max_val = np.max(mapimage)
+                    bound = np.max((np.abs(min_val), np.abs(max_val)))
         
                     if self.show_scale_bar == 1:
                         um_string = ' $\mathrm{\mu m}$'
@@ -1586,7 +1661,7 @@ class PageNNMA(QtGui.QWidget):
                                                color = 'white', fill = True)
                         axes.add_patch(p)     
      
-                    im = axes.imshow(npy.rot90(mapimage), cmap=spanclrmap, vmin = -bound, vmax = bound)
+                    im = axes.imshow(np.rot90(mapimage), cmap=spanclrmap, vmin = -bound, vmax = bound)
                     _cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
     
                     axes.axis("off") 
@@ -1661,9 +1736,9 @@ class PageNNMA(QtGui.QWidget):
         axes.set_position([0.03,0.03,0.8,0.94])
         
         
-        min_val = npy.min(mapimage)
-        max_val = npy.max(mapimage)
-        bound = npy.max((npy.abs(min_val), npy.abs(max_val)))
+        min_val = np.min(mapimage)
+        max_val = np.max(mapimage)
+        bound = np.max((np.abs(min_val), np.abs(max_val)))
         
         if self.show_scale_bar == 1:
             um_string = ' $\mathrm{\mu m}$'
@@ -1675,7 +1750,7 @@ class PageNNMA(QtGui.QWidget):
                                    color = 'white', fill = True)
             axes.add_patch(p)     
      
-        im = axes.imshow(npy.rot90(mapimage), cmap=spanclrmap, vmin = -bound, vmax = bound)
+        im = axes.imshow(np.rot90(mapimage), cmap=spanclrmap, vmin = -bound, vmax = bound)
         cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
     
         axes.axis("off") 
@@ -2006,10 +2081,10 @@ class PageXrayPeakFitting(QtGui.QWidget):
         self.i_spec = 1
         
         self.base = 0.0
-        self.stepfitparams = npy.zeros((6))
-        self.gauss_fp_a = npy.zeros((12))
-        self.gauss_fp_m = npy.zeros((12))
-        self.gauss_fp_s = npy.zeros((12))
+        self.stepfitparams = np.zeros((6))
+        self.gauss_fp_a = np.zeros((12))
+        self.gauss_fp_m = np.zeros((12))
+        self.gauss_fp_s = np.zeros((12))
         
         self.nsteps = []
         self.npeaks = []
@@ -2848,9 +2923,9 @@ class PageXrayPeakFitting(QtGui.QWidget):
         peaknames = []
         if len(self.npeaks) > 0:
             for i in range(self.npeaks[self.i_spec-1]):
-                i_eng=(npy.abs(self.peak_engs-self.anlz.xfitpars[self.i_spec-1].gauss_fp_m[i])).argmin()  
-                diff =   npy.abs(self.peak_engs[i_eng]-self.anlz.xfitpars[self.i_spec-1].gauss_fp_m[i])
-                if npy.abs(diff) < 0.5:
+                i_eng=(np.abs(self.peak_engs-self.anlz.xfitpars[self.i_spec-1].gauss_fp_m[i])).argmin()  
+                diff =   np.abs(self.peak_engs[i_eng]-self.anlz.xfitpars[self.i_spec-1].gauss_fp_m[i])
+                if np.abs(diff) < 0.5:
                     peaknames.append(self.peak_names[i_eng] + '\t({0:01.1f})'.format(diff))
                 else:
                     peaknames.append('unknown')
@@ -3696,11 +3771,11 @@ class PagePeakID(QtGui.QWidget):
             elif x > self.stk.ev[self.stk.n_ev-1]:
                 sel_ev = self.stk.n_ev-1
             else:
-                indx = npy.abs(self.stk.ev - x).argmin()
+                indx = np.abs(self.stk.ev - x).argmin()
                 sel_ev = indx
                 
             
-            self.i_eng=(npy.abs(self.peak_engs-self.stk.ev[sel_ev])).argmin()                 
+            self.i_eng=(np.abs(self.peak_engs-self.stk.ev[sel_ev])).argmin()                 
 
             self.ShowImage()
             self.ShowODPlot()
@@ -3774,7 +3849,7 @@ class PagePeakID(QtGui.QWidget):
         if self.com.i0_loaded == 0:
             return
             
-        iev=(npy.abs(self.stk.ev-self.peak_engs[self.i_eng])).argmin() 
+        iev=(np.abs(self.stk.ev-self.peak_engs[self.i_eng])).argmin() 
         image = self.stk.absdata[:,:,int(iev)].copy() 
 
         fig = self.absimgfig
@@ -3783,7 +3858,7 @@ class PagePeakID(QtGui.QWidget):
         axes = fig.gca()
         fig.patch.set_alpha(1.0)
         
-        im = axes.imshow(npy.rot90(image), cmap=matplotlib.cm.get_cmap("gray")) 
+        im = axes.imshow(np.rot90(image), cmap=matplotlib.cm.get_cmap("gray")) 
         
         #Show Scale Bar
         startx = int(self.stk.n_rows*0.05)
@@ -4378,7 +4453,7 @@ class PageSpectral(QtGui.QWidget):
             
             if self.com.pca_calculated == 1: 
                 tspectrumfit = self.anlz.target_pcafit_spectra[i, :]
-                diff = npy.abs(tspectrum-tspectrumfit)
+                diff = np.abs(tspectrum-tspectrumfit)
                 line2 = axes.plot(self.stk.ev,tspectrumfit, color='green', label = 'Fit')
                 line3 = axes.plot(self.stk.ev,diff, color='grey', label = 'Abs(Raw-Fit)')
             
@@ -4411,7 +4486,7 @@ class PageSpectral(QtGui.QWidget):
             
             if self.com.pca_calculated == 1: 
                 tspectrumfit = self.anlz.target_pcafit_spectra[i, :]
-                diff = npy.abs(tspectrum-tspectrumfit)
+                diff = np.abs(tspectrum-tspectrumfit)
                 line2 = axes.plot(self.stk.ev,tspectrumfit, color='green', label = 'Fit')
                 line3 = axes.plot(self.stk.ev,diff, color='grey', label = 'Abs(Raw-Fit)')
             
@@ -4472,9 +4547,9 @@ class PageSpectral(QtGui.QWidget):
                 axes.set_position([0.03,0.03,0.8,0.94])
             
             
-                min_val = npy.min(tsmapimage)
-                max_val = npy.max(tsmapimage)
-                bound = npy.max((npy.abs(min_val), npy.abs(max_val)))
+                min_val = np.min(tsmapimage)
+                max_val = np.max(tsmapimage)
+                bound = np.max((np.abs(min_val), np.abs(max_val)))
             
                 if self.show_scale_bar == 1:
                     um_string = ' $\mathrm{\mu m}$'
@@ -4486,7 +4561,7 @@ class PageSpectral(QtGui.QWidget):
                                                 color = 'white', fill = True)
                     axes.add_patch(p)     
          
-                im = axes.imshow(npy.rot90(tsmapimage), cmap=spanclrmap, vmin = -bound, vmax = bound)
+                im = axes.imshow(np.rot90(tsmapimage), cmap=spanclrmap, vmin = -bound, vmax = bound)
                 cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
         
                 axes.axis("off") 
@@ -4697,7 +4772,7 @@ class PageSpectral(QtGui.QWidget):
         
         self.tc_spfitlist.clear()     
         
-        norm_factor = 100./npy.sum(npy.absolute(self.anlz.target_pcafit_coeffs[self.i_tspec-1, :]))
+        norm_factor = 100./np.sum(np.absolute(self.anlz.target_pcafit_coeffs[self.i_tspec-1, :]))
         
         for i in range(self.anlz.numsigpca):
             textitem = '{0}: {1:5.2f} %'.format(i+1, norm_factor
@@ -4742,9 +4817,9 @@ class PageSpectral(QtGui.QWidget):
         axes.set_position([0.03,0.03,0.8,0.94])
         
         
-        min_val = npy.min(tsmapimage)
-        max_val = npy.max(tsmapimage)
-        bound = npy.max((npy.abs(min_val), npy.abs(max_val)))
+        min_val = np.min(tsmapimage)
+        max_val = np.max(tsmapimage)
+        bound = np.max((np.abs(min_val), np.abs(max_val)))
         
         if self.show_scale_bar == 1:
             um_string = ' $\mathrm{\mu m}$'
@@ -4756,7 +4831,7 @@ class PageSpectral(QtGui.QWidget):
                                    color = 'white', fill = True)
             axes.add_patch(p)     
      
-        im = axes.imshow(npy.rot90(tsmapimage), cmap=spanclrmap, vmin = -bound, vmax = bound)
+        im = axes.imshow(np.rot90(tsmapimage), cmap=spanclrmap, vmin = -bound, vmax = bound)
         cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
     
         axes.axis("off") 
@@ -4784,7 +4859,7 @@ class PageSpectral(QtGui.QWidget):
 
         if self.com.pca_calculated == 1:       
             tspectrumfit = self.anlz.target_pcafit_spectra[self.i_tspec-1, :]  
-            diff = npy.abs(tspectrum-tspectrumfit)      
+            diff = np.abs(tspectrum-tspectrumfit)      
             line2 = axes.plot(self.stk.ev,tspectrumfit, color='green', label = 'Fit')
         
             line3 = axes.plot(self.stk.ev,diff, color='grey', label = 'Abs(Raw-Fit)')
@@ -4842,7 +4917,7 @@ class ShowCompositeRBGmap(QtGui.QDialog):
         self.n_cols = self.anlz.stack.n_cols 
         self.n_rows = self.anlz.stack.n_rows
          
-        self.rgbimage = npy.zeros((self.n_cols, self.n_rows, 3), dtype=float)
+        self.rgbimage = np.zeros((self.n_cols, self.n_rows, 3), dtype=float)
         
         self.minr = 0
         self.maxr = 100
@@ -5095,14 +5170,14 @@ class ShowCompositeRBGmap(QtGui.QDialog):
         
 
         if scale_min >= scale_max: 
-            tsmap = npy.zeros((self.n_cols, self.n_rows), dtype=float)
+            tsmap = np.zeros((self.n_cols, self.n_rows), dtype=float)
         else:
             tsmap = tsmap.clip(min=scale_min, max=scale_max)
             tsmap = (tsmap -scale_min) / (scale_max - scale_min)
             
-        indices = npy.where(tsmap < 0)
+        indices = np.where(tsmap < 0)
         tsmap[indices] = 0.0
-        indices = npy.where(tsmap > 1)
+        indices = np.where(tsmap > 1)
         tsmap[indices] = 1.0
     
         self.rgbimage[:,:,0] = tsmap*float(self.weightr)/100.
@@ -5156,15 +5231,15 @@ class ShowCompositeRBGmap(QtGui.QDialog):
         scale_max = uscale_min + (uscale_max-uscale_min)*float(self.maxg)/100.
 
         if scale_min >= scale_max: 
-            tsmap = npy.zeros((self.n_cols, self.n_rows), dtype=float)
+            tsmap = np.zeros((self.n_cols, self.n_rows), dtype=float)
         else:
             tsmap = tsmap.clip(min=scale_min, max=scale_max)
             tsmap = (tsmap - scale_min) / (scale_max - scale_min)
 
 
-        indices = npy.where(tsmap < 0)
+        indices = np.where(tsmap < 0)
         tsmap[indices] = 0.0
-        indices = npy.where(tsmap > 1)
+        indices = np.where(tsmap > 1)
         tsmap[indices] = 1.0
     
         self.rgbimage[:,:,1] = tsmap*float(self.weightg)/100.
@@ -5216,14 +5291,14 @@ class ShowCompositeRBGmap(QtGui.QDialog):
         scale_max = uscale_min + (uscale_max-uscale_min)*float(self.maxb)/100.
 
         if scale_min >= scale_max: 
-            tsmap = npy.zeros((self.n_cols, self.n_rows), dtype=float)
+            tsmap = np.zeros((self.n_cols, self.n_rows), dtype=float)
         else:
             tsmap = tsmap.clip(min=scale_min, max=scale_max)
             tsmap = (tsmap - scale_min) / (scale_max - scale_min)
 
-        indices = npy.where(tsmap < 0)
+        indices = np.where(tsmap < 0)
         tsmap[indices] = 0.0
-        indices = npy.where(tsmap > 1)
+        indices = np.where(tsmap > 1)
         tsmap[indices] = 1.0
     
         self.rgbimage[:,:,2] = tsmap*float(self.weightb)/100.
@@ -5274,7 +5349,7 @@ class ShowCompositeRBGmap(QtGui.QDialog):
         axes = fig.gca()
         fig.patch.set_alpha(1.0) 
       
-        im = axes.imshow(npy.rot90(self.rgbimage))
+        im = axes.imshow(np.rot90(self.rgbimage))
         
         axes.axis("off")  
         
@@ -5433,7 +5508,7 @@ class ShowMapHistogram(QtGui.QDialog):
             self.histogram = self.anlz.original_fit_maps
             
         
-        histdata = npy.reshape(self.histogram, (self.anlz.stack.n_cols*self.anlz.stack.n_rows*self.anlz.n_target_spectra), order='F')
+        histdata = np.reshape(self.histogram, (self.anlz.stack.n_cols*self.anlz.stack.n_rows*self.anlz.n_target_spectra), order='F')
         
         self.n, self.bins, patches = self.axes.hist(histdata, 200, normed=1, facecolor='green', alpha=0.75)
         
@@ -5459,7 +5534,7 @@ class ShowMapHistogram(QtGui.QDialog):
             self.histogram = self.anlz.original_fit_maps4D
             
         
-        histdata = npy.reshape(self.histogram, (self.anlz.stack.n_cols*self.anlz.stack.n_rows*self.anlz.n_target_spectra*self.anlz.stack.n_theta), order='F')
+        histdata = np.reshape(self.histogram, (self.anlz.stack.n_cols*self.anlz.stack.n_rows*self.anlz.n_target_spectra*self.anlz.stack.n_theta), order='F')
         
         self.n, self.bins, patches = self.axes.hist(histdata, 200, normed=1, facecolor='green', alpha=0.75)
         
@@ -5948,7 +6023,7 @@ class PageCluster(QtGui.QWidget):
 #----------------------------------------------------------------------     
     def MakeColorTable(self):
         self.maxclcolors = 11
-        colors_i = npy.linspace(0,self.maxclcolors,self.maxclcolors+1)
+        colors_i = np.linspace(0,self.maxclcolors,self.maxclcolors+1)
 
        
 #         self.colors=['#0000FF','#FF0000','#DFE32D','#36F200','#B366FF',
@@ -5968,7 +6043,7 @@ class PageCluster(QtGui.QWidget):
      
         self.bnorm1 = matplotlib.colors.BoundaryNorm(colors_i, self.clusterclrmap1.N)
         
-        colors_i = npy.linspace(0,self.maxclcolors+2,self.maxclcolors+3)
+        colors_i = np.linspace(0,self.maxclcolors+2,self.maxclcolors+3)
         
         #use black color for clusters > maxclcolors, the other 2 colors are for background      
 #         colors2=['#0000FF','#FF0000','#DFE32D','#36F200','#B366FF',
@@ -6069,8 +6144,8 @@ class PageCluster(QtGui.QWidget):
 
         if self.com.cluster_calculated == 1:   
             try:  
-                self.ix = int(npy.floor(y))           
-                self.iy = int(npy.floor(x))  
+                self.ix = int(np.floor(y))           
+                self.iy = int(np.floor(x))  
                         
                 if self.ix<0 :
                     self.ix=0
@@ -6121,7 +6196,7 @@ class PageCluster(QtGui.QWidget):
         
         
         
-        im = axes.imshow(npy.rot90(self.clusterimage), cmap=self.clusterclrmap1, norm=self.bnorm1)
+        im = axes.imshow(np.rot90(self.clusterimage), cmap=self.clusterclrmap1, norm=self.bnorm1)
         axes.axis("off")
         #cbar = axes.figure.colorbar(im)         
         self.ClusterImagePan.draw()
@@ -6132,8 +6207,8 @@ class PageCluster(QtGui.QWidget):
 #Show composite cluster image  
     def showIndvClusterImage(self):
         
-        indvclusterimage = npy.zeros((self.anlz.stack.n_cols, self.anlz.stack.n_rows))+20.      
-        ind = npy.where(self.anlz.cluster_indices == self.selcluster-1)    
+        indvclusterimage = np.zeros((self.anlz.stack.n_cols, self.anlz.stack.n_rows))+20.      
+        ind = np.where(self.anlz.cluster_indices == self.selcluster-1)    
         colorcl = min(self.selcluster-1,self.maxclcolors-1)
         indvclusterimage[ind] = colorcl
 
@@ -6143,7 +6218,7 @@ class PageCluster(QtGui.QWidget):
         axes = fig.gca()
             
         
-        im = axes.imshow(npy.rot90(indvclusterimage), cmap=self.clusterclrmap2, norm=self.bnorm2)
+        im = axes.imshow(np.rot90(indvclusterimage), cmap=self.clusterclrmap2, norm=self.bnorm2)
         axes.axis("off")
 
         self.ClusterIndvImagePan.draw()
@@ -6179,7 +6254,7 @@ class PageCluster(QtGui.QWidget):
                     clcolor = self.colors[self.maxclcolors-1]
                 else:
                     clcolor = self.colors[i-1]  
-                clusterspectrum = self.anlz.clusterspectra[i-1, ]/npy.amax(self.anlz.clusterspectra[i-1, ])           
+                clusterspectrum = self.anlz.clusterspectra[i-1, ]/np.amax(self.anlz.clusterspectra[i-1, ])           
                 specplot = axes.plot(self.anlz.stack.ev,clusterspectrum, color = clcolor)
             
             self.tc_clustersp.setText(" Normalized Cluster spectra"  ) 
@@ -6213,7 +6288,7 @@ class PageCluster(QtGui.QWidget):
                
         
         
-        im = axes.imshow(npy.rot90(mapimage), cmap=matplotlib.cm.get_cmap('gray'))
+        im = axes.imshow(np.rot90(mapimage), cmap=matplotlib.cm.get_cmap('gray'))
         
         #cbar = axes.figure.colorbar(im, orientation='vertical',cax=axcb) 
         
@@ -6271,7 +6346,7 @@ class PageCluster(QtGui.QWidget):
                 fig.add_axes((0.0,0.0,1.0,1.0))
                 axes = fig.gca()         
         
-                im = axes.imshow(npy.rot90(self.clusterimage), cmap=self.clusterclrmap1, norm=self.bnorm1)
+                im = axes.imshow(np.rot90(self.clusterimage), cmap=self.clusterclrmap1, norm=self.bnorm1)
                 axes.axis("off")
                 
                 fileName_caimg = self.SaveFileName+"_CAcimg."+ext       
@@ -6288,7 +6363,7 @@ class PageCluster(QtGui.QWidget):
                 fig.add_axes((0.0,0.0,1.0,1.0))
                 axes = fig.gca() 
         
-                im = axes.imshow(npy.rot90(self.clusterimage), cmap=self.clusterclrmap1, norm=self.bnorm1)
+                im = axes.imshow(np.rot90(self.clusterimage), cmap=self.clusterclrmap1, norm=self.bnorm1)
                 axes.axis("off")
                 
                 fileName_caimg = self.SaveFileName+"_CAcimg."+ext       
@@ -6304,7 +6379,7 @@ class PageCluster(QtGui.QWidget):
                 fig.add_axes((0.0,0.0,1.0,1.0))
                 axes = fig.gca() 
         
-                im = axes.imshow(npy.rot90(self.clusterimage), cmap=self.clusterclrmap1, norm=self.bnorm1)
+                im = axes.imshow(np.rot90(self.clusterimage), cmap=self.clusterclrmap1, norm=self.bnorm1)
                 axes.axis("off")
                 
                 fileName_caimg = self.SaveFileName+"_CAcimg."+ext       
@@ -6322,8 +6397,8 @@ class PageCluster(QtGui.QWidget):
             if indimgs_png:
                 for i in range (self.numclusters):
               
-                    indvclusterimage = npy.zeros((self.anlz.stack.n_cols, self.anlz.stack.n_rows))+20.      
-                    ind = npy.where(self.anlz.cluster_indices == i)    
+                    indvclusterimage = np.zeros((self.anlz.stack.n_cols, self.anlz.stack.n_rows))+20.      
+                    ind = np.where(self.anlz.cluster_indices == i)    
                     colorcl = min(i,9)
                     indvclusterimage[ind] = colorcl
 
@@ -6331,7 +6406,7 @@ class PageCluster(QtGui.QWidget):
                     canvas = FigureCanvas(fig)
                     fig.add_axes((0.0,0.0,1.0,1.0))
                     axes = fig.gca()            
-                    im = axes.imshow(npy.rot90(indvclusterimage), cmap=self.clusterclrmap2, norm=self.bnorm2)
+                    im = axes.imshow(np.rot90(indvclusterimage), cmap=self.clusterclrmap2, norm=self.bnorm2)
                     axes.axis("off")
                    
                     fileName_img = self.SaveFileName+"_CAimg_" +str(i+1)+"."+ext               
@@ -6367,7 +6442,7 @@ class PageCluster(QtGui.QWidget):
                 
                 for i in range(1, self.numclusters+1):
                    
-                    clusterspectrum = self.anlz.clusterspectra[i-1, ]/npy.amax(self.anlz.clusterspectra[i-1, ])
+                    clusterspectrum = self.anlz.clusterspectra[i-1, ]/np.amax(self.anlz.clusterspectra[i-1, ])
 
                     if i >= self.maxclcolors:
                         clcolor = self.colors[self.maxclcolors-1]
@@ -6396,8 +6471,8 @@ class PageCluster(QtGui.QWidget):
             if indimgs_pdf:
                 for i in range (self.numclusters):
               
-                    indvclusterimage = npy.zeros((self.anlz.stack.n_cols, self.anlz.stack.n_rows))+20.      
-                    ind = npy.where(self.anlz.cluster_indices == i)    
+                    indvclusterimage = np.zeros((self.anlz.stack.n_cols, self.anlz.stack.n_rows))+20.      
+                    ind = np.where(self.anlz.cluster_indices == i)    
                     colorcl = min(i,9)
                     indvclusterimage[ind] = colorcl
 
@@ -6405,7 +6480,7 @@ class PageCluster(QtGui.QWidget):
                     canvas = FigureCanvas(fig)
                     fig.add_axes((0.0,0.0,1.0,1.0))
                     axes = fig.gca()       
-                    im = axes.imshow(npy.rot90(indvclusterimage), cmap=self.clusterclrmap2, norm=self.bnorm2)
+                    im = axes.imshow(np.rot90(indvclusterimage), cmap=self.clusterclrmap2, norm=self.bnorm2)
                     axes.axis("off")
                    
                     fileName_img = self.SaveFileName+"_CAimg_" +str(i+1)+"."+ext               
@@ -6440,7 +6515,7 @@ class PageCluster(QtGui.QWidget):
                 
                 for i in range(1, self.numclusters+1):
                    
-                    clusterspectrum = self.anlz.clusterspectra[i-1, ]/npy.amax(self.anlz.clusterspectra[i-1, ])
+                    clusterspectrum = self.anlz.clusterspectra[i-1, ]/np.amax(self.anlz.clusterspectra[i-1, ])
 
                     if i >= self.maxclcolors:
                         clcolor = self.colors[self.maxclcolors-1]
@@ -6461,8 +6536,8 @@ class PageCluster(QtGui.QWidget):
             if indimgs_svg:
                 for i in range (self.numclusters):
               
-                    indvclusterimage = npy.zeros((self.anlz.stack.n_cols, self.anlz.stack.n_rows))+20.      
-                    ind = npy.where(self.anlz.cluster_indices == i)    
+                    indvclusterimage = np.zeros((self.anlz.stack.n_cols, self.anlz.stack.n_rows))+20.      
+                    ind = np.where(self.anlz.cluster_indices == i)    
                     colorcl = min(i,9)
                     indvclusterimage[ind] = colorcl
 
@@ -6470,7 +6545,7 @@ class PageCluster(QtGui.QWidget):
                     canvas = FigureCanvas(fig)
                     fig.add_axes((0.0,0.0,1.0,1.0))
                     axes = fig.gca()       
-                    im = axes.imshow(npy.rot90(indvclusterimage), cmap=self.clusterclrmap2, norm=self.bnorm2)
+                    im = axes.imshow(np.rot90(indvclusterimage), cmap=self.clusterclrmap2, norm=self.bnorm2)
                     axes.axis("off")
                    
                     fileName_img = self.SaveFileName+"_CAimg_" +str(i+1)+"."+ext               
@@ -6505,7 +6580,7 @@ class PageCluster(QtGui.QWidget):
                 
                 for i in range(1, self.numclusters+1):
                    
-                    clusterspectrum = self.anlz.clusterspectra[i-1, ]/npy.amax(self.anlz.clusterspectra[i-1, ])
+                    clusterspectrum = self.anlz.clusterspectra[i-1, ]/np.amax(self.anlz.clusterspectra[i-1, ])
 
                     if i >= self.maxclcolors:
                         clcolor = self.colors[self.maxclcolors-1]
@@ -6524,8 +6599,8 @@ class PageCluster(QtGui.QWidget):
             if indimgs_tif:
                 for i in range (self.numclusters):
               
-                    indvclusterimage = npy.zeros((self.anlz.stack.n_cols, self.anlz.stack.n_rows))+20.      
-                    ind = npy.where(self.anlz.cluster_indices == i)    
+                    indvclusterimage = np.zeros((self.anlz.stack.n_cols, self.anlz.stack.n_rows))+20.      
+                    ind = np.where(self.anlz.cluster_indices == i)    
                     colorcl = min(i,9)
                     indvclusterimage[ind] = colorcl
 
@@ -6556,10 +6631,10 @@ class PageCluster(QtGui.QWidget):
     def SaveScatt(self, png_pdf = 1): 
           
         od_reduced = self.anlz.pcaimages[:,:,0:self.anlz.numsigpca]        
-        od_reduced = npy.reshape(od_reduced, (self.stk.n_cols*self.stk.n_rows,self.anlz.numsigpca), order='F')
+        od_reduced = np.reshape(od_reduced, (self.stk.n_cols*self.stk.n_rows,self.anlz.numsigpca), order='F')
 
         clindices = self.anlz.cluster_indices
-        clindices = npy.reshape(clindices, (self.stk.n_cols*self.stk.n_rows), order='F')
+        clindices = np.reshape(clindices, (self.stk.n_cols*self.stk.n_rows), order='F')
         
         path, ext = os.path.splitext(self.SaveFileName) 
         ext = ext[1:].lower() 
@@ -6583,7 +6658,7 @@ class PageCluster(QtGui.QWidget):
                 for jp in range(self.anlz.numsigpca):
                     if jp >= (ip+1):
                         nplots = nplots+1    
-            nplotsrows = npy.ceil(nplots/2)    
+            nplotsrows = np.ceil(nplots/2)    
             
             plotsize = 2.5    
             
@@ -6617,7 +6692,7 @@ class PageCluster(QtGui.QWidget):
                         pplot = pplot+1
                         
                         for i in range(self.numclusters):
-                            thiscluster = npy.where(clindices == i)
+                            thiscluster = np.where(clindices == i)
                             axes.plot(x_comp[thiscluster], y_comp[thiscluster],'.',color=self.colors[i],alpha=0.5)
                         axes.set_xlabel('Component '+str(ip+1))
                         axes.set_ylabel('Component '+str(jp+1))
@@ -6677,10 +6752,10 @@ class Scatterplots(QtGui.QDialog):
         self.nrows = self.anlz.stack.n_rows
          
         self.od_reduced = self.anlz.pcaimages[:,:,0:self.numsigpca]        
-        self.od_reduced = npy.reshape(self.od_reduced, (self.ncols*self.nrows,self.numsigpca), order='F')
+        self.od_reduced = np.reshape(self.od_reduced, (self.ncols*self.nrows,self.numsigpca), order='F')
          
         self.clindices = self.anlz.cluster_indices
-        self.clindices = npy.reshape(self.clindices, (self.ncols*self.nrows), order='F')
+        self.clindices = np.reshape(self.clindices, (self.ncols*self.nrows), order='F')
         self.numclusters = self.parent.page3.numclusters
               
                       
@@ -6763,7 +6838,7 @@ class Scatterplots(QtGui.QDialog):
              
         
         for i in range(self.numclusters):
-            thiscluster = npy.where(self.clindices == i)
+            thiscluster = np.where(self.clindices == i)
             axes.plot(x_comp[thiscluster], y_comp[thiscluster],'.',color=self.colors[i],alpha=0.5)
             
         axes.set_xlabel('Component '+str(self.pca_x))
@@ -7207,7 +7282,7 @@ class PagePCA(QtGui.QWidget):
         self.numsigpca = 2
         self.slidershow.setValue(self.selpca)
         
-        scrollmax = npy.min([self.stk.n_ev, 20])
+        scrollmax = np.min([self.stk.n_ev, 20])
         self.slidershow.setMaximum(scrollmax)
 
         try: 
@@ -7235,7 +7310,7 @@ class PagePCA(QtGui.QWidget):
         self.numsigpca = 2
         self.slidershow.setValue(self.selpca)
         
-        scrollmax = npy.min([self.stk.n_ev, 20])
+        scrollmax = np.min([self.stk.n_ev, 20])
         self.slidershow.setMaximum(scrollmax)
 
 
@@ -7388,7 +7463,7 @@ class PagePCA(QtGui.QWidget):
                 
         if self.com.pca_calculated == 1:     
             #Find the closest point to the point clicked on the plot
-            self.selpca = int(npy.round(x))
+            self.selpca = int(np.round(x))
             
             if self.selpca < 1:
                 self.selpca = 1
@@ -7462,7 +7537,7 @@ class PagePCA(QtGui.QWidget):
                     axes.set_position([0.03,0.03,0.8,0.94])
                     bound = self.anlz.pcaimagebounds[i]       
         
-                    im = axes.imshow(npy.rot90(self.pcaimage), cmap=matplotlib.cm.get_cmap("seismic_r"), vmin = -bound, vmax = bound)
+                    im = axes.imshow(np.rot90(self.pcaimage), cmap=matplotlib.cm.get_cmap("seismic_r"), vmin = -bound, vmax = bound)
                     cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
                     axes.axis("off") 
                                 
@@ -7509,7 +7584,7 @@ class PagePCA(QtGui.QWidget):
                     axes.set_position([0.03,0.03,0.8,0.94])
                     bound = self.anlz.pcaimagebounds[i]            
         
-                    im = axes.imshow(npy.rot90(self.pcaimage), cmap=matplotlib.cm.get_cmap("seismic_r"), vmin = -bound, vmax = bound)
+                    im = axes.imshow(np.rot90(self.pcaimage), cmap=matplotlib.cm.get_cmap("seismic_r"), vmin = -bound, vmax = bound)
                     cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
                     axes.axis("off") 
                                 
@@ -7548,7 +7623,7 @@ class PagePCA(QtGui.QWidget):
                     axes.set_position([0.03,0.03,0.8,0.94])
                     bound = self.anlz.pcaimagebounds[i]            
         
-                    im = axes.imshow(npy.rot90(self.pcaimage), cmap=matplotlib.cm.get_cmap("seismic_r"), vmin = -bound, vmax = bound)
+                    im = axes.imshow(np.rot90(self.pcaimage), cmap=matplotlib.cm.get_cmap("seismic_r"), vmin = -bound, vmax = bound)
                     cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
                     axes.axis("off") 
                                 
@@ -7594,7 +7669,7 @@ class PagePCA(QtGui.QWidget):
 #----------------------------------------------------------------------      
     def showEvals(self):
         
-        evalmax = npy.min([self.stk.n_ev, 40])
+        evalmax = np.min([self.stk.n_ev, 40])
         self.pcaevals = self.anlz.eigenvals[0:evalmax]
         
 
@@ -7604,7 +7679,7 @@ class PagePCA(QtGui.QWidget):
         axes = fig.gca()
         
        
-        evalsplot = axes.semilogy(npy.arange(1,evalmax+1), self.pcaevals,'b.')    
+        evalsplot = axes.semilogy(np.arange(1,evalmax+1), self.pcaevals,'b.')    
         
         axes.set_xlabel('Principal Component')
         axes.set_ylabel('Log(Eigenvalue)')
@@ -7637,7 +7712,7 @@ class PagePCA(QtGui.QWidget):
         bound = self.anlz.pcaimagebounds[self.selpca-1]
         
      
-        im = axes.imshow(npy.rot90(self.pcaimage), cmap=matplotlib.cm.get_cmap("seismic_r"), vmin = -bound, vmax = bound)
+        im = axes.imshow(np.rot90(self.pcaimage), cmap=matplotlib.cm.get_cmap("seismic_r"), vmin = -bound, vmax = bound)
         cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)  
     
         axes.axis("off") 
@@ -8376,7 +8451,7 @@ class PageStack(QtGui.QWidget):
         if self.com.stack_4d == 1:
             self.stk.od3d = self.stk.od4D[:,:,:,self.itheta]
             self.stk.od = self.stk.od3d.copy()
-            self.stk.od = npy.reshape(self.stk.od, (self.stk.n_cols*self.stk.n_rows, self.stk.n_ev), order='F')      
+            self.stk.od = np.reshape(self.stk.od, (self.stk.n_cols*self.stk.n_rows, self.stk.n_ev), order='F')      
          
         self.loadSpectrum(self.ix, self.iy)
         self.loadImage()
@@ -8523,7 +8598,7 @@ class PageStack(QtGui.QWidget):
                     canvas = FigureCanvas(fig)
                     fig.add_axes((0.0,0.0,1.0,1.0))
                     axes = fig.gca()
-                    im = axes.imshow(npy.rot90(image), cmap=matplotlib.cm.get_cmap(self.colortable)) 
+                    im = axes.imshow(np.rot90(image), cmap=matplotlib.cm.get_cmap(self.colortable)) 
                     axes.axis("off") 
                                 
                     fileName_img = self.SaveFileName+"_imnum_" +str(i+1)+"."+ext
@@ -8699,7 +8774,7 @@ class PageStack(QtGui.QWidget):
             self.stk.od3d = self.stk.od4D[:,:,:,self.itheta]
             self.stk.od = self.stk.od3d.copy()
             n_pixels = self.stk.n_cols*self.stk.n_rows
-            self.stk.od = npy.reshape(self.stk.od, (n_pixels, self.stk.n_ev), order='F')        
+            self.stk.od = np.reshape(self.stk.od, (n_pixels, self.stk.n_ev), order='F')        
             
         self.tc_imagetheta.setText("4D Data Angle: "+str(self.stk.theta[self.itheta]))
         
@@ -8725,7 +8800,7 @@ class PageStack(QtGui.QWidget):
             elif x > self.stk.ev[self.stk.n_ev-1]:
                 sel_ev = self.stk.n_ev-1
             else:
-                indx = npy.abs(self.stk.ev - x).argmin()
+                indx = np.abs(self.stk.ev - x).argmin()
                 sel_ev = indx
                 
             self.iev = sel_ev                   
@@ -8748,8 +8823,8 @@ class PageStack(QtGui.QWidget):
             return
         
         if (self.com.stack_loaded == 1) and (self.addroi == 0):      
-            self.ix = int(npy.floor(x))           
-            self.iy = self.stk.n_rows-1-int(npy.floor(y))  
+            self.ix = int(np.floor(x))           
+            self.iy = self.stk.n_rows-1-int(np.floor(y))  
                     
             if self.ix<0 :
                 self.ix=0
@@ -8947,25 +9022,25 @@ class PageStack(QtGui.QWidget):
                      
  
         if self.defaultdisplay == 1.0:
-            im = axes.imshow(npy.rot90( image), cmap=matplotlib.cm.get_cmap(self.colortable))
+            im = axes.imshow(np.rot90( image), cmap=matplotlib.cm.get_cmap(self.colortable))
         else:
-            imgmax = npy.amax(image)
-            imgmin = npy.amin(image)
+            imgmax = np.amax(image)
+            imgmin = np.amin(image)
             if (self.gamma != 1.0) or (imgmin < 0.0):
                 image = (image-imgmin)/(imgmax-imgmin)
                 imgmax = 1.0
                 imgmin = 0.0
                 if (self.gamma != 1.0):
-                    image = npy.power(image, self.gamma)
+                    image = np.power(image, self.gamma)
             vmin=(imgmin+imgmax*self.brightness_min)
             vmax=imgmax*self.brightness_max
             if vmin > vmax : vmax = vmin + 0.1
-            im = axes.imshow(npy.rot90( image), cmap=matplotlib.cm.get_cmap(self.colortable), 
+            im = axes.imshow(np.rot90( image), cmap=matplotlib.cm.get_cmap(self.colortable), 
                              vmin=vmin,vmax=vmax)
              
 
         if (self.showROImask == 1) and (self.addroi == 1):
-            im_red = axes.imshow(npy.rot90( self.ROIpix_masked), cmap=matplotlib.cm.get_cmap("autumn")) 
+            im_red = axes.imshow(np.rot90( self.ROIpix_masked), cmap=matplotlib.cm.get_cmap("autumn")) 
         
           
         axes.axis("off") 
@@ -9031,7 +9106,7 @@ class PageStack(QtGui.QWidget):
 #         print("self.stk.x_dist[xpos] = ", type(ypos))
 #         print("self.stk.y_dist[ypos] = ", type(xpos))
 
-        self.tc_spec.setText('Spectrum at pixel [{0}, {1}] or position [{2:5.2f}, {3:5.2f}]'.format(str(ypos),  str(xpos), npy.float(self.stk.x_dist[xpos]), npy.float(self.stk.y_dist[ypos])))
+        self.tc_spec.setText('Spectrum at pixel [{0}, {1}] or position [{2:5.2f}, {3:5.2f}]'.format(str(ypos),  str(xpos), np.float(self.stk.x_dist[xpos]), np.float(self.stk.y_dist[ypos])))
 
 #----------------------------------------------------------------------
     def ResetDisplaySettings(self):
@@ -9108,14 +9183,14 @@ class PageStack(QtGui.QWidget):
 #----------------------------------------------------------------------    
     def CalcROISpectrum(self):
               
-        self.ROIspectrum = npy.zeros((self.stk.n_ev))
+        self.ROIspectrum = np.zeros((self.stk.n_ev))
                
-        indices = npy.where(self.ROIpix == 255)
+        indices = np.where(self.ROIpix == 255)
         numroipix = self.ROIpix[indices].shape[0]
             
         for ie in range(self.stk.n_ev):
             thiseng_od = self.stk.od3d[:,:,ie]
-            self.ROIspectrum[ie] = npy.sum(thiseng_od[indices])/numroipix
+            self.ROIspectrum[ie] = np.sum(thiseng_od[indices])/numroipix
                  
 #----------------------------------------------------------------------          
     def ShowROISpectrum(self):
@@ -9147,7 +9222,7 @@ class PageStack(QtGui.QWidget):
         
         #find pixels inside the polygon 
         if self.ROIpix == None:
-            self.ROIpix = npy.zeros((self.stk.n_cols,self.stk.n_rows))    
+            self.ROIpix = np.zeros((self.stk.n_cols,self.stk.n_rows))    
         
         for i in range(self.stk.n_cols):
             for j in range(self.stk.n_rows):
@@ -9157,10 +9232,10 @@ class PageStack(QtGui.QWidget):
               
 
 
-        self.ROIpix = npy.ma.array(self.ROIpix)
+        self.ROIpix = np.ma.array(self.ROIpix)
         
         
-        self.ROIpix_masked =  npy.ma.masked_values(self.ROIpix, 0)
+        self.ROIpix_masked =  np.ma.masked_values(self.ROIpix, 0)
         
         
         self.showROImask = 1
@@ -9204,14 +9279,14 @@ class PageStack(QtGui.QWidget):
 #----------------------------------------------------------------------    
     def CalcROI_I0Spectrum(self):
    
-        self.ROIspectrum = npy.zeros((self.stk.n_ev))
+        self.ROIspectrum = np.zeros((self.stk.n_ev))
                
-        indices = npy.where(self.ROIpix == 255)
+        indices = np.where(self.ROIpix == 255)
         numroipix = self.ROIpix[indices].shape[0]
             
         for ie in range(self.stk.n_ev):
             thiseng_abs = self.stk.absdata[:,:,ie]
-            self.ROIspectrum[ie] = npy.sum(thiseng_abs[indices])/numroipix
+            self.ROIspectrum[ie] = np.sum(thiseng_abs[indices])/numroipix
                 
 #----------------------------------------------------------------------    
     def OnSetROII0(self, evt):    
@@ -9528,7 +9603,7 @@ class ShowHistogram(QtGui.QDialog):
       
         
         self.stack.calc_histogram()
-        averagefluxmax = npy.max(self.stack.histogram)
+        averagefluxmax = np.max(self.stack.histogram)
         self.histmin = 0.98*averagefluxmax
         self.histmax = averagefluxmax
         
@@ -9594,7 +9669,7 @@ class ShowHistogram(QtGui.QDialog):
         self.axes = fig.gca()
         
         
-        histdata =  npy.reshape(self.stack.histogram, (self.stack.n_cols*self.stack.n_rows), order='F')
+        histdata =  np.reshape(self.stack.histogram, (self.stack.n_cols*self.stack.n_rows), order='F')
         
         self.n, self.bins, patches = self.axes.hist(histdata, 200, normed=1, facecolor='green', alpha=0.75)
         
@@ -9618,14 +9693,14 @@ class ShowHistogram(QtGui.QDialog):
         fluxmin = self.histmin
         fluxmax = self.histmax
                 
-        hist_indices = npy.where((fluxmin<self.stack.averageflux)&(self.stack.averageflux<fluxmax))
+        hist_indices = np.where((fluxmin<self.stack.averageflux)&(self.stack.averageflux<fluxmax))
 
-        redpix = npy.zeros((self.stack.n_cols,self.stack.n_rows))    
+        redpix = np.zeros((self.stack.n_cols,self.stack.n_rows))    
         redpix[hist_indices] = 255
               
-        redpix = npy.ma.array(redpix)
+        redpix = np.ma.array(redpix)
         
-        redpix_masked =  npy.ma.masked_values(redpix, 0)
+        redpix_masked =  np.ma.masked_values(redpix, 0)
         
                
         fig = self.absimgfig
@@ -9636,9 +9711,9 @@ class ShowHistogram(QtGui.QDialog):
         axes = fig.gca()
         fig.patch.set_alpha(1.0) 
       
-        im = axes.imshow(npy.rot90(image), cmap=matplotlib.cm.get_cmap("gray")) 
+        im = axes.imshow(np.rot90(image), cmap=matplotlib.cm.get_cmap("gray")) 
 
-        im_red = axes.imshow(npy.rot90(redpix_masked),cmap=matplotlib.cm.get_cmap("autumn"))  
+        im_red = axes.imshow(np.rot90(redpix_masked),cmap=matplotlib.cm.get_cmap("autumn"))  
          
         axes.axis("off")  
         self.AbsImagePanel.draw()
@@ -9825,7 +9900,7 @@ class LimitEv(QtGui.QDialog):
             return
                 
         
-        self.limitevmin = npy.abs(self.stack.ev-x1).argmin()
+        self.limitevmin = np.abs(self.stack.ev-x1).argmin()
 
              
         
@@ -9842,8 +9917,8 @@ class LimitEv(QtGui.QDialog):
             return    
         
                 
-        #self.limitevmin = npy.abs(self.stack.ev-x1).argmin()
-        self.limitevmax = npy.abs(self.stack.ev-x2).argmin()
+        #self.limitevmin = np.abs(self.stack.ev-x1).argmin()
+        self.limitevmax = np.abs(self.stack.ev-x2).argmin()
         
         self.evlimited = 1
              
@@ -9858,7 +9933,7 @@ class LimitEv(QtGui.QDialog):
         if x2 == None:
             return  
         
-        self.limitevmax = npy.abs(self.stack.ev-x2).argmin()
+        self.limitevmax = np.abs(self.stack.ev-x2).argmin()
         
         fig = self.specfig
 
@@ -9889,7 +9964,7 @@ class LimitEv(QtGui.QDialog):
         
             self.stack.od = self.stack.od3d.copy()
         
-            self.stack.od = npy.reshape(self.stack.od, (self.stack.n_rows*self.stack.n_cols, self.stack.n_ev), order='F')
+            self.stack.od = np.reshape(self.stack.od, (self.stack.n_rows*self.stack.n_cols, self.stack.n_ev), order='F')
         
         self.stack.fill_h5_struct_from_stk()
         if self.com.i0_loaded == 1: 
@@ -10006,7 +10081,7 @@ class CliptoSubregion(QtGui.QDialog):
         axes = fig.gca()
         fig.patch.set_alpha(1.0) 
       
-        im = axes.imshow(npy.rot90(image), cmap=matplotlib.cm.get_cmap("gray")) 
+        im = axes.imshow(np.rot90(image), cmap=matplotlib.cm.get_cmap("gray")) 
         
         # Draw the rectangle
         line1=matplotlib.lines.Line2D([self.new_x1,self.new_x2], [self.new_y1,self.new_y1] ,color="red")
@@ -10143,7 +10218,7 @@ class CliptoSubregion(QtGui.QDialog):
         
             self.stack.od = self.stack.od3d.copy()
         
-            self.stack.od = npy.reshape(self.stack.od, (self.stack.n_rows*self.stack.n_cols, self.stack.n_ev), order='F')
+            self.stack.od = np.reshape(self.stack.od, (self.stack.n_rows*self.stack.n_cols, self.stack.n_ev), order='F')
 
         
         #Fix the slider on Page 1! 
@@ -10203,16 +10278,16 @@ class ImageRegistration(QtGui.QDialog):
         
         if self.com.stack_4d == 0:
             self.aligned_stack = self.stack.absdata.copy()
-            self.man_xs = npy.zeros((self.stack.n_ev))
-            self.man_ys = npy.zeros((self.stack.n_ev))    
-            self.xshifts = npy.zeros((self.stack.n_ev))
-            self.yshifts = npy.zeros((self.stack.n_ev))        
+            self.man_xs = np.zeros((self.stack.n_ev))
+            self.man_ys = np.zeros((self.stack.n_ev))    
+            self.xshifts = np.zeros((self.stack.n_ev))
+            self.yshifts = np.zeros((self.stack.n_ev))        
         else:
             self.aligned_stack = self.stack.stack4D.copy()
-            self.man_xs = npy.zeros((self.stack.n_ev,self.stack.n_theta))
-            self.man_ys = npy.zeros((self.stack.n_ev,self.stack.n_theta))    
-            self.xshifts = npy.zeros((self.stack.n_ev,self.stack.n_theta))
-            self.yshifts = npy.zeros((self.stack.n_ev,self.stack.n_theta))        
+            self.man_xs = np.zeros((self.stack.n_ev,self.stack.n_theta))
+            self.man_ys = np.zeros((self.stack.n_ev,self.stack.n_theta))    
+            self.xshifts = np.zeros((self.stack.n_ev,self.stack.n_theta))
+            self.yshifts = np.zeros((self.stack.n_ev,self.stack.n_theta))        
         
 
         
@@ -10623,7 +10698,7 @@ class ImageRegistration(QtGui.QDialog):
         axes = fig.gca()  
              
 
-        _im = axes.imshow(npy.rot90(image), cmap=matplotlib.cm.get_cmap('gray')) 
+        _im = axes.imshow(np.rot90(image), cmap=matplotlib.cm.get_cmap('gray')) 
         axes.autoscale(False)
 #         if self.man_align == 2:           
 #             lx=matplotlib.lines.Line2D([self.man_yref-self.man_ys[self.iev],
@@ -10723,7 +10798,7 @@ class ImageRegistration(QtGui.QDialog):
         from PIL import Image  
         img = Image.open(fileName)
         
-        self.ref_image = npy.array((img))
+        self.ref_image = np.array((img))
         
         self.ShowRefImage()
         self.have_ref_image = 1
@@ -10739,7 +10814,7 @@ class ImageRegistration(QtGui.QDialog):
         axes = fig.gca()
         
     
-        _im = axes.imshow(npy.rot90(self.ref_image), cmap=matplotlib.cm.get_cmap('gray')) 
+        _im = axes.imshow(np.rot90(self.ref_image), cmap=matplotlib.cm.get_cmap('gray')) 
         
         if (self.subregion == 1):
 
@@ -10794,16 +10869,16 @@ class ImageRegistration(QtGui.QDialog):
         
         if self.com.stack_4d == 0:
             self.aligned_stack = self.stack.absdata.copy()  
-            self.man_xs = npy.zeros((self.stack.n_ev))
-            self.man_ys = npy.zeros((self.stack.n_ev))
-            self.xshifts = npy.zeros((self.stack.n_ev))
-            self.yshifts = npy.zeros((self.stack.n_ev))
+            self.man_xs = np.zeros((self.stack.n_ev))
+            self.man_ys = np.zeros((self.stack.n_ev))
+            self.xshifts = np.zeros((self.stack.n_ev))
+            self.yshifts = np.zeros((self.stack.n_ev))
         else:
             self.aligned_stack = self.stack.stack4D.copy()
-            self.man_xs = npy.zeros((self.stack.n_ev,self.stack.n_theta))
-            self.man_ys = npy.zeros((self.stack.n_ev,self.stack.n_theta))    
-            self.xshifts = npy.zeros((self.stack.n_ev,self.stack.n_theta))
-            self.yshifts = npy.zeros((self.stack.n_ev,self.stack.n_theta))   
+            self.man_xs = np.zeros((self.stack.n_ev,self.stack.n_theta))
+            self.man_ys = np.zeros((self.stack.n_ev,self.stack.n_theta))    
+            self.xshifts = np.zeros((self.stack.n_ev,self.stack.n_theta))
+            self.yshifts = np.zeros((self.stack.n_ev,self.stack.n_theta))   
                         
 
         
@@ -10830,12 +10905,12 @@ class ImageRegistration(QtGui.QDialog):
         fig.add_axes(((0.0,0.0,1.0,1.0)))
         axes = fig.gca()
     
-        im = axes.imshow(npy.rot90(ccorr), cmap=matplotlib.cm.get_cmap('gray')) 
+        im = axes.imshow(np.rot90(ccorr), cmap=matplotlib.cm.get_cmap('gray')) 
         
         nx = ccorr.shape[0]
         ny = ccorr.shape[1]
-        xcenter = xshift + npy.float(nx)/2.0
-        ycenter = yshift + npy.float(ny)/2.0
+        xcenter = xshift + np.float(nx)/2.0
+        ycenter = yshift + np.float(ny)/2.0
         
         xl = xcenter-10
         if xl<0:
@@ -10890,20 +10965,20 @@ class ImageRegistration(QtGui.QDialog):
     def OnRemoveImage(self, event):
         
 
-        self.stack.absdata = npy.delete(self.stack.absdata, self.iev, axis=2)  
+        self.stack.absdata = np.delete(self.stack.absdata, self.iev, axis=2)  
             
-        self.aligned_stack = npy.delete(self.aligned_stack, self.iev, axis=2)
+        self.aligned_stack = np.delete(self.aligned_stack, self.iev, axis=2)
         
         if self.com.stack_4d == 1:
-            self.stack.stack4D = npy.delete(self.stack.stack4D, self.iev, axis=2)  
+            self.stack.stack4D = np.delete(self.stack.stack4D, self.iev, axis=2)  
 
         
         self.stack.n_ev = self.stack.n_ev - 1
-        self.stack.ev = npy.delete(self.stack.ev, self.iev) 
+        self.stack.ev = np.delete(self.stack.ev, self.iev) 
         
         
-        self.xshifts = npy.delete(self.xshifts, self.iev) 
-        self.yshifts = npy.delete(self.yshifts, self.iev) 
+        self.xshifts = np.delete(self.xshifts, self.iev) 
+        self.yshifts = np.delete(self.yshifts, self.iev) 
         
         if self.com.stack_4d == 0:
             self.stack.data_struct.exchange.data = self.stack.absdata
@@ -10979,9 +11054,9 @@ class ImageRegistration(QtGui.QDialog):
             #Limit the shifts to MAXSHIFT chosen by the user
             if (self.maxshift > 0):
                 if (abs(xshift) > self.maxshift):
-                        xshift = npy.sign(xshift)*self.maxshift
+                        xshift = np.sign(xshift)*self.maxshift
                 if (abs(yshift) > self.maxshift):
-                        yshift = npy.sign(yshift)*self.maxshift
+                        yshift = np.sign(yshift)*self.maxshift
             
             self.xshifts[i] = xshift
             self.yshifts[i] = yshift
@@ -11011,11 +11086,11 @@ class ImageRegistration(QtGui.QDialog):
         self.UpdateWidgets()
         
         
-        min_xshift = npy.min(self.xshifts)
-        max_xshift = npy.max(self.xshifts)
+        min_xshift = np.min(self.xshifts)
+        max_xshift = np.max(self.xshifts)
         
-        min_yshift = npy.min(self.yshifts)
-        max_yshift = npy.max(self.yshifts)
+        min_yshift = np.min(self.yshifts)
+        max_yshift = np.max(self.yshifts)
         
         if min_xshift < self.minxs : self.minxs = min_xshift
         if max_xshift > self.maxxs : self.maxxs = max_xshift
@@ -11075,9 +11150,9 @@ class ImageRegistration(QtGui.QDialog):
                 #Limit the shifts to MAXSHIFT chosen by the user
                 if (self.maxshift > 0):
                     if (abs(xshift) > self.maxshift):
-                            xshift = npy.sign(xshift)*self.maxshift
+                            xshift = np.sign(xshift)*self.maxshift
                     if (abs(yshift) > self.maxshift):
-                            yshift = npy.sign(yshift)*self.maxshift
+                            yshift = np.sign(yshift)*self.maxshift
                 
                 self.xshifts[i,j] = xshift
                 self.yshifts[i,j] = yshift
@@ -11109,11 +11184,11 @@ class ImageRegistration(QtGui.QDialog):
         self.UpdateWidgets()
         
         
-        min_xshift = npy.min(self.xshifts)
-        max_xshift = npy.max(self.xshifts)
+        min_xshift = np.min(self.xshifts)
+        max_xshift = np.max(self.xshifts)
         
-        min_yshift = npy.min(self.yshifts)
-        max_yshift = npy.max(self.yshifts)
+        min_yshift = np.min(self.yshifts)
+        max_yshift = np.max(self.yshifts)
         
         if min_xshift < self.minxs : self.minxs = min_xshift
         if max_xshift > self.maxxs : self.maxxs = max_xshift
@@ -11166,8 +11241,8 @@ class ImageRegistration(QtGui.QDialog):
             pass   
         
         if (self.man_align == 1):      
-            self.man_xref = int(npy.floor(x))           
-            self.man_yref = int(npy.floor(y))  
+            self.man_xref = int(np.floor(x))           
+            self.man_yref = int(np.floor(y))  
                     
             if self.man_xref<0 :
                 self.man_xref=0
@@ -11289,11 +11364,11 @@ class ImageRegistration(QtGui.QDialog):
         
         self.UpdateWidgets()
         
-        min_xshift = npy.min(self.xshifts)
-        max_xshift = npy.max(self.xshifts)
+        min_xshift = np.min(self.xshifts)
+        max_xshift = np.max(self.xshifts)
         
-        min_yshift = npy.min(self.yshifts)
-        max_yshift = npy.max(self.yshifts)
+        min_yshift = np.min(self.yshifts)
+        max_yshift = np.max(self.yshifts)
         
         if min_xshift < self.minxs : self.minxs = min_xshift
         if max_xshift > self.maxxs : self.maxxs = max_xshift
@@ -11317,7 +11392,7 @@ class ImageRegistration(QtGui.QDialog):
             self.stack.absdata = self.stack.stack4D[:,:,:,self.itheta]
             
         
-        datadim = npy.int32(self.stack.absdata.shape)
+        datadim = np.int32(self.stack.absdata.shape)
         
         self.stack.n_cols = datadim[0].copy()
         self.stack.n_rows =  datadim[1].copy()
@@ -11338,7 +11413,7 @@ class ImageRegistration(QtGui.QDialog):
                 self.stack.od3d = self.stack.od3d[self.xleft:self.xright, self.ybottom:self.ytop, :] 
             
                 self.stack.od = self.stack.od3d.copy()
-                self.stack.od = npy.reshape(self.stack.od, (self.stack.n_cols*self.stack.n_rows, self.stack.n_ev), order='F')            
+                self.stack.od = np.reshape(self.stack.od, (self.stack.n_cols*self.stack.n_rows, self.stack.n_ev), order='F')            
 
             else:
                 #Resize optical density for 4D stack
@@ -11354,7 +11429,7 @@ class ImageRegistration(QtGui.QDialog):
                 self.stack.od3d = self.stack.od4D[:,:,:,self.itheta]
                 self.stack.od = self.stack.od3d.copy()
                 n_pixels = self.stack.n_cols*self.stack.n_rows
-                self.stack.od = npy.reshape(self.stack.od, (n_pixels, self.stack.n_ev), order='F')      
+                self.stack.od = np.reshape(self.stack.od, (n_pixels, self.stack.n_ev), order='F')      
                 
             self.stack.data_struct.spectromicroscopy.optical_density = self.stack.od   
 
@@ -11418,7 +11493,7 @@ class ImageRegistration(QtGui.QDialog):
             elif x > self.stack.ev[self.stack.n_ev-1]:
                 sel_ev = self.stack.n_ev-1
             else:
-                indx = npy.abs(self.stack.ev - x).argmin()
+                indx = np.abs(self.stack.ev - x).argmin()
                 sel_ev = indx
                 
             self.iev = sel_ev                   
@@ -11627,8 +11702,8 @@ class ImageRegistration(QtGui.QDialog):
         f.close()
         
 
-        self.xshifts = npy.zeros((self.stack.n_ev))
-        self.yshifts = npy.zeros((self.stack.n_ev)) 
+        self.xshifts = np.zeros((self.stack.n_ev))
+        self.yshifts = np.zeros((self.stack.n_ev)) 
        
         for ie in range(self.stack.n_ev):
             engfl = '%.6f' % ( self.stack.ev[ie])
@@ -11750,9 +11825,9 @@ class SpectralROI(QtGui.QDialog):
         self.odtotal = self.stack.od3d.sum(axis=0)   
         self.odtotal = self.odtotal.sum(axis=0)/(self.stack.n_rows*self.stack.n_cols) 
         
-        self.image_i0 = npy.zeros((self.stack.n_cols, self.stack.n_rows))
-        self.image_i = npy.zeros((self.stack.n_cols, self.stack.n_rows))
-        self.odthickmap = npy.zeros((self.stack.n_cols, self.stack.n_rows))
+        self.image_i0 = np.zeros((self.stack.n_cols, self.stack.n_rows))
+        self.image_i = np.zeros((self.stack.n_cols, self.stack.n_rows))
+        self.odthickmap = np.zeros((self.stack.n_cols, self.stack.n_rows))
         
 
         
@@ -11878,7 +11953,7 @@ class SpectralROI(QtGui.QDialog):
         axes.set_position([0.03,0.03,0.8,0.94])
         
         
-        im = axes.imshow(npy.rot90(self.odthickmap), cmap=matplotlib.cm.get_cmap("gray")) 
+        im = axes.imshow(np.rot90(self.odthickmap), cmap=matplotlib.cm.get_cmap("gray")) 
 
         cbar = axes.figure.colorbar(im, orientation='vertical',cax=axcb) 
 
@@ -11933,27 +12008,27 @@ class SpectralROI(QtGui.QDialog):
             self.iselected = 0
         
         if self.i0selected == 0:       
-            self.i0min = npy.abs(self.stack.ev - x1).argmin()
-            self.i0max = npy.abs(self.stack.ev - x2).argmin()
+            self.i0min = np.abs(self.stack.ev - x1).argmin()
+            self.i0max = np.abs(self.stack.ev - x2).argmin()
             
-            self.image_i0 = npy.sum(self.stack.absdata[:, :, self.i0min:self.i0max+1], axis=2)/(self.i0max+1-self.i0min)
+            self.image_i0 = np.sum(self.stack.absdata[:, :, self.i0min:self.i0max+1], axis=2)/(self.i0max+1-self.i0min)
 
             self.textctrl1.setText('Selection: [ '+str(self.stack.ev[self.i0min]) + ' eV, '+ str(self.stack.ev[self.i0max])+' eV ]' )
             self.i0selected = 1
             
         elif self.iselected == 0:
-            self.imin = npy.abs(self.stack.ev - x1).argmin()
-            self.imax = npy.abs(self.stack.ev - x2).argmin()
+            self.imin = np.abs(self.stack.ev - x1).argmin()
+            self.imax = np.abs(self.stack.ev - x2).argmin()
                        
-            self.image_i = npy.sum(self.stack.absdata[:, :, self.imin:self.imax+1], axis=2)/(self.imax+1-self.imin)
+            self.image_i = np.sum(self.stack.absdata[:, :, self.imin:self.imax+1], axis=2)/(self.imax+1-self.imin)
             
             self.textctrl2.setText('Selection: [ '+str(self.stack.ev[self.imin]) + ' eV, '+ str(self.stack.ev[self.imax])+' eV ]' )
             self.iselected = 1        
             
         if (self.i0selected == 1) and (self.iselected ==1):              
             nonzeroind = self.image_i0.nonzero()
-            self.odthickmap = npy.zeros((self.stack.n_cols, self.stack.n_rows))
-            self.odthickmap[nonzeroind] = - npy.log(self.image_i[nonzeroind]/self.image_i0[nonzeroind])
+            self.odthickmap = np.zeros((self.stack.n_cols, self.stack.n_rows))
+            self.odthickmap[nonzeroind] = - np.log(self.image_i[nonzeroind]/self.image_i0[nonzeroind])
             self.draw_image()
             
         
@@ -12735,7 +12810,7 @@ class PageLoadData(QtGui.QWidget):
         axes = fig.gca()
         fig.patch.set_alpha(1.0)
          
-        im = axes.imshow(npy.rot90( image ), cmap=matplotlib.cm.get_cmap("gray")) 
+        im = axes.imshow(np.rot90( image ), cmap=matplotlib.cm.get_cmap("gray")) 
          
         if self.window().page1.show_scale_bar == 1:
             #Show Scale Bar
@@ -13025,11 +13100,11 @@ class StackListFrame(QtGui.QDialog):
         #fill the gui structure data
         self.stk.absdata = self.data_struct.exchange.data
         
-        datadim = npy.int32(self.stk.absdata.shape)
+        datadim = np.int32(self.stk.absdata.shape)
         self.stk.n_cols = datadim[0].copy()
         self.stk.n_rows =  datadim[1].copy()
         self.stk.ev = self.data_struct.exchange.energy 
-        self.stk.n_ev = npy.int32(self.stk.ev.shape[0]).copy()
+        self.stk.n_ev = np.int32(self.stk.ev.shape[0]).copy()
         
         npixels = self.stk.n_cols*self.stk.n_rows*self.stk.n_ev
         
@@ -13376,8 +13451,8 @@ class MainFrame(QtGui.QMainWindow):
             #Update widgets 
             x=self.stk.n_cols
             y=self.stk.n_rows
-            self.page1.imgrgb = npy.zeros(x*y*3,dtype = "uint8")        
-            self.page1.maxval = npy.amax(self.stk.absdata)
+            self.page1.imgrgb = np.zeros(x*y*3,dtype = "uint8")        
+            self.page1.maxval = np.amax(self.stk.absdata)
             
             
             self.ix = int(x/2)
@@ -13509,8 +13584,8 @@ class MainFrame(QtGui.QMainWindow):
         
             x=self.stk.n_cols
             y=self.stk.n_rows  
-            self.page1.imgrgb = npy.zeros(x*y*3,dtype = "uint8")        
-            self.page1.maxval = npy.amax(self.stk.absdata)
+            self.page1.imgrgb = np.zeros(x*y*3,dtype = "uint8")        
+            self.page1.maxval = np.amax(self.stk.absdata)
             
             
             self.ix = int(x/2)
@@ -13595,6 +13670,7 @@ class MainFrame(QtGui.QMainWindow):
         
         #try:
         if True:
+            #wildcard = "HDF5 file (*.hdf5);;aXis2000 NCB file (*.ncb);;TIFF file (.tif);;STK file (*.stk);;"
             wildcard = "HDF5 file (*.hdf5);;aXis2000 NCB file (*.ncb);;TIFF file (.tif);;STK file (*.stk);;"
 
             filepath = QtGui.QFileDialog.getSaveFileName(self, 'Save processed stack', '', wildcard)
@@ -13611,16 +13687,16 @@ class MainFrame(QtGui.QMainWindow):
             basename, extension = os.path.splitext(filepath)      
                        
             if extension == '.hdf5':            
-                self.stk.write_h5(filepath, self.data_struct) 
+                file_dataexch_hdf5.write_h5(filepath, self.data_struct) 
                            
-            elif extension == '.ncb':    
-                self.stk.write_ncb(filepath, self.data_struct) 
-           
-            elif extension == '.tif':    
-                self.stk.write_tif(filepath, self.stk.absdata, energies=self.stk.ev) 
-                
-            elif extension == '.stk':    
-                self.stk.write_stk(filepath) 
+#             elif extension == '.ncb':    
+#                 self.stk.write_ncb(filepath, self.data_struct) 
+#            
+#             elif extension == '.tif':    
+#                 self.stk.write_tif(filepath, self.stk.absdata, energies=self.stk.ev) 
+#                 
+#             elif extension == '.stk':    
+#                 self.stk.write_stk(filepath) 
             
          
             QtGui.QApplication.restoreOverrideCursor()
@@ -13667,7 +13743,7 @@ class MainFrame(QtGui.QMainWindow):
             self.common.filename = self.page1.filename
             
 
-            self.stk.write_results_h5(filepath, self.data_struct, self.anlz)   
+            file_dataexch_hdf5.write_results_h5(filepath, self.data_struct, self.anlz)   
 
             QtGui.QApplication.restoreOverrideCursor()
 
