@@ -258,6 +258,17 @@ class PageTomo(QtGui.QWidget):
         self.button_roi.setEnabled(False)
         vbox3.addWidget(self.button_roi)
         
+        
+        self.button_roispec = QtGui.QPushButton( 'Show ROI Spectrum')
+        self.button_roispec.clicked.connect( self.OnShowROISpec)
+        self.button_roispec.setEnabled(False)
+        vbox3.addWidget(self.button_roispec)
+        
+        self.button_roidel = QtGui.QPushButton( 'Reset ROI')
+        self.button_roidel.clicked.connect( self.OnResetROI)
+        self.button_roidel.setEnabled(False)
+        vbox3.addWidget(self.button_roidel)
+        
         sizer3.setLayout(vbox3)
 
 
@@ -304,7 +315,7 @@ class PageTomo(QtGui.QWidget):
 
         self.AbsImagePanel = FigureCanvas(self.absimgfig)
         self.AbsImagePanel.setParent(self)
-        self.AbsImagePanel.mpl_connect('button_press_event', self.OnPointImage)
+        self.cid1 = self.AbsImagePanel.mpl_connect('button_press_event', self.OnPointImage)
         
         
         fbox.addWidget(self.AbsImagePanel)
@@ -477,6 +488,8 @@ class PageTomo(QtGui.QWidget):
         
         dims = self.tr.tomorec.shape
         
+        self.nslices = dims[2]
+        
         self.islice = int(dims[2]/2)
         
         self.slider_slice.setRange(0, dims[2]-1)
@@ -524,6 +537,7 @@ class PageTomo(QtGui.QWidget):
         dims = self.tr.tomorec.shape
         
         self.ROIvol = [[]]* dims[2]
+        self.button_roispec.setEnabled(False)
         
         self.islice = int(dims[2]/2)
         self.slider_slice.setValue(self.islice)
@@ -601,8 +615,48 @@ class PageTomo(QtGui.QWidget):
         title = 'Point [{0:d}, {0:d}, {0:d}]'.format(ix,iy,self.islice)
                 
         plot = PlotFrame(self, self.stack.ev, spectrum, title=title)
-        plot.show()
+        plot.show()       
+
+#----------------------------------------------------------------------    
+    def OnSave(self, event): 
         
+        
+        wildcard = "Mrc files (*.mrc);;"
+
+        SaveFileName = QtGui.QFileDialog.getSaveFileName(self, 'Save Tomo Reconstructions', '', wildcard)
+
+        SaveFileName = str(SaveFileName)
+        if SaveFileName == '':
+            return
+        
+        
+        data = self.tr.tomorec
+                
+        self.tr.save_mrc(SaveFileName, data)        
+        
+        
+#----------------------------------------------------------------------    
+    def OnSaveAll(self, event): 
+        
+        
+        wildcard = "Mrc files (*.mrc);;"
+
+        SaveFileName = QtGui.QFileDialog.getSaveFileName(self, 'Save Tomo Reconstructions', '', wildcard)
+
+        SaveFileName = str(SaveFileName)
+        if SaveFileName == '':
+            return
+        
+        
+        basename, extension = os.path.splitext(SaveFileName)  
+
+        for i in range(self.ncomponents):
+            data = self.fulltomorecdata[i]        
+        
+            savefn = basename + '_'+self.datanames[i]+extension
+                
+            self.tr.save_mrc(savefn, data)        
+
 #---------------------------------------------------------------------- 
 
     def OnSelectLasso(self,verts):
@@ -645,57 +699,62 @@ class PageTomo(QtGui.QWidget):
         
 
 
-
-
 #----------------------------------------------------------------------           
     def OnSelectROI(self, event):
+        
+        self.AbsImagePanel.mpl_disconnect(self.cid1)
+        self.button_roispec.setEnabled(True)
+        self.button_roidel.setEnabled(True)
         
         lineprops = dict(color='red', linestyle='-', linewidth = 1, alpha=1)
 
 
         self.lasso = LassoSelector(self.axes, onselect=self.OnSelectLasso, useblit=False, lineprops=lineprops)
         
+        
+#----------------------------------------------------------------------           
+    def OnResetROI(self, event):        
+        
+        self.button_roispec.setEnabled(False)
+        self.button_roidel.setEnabled(False)
+        
+        self.ROIvol =  [[]]*self.nslices
+        
+        self.haveROI = 0
+               
+        self.cid1 = self.AbsImagePanel.mpl_connect('button_press_event', self.OnPointImage)
+        
+        self.ShowImage()
 
 #----------------------------------------------------------------------    
-    def OnSave(self, event): 
-        
-        
-        wildcard = "Mrc files (*.mrc);;"
+    def CalcROISpectrum(self):
+              
+        ROIspectrum = np.zeros((self.stack.n_ev))
+               
 
-        SaveFileName = QtGui.QFileDialog.getSaveFileName(self, 'Save Tomo Reconstructions', '', wildcard)
-
-        SaveFileName = str(SaveFileName)
-        if SaveFileName == '':
-            return
-        
-        
-        data = self.tr.tomorec
+        for i in range(self.nslices):
+            roimask = self.ROIvol[i]
+            if roimask != []:
+                for ie in range(self.stack.n_ev):
+                    indices = np.where(roimask == 255)
+                    numroipix = roimask[indices].shape[0]
                 
-        self.tr.save_mrc(SaveFileName, data)        
+                    roivoxels = self.fulltomorecdata[ie][:,:,i]
+                    ROIspectrum[ie] = np.sum(roivoxels[indices])/numroipix
+                    
+        return ROIspectrum
+    
+                 
+#----------------------------------------------------------------------          
+    def OnShowROISpec(self):
         
-        
-#----------------------------------------------------------------------    
-    def OnSaveAll(self, event): 
-        
-        
-        wildcard = "Mrc files (*.mrc);;"
-
-        SaveFileName = QtGui.QFileDialog.getSaveFileName(self, 'Save Tomo Reconstructions', '', wildcard)
-
-        SaveFileName = str(SaveFileName)
-        if SaveFileName == '':
-            return
-        
-        
-        basename, extension = os.path.splitext(SaveFileName)  
-
-        for i in range(self.ncomponents):
-            data = self.fulltomorecdata[i]        
-        
-            savefn = basename + '_'+self.datanames[i]+extension
+        spectrum = self.CalcROISpectrum()
+            
+        title = 'ROI spectrum'
                 
-            self.tr.save_mrc(savefn, data)        
-        
+        plot = PlotFrame(self, self.stack.ev, spectrum, title=title)
+        plot.show()   
+            
 #----------------------------------------------------------------------        
     def ShowImage(self):
         
@@ -713,7 +772,8 @@ class PageTomo(QtGui.QWidget):
         im = axes.imshow(np.rot90(image), cmap=matplotlib.cm.get_cmap("gray")) 
         
         if self.haveROI == 1:
-            im_red = axes.imshow(np.rot90(self.ROIvol[self.islice]), cmap=matplotlib.cm.get_cmap("autumn")) 
+            if self.ROIvol[self.islice] != []:
+                im_red = axes.imshow(np.rot90(self.ROIvol[self.islice]), cmap=matplotlib.cm.get_cmap("autumn")) 
          
 #         if self.window().page1.show_scale_bar == 1:
 #             #Show Scale Bar
