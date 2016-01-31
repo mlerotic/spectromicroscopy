@@ -8820,6 +8820,7 @@ class PageStack(QtGui.QWidget):
 #----------------------------------------------------------------------            
     def OnScrollEng(self, value):
         self.iev = value
+        
 
         if self.com.stack_loaded == 1:
             self.loadImage()
@@ -8828,6 +8829,7 @@ class PageStack(QtGui.QWidget):
 #----------------------------------------------------------------------            
     def OnScrollTheta(self, value):
         self.itheta = value
+        
 
         self.stk.absdata = self.stk.stack4D[:,:,:,self.itheta]
         if self.com.i0_loaded:
@@ -8837,6 +8839,7 @@ class PageStack(QtGui.QWidget):
             self.stk.od = np.reshape(self.stk.od, (n_pixels, self.stk.n_ev), order='F')        
             
         self.tc_imagetheta.setText("4D Data Angle: "+str(self.stk.theta[self.itheta]))
+        
         
         if self.com.stack_loaded == 1:
             self.loadImage()
@@ -10041,6 +10044,10 @@ class LimitEv(QtGui.QDialog):
         self.parent.page1.slider_eng.setRange(0,self.stack.n_ev-1)
         self.parent.page1.iev = self.stack.n_ev/2
         self.parent.page1.slider_eng.setValue(self.parent.page1.iev)
+        
+        self.parent.page0.slider_eng.setRange(0,self.stack.n_ev-1)
+        self.parent.page0.iev = self.stack.n_ev/2
+        self.parent.page0.slider_eng.setValue(self.parent.page1.iev)
         
         self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
         self.parent.page1.loadImage()
@@ -12861,6 +12868,7 @@ class PageLoadData(QtGui.QWidget):
                     
 #----------------------------------------------------------------------        
     def ShowImage(self):
+        
         
         image = self.stk.absdata[:,:,int(self.iev)].copy() 
 
