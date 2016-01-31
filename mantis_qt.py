@@ -396,6 +396,7 @@ class PageTomo(QtGui.QWidget):
         
         self.tomodata = self.stack.od4D
         
+        self.datanames = []
         for i in range(self.stack.n_ev):
             self.datanames.append(str(self.stack.ev[i]))
             
@@ -408,6 +409,7 @@ class PageTomo(QtGui.QWidget):
         
         self.button_calcall.setEnabled(True)
         self.button_calc1.setEnabled(True)
+        self.button_roi.setEnabled(False)
         self.energiesloaded = 1
         
         
@@ -439,6 +441,7 @@ class PageTomo(QtGui.QWidget):
                 self.tomodata[:,:,:,i] = self.anlz.target_pcafit_maps[i]
          
        
+        self.datanames = []
         for i in range(self.ncomponents):
             self.datanames.append(str(self.anlz.tspec_names[i]))
             
@@ -450,6 +453,7 @@ class PageTomo(QtGui.QWidget):
         
         self.button_calcall.setEnabled(True)
         self.button_calc1.setEnabled(True)
+        self.button_roi.setEnabled(False)
         self.energiesloaded = 0
         
         
@@ -548,8 +552,9 @@ class PageTomo(QtGui.QWidget):
         
         self.tc_comp.setText('Component: '+self.datanames[self.select1])
         self.slider_comp.setRange(0, 0)
-        self.button_save.setEnabled(True)
-        self.button_roi.setEnabled(True)
+        self.button_roi.setEnabled(False)
+        self.button_save.setEnabled(False)
+
         
         self.ShowImage()
         
