@@ -504,7 +504,10 @@ class PageTomo(QtGui.QWidget):
         self.slider_comp.setValue(self.icomp)
         self.button_save.setEnabled(True)
         self.button_saveall.setEnabled(True)
-        self.button_roi.setEnabled(True)
+        if self.energiesloaded == 1:
+            self.button_roi.setEnabled(True)
+        else:
+            self.button_roi.setEnabled(False)
           
         
         self.ShowImage()
@@ -4292,7 +4295,6 @@ class PageSpectral(QtGui.QWidget):
             self.slider_tspec.setMaximum(self.anlz.n_target_spectra)
             self.slider_tspec.setValue(self.i_tspec)
             
-            self.button_calc4d.setEnabled(True)
             
             self.loadTSpectrum()
             self.loadTargetMap()    
@@ -4349,7 +4351,6 @@ class PageSpectral(QtGui.QWidget):
             self.slider_tspec.setMaximum(self.anlz.n_target_spectra)
             self.slider_tspec.setValue(self.i_tspec)
             
-            self.button_calc4d.setEnabled(True)
             
             self.ShowSpectraList() 
             self.loadTSpectrum()
@@ -4414,6 +4415,8 @@ class PageSpectral(QtGui.QWidget):
             self.slider_theta.setRange(0, self.stk.n_theta-1)
             self.slider_theta.setValue(self.itheta)
             self.tc_imagetheta.setText("4D Data Angle: "+str(self.stk.theta[self.itheta])) 
+            
+            self.button_calc4d.setEnabled(True)
             
             self.ShowSpectraList() 
             self.loadTSpectrum()
@@ -13956,8 +13959,7 @@ class MainFrame(QtGui.QMainWindow):
             self.page4.button_showrgb.setEnabled(False) 
             self.page4.button_histogram.setEnabled(False) 
             self.page4.button_calc4d.setEnabled(False)
-            if showtomotab:
-                self.page8.button_spcomp.setEnabled(False)
+
         else:
             self.page4.button_removespec.setEnabled(True)
             self.page4.button_movespdown.setEnabled(True)
@@ -13966,8 +13968,14 @@ class MainFrame(QtGui.QMainWindow):
             self.page4.button_showrgb.setEnabled(True)    
             self.page4.button_histogram.setEnabled(True) 
             self.page4.button_calc4d.setEnabled(True)
-            if showtomotab:
+                
+        
+        if showtomotab:
+            if self.common.spec_anl4D_calculated == 0:
+                self.page8.button_spcomp.setEnabled(False)
+            else:
                 self.page8.button_spcomp.setEnabled(True)
+            
             
         if self.page6 != None:
             if self.common.cluster_calculated == 0:   
