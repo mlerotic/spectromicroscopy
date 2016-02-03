@@ -57,7 +57,7 @@ from file_plugins import file_bim
 from file_plugins import file_dataexch_hdf5
 
 
-version = '2.2.01'
+version = '2.2.02'
 
 Winsizex = 1000
 Winsizey = 700
@@ -69,7 +69,7 @@ ImgDpi = 40
 
 verbose = True
 
-showtomotab = 1
+showtomotab = 0
 
 
 
@@ -114,6 +114,9 @@ class PageTomo(QtGui.QWidget):
         
         self.tr = tomo_reconstruction.Ctomo(self.stack)
         
+        self.algonames = ['Compressed Sensing', 'SIRT']
+        self.algo = 0
+        
         self.fulltomorecdata = []
         self.ncomponents = 0
         
@@ -124,6 +127,7 @@ class PageTomo(QtGui.QWidget):
         self.datanames = []
         
         self.haveROI = 0
+        self.ROIarray = []
         self.ROIvol = []
         
         self.select1 = 0        
@@ -154,7 +158,7 @@ class PageTomo(QtGui.QWidget):
         sizer1.setLayout(vbox1)
 
         #panel 2
-        sizer2 = QtGui.QGroupBox('Compressed Sensing Reconstruction')
+        sizer2 = QtGui.QGroupBox('Tomo Reconstruction')
         vbox2 = QtGui.QVBoxLayout()
 
         
@@ -197,6 +201,16 @@ class PageTomo(QtGui.QWidget):
         vbox2.addStretch(1)
         vbox2.addWidget(line) 
         vbox2.addStretch(1)  
+        
+#         hbox21 = QtGui.QHBoxLayout()
+#         tc1 = QtGui.QLabel(self)
+#         hbox21.addWidget(tc1)
+#         tc1.setText('Choose Tomo Dataset: ')
+        self.comboalgos = QtGui.QComboBox(self)
+        self.comboalgos.activated[int].connect(self.OnSelectAlgo)
+        self.comboalgos.addItems(self.algonames)
+        vbox2.addWidget(self.comboalgos)
+        
  
         hbox22 = QtGui.QHBoxLayout()
         text1 = QtGui.QLabel(self)
@@ -214,9 +228,9 @@ class PageTomo(QtGui.QWidget):
           
                 
         hbox23 = QtGui.QHBoxLayout()
-        tc1 = QtGui.QLabel(self)
-        tc1.setText("CS Parameter Beta")  
-        hbox23.addWidget(tc1)      
+        self.tc_par = QtGui.QLabel(self)
+        self.tc_par.setText("CS Parameter Beta")  
+        hbox23.addWidget(self.tc_par)      
         self.ntc_beta = QtGui.QLineEdit(self)
         self.ntc_beta.setFixedWidth(65)
         self.ntc_beta.setValidator(QtGui.QDoubleValidator(0, 99999, 2, self))
@@ -254,20 +268,30 @@ class PageTomo(QtGui.QWidget):
 
         
         self.button_roi = QtGui.QPushButton( 'Select ROI')
-        self.button_roi.clicked.connect( self.OnSelectROI)
+        self.button_roi.clicked.connect(self.OnSelectROI)
         self.button_roi.setEnabled(False)
         vbox3.addWidget(self.button_roi)
         
+        self.button_roihist = QtGui.QPushButton( 'Histogram ROI selection...')
+        self.button_roihist.clicked.connect(self.OnROIHistogram)
+        #self.button_roihist.setEnabled(False)
+        vbox3.addWidget(self.button_roihist)
+        
         
         self.button_roispec = QtGui.QPushButton( 'Show ROI Spectrum')
-        self.button_roispec.clicked.connect( self.OnShowROISpec)
+        self.button_roispec.clicked.connect(self.OnShowROISpec)
         self.button_roispec.setEnabled(False)
         vbox3.addWidget(self.button_roispec)
         
         self.button_roidel = QtGui.QPushButton( 'Reset ROI')
-        self.button_roidel.clicked.connect( self.OnResetROI)
+        self.button_roidel.clicked.connect(self.OnResetROI)
         self.button_roidel.setEnabled(False)
         vbox3.addWidget(self.button_roidel)
+        
+        self.button_saveroi = QtGui.QPushButton( 'Save ROI as .mrc')
+        self.button_saveroi.clicked.connect(self.OnSaveROI)
+        self.button_saveroi.setEnabled(False)
+        vbox3.addWidget(self.button_saveroi)
         
         sizer3.setLayout(vbox3)
 
@@ -499,6 +523,7 @@ class PageTomo(QtGui.QWidget):
         self.slider_slice.setRange(0, dims[2]-1)
         
         self.ROIvol =  [[]]* dims[2]
+        self.ROIarray = np.zeros((dims[0], dims[1], dims[2]))
         
         self.tc_comp.setText('Component: '+self.datanames[self.icomp])
         
@@ -542,8 +567,10 @@ class PageTomo(QtGui.QWidget):
         self.full_tomo_calculated = 0
         
         dims = self.tr.tomorec.shape
-        
+        self.nslices = dims[2]
+                
         self.ROIvol = [[]]* dims[2]
+        self.ROIarray = np.zeros((dims[0], dims[1], dims[2]))
         self.button_roispec.setEnabled(False)
         
         self.islice = int(dims[2]/2)
@@ -552,8 +579,8 @@ class PageTomo(QtGui.QWidget):
         
         self.tc_comp.setText('Component: '+self.datanames[self.select1])
         self.slider_comp.setRange(0, 0)
-        self.button_roi.setEnabled(False)
-        self.button_save.setEnabled(False)
+        self.button_roi.setEnabled(True)
+        self.button_save.setEnabled(True)
 
         
         self.ShowImage()
@@ -565,6 +592,19 @@ class PageTomo(QtGui.QWidget):
     def OnSelect1Comp(self, value):
         item = value
         self.select1 = item
+        
+
+#----------------------------------------------------------------------           
+    def OnSelectAlgo(self, value):
+        item = value
+        self.algo = item
+        
+        if self.algo == 0:
+            self.tc_par.setText("CS Parameter Beta")
+            self.ntc_beta.setEnabled(True)
+        else:
+            self.tc_par.setText(" ")
+            self.ntc_beta.setEnabled(False)
         
         
 #----------------------------------------------------------------------            
@@ -663,7 +703,25 @@ class PageTomo(QtGui.QWidget):
         
             savefn = basename + '_'+self.datanames[i]+extension
                 
-            self.tr.save_mrc(savefn, data)        
+            self.tr.save_mrc(savefn, data)    
+            
+            
+#----------------------------------------------------------------------    
+    def OnSaveROI(self, event): 
+        
+        
+        wildcard = "Mrc files (*.mrc);;"
+
+        SaveFileName = QtGui.QFileDialog.getSaveFileName(self, 'Save ROI Selection', '', wildcard)
+
+        SaveFileName = str(SaveFileName)
+        if SaveFileName == '':
+            return
+        
+        
+        data = self.ROIarray
+                
+        self.tr.save_mrc(SaveFileName, data)      
 
 #---------------------------------------------------------------------- 
 
@@ -700,6 +758,7 @@ class PageTomo(QtGui.QWidget):
         
         
         self.ROIvol[self.islice] = ROIpix_masked
+        self.ROIarray[:,:,self.islice] = ROIpix[:]
         
         self.haveROI = 1
         
@@ -711,20 +770,32 @@ class PageTomo(QtGui.QWidget):
     def OnSelectROI(self, event):
         
         self.AbsImagePanel.mpl_disconnect(self.cid1)
-        self.button_roispec.setEnabled(True)
+        if self.full_tomo_calculated == 1:
+            self.button_roispec.setEnabled(True)
+        
         self.button_roidel.setEnabled(True)
+        self.button_roihist.setEnabled(True)
+        self.button_saveroi.setEnabled(True)
         
         lineprops = dict(color='red', linestyle='-', linewidth = 1, alpha=1)
 
 
         self.lasso = LassoSelector(self.axes, onselect=self.OnSelectLasso, useblit=False, lineprops=lineprops)
         
-        
+#----------------------------------------------------------------------       
+    def OnROIHistogram(self, event):    
+        #self.window().Hide()
+        histogram = ROIHistogram(self)
+        histogram.show()
+               
 #----------------------------------------------------------------------           
     def OnResetROI(self, event):        
         
         self.button_roispec.setEnabled(False)
         self.button_roidel.setEnabled(False)
+        self.button_roihist.setEnabled(False)
+        self.button_saveroi.setEnabled(False)
+
         
         self.ROIvol =  [[]]*self.nslices
         
@@ -823,6 +894,7 @@ class PageTomo(QtGui.QWidget):
         self.datanames = []     
         
         self.ROIvol = []
+        self.ROIarray = []
         self.haveROI = 0
         
         
@@ -837,6 +909,10 @@ class PageTomo(QtGui.QWidget):
         self.button_save.setEnabled(False)
         self.button_save.setEnabled(False)
         self.button_roi.setEnabled(False)
+        self.button_roidel.setEnabled(False)
+        self.button_roihist.setEnabled(False)
+        self.button_saveroi.setEnabled(False)
+        self.button_roispec.setEnabled(False)
         
         self.tc_imagecomp.setText("Dataset: ")
         self.tc_comp.setText('Component: ')
@@ -845,6 +921,210 @@ class PageTomo(QtGui.QWidget):
         
         self.combonames.clear()
         
+
+
+#---------------------------------------------------------------------- 
+class ROIHistogram(QtGui.QDialog):
+
+    #def __init__(self, parent, stack):   
+    def __init__(self, parent):  
+        QtGui.QWidget.__init__(self, parent)
+        
+        self.parent = parent
+
+        
+        self.resize(600, 600)
+        self.setWindowTitle('Histogram')
+        
+        pal = QtGui.QPalette()
+        self.setAutoFillBackground(True)
+        pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
+        self.setPalette(pal)
+                
+#         self.stack = stack
+#       
+#         
+#         self.stack.calc_histogram()
+#         averagefluxmax = np.max(self.stack.histogram)
+#         self.histmin = 0.98*averagefluxmax
+#         self.histmax = averagefluxmax
+        
+
+        vbox = QtGui.QVBoxLayout()
+               
+        frame = QtGui.QFrame()
+        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        fbox = QtGui.QHBoxLayout()
+   
+        self.histfig = Figure((6.0, 4.2))
+        self.HistogramPanel = FigureCanvas(self.histfig)
+        self.HistogramPanel.setParent(self)
+        self.HistogramPanel.mpl_connect('button_press_event', self.OnSelection1)
+        self.HistogramPanel.mpl_connect('button_release_event', self.OnSelection2)
+        
+        
+        fbox.addWidget(self.HistogramPanel)
+        frame.setLayout(fbox)
+        vbox.addWidget(frame)
+                        
+        vbox1 = QtGui.QVBoxLayout()
+        sizer1 = QtGui.QGroupBox('I0 pixels')
+
+        self.textctrl = QtGui.QLabel(self)
+        #self.textctrl.setText('Selection: [ {0:5.2f} kHz, {1:5.2f} kHz ]'.format(float(self.histmin), float(self.histmax)))
+        vbox1.addWidget(self.textctrl)
+
+ 
+        self.absimgfig = Figure((2.5,2.5))
+        self.AbsImagePanel = FigureCanvas(self.absimgfig)
+        self.AbsImagePanel.setParent(self)
+
+        vbox1.addWidget(self.AbsImagePanel,0,QtCore .Qt. AlignLeft)
+        sizer1.setLayout(vbox1)
+        vbox.addWidget(sizer1)
+                
+        hbox2 = QtGui.QHBoxLayout()
+        button_ok = QtGui.QPushButton('Accept')
+        button_ok.clicked.connect(self.OnAccept)
+        hbox2.addWidget(button_ok)
+                
+        button_cancel = QtGui.QPushButton('Cancel')
+        button_cancel.clicked.connect(self.close)
+        hbox2.addWidget(button_cancel)
+        
+        vbox.addLayout(hbox2)
+        
+        self.setLayout(vbox)
+        
+#         self.draw_histogram()
+#         self.draw_image()
+
+
+        
+#----------------------------------------------------------------------        
+    def draw_histogram(self):
+        
+     
+        fig = self.histfig
+        fig.clf()
+        fig.add_axes((0.15,0.15,0.75,0.75))
+        self.axes = fig.gca()
+        
+        
+        histdata =  np.reshape(self.stack.histogram, (self.stack.n_cols*self.stack.n_rows), order='F')
+        
+        self.n, self.bins, patches = self.axes.hist(histdata, 200, normed=1, facecolor='green', alpha=0.75)
+        
+        self.axes.set_xlabel('Average Flux [kHz]')
+        self.axes.set_ylabel('Percentage of Pixels')
+
+        self.patch = self.axes.axvspan(self.histmin, self.histmax, facecolor='r', alpha=0.3)
+
+        
+        self.HistogramPanel.draw()
+        
+        
+    
+    
+#----------------------------------------------------------------------        
+    def draw_image(self):
+        
+   
+        image = self.stack.absdata[:,:,self.stack.n_ev/2].copy() 
+       
+        fluxmin = self.histmin
+        fluxmax = self.histmax
+                
+        hist_indices = np.where((fluxmin<self.stack.averageflux)&(self.stack.averageflux<fluxmax))
+
+        redpix = np.zeros((self.stack.n_cols,self.stack.n_rows))    
+        redpix[hist_indices] = 255
+              
+        redpix = np.ma.array(redpix)
+        
+        redpix_masked =  np.ma.masked_values(redpix, 0)
+        
+               
+        fig = self.absimgfig
+        fig.clf()
+        fig.add_axes(((0.0,0.0,1.0,1.0)))
+        
+        
+        axes = fig.gca()
+        fig.patch.set_alpha(1.0) 
+      
+        im = axes.imshow(np.rot90(image), cmap=matplotlib.cm.get_cmap("gray")) 
+
+        im_red = axes.imshow(np.rot90(redpix_masked),cmap=matplotlib.cm.get_cmap("autumn"))  
+         
+        axes.axis("off")  
+        self.AbsImagePanel.draw()
+
+#----------------------------------------------------------------------        
+    def OnSelection1(self, evt):
+        
+        x1 = evt.xdata
+                
+        self.button_pressed = True
+        self.conn = self.HistogramPanel.mpl_connect('motion_notify_event', self.OnSelectionMotion) 
+        
+        if x1 == None:
+            return
+        
+        self.histmin = x1
+
+    
+
+        
+#----------------------------------------------------------------------        
+    def OnSelection2(self, evt):
+        
+        x2 = evt.xdata
+            
+
+        self.button_pressed = False
+        self.HistogramPanel.mpl_disconnect(self.conn)    
+        
+        if x2 == None:
+            return        
+        
+        self.histmax = x2
+
+        self.textctrl.setText('Selection: [ {0:5.2f} kHz, {1:5.2f} kHz ]'.format(float(self.histmin), float(self.histmax)))
+    
+        
+        self.draw_histogram()
+        self.draw_image()       
+
+        
+#----------------------------------------------------------------------        
+    def OnSelectionMotion(self, event):        
+
+        x2 = event.xdata
+        
+        if x2 == None:
+            return  
+        self.histmax = x2
+        
+        fig = self.histfig
+
+        axes = fig.gca()
+
+        if self.patch != None:
+            self.patch.remove()
+        self.patch = axes.axvspan(self.histmin, self.histmax, facecolor='white', alpha=0.3)
+
+        self.HistogramPanel.draw()        
+        
+        
+#----------------------------------------------------------------------        
+    def OnAccept(self, evt):
+        
+        self.stack.i0_from_histogram(self.histmin, self.histmax)
+        self.parent.I0histogramCalculated()
+        self.close()
+
+
         
 
 #----------------------------------------------------------------------
@@ -10538,7 +10818,7 @@ class ImageRegistration(QtGui.QDialog):
         vbox8.addSpacing(5)  
         
          
-        self.button_remove = QtGui.QPushButton('Remove image from stack')
+        self.button_remove = QtGui.QPushButton('Remove energy from stack')
         self.button_remove.clicked.connect(self.OnRemoveImage)    
         vbox8.addWidget(self.button_remove)
                
@@ -11052,13 +11332,17 @@ class ImageRegistration(QtGui.QDialog):
         self.stack.ev = np.delete(self.stack.ev, self.iev) 
         
         
-        self.xshifts = np.delete(self.xshifts, self.iev) 
-        self.yshifts = np.delete(self.yshifts, self.iev) 
+
         
         if self.com.stack_4d == 0:
             self.stack.data_struct.exchange.data = self.stack.absdata
+            self.xshifts = np.delete(self.xshifts, self.iev) 
+            self.yshifts = np.delete(self.yshifts, self.iev) 
         else:
             self.stack.data_struct.exchange.data = self.stack.stack4D
+            self.xshifts = np.delete(self.xshifts, self.iev, axis=0) 
+            self.yshifts = np.delete(self.yshifts, self.iev, axis=0) 
+            
         self.stack.data_struct.exchange.energy = self.stack.ev
         
         if self.com.i0_loaded == 1:

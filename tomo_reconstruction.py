@@ -35,8 +35,8 @@ import Mrc
 #----------------------------------------------------------------------
 def write_mrc(stack, mrcfn):
     
-    stackf32 = stack.astype(np.float32)
-    Mrc.save(stackf32, mrcfn,ifExists='overwrite',calcMMM=False)
+    #stackf32 = stack.astype(np.float32)
+    Mrc.save(stack, mrcfn,ifExists='overwrite',calcMMM=False)
 
 
 #----------------------------------------------------------------------
@@ -144,7 +144,9 @@ class Ctomo:
         
 #----------------------------------------------------------------------   
 # Save mrc
-    def save_mrc(self, path, data):    
+    def save_mrc(self, path, data):  
+        
+        data = np.array(data, dtype=np.float32)  
         
         write_mrc(data, path)
 
