@@ -67,7 +67,7 @@ PlotW = PlotH*1.61803
 
 ImgDpi = 40
 
-verbose = True
+verbose = False
 
 showtomotab = 1
 
@@ -137,6 +137,8 @@ class PageTomo(QtGui.QWidget):
         
         self.maxIters = 10
         self.beta = 0.5
+        self.engpar = 0.001
+        self.useengreg = 0
         self.samplethick = 0
         
 
@@ -153,6 +155,11 @@ class PageTomo(QtGui.QWidget):
         self.button_engdata.clicked.connect( self.OnLoadTomoEng)
         self.button_engdata.setEnabled(False)
         vbox1.addWidget(self.button_engdata)
+        
+        self.button_expdata = QtGui.QPushButton('Export Tomo Data as .mrc')
+        self.button_expdata.clicked.connect( self.OnExportData)
+        self.button_expdata.setEnabled(False)
+        vbox1.addWidget(self.button_expdata)
         
 
         sizer1.setLayout(vbox1)
@@ -223,7 +230,8 @@ class PageTomo(QtGui.QWidget):
         self.ntc_niterations.setAlignment(QtCore.Qt.AlignRight)   
         self.ntc_niterations.setText(str(self.maxIters))
         hbox22.addWidget(self.ntc_niterations)  
-  
+        
+          
         vbox2.addLayout(hbox22) 
           
                 
@@ -240,6 +248,28 @@ class PageTomo(QtGui.QWidget):
         hbox23.addWidget(self.ntc_beta) 
         
         vbox2.addLayout(hbox23) 
+        
+
+
+        
+        
+        hbox25 = QtGui.QHBoxLayout()
+   
+        self.cb_ereg = QtGui.QCheckBox('CS Energy Reg Parameter', self)
+        self.cb_ereg.setChecked(False)
+        self.cb_ereg.stateChanged.connect(self.OnCBEngReg)
+        hbox25.addWidget(self.cb_ereg)        
+        
+        self.ntc_ereg = QtGui.QLineEdit(self)
+        self.ntc_ereg.setFixedWidth(65)
+        self.ntc_ereg.setValidator(QtGui.QDoubleValidator(0, 99999, 2, self))
+        self.ntc_ereg.setAlignment(QtCore.Qt.AlignRight)         
+        hbox25.addStretch(1)
+        self.ntc_ereg.setText(str(self.engpar))
+        self.ntc_ereg.setEnabled(False)
+        hbox25.addWidget(self.ntc_ereg)         
+        
+        vbox2.addLayout(hbox25) 
         
         
         hbox24 = QtGui.QHBoxLayout()
@@ -274,7 +304,7 @@ class PageTomo(QtGui.QWidget):
         
         self.button_roihist = QtGui.QPushButton( 'Histogram ROI selection...')
         self.button_roihist.clicked.connect(self.OnROIHistogram)
-        #self.button_roihist.setEnabled(False)
+        self.button_roihist.setEnabled(False)
         vbox3.addWidget(self.button_roihist)
         
         
@@ -418,7 +448,6 @@ class PageTomo(QtGui.QWidget):
         self.AbsImagePanel.draw()   
         
         self.button_save.setEnabled(False)
-        self.button_save.setEnabled(False)
         self.tc_comp.setText('Component: ')
         self.slider_comp.setEnabled(False)
         
@@ -440,6 +469,8 @@ class PageTomo(QtGui.QWidget):
         self.button_calc1.setEnabled(True)
         self.button_roi.setEnabled(False)
         self.energiesloaded = 1
+        
+        self.button_expdata.setEnabled(True)
         
         
 #----------------------------------------------------------------------          
@@ -485,6 +516,8 @@ class PageTomo(QtGui.QWidget):
         self.button_roi.setEnabled(False)
         self.energiesloaded = 0
         
+        self.button_expdata.setEnabled(True)
+        
         
 #----------------------------------------------------------------------          
     def OnCalcTomoFull(self, event):
@@ -505,11 +538,12 @@ class PageTomo(QtGui.QWidget):
             
             print 'Progress ',i+1,' / ',self.ncomponents
                 
-            self.tr.calc_tomo1(self.tomodata[:,:,i,:], 
+            self.tr.calc_tomo(self.tomodata[:,:,i,:], 
                                self.stack.theta,
                                self.maxIters,
                                self.beta,
-                               self.samplethick)
+                               self.samplethick,
+                               algorithm = self.algo)
             
             self.fulltomorecdata.append(self.tr.tomorec.copy())
             
@@ -539,6 +573,7 @@ class PageTomo(QtGui.QWidget):
         self.button_save.setEnabled(True)
         self.button_saveall.setEnabled(True)
         self.button_roi.setEnabled(True)
+        self.button_roihist.setEnabled(True)
         self.button_loadroi.setEnabled(True)
           
         
@@ -560,11 +595,12 @@ class PageTomo(QtGui.QWidget):
         self.samplethick = int(value) 
 
                 
-        self.tr.calc_tomo1(self.tomodata[:,:,self.select1,:], 
+        self.tr.calc_tomo(self.tomodata[:,:,self.select1,:], 
                            self.stack.theta,
                            self.maxIters,
                            self.beta,
-                           self.samplethick)
+                           self.samplethick,
+                           algorithm = self.algo)
         
         self.tomo_calculated = 1
         self.full_tomo_calculated = 0
@@ -587,6 +623,7 @@ class PageTomo(QtGui.QWidget):
         self.button_roispec.setEnabled(False)
         self.button_roi.setEnabled(True)
         self.button_loadroi.setEnabled(True)
+        self.button_roihist.setEnabled(True)
 
         
         self.ShowImage()
@@ -604,6 +641,7 @@ class PageTomo(QtGui.QWidget):
     def OnSelectAlgo(self, value):
         item = value
         self.algo = item
+    
         
         if self.algo == 0:
             self.tc_par.setText("CS Parameter Beta")
@@ -611,6 +649,17 @@ class PageTomo(QtGui.QWidget):
         else:
             self.tc_par.setText(" ")
             self.ntc_beta.setEnabled(False)
+            
+            
+ #----------------------------------------------------------------------           
+    def OnCBEngReg(self, state):
+        
+        if state == QtCore.Qt.Checked:
+            self.useengreg = 1
+            self.ntc_ereg.setEnabled(True)
+        else: 
+            self.useengreg = 0
+            self.ntc_ereg.setEnabled(False)
         
         
 #----------------------------------------------------------------------            
@@ -672,6 +721,29 @@ class PageTomo(QtGui.QWidget):
         plot.show()       
 
 #----------------------------------------------------------------------    
+    def OnExportData(self, event): 
+        
+        
+        wildcard = "Mrc files (*.mrc);;"
+
+        SaveFileName = QtGui.QFileDialog.getSaveFileName(self, 'Save Tomo Reconstructions', '', wildcard)
+
+        SaveFileName = str(SaveFileName)
+        if SaveFileName == '':
+            return
+        
+        
+        basename, extension = os.path.splitext(SaveFileName)  
+
+        for i in range(self.ncomponents):
+            data = self.tomodata[:,:,i,:]        
+        
+            savefn = basename + '_TiltS_'+self.datanames[i]+extension
+                
+            self.tr.save_mrc(savefn, data)  
+        
+        
+#----------------------------------------------------------------------    
     def OnSave(self, event): 
         
         
@@ -699,10 +771,10 @@ class PageTomo(QtGui.QWidget):
 
         SaveFileName = str(SaveFileName)
         if SaveFileName == '':
-            return
-        
+            return        
         
         basename, extension = os.path.splitext(SaveFileName)  
+            
 
         for i in range(self.ncomponents):
             data = self.fulltomorecdata[i]        
@@ -760,7 +832,6 @@ class PageTomo(QtGui.QWidget):
             self.button_roispec.setEnabled(True)
         
         self.button_roidel.setEnabled(True)
-        self.button_roihist.setEnabled(True)
         self.button_saveroi.setEnabled(True)
         
         self.ShowImage()
@@ -978,6 +1049,7 @@ class PageTomo(QtGui.QWidget):
         
         self.button_spcomp.setEnabled(False)
         self.button_engdata.setEnabled(False)
+        self.button_expdata.setEnabled(False)
         self.button_calc1.setEnabled(False)
         self.button_calcall.setEnabled(False)
         self.button_save.setEnabled(False)
@@ -9333,7 +9405,7 @@ class PageStack(QtGui.QWidget):
             self.loadImage()
             self.window().page0.ShowImage()
                     
- #----------------------------------------------------------------------           
+#----------------------------------------------------------------------           
     def OnShowColBar(self, state):
         
         if state == QtCore.Qt.Checked:
