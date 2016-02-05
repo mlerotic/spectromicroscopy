@@ -37,6 +37,14 @@ def write_mrc(stack, mrcfn):
     
     #stackf32 = stack.astype(np.float32)
     Mrc.save(stack, mrcfn,ifExists='overwrite',calcMMM=False)
+    
+    
+#----------------------------------------------------------------------
+def load_mrc( mrcfn):
+    
+    stack = Mrc.load(mrcfn)
+    
+    return stack
 
 
 #----------------------------------------------------------------------

@@ -293,6 +293,11 @@ class PageTomo(QtGui.QWidget):
         self.button_saveroi.setEnabled(False)
         vbox3.addWidget(self.button_saveroi)
         
+        self.button_loadroi = QtGui.QPushButton( 'Load ROI from .mrc')
+        self.button_loadroi.clicked.connect(self.OnLoadROI)
+        self.button_loadroi.setEnabled(False)
+        vbox3.addWidget(self.button_loadroi)
+        
         sizer3.setLayout(vbox3)
 
 
@@ -533,10 +538,8 @@ class PageTomo(QtGui.QWidget):
         self.slider_comp.setValue(self.icomp)
         self.button_save.setEnabled(True)
         self.button_saveall.setEnabled(True)
-        if self.energiesloaded == 1:
-            self.button_roi.setEnabled(True)
-        else:
-            self.button_roi.setEnabled(False)
+        self.button_roi.setEnabled(True)
+        self.button_loadroi.setEnabled(True)
           
         
         self.ShowImage()
@@ -581,6 +584,9 @@ class PageTomo(QtGui.QWidget):
         self.slider_comp.setRange(0, 0)
         self.button_roi.setEnabled(True)
         self.button_save.setEnabled(True)
+        self.button_roispec.setEnabled(False)
+        self.button_roi.setEnabled(True)
+        self.button_loadroi.setEnabled(True)
 
         
         self.ShowImage()
@@ -722,6 +728,42 @@ class PageTomo(QtGui.QWidget):
         data = self.ROIarray
                 
         self.tr.save_mrc(SaveFileName, data)      
+        
+        
+#----------------------------------------------------------------------    
+    def OnLoadROI(self, event): 
+        
+        
+        wildcard = "Mrc files (*.mrc);;"
+
+        OpenFileName = QtGui.QFileDialog.getOpenFileName(self, 'Load ROI Selection', '', wildcard)
+
+        OpenFileName = str(OpenFileName)
+        if OpenFileName == '':
+            return
+        
+                
+        self.ROIarray = tomo_reconstruction.load_mrc(OpenFileName)  
+        
+        
+        for i in range(self.nslices):
+
+            ROIpix = np.ma.array(self.ROIarray[:,:,i])
+            
+            ROIpix_masked =  np.ma.masked_values(ROIpix, 0)
+            self.ROIvol[i] = ROIpix_masked
+
+        
+        self.haveROI = 1
+        
+        if self.full_tomo_calculated == 1:
+            self.button_roispec.setEnabled(True)
+        
+        self.button_roidel.setEnabled(True)
+        self.button_roihist.setEnabled(True)
+        self.button_saveroi.setEnabled(True)
+        
+        self.ShowImage()
 
 #---------------------------------------------------------------------- 
 
@@ -770,7 +812,7 @@ class PageTomo(QtGui.QWidget):
     def OnSelectROI(self, event):
         
         self.AbsImagePanel.mpl_disconnect(self.cid1)
-        if self.full_tomo_calculated == 1:
+        if self.full_tomo_calculated == 1 and self.energiesloaded == 1:
             self.button_roispec.setEnabled(True)
         
         self.button_roidel.setEnabled(True)
@@ -883,8 +925,7 @@ class PageTomo(QtGui.QWidget):
 #----------------------------------------------------------------------        
     def MakeHistogramROI(self, histmin, histmax):        
 
-
-        
+      
         for i in range(self.nslices):
                  
             hist_indices = np.where((histmin<self.tr.tomorec[:,:,i])&(self.tr.tomorec[:,:,i]<histmax))
