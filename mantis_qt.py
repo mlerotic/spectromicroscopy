@@ -69,7 +69,7 @@ ImgDpi = 40
 
 verbose = True
 
-showtomotab = 0
+showtomotab = 1
 
 
 
@@ -785,7 +785,8 @@ class PageTomo(QtGui.QWidget):
 #----------------------------------------------------------------------       
     def OnROIHistogram(self, event):    
         #self.window().Hide()
-        histogram = ROIHistogram(self)
+        image = self.tr.tomorec[:,:,self.islice].copy() 
+        histogram = ROIHistogram(self, image, self.stack)
         histogram.show()
                
 #----------------------------------------------------------------------           
@@ -878,7 +879,39 @@ class PageTomo(QtGui.QWidget):
         
         self.xys = np.dstack(np.meshgrid(np.arange(self.stack.n_cols), np.arange(self.stack.n_rows))).reshape(-1,2)
          
+
+#----------------------------------------------------------------------        
+    def MakeHistogramROI(self, histmin, histmax):        
+
+
         
+        for i in range(self.nslices):
+                 
+            hist_indices = np.where((histmin<self.tr.tomorec[:,:,i])&(self.tr.tomorec[:,:,i]<histmax))
+ 
+            ROIpix = np.zeros((self.stack.n_cols,self.stack.n_rows))    
+            ROIpix[hist_indices] = 255
+
+            ROIpix = np.ma.array(ROIpix)
+            
+            ROIpix_masked =  np.ma.masked_values(ROIpix, 0)
+            
+            
+            self.ROIvol[i] = ROIpix_masked
+            self.ROIarray[:,:,i] = ROIpix[:]
+        
+        self.haveROI = 1
+        
+        if self.full_tomo_calculated == 1:
+            self.button_roispec.setEnabled(True)
+        
+        self.button_roidel.setEnabled(True)
+        self.button_roihist.setEnabled(True)
+        self.button_saveroi.setEnabled(True)
+        
+        self.ShowImage()
+        
+
 #----------------------------------------------------------------------        
     def NewStackClear(self):
         
@@ -926,8 +959,7 @@ class PageTomo(QtGui.QWidget):
 #---------------------------------------------------------------------- 
 class ROIHistogram(QtGui.QDialog):
 
-    #def __init__(self, parent, stack):   
-    def __init__(self, parent):  
+    def __init__(self, parent, image, stack):   
         QtGui.QWidget.__init__(self, parent)
         
         self.parent = parent
@@ -941,13 +973,13 @@ class ROIHistogram(QtGui.QDialog):
         pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
         self.setPalette(pal)
                 
-#         self.stack = stack
-#       
-#         
-#         self.stack.calc_histogram()
-#         averagefluxmax = np.max(self.stack.histogram)
-#         self.histmin = 0.98*averagefluxmax
-#         self.histmax = averagefluxmax
+        self.image = image
+        self.stack = stack
+    
+        
+        imgmax = np.max(self.image)
+        self.histmin = 0.3*imgmax
+        self.histmax = 0.6*imgmax
         
 
         vbox = QtGui.QVBoxLayout()
@@ -967,21 +999,33 @@ class ROIHistogram(QtGui.QDialog):
         frame.setLayout(fbox)
         vbox.addWidget(frame)
                         
+        hbox = QtGui.QHBoxLayout()
         vbox1 = QtGui.QVBoxLayout()
-        sizer1 = QtGui.QGroupBox('I0 pixels')
+        sizer1 = QtGui.QGroupBox('ROI selection')
+        
+        
+        tc1 = QtGui.QLabel(self)
+        tc1.setText('Select an ROI region by clicking and dragging a mouse on the histogram.')
+        vbox1.addWidget(tc1)
 
-        self.textctrl = QtGui.QLabel(self)
-        #self.textctrl.setText('Selection: [ {0:5.2f} kHz, {1:5.2f} kHz ]'.format(float(self.histmin), float(self.histmax)))
-        vbox1.addWidget(self.textctrl)
+        self.textctrl1 = QtGui.QLabel(self)
+        self.textctrl1.setText('Min =  {0:04.3f}'.format(float(self.histmin)))
+        vbox1.addWidget(self.textctrl1)
+        
+        self.textctrl2 = QtGui.QLabel(self)
+        self.textctrl2.setText('Max =  {0:04.3f}'.format( float(self.histmax)))
+        vbox1.addWidget(self.textctrl2)
 
- 
-        self.absimgfig = Figure((2.5,2.5))
+        sizer1.setLayout(vbox1)
+        hbox.addWidget(sizer1)
+        
+        self.absimgfig = Figure((4,4))
         self.AbsImagePanel = FigureCanvas(self.absimgfig)
         self.AbsImagePanel.setParent(self)
 
-        vbox1.addWidget(self.AbsImagePanel,0,QtCore .Qt. AlignLeft)
-        sizer1.setLayout(vbox1)
-        vbox.addWidget(sizer1)
+        hbox.addWidget(self.AbsImagePanel,0,QtCore .Qt. AlignLeft)
+        
+        vbox.addLayout(hbox)
                 
         hbox2 = QtGui.QHBoxLayout()
         button_ok = QtGui.QPushButton('Accept')
@@ -996,8 +1040,8 @@ class ROIHistogram(QtGui.QDialog):
         
         self.setLayout(vbox)
         
-#         self.draw_histogram()
-#         self.draw_image()
+        self.draw_histogram()
+        self.draw_image()
 
 
         
@@ -1010,12 +1054,11 @@ class ROIHistogram(QtGui.QDialog):
         fig.add_axes((0.15,0.15,0.75,0.75))
         self.axes = fig.gca()
         
+        histogram = self.image.flatten()
         
-        histdata =  np.reshape(self.stack.histogram, (self.stack.n_cols*self.stack.n_rows), order='F')
+        self.n, self.bins, patches = self.axes.hist(histogram, 200, normed=1, facecolor='green', alpha=0.75)
         
-        self.n, self.bins, patches = self.axes.hist(histdata, 200, normed=1, facecolor='green', alpha=0.75)
-        
-        self.axes.set_xlabel('Average Flux [kHz]')
+        self.axes.set_xlabel('Optical Density')
         self.axes.set_ylabel('Percentage of Pixels')
 
         self.patch = self.axes.axvspan(self.histmin, self.histmax, facecolor='r', alpha=0.3)
@@ -1030,18 +1073,18 @@ class ROIHistogram(QtGui.QDialog):
     def draw_image(self):
         
    
-        image = self.stack.absdata[:,:,self.stack.n_ev/2].copy() 
+        image = self.image.copy() 
        
         fluxmin = self.histmin
         fluxmax = self.histmax
-                
-        hist_indices = np.where((fluxmin<self.stack.averageflux)&(self.stack.averageflux<fluxmax))
-
+                 
+        hist_indices = np.where((fluxmin<image)&(image<fluxmax))
+ 
         redpix = np.zeros((self.stack.n_cols,self.stack.n_rows))    
         redpix[hist_indices] = 255
-              
+               
         redpix = np.ma.array(redpix)
-        
+         
         redpix_masked =  np.ma.masked_values(redpix, 0)
         
                
@@ -1090,8 +1133,8 @@ class ROIHistogram(QtGui.QDialog):
         
         self.histmax = x2
 
-        self.textctrl.setText('Selection: [ {0:5.2f} kHz, {1:5.2f} kHz ]'.format(float(self.histmin), float(self.histmax)))
-    
+        self.textctrl1.setText('Min =  {0:04.3f}'.format(float(self.histmin)))
+        self.textctrl2.setText('Max =  {0:04.3f}'.format( float(self.histmax)))
         
         self.draw_histogram()
         self.draw_image()       
@@ -1120,8 +1163,8 @@ class ROIHistogram(QtGui.QDialog):
 #----------------------------------------------------------------------        
     def OnAccept(self, evt):
         
-        self.stack.i0_from_histogram(self.histmin, self.histmax)
-        self.parent.I0histogramCalculated()
+        self.parent.MakeHistogramROI(self.histmin, self.histmax)
+
         self.close()
 
 
