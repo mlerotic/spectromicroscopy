@@ -113,6 +113,7 @@ class PageTomo(QtGui.QWidget):
         self.anlz = anlz
         
         self.tr = tomo_reconstruction.Ctomo(self.stack)
+        self.theta = []
         
         self.algonames = ['Compressed Sensing', 'SIRT']
         self.algo = 0
@@ -161,6 +162,18 @@ class PageTomo(QtGui.QWidget):
         self.button_expdata.setEnabled(False)
         vbox1.addWidget(self.button_expdata)
         
+        
+        line = QtGui.QFrame()
+        line.setFrameShape(QtGui.QFrame.HLine)
+        line.setFrameShadow(QtGui.QFrame.Sunken) 
+        
+        vbox1.addStretch(1)
+        vbox1.addWidget(line) 
+        vbox1.addStretch(1)  
+        
+        self.button_loadmrc = QtGui.QPushButton('Load Single Dataset from .mrc')
+        self.button_loadmrc.clicked.connect( self.OnLoadSingleMrc)
+        vbox1.addWidget(self.button_loadmrc)        
 
         sizer1.setLayout(vbox1)
 
@@ -414,14 +427,21 @@ class PageTomo(QtGui.QWidget):
         vboxt1.addWidget(sizer1)
         vboxt1.addStretch (1)
         vboxt1.addWidget(sizer2)
-        vboxt1.addStretch (1)
-        vboxt1.addWidget(sizer3)
+        
+        vboxt2 = QtGui.QVBoxLayout()
+        vboxt2.addWidget(sizer3)
+        vboxt2.addStretch (1)
         
         hboxtop.addStretch (0.5)
         hboxtop.addLayout(vboxt1)
         hboxtop.addStretch (0.5)
         hboxtop.addLayout(vbox5)
         hboxtop.addStretch (0.5)
+        hboxtop.addLayout(vboxt2)
+        hboxtop.addStretch (0.5)
+
+        #vboxt1.addStretch (1)
+
         
         vboxtop.addStretch (0.5)
         vboxtop.addLayout(hboxtop)
@@ -431,7 +451,7 @@ class PageTomo(QtGui.QWidget):
 #         vboxtop.addWidget(sizer4)
 #         vboxtop.addStretch (0.5)
 
-        vboxtop.setContentsMargins(50,50,50,50)
+        vboxtop.setContentsMargins(20,20,20,20)
         self.setLayout(vboxtop)
         
         
@@ -453,6 +473,10 @@ class PageTomo(QtGui.QWidget):
         
         
         self.tomodata = self.stack.od4D
+        
+        self.theta = self.stack.theta
+        self.n_cols = self.stack.n_cols
+        self.n_rows = self.stack.n_rows
         
         self.datanames = []
         for i in range(self.stack.n_ev):
@@ -500,7 +524,10 @@ class PageTomo(QtGui.QWidget):
             else:
                 self.tomodata[:,:,:,i] = self.anlz.target_pcafit_maps[i]
          
-       
+        self.theta = self.stack.theta
+        self.n_cols = self.stack.n_cols
+        self.n_rows = self.stack.n_rows
+                
         self.datanames = []
         for i in range(self.ncomponents):
             self.datanames.append(str(self.anlz.tspec_names[i]))
@@ -518,7 +545,98 @@ class PageTomo(QtGui.QWidget):
         
         self.button_expdata.setEnabled(True)
         
+#----------------------------------------------------------------------          
+    def OnLoadSingleMrc(self, event):
         
+        
+
+        wildcard = "Mrc files (*.mrc);;"
+
+        OpenFileName = QtGui.QFileDialog.getOpenFileName(self, 'Load Tomo Dataset', '', wildcard,
+                                                         None, QtGui.QFileDialog.DontUseNativeDialog)
+
+        OpenFileName = str(OpenFileName)
+        if OpenFileName == '':
+            return
+        
+        data = tomo_reconstruction.load_mrc(OpenFileName)
+        
+        
+        #data = np.swapaxes(data, 0, 2)
+        
+        #data = data[256:768,256:768,:]
+        
+        dims = data.shape
+        self.n_cols = dims[0]
+        self.n_rows = dims[1]
+        
+        self.tomodata = np.zeros((dims[0], dims[1], 1, dims[2]))
+        self.tomodata[:,:,0,:] = data
+        
+        #Read energies from file
+        wildcard = "Angle files (*.*);;"
+        OpenFileName2 = QtGui.QFileDialog.getOpenFileName(self, 'Load Angle data', '', wildcard,
+                                                         None, QtGui.QFileDialog.DontUseNativeDialog)
+
+        OpenFileName2 = str(OpenFileName2)
+        if OpenFileName2 == '':
+            return
+
+        f = open(str(OpenFileName2),'r')
+        
+        tlist = []   
+    
+        for line in f:
+            if line.startswith("*"):
+                pass
+            else:
+                t = line 
+                tlist.append(float(t))
+                   
+            
+                
+        self.theta = np.array(tlist)
+                
+        f.close()
+        
+    
+        self.fulltomorecdata = []        
+        self.tomo_calculated = 0
+        self.full_tomo_calculated = 0
+        
+        
+
+
+        fig = self.absimgfig
+        fig.clf()
+        self.AbsImagePanel.draw()   
+        
+        self.button_save.setEnabled(False)
+        self.tc_comp.setText('Component: ')
+        self.slider_comp.setEnabled(False)
+        
+        
+        basename = os.path.basename(str(OpenFileName))
+        self.datanames = []
+        
+
+        self.datanames.append(str(basename))
+            
+        self.ncomponents = 1
+        
+        self.combonames.clear()
+        #self.combonames.addItems(self.datanames)
+        
+        self.tc_imagecomp.setText("Dataset:" + OpenFileName)
+        
+        self.button_calcall.setEnabled(False)
+        self.button_calc1.setEnabled(True)
+        self.button_roi.setEnabled(False)
+        self.energiesloaded = 0
+        
+        self.button_expdata.setEnabled(False)
+        
+               
 #----------------------------------------------------------------------          
     def OnCalcTomoFull(self, event):
         
@@ -547,7 +665,7 @@ class PageTomo(QtGui.QWidget):
                 print 'Progress ',i+1,' / ',self.ncomponents
                     
                 self.tr.calc_tomo(self.tomodata[:,:,i,:], 
-                                   self.stack.theta,
+                                   self.theta,
                                    self.maxIters,
                                    self.beta,
                                    0,
@@ -560,7 +678,7 @@ class PageTomo(QtGui.QWidget):
                 print 'Progress ',i+1,' / ',self.ncomponents
                     
                 self.tr.calc_tomo(self.tomodata[:,:,i,:], 
-                                   self.stack.theta,
+                                   self.theta,
                                    self.maxIters,
                                    self.beta,
                                    self.samplethick,
@@ -578,7 +696,7 @@ class PageTomo(QtGui.QWidget):
                 print 'Progress ',i+1,' / ',self.ncomponents
                     
                 self.tr.calc_tomo(self.tomodata[:,:,i,:], 
-                                   self.stack.theta,
+                                   self.theta,
                                    self.maxIters,
                                    self.beta,
                                    self.samplethick,
@@ -636,9 +754,11 @@ class PageTomo(QtGui.QWidget):
         value = self.ntc_samplethick.text()
         self.samplethick = int(value) 
 
-                
+        dims = self.tomodata[:,:,self.select1,:].shape
+        print 'Data dims = ', dims
+        
         self.tr.calc_tomo(self.tomodata[:,:,self.select1,:], 
-                           self.stack.theta,
+                           self.theta,
                            self.maxIters,
                            self.beta,
                            self.samplethick,
@@ -745,16 +865,16 @@ class PageTomo(QtGui.QWidget):
         
      
         ix = int(np.floor(x))           
-        iy = self.stack.n_rows-1-int(np.floor(y))  
+        iy = self.n_rows-1-int(np.floor(y))  
                 
         if ix<0 :
             ix=0
-        if ix>self.stack.n_cols-1 :
-            ix=self.stack.n_cols-1
+        if ix>self.n_cols-1 :
+            ix=self.n_cols-1
         if iy<0 :
             iy=0
-        if iy>self.stack.n_rows-1 :
-            iy=self.stack.n_rows-1
+        if iy>self.n_rows-1 :
+            iy=self.n_rows-1
             
         spectrum = []
 
@@ -787,6 +907,15 @@ class PageTomo(QtGui.QWidget):
             savefn = basename + '_TiltS_'+self.datanames[i]+extension
                 
             self.tr.save_mrc(savefn, data)  
+            
+        savefn2 = basename + '_Angles.txt'
+        
+        f = open(str(savefn2),'wt')
+        
+        for i in range(len(self.theta)):
+            print>>f, self.theta[i]
+            
+        f.close()
         
         
 #----------------------------------------------------------------------    
@@ -901,13 +1030,13 @@ class PageTomo(QtGui.QWidget):
         path = matplotlib.path.Path(verts)
         #find pixels inside the polygon 
 
-        ROIpix = np.zeros((self.stack.n_cols,self.stack.n_rows))    
+        ROIpix = np.zeros((self.n_cols,self.n_rows))    
         
-        for i in range(self.stack.n_cols):
-            for j in range(self.stack.n_rows):
+        for i in range(self.n_cols):
+            for j in range(self.n_rows):
                 Pinside = path.contains_point((i,j))
                 if Pinside == True:
-                    ROIpix[i, self.stack.n_rows-1-j] = 255
+                    ROIpix[i, self.n_rows-1-j] = 255
               
 
 
@@ -945,7 +1074,7 @@ class PageTomo(QtGui.QWidget):
     def OnROIHistogram(self, event):    
         #self.window().Hide()
         image = self.tr.tomorec[:,:,self.islice].copy() 
-        histogram = ROIHistogram(self, image, self.stack)
+        histogram = ROIHistogram(self, image, self.n_cols, self.n_rows)
         histogram.show()
                
 #----------------------------------------------------------------------           
@@ -953,7 +1082,7 @@ class PageTomo(QtGui.QWidget):
         
         self.button_roispec.setEnabled(False)
         self.button_roidel.setEnabled(False)
-        self.button_roihist.setEnabled(False)
+        self.button_roihist.setEnabled(True)
         self.button_saveroi.setEnabled(False)
 
         
@@ -1036,7 +1165,7 @@ class PageTomo(QtGui.QWidget):
         self.AbsImagePanel.draw()
         self.axes = axes
         
-        self.xys = np.dstack(np.meshgrid(np.arange(self.stack.n_cols), np.arange(self.stack.n_rows))).reshape(-1,2)
+        self.xys = np.dstack(np.meshgrid(np.arange(self.n_cols), np.arange(self.n_rows))).reshape(-1,2)
          
 
 #----------------------------------------------------------------------        
@@ -1047,7 +1176,7 @@ class PageTomo(QtGui.QWidget):
                  
             hist_indices = np.where((histmin<self.tr.tomorec[:,:,i])&(self.tr.tomorec[:,:,i]<histmax))
  
-            ROIpix = np.zeros((self.stack.n_cols,self.stack.n_rows))    
+            ROIpix = np.zeros((self.n_cols,self.n_rows))    
             ROIpix[hist_indices] = 255
 
             ROIpix = np.ma.array(ROIpix)
@@ -1118,7 +1247,7 @@ class PageTomo(QtGui.QWidget):
 #---------------------------------------------------------------------- 
 class ROIHistogram(QtGui.QDialog):
 
-    def __init__(self, parent, image, stack):   
+    def __init__(self, parent, image, n_cols, n_rows):   
         QtGui.QWidget.__init__(self, parent)
         
         self.parent = parent
@@ -1133,7 +1262,9 @@ class ROIHistogram(QtGui.QDialog):
         self.setPalette(pal)
                 
         self.image = image
-        self.stack = stack
+        
+        self.n_cols = n_cols
+        self.n_rows = n_rows
     
         
         imgmax = np.max(self.image)
@@ -1239,7 +1370,7 @@ class ROIHistogram(QtGui.QDialog):
                  
         hist_indices = np.where((fluxmin<image)&(image<fluxmax))
  
-        redpix = np.zeros((self.stack.n_cols,self.stack.n_rows))    
+        redpix = np.zeros((self.n_cols,self.n_rows))    
         redpix[hist_indices] = 255
                
         redpix = np.ma.array(redpix)
