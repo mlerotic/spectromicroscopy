@@ -533,21 +533,63 @@ class PageTomo(QtGui.QWidget):
         self.samplethick = int(value) 
         
         self.fulltomorecdata = []
+        
+        if (self.useengreg == 1) and (self.algo == 0):
 
-        for i in range(self.ncomponents):
+            value = self.ntc_ereg.text()
+            beta2 = float(value)   
             
-            print 'Progress ',i+1,' / ',self.ncomponents
+            print 'Calculate initial reconstructions'
+
+            initrecs = []
+            for i in range(self.ncomponents):
                 
-            self.tr.calc_tomo(self.tomodata[:,:,i,:], 
-                               self.stack.theta,
-                               self.maxIters,
-                               self.beta,
-                               self.samplethick,
-                               algorithm = self.algo)
+                print 'Progress ',i+1,' / ',self.ncomponents
+                    
+                self.tr.calc_tomo(self.tomodata[:,:,i,:], 
+                                   self.stack.theta,
+                                   self.maxIters,
+                                   self.beta,
+                                   0,
+                                   algorithm = self.algo)
+                    
+                initrecs.append(np.swapaxes(np.array(self.tr.tomorec.copy()), 0, 1))
+                
+            for i in range(self.ncomponents):
+                
+                print 'Progress ',i+1,' / ',self.ncomponents
+                    
+                self.tr.calc_tomo(self.tomodata[:,:,i,:], 
+                                   self.stack.theta,
+                                   self.maxIters,
+                                   self.beta,
+                                   self.samplethick,
+                                   algorithm = 2,
+                                   x0=initrecs,
+                                   comp = i, beta2=beta2)
+                
+                self.fulltomorecdata.append(self.tr.tomorec.copy()) 
+                
             
-            self.fulltomorecdata.append(self.tr.tomorec.copy())
+        else:  
+                
+            for i in range(self.ncomponents):
+                
+                print 'Progress ',i+1,' / ',self.ncomponents
+                    
+                self.tr.calc_tomo(self.tomodata[:,:,i,:], 
+                                   self.stack.theta,
+                                   self.maxIters,
+                                   self.beta,
+                                   self.samplethick,
+                                   algorithm = self.algo)
+                
+                self.fulltomorecdata.append(self.tr.tomorec.copy())
+         
+            
             
         self.tr.tomorec = self.fulltomorecdata[self.icomp]
+        
         
         
         self.full_tomo_calculated = 1
@@ -642,13 +684,17 @@ class PageTomo(QtGui.QWidget):
         item = value
         self.algo = item
     
-        
+        # 0 - CS
         if self.algo == 0:
-            self.tc_par.setText("CS Parameter Beta")
+            self.tc_par.setEnabled(True)
             self.ntc_beta.setEnabled(True)
+            self.cb_ereg.setEnabled(True)
+            self.ntc_ereg.setEnabled(True)
         else:
-            self.tc_par.setText(" ")
+            self.tc_par.setEnabled(False)
             self.ntc_beta.setEnabled(False)
+            self.cb_ereg.setEnabled(False)
+            self.ntc_ereg.setEnabled(False)
             
             
  #----------------------------------------------------------------------           
