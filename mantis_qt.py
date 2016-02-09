@@ -57,7 +57,7 @@ from file_plugins import file_bim
 from file_plugins import file_dataexch_hdf5
 
 
-version = '2.2.02'
+version = '2.2.03'
 
 Winsizex = 1000
 Winsizey = 700
@@ -562,17 +562,10 @@ class PageTomo(QtGui.QWidget):
         data = tomo_reconstruction.load_mrc(OpenFileName)
         
         
-        #data = np.swapaxes(data, 0, 2)
-        
-        #data = data[256:768,256:768,:]
+        #data = data[:,256:768,256:768]
         
         dims = data.shape
-        self.n_cols = dims[0]
-        self.n_rows = dims[1]
-        
-        self.tomodata = np.zeros((dims[0], dims[1], 1, dims[2]))
-        self.tomodata[:,:,0,:] = data
-        
+
         #Read energies from file
         wildcard = "Angle files (*.*);;"
         OpenFileName2 = QtGui.QFileDialog.getOpenFileName(self, 'Load Angle data', '', wildcard,
@@ -593,12 +586,21 @@ class PageTomo(QtGui.QWidget):
                 t = line 
                 tlist.append(float(t))
                    
-            
-                
+   
         self.theta = np.array(tlist)
                 
         f.close()
         
+        ntheta = len(self.theta)
+        if ntheta != dims[2]:
+            data = np.swapaxes(data, 0, 2)
+            
+            
+        dims = data.shape
+        self.n_cols = dims[0]
+        self.n_rows = dims[1]
+        self.tomodata = np.zeros((dims[0], dims[1], 1, dims[2]))
+        self.tomodata[:,:,0,:] = data        
     
         self.fulltomorecdata = []        
         self.tomo_calculated = 0
