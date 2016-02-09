@@ -19,7 +19,7 @@ from __future__ import division
 
 import os
 import numpy as np
-from skimage.morphology._greyreconstruct import reconstruction_loop
+#from skimage.morphology._greyreconstruct import reconstruction_loop
 
 M_PI = 3.14159265358979323846264338327
 
