@@ -55,6 +55,9 @@ import file_plugins
 from file_plugins import file_xrm
 from file_plugins import file_bim
 from file_plugins import file_dataexch_hdf5
+from file_plugins import file_ncb
+from file_plugins import file_tif
+from file_plugins import file_stk
 
 
 version = '2.2.03'
@@ -69,7 +72,7 @@ ImgDpi = 40
 
 verbose = False
 
-showtomotab = 0
+showtomotab = 1
 
 
 
@@ -14360,13 +14363,13 @@ class MainFrame(QtGui.QMainWindow):
     def SaveProcessedStack(self):
 
         """
-        Browse for .hdf5 file or .ncb or tiff or .stk
+        Browse for .hdf5 file or .ncb or tiff 
         """
         
-        #try:
-        if True:
+        try:
+        #if True:
             #wildcard = "HDF5 file (*.hdf5);;aXis2000 NCB file (*.ncb);;TIFF file (.tif);;STK file (*.stk);;"
-            wildcard = "HDF5 file (*.hdf5);;aXis2000 NCB file (*.ncb);;TIFF file (.tif);;STK file (*.stk);;"
+            wildcard = "HDF5 file (*.hdf5);;aXis2000 NCB file (*.ncb);;TIFF file (.tif)"
 
             filepath = QtGui.QFileDialog.getSaveFileName(self, 'Save processed stack', '', wildcard)
 
@@ -14384,23 +14387,21 @@ class MainFrame(QtGui.QMainWindow):
             if extension == '.hdf5':            
                 file_dataexch_hdf5.write_h5(filepath, self.data_struct) 
                            
-#             elif extension == '.ncb':    
-#                 self.stk.write_ncb(filepath, self.data_struct) 
-#            
-#             elif extension == '.tif':    
-#                 self.stk.write_tif(filepath, self.stk.absdata, energies=self.stk.ev) 
-#                 
-#             elif extension == '.stk':    
-#                 self.stk.write_stk(filepath) 
+            elif extension == '.ncb':    
+                file_ncb.write_ncb(filepath, self.stk) 
+            
+            elif extension == '.tif':    
+                file_tif.write_tif(filepath, self.stk.absdata, energies=self.stk.ev) 
+                 
             
          
             QtGui.QApplication.restoreOverrideCursor()
 
-#         except:
-#       
-#             QtGui.QApplication.restoreOverrideCursor()
-#                  
-#             QtGui.QMessageBox.warning(self, 'Error', 'Could not save processed stack file.')
+        except:
+       
+            QtGui.QApplication.restoreOverrideCursor()
+                  
+            QtGui.QMessageBox.warning(self, 'Error', 'Could not save processed stack file.')
                    
 
         self.refresh_widgets()

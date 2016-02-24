@@ -111,7 +111,7 @@ def read(filename, self, selection=None):
 
 #---------------------------------------------------------------------- 
       
-def write_tif(self, filename, data, energies = []):   
+def write_tif(filename, data, energies = []):   
 
     dims = data.shape
     for i in range(dims[2]):

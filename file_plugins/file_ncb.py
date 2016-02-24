@@ -295,6 +295,82 @@ def read_ncb_data(self, filename):
 
     return image_stack, angles
 
+
+#----------------------------------------------------------------------
+#  This procedure writes  a whole stack (3d (E,x,y) array) to a binary file
+#  with associated *.dat file to track paramaters
+def write_ncb(filename, stack):
+    
+    
+    print 'Writing .ncb stack:', filename
+    
+    
+    basename, extension = os.path.splitext(filename) 
+    dat_fn = basename + '.dat'
+    
+    image_stack = np.transpose(stack.absdata, axes=(1,0,2))
+    
+    #image_stack = stack.absdata.copy()
+    
+    image_stack = np.reshape(image_stack, (stack.n_cols*stack.n_rows*stack.n_ev), order='F') 
+    
+
+    tmax = np.amax(image_stack)
+    tmin = np.amin(image_stack)
+    test = np.amax([abs(tmin), abs(tmax)])
+    scale = 1.
+    if test > 3e4 or test < 1e3 :
+        scale = 10.**(3-np.fix(np.math.log10(test)))
+
+
+    #Save image stack to a binary .dat file
+    f = open(str(filename),'wb')
+    if scale != 1.0:
+        print 'Scaling the data by ', scale
+        saveddata = image_stack*scale
+        saveddata.astype(np.int16).tofile(f)
+    else:
+        scale = -1.0
+        image_stack.astype(np.float32).tofile(f)
+    f.close()
+
+    #print 'imagedims', image_stack.shape
+    
+
+    f = open(str(dat_fn),'w')
+
+    print>>f, '\t%d\t%d\t%.6f' %(stack.n_rows, stack.n_cols, scale)
+    #print>>f, '\t%d\t%d\t%.6f' %(stack.n_cols, stack.n_rows, scale)
+    
+    
+    x_start = stack.y_dist[0]
+    x_stop = stack.y_dist[-1]
+    if x_start != 0. :
+        x_stop = x_stop - x_start
+        x_start = 0.
+
+    print>>f, '\t%.6f\t%.6f' %(x_start, x_stop)
+    
+    y_start = stack.x_dist[0]
+    y_stop = stack.x_dist[-1]
+    if y_start != 0. :
+        y_stop = y_stop - y_start
+        y_start = 0.
+    print>>f, '\t%.6f\t%.6f' %(y_start, y_stop)
+    
+    print>>f, '\t%d' %(stack.n_ev)
+    
+    for i in range(stack.n_ev):
+        print>>f, '\t%.6f' %(stack.ev[i])
+    
+    for i in range(stack.n_ev):
+        thisstr = 'image'+str(i+1)
+        print>>f, '%s\t%.6f\t%.6f' %(thisstr, stack.ev[i], stack.data_dwell[i])
+
+    f.close()
+    
+    return
+
 #----------------------------------------------------------------------  
 def natural_sort(l): 
     convert = lambda text: int(text) if text.isdigit() else text.lower() 
