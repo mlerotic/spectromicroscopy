@@ -72,7 +72,7 @@ ImgDpi = 40
 
 verbose = False
 
-showtomotab = 1
+showtomotab = 0
 
 
 
