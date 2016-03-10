@@ -59,7 +59,7 @@ def calc_coords(ry, rz, xi, yi, sin_p, cos_p,
     srcx = xi*cos_p-yi*sin_p
     srcy = xi*sin_p+yi*cos_p
     detx = -xi*cos_p-yi*sin_p
-    dety = -xi*sin_p+yi*cos_p
+    dety = -xi*sin_p+yi*cos_p    
 
     slope = (srcy-dety)/(srcx-detx)
     islope = 1/slope

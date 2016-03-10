@@ -23,6 +23,8 @@ import scipy as sp
 from time import time
 
 
+
+
 import warnings
 warnings.simplefilter('ignore', DeprecationWarning)
 
@@ -97,7 +99,7 @@ class Ctomo:
         #print 'Number of angles ', nang
                 
         dims = tomodata.shape
-        #print 'Dimensions ', dims, tomodata.dtype        
+        print 'Dimensions ', dims, tomodata.dtype        
     
         stack = np.swapaxes(tomodata, 0, 1)
 
@@ -172,6 +174,10 @@ class Ctomo:
 # Calculate tomo - SIRT reconstruction for 1 dataset 
     def calc_tomo_sirt(self, tomodata, theta, maxiter, beta, samplethickness):
         
+        try:
+            from skimage.transform import iradon, radon
+        except:
+            return
 
         print 'SIRT'
         #print 'Angles ', theta
@@ -186,18 +192,17 @@ class Ctomo:
                       
         nang = len(theta)
         print 'Number of angles ', nang
+    
+        tomodata = np.swapaxes(tomodata, 0, 1)
                 
         dims = tomodata.shape
         print 'Dimensions ', dims, tomodata.dtype        
-    
-        stack = np.swapaxes(tomodata, 0, 2)
-        
-        stack = stack.astype(np.float32)
-        
-        print 'stack shape', stack.shape
+     
+        stack = tomodata.astype(np.float32)
 
 
-        theta = np.deg2rad(theta)
+
+        #theta = np.deg2rad(theta)
         
         dims = stack.shape
         ncols = dims[0]
@@ -206,7 +211,73 @@ class Ctomo:
         
         t1 = time()
         
-        recondata = st.calculate_sirt(stack, theta, maxiter)
+        #recondata = st.calculate_sirt(stack, theta, maxiter)
+        
+
+        print 'Calculating SIRT reconstruction'
+        print 'Number of iterations: ', maxiter
+        #N Iterations
+        n = maxiter
+    
+        R = stack[ncols/2,:, :]
+        S1 = np.sum(R)
+        # Normalize the sinogram
+#         Rmax = np.amax(R)
+#         Rmin = np.amin(R)
+#         
+#         R = (R-Rmin)/(Rmax-Rmin)
+        
+    
+
+        At = iradon(R, theta=theta, output_size=nrows)
+        
+        #calculate pixels sum on At
+        S2 = np.sum(At)
+        #normalize At so that pixel counts match
+        At = (At/S2)*S1
+    
+        
+        #Matrix xk is our solution at the k-th step, 
+        #now it is our initial guess
+        xk = At
+        error = []
+        recondata = []
+        
+        for j in range(ncols):
+            print 'processing ', j,' of ', ncols
+            
+
+            R = stack[j,:, :]
+            S1 = np.sum(R)
+            # Normalize the sinogram
+#             Rmax = np.amax(R)
+#             Rmin = np.amin(R)
+#             R = (R-Rmin)/(Rmax-Rmin)
+            
+            At = iradon(R, theta=theta, output_size=nrows)
+            S2 = np.sum(At)
+            At = (At/S2)*S1
+            xk = At
+            
+            
+            for  k in range(n):
+                t = iradon(radon(xk,theta),theta)
+                #normalize
+                St = np.sum(t)
+                t = (t/St)*S1
+                #update using (At g - At A x_k) 
+                #new xk = xk + difference between reconstruction At_starting - t_previuous_step
+                xk = xk + At - t
+                #delete values <0 aka not real!
+                xk = xk.clip(min=0)
+
+             
+
+            
+            recondata.append(xk.copy())
+            
+        #Save the 3D tomo reconstruction to a HDF5 file
+        recondata=np.array(recondata)
 
             
         #Save the 3D tomo reconstruction to a HDF5 file
@@ -215,25 +286,23 @@ class Ctomo:
         t2 = time()
         print "reconstruction done in %f s" %(t2 - t1)                
                 
-        #Save the 3D tomo reconstruction to a HDF5 file
         recondata=np.array(recondata)
         dims = recondata.shape
-        #print 'final dims', dims
+
         
         #Crop the data is sample thickness is defined
         if (samplethickness > 0) and (samplethickness<dims[2]-2):
+            print 'Cropping the data'
             recondata = recondata[:,:,dims[2]/2-samplethickness/2:dims[2]/2+samplethickness/2]
                
     
-        
-        #print 'final dims', recondata.shape
-        
+        recondata = np.swapaxes(recondata, 1, 2)        
         recondata = np.swapaxes(recondata, 0, 1)
         
+        #print 'final dims', recondata.shape
+           
         self.tomorec = recondata
         
-
-#         write_mrc(recondata, 'testMantistomo.mrc')
         
         return
     

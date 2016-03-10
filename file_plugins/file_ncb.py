@@ -215,6 +215,8 @@ def read_ncb_data(self, filename):
 
     if verbose:
         print 'self.n_cols, self.n_rows, scale', self.n_cols, self.n_rows, scale
+        
+    
     
     temp = lines[1].split()
     x_start = float(temp[0])

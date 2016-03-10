@@ -174,7 +174,7 @@ class PageTomo(QtGui.QWidget):
         vbox1.addWidget(line) 
         vbox1.addStretch(1)  
         
-        self.button_loadmrc = QtGui.QPushButton('Load Single Dataset from .mrc')
+        self.button_loadmrc = QtGui.QPushButton('Load Single Tomo Dataset')
         self.button_loadmrc.clicked.connect( self.OnLoadSingleMrc)
         vbox1.addWidget(self.button_loadmrc)        
 
@@ -551,9 +551,11 @@ class PageTomo(QtGui.QWidget):
 #----------------------------------------------------------------------          
     def OnLoadSingleMrc(self, event):
         
-        
 
-        wildcard = "Mrc files (*.mrc);;"
+                        
+
+        wildcard = "Supported 4D formats (*.mrc *.ncb);;Mrc files (*.mrc);;NCB files (*.ncb);;"
+
 
         OpenFileName = QtGui.QFileDialog.getOpenFileName(self, 'Load Tomo Dataset', '', wildcard,
                                                          None, QtGui.QFileDialog.DontUseNativeDialog)
@@ -562,49 +564,72 @@ class PageTomo(QtGui.QWidget):
         if OpenFileName == '':
             return
         
-        data = tomo_reconstruction.load_mrc(OpenFileName)
+        basename, extension = os.path.splitext(OpenFileName) 
         
+        if extension == '.mrc':
         
-        #data = data[:,256:768,256:768]
-        
-        dims = data.shape
-
-        #Read energies from file
-        wildcard = "Angle files (*.*);;"
-        OpenFileName2 = QtGui.QFileDialog.getOpenFileName(self, 'Load Angle data', '', wildcard,
-                                                         None, QtGui.QFileDialog.DontUseNativeDialog)
-
-        OpenFileName2 = str(OpenFileName2)
-        if OpenFileName2 == '':
-            return
-
-        f = open(str(OpenFileName2),'r')
-        
-        tlist = []   
+            data = tomo_reconstruction.load_mrc(OpenFileName)
+            
+            
+            #data = data[:,256:768,256:768]
+            
+            dims = data.shape
     
-        for line in f:
-            if line.startswith("*"):
-                pass
-            else:
-                t = line 
-                tlist.append(float(t))
-                   
-   
-        self.theta = np.array(tlist)
+            #Read energies from file
+            wildcard = "Angle files (*.*);;"
+            OpenFileName2 = QtGui.QFileDialog.getOpenFileName(self, 'Load Angle data', '', wildcard,
+                                                             None, QtGui.QFileDialog.DontUseNativeDialog)
+    
+            OpenFileName2 = str(OpenFileName2)
+            if OpenFileName2 == '':
+                return
+    
+            f = open(str(OpenFileName2),'r')
+            
+            tlist = []   
+        
+            for line in f:
+                if line.startswith("*"):
+                    pass
+                else:
+                    t = line 
+                    tlist.append(float(t))
+                       
+       
+            self.theta = np.array(tlist)
+                    
+            f.close()
+            
+            ntheta = len(self.theta)
+            if ntheta != dims[2]:
+                data = np.swapaxes(data, 0, 2)
                 
-        f.close()
-        
-        ntheta = len(self.theta)
-        if ntheta != dims[2]:
-            data = np.swapaxes(data, 0, 2)
+                
+            dims = data.shape
+            self.n_cols = dims[0]
+            self.n_rows = dims[1]
+            self.tomodata = np.zeros((dims[0], dims[1], 1, dims[2]))
+            self.tomodata[:,:,0,:] = data   
             
+        elif extension == '.ncb' :
             
-        dims = data.shape
-        self.n_cols = dims[0]
-        self.n_rows = dims[1]
-        self.tomodata = np.zeros((dims[0], dims[1], 1, dims[2]))
-        self.tomodata[:,:,0,:] = data        
-    
+            data, thetalist = file_ncb.read_ncb_data(self, OpenFileName)
+                
+            dims = data.shape
+            self.theta = np.array(thetalist)
+             
+            ntheta = len(self.theta)
+            if ntheta != dims[2]:
+                data = np.swapaxes(data, 0, 2)
+                
+                
+            dims = data.shape
+            self.n_cols = dims[0]
+            self.n_rows = dims[1]
+            self.tomodata = np.zeros((dims[0], dims[1], 1, dims[2]))
+            self.tomodata[:,:,0,:] = data   
+            
+                
         self.fulltomorecdata = []        
         self.tomo_calculated = 0
         self.full_tomo_calculated = 0
@@ -4895,7 +4920,7 @@ class PageSpectral(QtGui.QWidget):
 
         try: 
         
-            wildcard = "Spectrum files (*.csv);;Spectrum files (*.xas);;"
+            wildcard = "Supported spectrum formats (*.csv *.xas);;Spectrum files (*.csv);;Spectrum files (*.xas);;"
             
             #filepath = QtGui.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', '', wildcard, self.DefaultDir)
             filepath = QtGui.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', '', wildcard)
@@ -4918,6 +4943,8 @@ class PageSpectral(QtGui.QWidget):
             self.slider_tspec.setMaximum(self.anlz.n_target_spectra)
             self.slider_tspec.setValue(self.i_tspec)
             
+            if self.anlz.tspec_names[self.i_tspec-1].strip() == '':
+                self.anlz.tspec_names[self.i_tspec-1] = 'Component '+str(self.i_tspec)
             
             self.loadTSpectrum()
             self.loadTargetMap()    
