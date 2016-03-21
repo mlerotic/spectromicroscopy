@@ -60,7 +60,7 @@ from file_plugins import file_tif
 from file_plugins import file_stk
 
 
-version = '2.2.03'
+version = '2.2.04'
 
 Winsizex = 1000
 Winsizey = 700
@@ -72,7 +72,7 @@ ImgDpi = 40
 
 verbose = False
 
-showtomotab = 0
+showtomotab = 1
 
 
 
@@ -13346,7 +13346,7 @@ class PageLoadData(QtGui.QWidget):
         sizer1 = QtGui.QGroupBox('Load Data Stack')
         vbox1 = QtGui.QVBoxLayout()
         
-        self.button_multiload = QtGui.QPushButton('  Load Stack  ')
+        self.button_multiload = QtGui.QPushButton('  Load XANES Stack  ')
         self.button_multiload.clicked.connect( self.OnLoadMulti)
         vbox1.addWidget(self.button_multiload)
         
@@ -13361,7 +13361,7 @@ class PageLoadData(QtGui.QWidget):
         sizer2 = QtGui.QGroupBox('Build a stack from a set of files')
         vbox2 = QtGui.QVBoxLayout()
 
-        button_sm = QtGui.QPushButton( '  Select a directory with stack files  ')
+        button_sm = QtGui.QPushButton( ' Select a directory with stack files  [.sm, .xrm] ')
         button_sm.clicked.connect( self.OnBuildStack)
         vbox2.addWidget(button_sm)
         
