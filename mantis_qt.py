@@ -1128,17 +1128,13 @@ class PageTomo(QtGui.QWidget):
     def CalcROISpectrum(self):
               
         ROIspectrum = np.zeros((self.stack.n_ev))
-               
-
-        for i in range(self.nslices):
-            roimask = self.ROIvol[i]
-            if roimask != []:
-                for ie in range(self.stack.n_ev):
-                    indices = np.where(roimask == 255)
-                    numroipix = roimask[indices].shape[0]
-                
-                    roivoxels = self.fulltomorecdata[ie][:,:,i]
-                    ROIspectrum[ie] = np.sum(roivoxels[indices])/numroipix
+                              
+        for ie in range(self.stack.n_ev):
+            indices = np.where(self.ROIarray == 255)
+            numroipix = self.ROIarray[indices].shape[0] 
+            if numroipix > 0:
+                roivoxels = self.fulltomorecdata[ie]
+                ROIspectrum[ie] = np.sum(roivoxels[indices])/numroipix                       
                     
         return ROIspectrum
     
