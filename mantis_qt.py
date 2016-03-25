@@ -554,7 +554,7 @@ class PageTomo(QtGui.QWidget):
 
                         
 
-        wildcard = "Supported 4D formats (*.mrc *.ncb);;Mrc files (*.mrc);;NCB files (*.ncb);;"
+        wildcard = "Supported 4D formats (*.mrc *.ali *.ncb);;Mrc files (*.mrc *.ali);;NCB files (*.ncb);;"
 
 
         OpenFileName = QtGui.QFileDialog.getOpenFileName(self, 'Load Tomo Dataset', '', wildcard,
@@ -570,8 +570,10 @@ class PageTomo(QtGui.QWidget):
         
             data = tomo_reconstruction.load_mrc(OpenFileName)
             
+            print data.shape
             
             #data = data[:,256:768,256:768]
+
             
             dims = data.shape
     
@@ -664,7 +666,7 @@ class PageTomo(QtGui.QWidget):
         self.button_roi.setEnabled(False)
         self.energiesloaded = 0
         
-        self.button_expdata.setEnabled(False)
+        self.button_expdata.setEnabled(True)
         
                
 #----------------------------------------------------------------------          
