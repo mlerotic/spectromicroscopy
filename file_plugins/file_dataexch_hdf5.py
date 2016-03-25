@@ -349,6 +349,7 @@ def read(filename, self, selection=None):
             if 'axes' in data.attrs:
                 data_struct.exchange.data_axes = data.attrs['axes']
                 axes_list = data_struct.exchange.data_axes.split(':')
+                
         
                 #Axes list can be arbitrary but for spectromicroscopy it is always x:y:z
                 for i in axes_list:
@@ -428,6 +429,8 @@ def read(filename, self, selection=None):
 
     if have4d == 0:
         self.absdata = data_struct.exchange.data
+        
+        
     else:
         self.stack4D = data_struct.exchange.data
         self.theta = data_struct.exchange.theta
@@ -453,7 +456,7 @@ def read(filename, self, selection=None):
         if self.ev[i] > self.ev[i+1]:
             consec = 1
             break
-    if consec == 1:
+    if (consec == 1) and (have4d == 0):
         if verbose == 1: print "sort the energy data"
         sortind = np.argsort(self.ev)
         self.ev = self.ev[sortind]
@@ -476,8 +479,7 @@ def read(filename, self, selection=None):
     
     self.data_dwell = np.ones((self.n_ev))
     self.i0_dwell = np.ones((self.n_ev))
-    
-    self.fill_h5_struct_from_stk()
+
     
     if self.data_struct.spectromicroscopy.normalization.white_spectrum is not None:
         self.calculate_optical_density()

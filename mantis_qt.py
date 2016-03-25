@@ -60,7 +60,7 @@ from file_plugins import file_tif
 from file_plugins import file_stk
 
 
-version = '2.2.04'
+version = '2.2.05'
 
 Winsizex = 1000
 Winsizey = 700
@@ -13348,10 +13348,12 @@ class PageLoadData(QtGui.QWidget):
         
         self.button_multiload = QtGui.QPushButton('  Load XANES Stack  ')
         self.button_multiload.clicked.connect( self.OnLoadMulti)
+        self.button_multiload.setToolTip('Supported Formats .hdf .hdf5 .ncb .nxs .hdr .stk .tif .tiff .txrm')
         vbox1.addWidget(self.button_multiload)
         
         
         self.button_4d = QtGui.QPushButton( 'Load 4D stack TOMO-XANES')
+        self.button_4d.setToolTip('Supported Formats .hdf5 .ncb')
         self.button_4d.clicked.connect( self.OnLoad4D)
         vbox1.addWidget(self.button_4d) 
 
@@ -13362,6 +13364,7 @@ class PageLoadData(QtGui.QWidget):
         vbox2 = QtGui.QVBoxLayout()
 
         button_sm = QtGui.QPushButton( ' Select a directory with stack files  [.sm, .xrm] ')
+        button_sm.setToolTip('Supported Formats .sm, .xrm')
         button_sm.clicked.connect( self.OnBuildStack)
         vbox2.addWidget(button_sm)
         
@@ -14367,14 +14370,14 @@ class MainFrame(QtGui.QMainWindow):
             QtGui.QApplication.restoreOverrideCursor()
                  
         except:
-         
+          
             self.common.stack_loaded = 0 
             self.common.i0_loaded = 0
             self.new_stack_refresh()
-                                        
+                                         
             QtGui.QApplication.restoreOverrideCursor()
             QtGui.QMessageBox.warning(self, 'Error', 'Image stack not loaded.')
-        
+         
             import sys
             print sys.exc_info()
                    
@@ -14447,6 +14450,9 @@ class MainFrame(QtGui.QMainWindow):
         """
 
         try:
+            
+            print self.data_struct.exchange.data.shape
+            print self.data_struct.exchange.data_axes
 
             wildcard = "HDF5 files (*.hdf5)"
 
