@@ -721,6 +721,40 @@ class data:
         if spectrum_evdata[-1]<spectrum_evdata[0]:
             spectrum_evdata = spectrum_evdata[::-1]
             spectrum_data = spectrum_data[::-1]
+            
+        if spectrum_common_name == ' ':
+            spectrum_common_name = os.path.splitext(os.path.basename(str(filename)))[0]
+        
+        return spectrum_evdata, spectrum_data, spectrum_common_name
+    
+    
+#----------------------------------------------------------------------   
+#Read x-ray absorption spectrum
+    def read_txt(self, filename):
+        
+        spectrum_common_name = os.path.splitext(os.path.basename(str(filename)))[0]
+ 
+        f = open(str(filename),'rU')
+        
+        elist = []
+        ilist = []    
+    
+        for line in f:
+            if line.startswith('%'):
+                pass
+            else:
+                e, i = [float (x) for x in line.split()] 
+                elist.append(e)
+                ilist.append(i)
+                
+        spectrum_evdata = np.array(elist)
+        spectrum_data = np.array(ilist) 
+                
+        f.close()
+        
+        if spectrum_evdata[-1]<spectrum_evdata[0]:
+            spectrum_evdata = spectrum_evdata[::-1]
+            spectrum_data = spectrum_data[::-1]
         
         return spectrum_evdata, spectrum_data, spectrum_common_name
 
@@ -760,6 +794,10 @@ class data:
         if spectrum_evdata[-1]<spectrum_evdata[0]:
             spectrum_evdata = spectrum_evdata[::-1]
             spectrum_data = spectrum_data[::-1]
+            
+            
+        if spectrum_common_name == ' ':
+            spectrum_common_name = os.path.splitext(os.path.basename(str(filename)))[0]
         
         return spectrum_evdata, spectrum_data, spectrum_common_name
         

@@ -4920,7 +4920,7 @@ class PageSpectral(QtGui.QWidget):
 
         try: 
         
-            wildcard = "Supported spectrum formats (*.csv *.xas);;Spectrum files (*.csv);;Spectrum files (*.xas);;"
+            wildcard = "Supported spectrum formats (*.csv *.xas *.txt);;Spectrum files (*.csv);;Spectrum files (*.xas);;Spectrum files (*.txt);;"
             
             #filepath = QtGui.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', '', wildcard, self.DefaultDir)
             filepath = QtGui.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', '', wildcard)
@@ -12386,13 +12386,26 @@ class ImageRegistration(QtGui.QDialog):
         if filepath == '':
             return
         
+        
+        
+        
         f = open(filepath, 'w')
-        print>>f, '*********************  Alignment file  ********************'
-        print>>f, '***  for ', self.com.filename
-        print>>f, '***  ev, xshift, yshift'           
-        for ie in range(self.stack.n_ev):
-            print>>f, '%.6f, %.6f, %.6f' %(self.stack.ev[ie], self.xshifts[ie], self.yshifts[ie])
-    
+        
+        if self.com.stack_4d == 0:
+            print>>f, '*********************  Alignment file  ********************'
+            print>>f, '***  for ', self.com.filename
+            print>>f, '***  ev, xshift, yshift'           
+            for ie in range(self.stack.n_ev):
+                print>>f, '%.6f, %.6f, %.6f' %(self.stack.ev[ie], self.xshifts[ie], self.yshifts[ie])
+        else:
+            print>>f, '*********************  Alignment file  ********************'
+            print>>f, '***  for ', self.com.filename
+            print>>f, '***  ev, theta, xshift, yshift'           
+            for i in range(self.stack.n_ev):
+                for j in range(self.stack.n_theta):
+                    print>>f, '%.6f, %.6f, %.6f, %.6f' %(self.stack.ev[i], self.stack.theta[j], self.xshifts[i,j], self.yshifts[i,j])
+  
+                                      
         f.close()            
         
 #----------------------------------------------------------------------  

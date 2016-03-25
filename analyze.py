@@ -1072,6 +1072,8 @@ class analyze:
                 spectrum_evdata, spectrum_data, spectrum_common_name = self.stack.read_csv(filename)
             elif extension == '.xas':
                 spectrum_evdata, spectrum_data, spectrum_common_name = self.stack.read_xas(filename)
+            elif extension == '.txt':
+                spectrum_evdata, spectrum_data, spectrum_common_name = self.stack.read_txt(filename)
                                     
             # Map this spectrum onto our energy range - interpolate to ev
             ftspec = scipy.interpolate.interp1d(spectrum_evdata, spectrum_data, kind='cubic', bounds_error=False)      
