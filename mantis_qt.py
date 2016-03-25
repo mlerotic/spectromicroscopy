@@ -12111,9 +12111,11 @@ class ImageRegistration(QtGui.QDialog):
         
         if self.com.stack_4d == 0:
             self.stack.absdata = self.aligned_stack  
+            self.stack.data_struct.exchange.data = self.stack.absdata
         else:
             self.stack.stack4D = self.aligned_stack  
             self.stack.absdata = self.stack.stack4D[:,:,:,self.itheta]
+            self.stack.data_struct.exchange.data = self.stack.stack4D
             
         
         datadim = np.int32(self.stack.absdata.shape)
@@ -12157,7 +12159,7 @@ class ImageRegistration(QtGui.QDialog):
                 
             self.stack.data_struct.spectromicroscopy.optical_density = self.stack.od   
 
-        self.stack.data_struct.exchange.data = self.stack.absdata
+        
         self.stack.data_struct.exchange.energy = self.stack.ev
         
 
