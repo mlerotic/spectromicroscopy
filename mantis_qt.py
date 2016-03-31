@@ -60,7 +60,7 @@ from file_plugins import file_tif
 from file_plugins import file_stk
 
 
-version = '2.2.05'
+version = '2.2.06'
 
 Winsizex = 1000
 Winsizey = 700
@@ -75,8 +75,7 @@ verbose = False
 showtomotab = 1
 
 
-
-            
+ 
 #----------------------------------------------------------------------
 class common:
     def __init__(self):
@@ -571,7 +570,6 @@ class PageTomo(QtGui.QWidget):
             #print data.shape
             
             #data = data[:,256:768,256:768]
-
             
             dims = data.shape
     
@@ -965,7 +963,7 @@ class PageTomo(QtGui.QWidget):
         
         data = self.tr.tomorec
                 
-        self.tr.save_mrc(SaveFileName, data)        
+        self.tr.save_mrc(SaveFileName, data.T)        
         
         
 #----------------------------------------------------------------------    
@@ -988,7 +986,7 @@ class PageTomo(QtGui.QWidget):
         
             savefn = basename + '_'+self.datanames[i]+extension
                 
-            self.tr.save_mrc(savefn, data)    
+            self.tr.save_mrc(savefn, data.T)    
             
             
 #----------------------------------------------------------------------    
