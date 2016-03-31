@@ -550,8 +550,6 @@ class PageTomo(QtGui.QWidget):
         
 #----------------------------------------------------------------------          
     def OnLoadSingleMrc(self, event):
-        
-
                         
 
         wildcard = "Supported 4D formats (*.mrc *.ali *.ncb);;Mrc files (*.mrc *.ali);;NCB files (*.ncb);;"
@@ -570,7 +568,7 @@ class PageTomo(QtGui.QWidget):
         
             data = tomo_reconstruction.load_mrc(OpenFileName)
             
-            print data.shape
+            #print data.shape
             
             #data = data[:,256:768,256:768]
 
@@ -595,6 +593,8 @@ class PageTomo(QtGui.QWidget):
                     pass
                 else:
                     t = line 
+                    if t.strip() == '':
+                        continue
                     tlist.append(float(t))
                        
        

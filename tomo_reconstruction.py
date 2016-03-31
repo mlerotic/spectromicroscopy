@@ -68,13 +68,14 @@ class Ctomo:
     def calc_tomo(self, tomodata, theta, maxiter, beta, samplethickness, algorithm = 0,
                   x0=[], comp = 0, beta2 = 0):     
         
+        tomodata = tomodata
         #Algorithm 
         if algorithm == 0:
-            self.calc_tomo_cs(tomodata, theta, maxiter, beta, samplethickness)  
+            self.calc_tomo_cs(tomodata.astype(np.float32), theta, maxiter, beta, samplethickness)  
         elif algorithm == 1:
-            self.calc_tomo_sirt(tomodata, theta, maxiter, beta, samplethickness) 
+            self.calc_tomo_sirt(tomodata.astype(np.float32), theta, maxiter, beta, samplethickness) 
         else:
-            self.calc_tomo_cs_tveng(tomodata, theta, maxiter, beta, samplethickness,
+            self.calc_tomo_cs_tveng(tomodata.astype(np.float32), theta, maxiter, beta, samplethickness,
                                     x0, comp, beta2)  
              
         
