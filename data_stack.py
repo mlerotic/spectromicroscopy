@@ -101,6 +101,15 @@ class data:
         self.fill_h5_struct_normalization()
         
         
+#----------------------------------------------------------------------   
+    def read_xrm_ReferenceImages(self, filenames):
+
+        
+        self.calculate_optical_density_from_refimgs(filenames)
+        
+        self.fill_h5_struct_normalization()
+        
+        
 #----------------------------------------------------------------------          
     def read_h54D(self, filename):    
 
