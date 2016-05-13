@@ -4915,11 +4915,12 @@ class PageSpectral(QtGui.QWidget):
         
 
         try: 
-        
+        #if True:
             wildcard = "Supported spectrum formats (*.csv *.xas *.txt);;Spectrum files (*.csv);;Spectrum files (*.xas);;Spectrum files (*.txt);;"
+            directory = self.com.path
             
-            #filepath = QtGui.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', '', wildcard, self.DefaultDir)
-            filepath = QtGui.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', '', wildcard)
+            filepath = QtGui.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', directory, wildcard)
+            #filepath = QtGui.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', '', wildcard)
             
 
             filepath = str(filepath)
@@ -4928,7 +4929,8 @@ class PageSpectral(QtGui.QWidget):
             
             self.filename =  os.path.basename(str(filepath))
             directory =  os.path.dirname(str(filepath))
-            self.DefaultDir = directory            
+            self.com.path = directory
+                       
                                                         
             QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))    
                                             
@@ -14209,6 +14211,7 @@ class MainFrame(QtGui.QMainWindow):
             
             self.stk.scale_bar()
             self.common.stack_loaded = 1
+            self.common.path = directory
             
             if self.stk.data_struct.spectromicroscopy.normalization.white_spectrum is not None:
                 self.common.i0_loaded = 1
