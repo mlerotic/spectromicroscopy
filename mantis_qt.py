@@ -60,7 +60,7 @@ from file_plugins import file_tif
 from file_plugins import file_stk
 
 
-version = '2.2.06'
+version = '2.2.07'
 
 Winsizex = 1000
 Winsizey = 700
@@ -6847,23 +6847,27 @@ class PageCluster(QtGui.QWidget):
                        
 #----------------------------------------------------------------------  
     def OnPointClusterImage(self, evt):
+        
+          
         x = evt.xdata
         y = evt.ydata
         
-
+        if (x == None) or (y == None):
+            return
+        
         if self.com.cluster_calculated == 1:   
             try:  
-                self.ix = int(np.floor(y))           
-                self.iy = int(np.floor(x))  
+                self.ix = int(np.floor(x))           
+                self.iy = self.stk.n_rows-1-int(np.floor(y))  
                         
                 if self.ix<0 :
                     self.ix=0
-                if self.ix>self.stk.n_cols :
-                    self.ix=self.stk.n_cols
+                if self.ix>self.stk.n_cols-1 :
+                    self.ix=self.stk.n_cols-1
                 if self.iy<0 :
                     self.iy=0
-                if self.iy>self.stk.n_rows :
-                    self.iy=self.stk.n_rows 
+                if self.iy>self.stk.n_rows-1 :
+                    self.iy=self.stk.n_rows-1
                     
                     
                 self.selcluster = self.anlz.cluster_indices[self.ix,self.iy] + 1
@@ -9811,14 +9815,8 @@ class PageStack(QtGui.QWidget):
          
         self.SpectrumPanel.draw()
          
-#         self.tc_spec.setText("Spectrum at pixel [" +str(ypos)+", " + str(xpos)+"] or position ["+
-#                               str(self.stk.x_dist[xpos])+", "+ str(self.stk.y_dist[ypos])+ "]")
 
-        #self.tc_spec.setText('Spectrum at pixel [{0}, {1}] or position [{2:5.2f}, {3:5.2f}]'.format(str(ypos),  str(xpos), self.stk.x_dist[xpos], self.stk.y_dist[ypos]))
-#         print("self.stk.x_dist[xpos] = ", type(ypos))
-#         print("self.stk.y_dist[ypos] = ", type(xpos))
-
-        self.tc_spec.setText('Spectrum at pixel [{0}, {1}] or position [{2:5.2f}, {3:5.2f}]'.format(str(ypos),  str(xpos), np.float(self.stk.x_dist[xpos]), np.float(self.stk.y_dist[ypos])))
+        self.tc_spec.setText('Spectrum at pixel [{0}, {1}] or position [{2:5.2f}, {3:5.2f}]'.format(str(xpos),  str(ypos), np.float(self.stk.x_dist[xpos]), np.float(self.stk.y_dist[ypos])))
 
 #----------------------------------------------------------------------
     def ResetDisplaySettings(self):
@@ -14042,7 +14040,7 @@ class MainFrame(QtGui.QMainWindow):
                
 
         self.resize(Winsizex, Winsizey)
-        self.setWindowTitle('Mantis')
+        self.setWindowTitle('Mantis v.{0}'.format(version))
         
         self.initToolbar()
 
