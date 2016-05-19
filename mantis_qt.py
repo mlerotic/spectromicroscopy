@@ -75,6 +75,9 @@ verbose = False
 showtomotab = 1
 
 
+def rebin(a, shape):
+    sh = shape[0],a.shape[0]//shape[0],shape[1],a.shape[1]//shape[1]
+    return a.reshape(sh).mean(-1).mean(1)
  
 #----------------------------------------------------------------------
 class common:
@@ -192,12 +195,20 @@ class PageTomo(QtGui.QWidget):
         hbox21 = QtGui.QHBoxLayout()
         tc1 = QtGui.QLabel(self)
         hbox21.addWidget(tc1)
-        tc1.setText('Choose Tomo Dataset: ')
+        tc1.setText('Choose Tomo Dataset:')
         self.combonames = QtGui.QComboBox(self)
         self.combonames.activated[int].connect(self.OnSelect1Comp)
         hbox21.addWidget(self.combonames)
-        
         vbox2.addLayout(hbox21)
+        
+        hbox22 = QtGui.QHBoxLayout()
+        tc2 = QtGui.QLabel(self)
+        hbox22.addWidget(tc2)
+        tc2.setText('Binning:  ')
+        self.combobin = QtGui.QComboBox(self)
+        self.combobin.addItems(['1','2','4','8'])
+        hbox22.addWidget(self.combobin)
+        vbox2.addLayout(hbox22)
         
         self.button_calcall = QtGui.QPushButton( 'Calculate All Datasets')
         self.button_calcall.clicked.connect( self.OnCalcTomoFull)
@@ -682,6 +693,10 @@ class PageTomo(QtGui.QWidget):
         
         self.fulltomorecdata = []
         
+        binningfactor = int (self.combobin.currentText())
+        dims = self.tomodata[:,:,0,:].shape
+        
+        
         if (self.useengreg == 1) and (self.algo == 0):
 
             value = self.ntc_ereg.text()
@@ -693,8 +708,19 @@ class PageTomo(QtGui.QWidget):
             for i in range(self.ncomponents):
                 
                 print 'Progress ',i+1,' / ',self.ncomponents
+                
+                if binningfactor > 1:                   
+                    shape = (int(dims[0]/binningfactor), int(dims[1]/binningfactor))
+                    projdata = np.zeros((shape[0], shape[1], dims[2]))
+                    #print 'Binning factor:', binningfactor
+                    #print 'Binned data dims', shape
+                    for j in range(dims[2]):
+                        projdata[:,:,j] = rebin(self.tomodata[0:shape[0]*binningfactor,0:shape[1]*binningfactor,i,j], shape)
+                else:
+                    projdata = self.tomodata[:,:,i,:]
+                        
                     
-                self.tr.calc_tomo(self.tomodata[:,:,i,:], 
+                self.tr.calc_tomo(projdata, 
                                    self.theta,
                                    self.maxIters,
                                    self.beta,
@@ -706,8 +732,18 @@ class PageTomo(QtGui.QWidget):
             for i in range(self.ncomponents):
                 
                 print 'Progress ',i+1,' / ',self.ncomponents
+                
+                if binningfactor > 1:                   
+                    shape = (int(dims[0]/binningfactor), int(dims[1]/binningfactor))
+                    projdata = np.zeros((shape[0], shape[1], dims[2]))
+                    #print 'Binning factor:', binningfactor
+                    #print 'Binned data dims', shape
+                    for j in range(dims[2]):
+                        projdata[:,:,j] = rebin(self.tomodata[0:shape[0]*binningfactor,0:shape[1]*binningfactor,i,j], shape)
+                else:
+                    projdata = self.tomodata[:,:,i,:]
                     
-                self.tr.calc_tomo(self.tomodata[:,:,i,:], 
+                self.tr.calc_tomo(projdata, 
                                    self.theta,
                                    self.maxIters,
                                    self.beta,
@@ -724,8 +760,18 @@ class PageTomo(QtGui.QWidget):
             for i in range(self.ncomponents):
                 
                 print 'Progress ',i+1,' / ',self.ncomponents
+                
+                if binningfactor > 1:                   
+                    shape = (int(dims[0]/binningfactor), int(dims[1]/binningfactor))
+                    projdata = np.zeros((shape[0], shape[1], dims[2]))
+                    #print 'Binning factor:', binningfactor
+                    #print 'Binned data dims', shape
+                    for j in range(dims[2]):
+                        projdata[:,:,j] = rebin(self.tomodata[0:shape[0]*binningfactor,0:shape[1]*binningfactor,i,j], shape)
+                else:
+                    projdata = self.tomodata[:,:,i,:]
                     
-                self.tr.calc_tomo(self.tomodata[:,:,i,:], 
+                self.tr.calc_tomo(projdata, 
                                    self.theta,
                                    self.maxIters,
                                    self.beta,
@@ -787,7 +833,22 @@ class PageTomo(QtGui.QWidget):
         dims = self.tomodata[:,:,self.select1,:].shape
         print 'Data dims = ', dims
         
-        self.tr.calc_tomo(self.tomodata[:,:,self.select1,:], 
+        projdata = self.tomodata[:,:,self.select1,:]      
+        
+        binningfactor = int (self.combobin.currentText())
+        
+        if binningfactor > 1:
+            binneddata = []
+            shape = (int(dims[0]/binningfactor), int(dims[1]/binningfactor))
+            projdata = np.zeros((shape[0], shape[1], dims[2]))
+            print 'Binning factor:', binningfactor
+            print 'Binned data dims', shape
+            for i in range(dims[2]):
+                projdata[:,:,i] = rebin(self.tomodata[0:shape[0]*binningfactor,0:shape[1]*binningfactor,self.select1,i], shape)
+                
+            
+        
+        self.tr.calc_tomo(projdata, 
                            self.theta,
                            self.maxIters,
                            self.beta,
@@ -2060,7 +2121,6 @@ class PageNNMA(QtGui.QWidget):
             
             wildcard = "Spectrum files (*.csv);;Spectrum files (*.xas);;"
             
-            #filepath = QtGui.QFileDialog.getOpenFileNames(self, 'Choose Spectra files', '', wildcard, self.DefaultDir)
             filepath = QtGui.QFileDialog.getOpenFileNames(self, 'Choose Spectra files', '', wildcard)
 
             if filepath == '':
@@ -3361,7 +3421,7 @@ class PageXrayPeakFitting(QtGui.QWidget):
             
             wildcard = "Spectrum files (*.csv)"
             
-            filepath = QtGui.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', '', wildcard)
+            filepath = QtGui.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', self.com.path, wildcard)
             
 
             filepath = str(filepath)
@@ -3370,7 +3430,7 @@ class PageXrayPeakFitting(QtGui.QWidget):
             
             self.filename =  os.path.basename(str(filepath))
             directory =  os.path.dirname(str(filepath))
-            self.DefaultDir = directory            
+            self.com.path = directory            
                                                         
             QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))    
                                             
@@ -4343,7 +4403,7 @@ class PagePeakID(QtGui.QWidget):
             
             wildcard = "Spectrum files (*.csv)"
             
-            filepath = QtGui.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', '', wildcard)
+            filepath = QtGui.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', self.com.path, wildcard)
             
 
             filepath = str(filepath)
@@ -4352,7 +4412,7 @@ class PagePeakID(QtGui.QWidget):
             
             self.filename =  os.path.basename(str(filepath))
             directory =  os.path.dirname(str(filepath))
-            self.DefaultDir = directory            
+            self.com.path = directory            
                                                         
             QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))    
                                             
@@ -13540,7 +13600,7 @@ class PageLoadData(QtGui.QWidget):
 #----------------------------------------------------------------------        
     def ShowImage(self):
         
-        
+
         image = self.stk.absdata[:,:,int(self.iev)].copy() 
 
         fig = self.absimgfig
@@ -14285,7 +14345,6 @@ class MainFrame(QtGui.QMainWindow):
                        
             
             directory =  os.path.dirname(str(filenames[0]))
-            self.page4.DefaultDir = directory
             self.page1.filename =  os.path.basename(str(filenames[0]))
         
             QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
@@ -14314,7 +14373,7 @@ class MainFrame(QtGui.QMainWindow):
                 self.stk.read_ncb4D(filenames)    
                 #Get energy list
                 wildcard =  "Text file (*.txt);;"  
-                engfilepath = QtGui.QFileDialog.getOpenFileName(self, 'Open file', '', wildcard)
+                engfilepath = QtGui.QFileDialog.getOpenFileName(self, 'Open file', directory, wildcard)
                 self.stk.read_ncb4Denergy(str(engfilepath))
                 
             
