@@ -60,7 +60,7 @@ from file_plugins import file_tif
 from file_plugins import file_stk
 
 
-version = '2.2.07'
+version = '2.2.09'
 
 Winsizex = 1000
 Winsizey = 700
@@ -382,21 +382,24 @@ class PageTomo(QtGui.QWidget):
 #         sizer4.setLayout(vbox4)
                 
  
-        #panel 5     
+        #panel 5    
+         
         vbox5 = QtGui.QVBoxLayout()
+        vbox5.addStretch(1)
         
         self.tc_imagecomp = QtGui.QLabel(self)
         self.tc_imagecomp.setText("Dataset: ")
         vbox5.addWidget(self.tc_imagecomp)
         
 
-        gridsizertop = QtGui.QGridLayout()
+        gridsizer5 = QtGui.QGridLayout()
+        gridsizer5.setSpacing(5)
         
         frame = QtGui.QFrame()
         frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
    
-        self.absimgfig = Figure((PlotH*1.25, PlotH*1.25))
+        self.absimgfig = Figure((PlotH*0.9, PlotH*0.9))
 
         self.AbsImagePanel = FigureCanvas(self.absimgfig)
         self.AbsImagePanel.setParent(self)
@@ -405,7 +408,7 @@ class PageTomo(QtGui.QWidget):
         
         fbox.addWidget(self.AbsImagePanel)
         frame.setLayout(fbox)
-        gridsizertop.addWidget(frame, 0, 0, QtCore .Qt. AlignLeft)
+        gridsizer5.addWidget(frame, 1, 1, QtCore .Qt. AlignLeft)
         
 
         self.slider_slice = QtGui.QScrollBar(QtCore.Qt.Vertical)
@@ -413,7 +416,7 @@ class PageTomo(QtGui.QWidget):
         self.slider_slice.valueChanged[int].connect(self.OnScrollSlice)
         self.slider_slice.setRange(0, 100)
         
-        gridsizertop.addWidget(self.slider_slice, 0, 1, QtCore .Qt. AlignLeft)
+        gridsizer5.addWidget(self.slider_slice, 1, 0, QtCore .Qt. AlignLeft)
         
         
         self.slider_comp = QtGui.QScrollBar(QtCore.Qt.Horizontal)
@@ -426,10 +429,44 @@ class PageTomo(QtGui.QWidget):
         hbox51 = QtGui.QHBoxLayout()
         hbox51.addWidget(self.tc_comp) 
         hbox51.addWidget(self.slider_comp)
-        gridsizertop.addLayout(hbox51, 1, 0)
+        gridsizer5.addLayout(hbox51, 0, 1)
+
+        
+        
+        frame2 = QtGui.QFrame()
+        frame2.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        fbox2 = QtGui.QHBoxLayout()
+   
+        self.absimgfig2 = Figure((PlotH*0.9, PlotH*0.9))
+
+        self.AbsImagePanel2 = FigureCanvas(self.absimgfig2)
+        self.AbsImagePanel2.setParent(self)
+        
+        
+        fbox2.addWidget(self.AbsImagePanel2)
+        frame2.setLayout(fbox2)
+        
+ 
+        gridsizer5.addWidget(frame2, 2, 1, QtCore .Qt. AlignLeft)        
+        
+        
+        frame3 = QtGui.QFrame()
+        frame3.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        fbox3 = QtGui.QHBoxLayout()
+   
+        self.absimgfig3 = Figure((PlotH*0.9, PlotH*0.9))
+
+        self.AbsImagePanel3 = FigureCanvas(self.absimgfig3)
+        self.AbsImagePanel3.setParent(self)
+        
+        
+        fbox3.addWidget(self.AbsImagePanel3)
+        frame3.setLayout(fbox3)
+        gridsizer5.addWidget(frame3, 1, 2, QtCore .Qt. AlignLeft)     
+        
         
 
-        vbox5.addLayout(gridsizertop)
+        vbox5.addLayout(gridsizer5)
         vbox5.addStretch(1)
         
        
@@ -440,29 +477,21 @@ class PageTomo(QtGui.QWidget):
         vboxt1.addWidget(sizer1)
         vboxt1.addStretch (1)
         vboxt1.addWidget(sizer2)
-        
-        vboxt2 = QtGui.QVBoxLayout()
-        vboxt2.addWidget(sizer3)
-        vboxt2.addStretch (1)
+        vboxt1.addStretch (1)
+        vboxt1.addWidget(sizer3)
+        vboxt1.addStretch (1)
         
         hboxtop.addStretch (0.5)
         hboxtop.addLayout(vboxt1)
         hboxtop.addStretch (0.5)
         hboxtop.addLayout(vbox5)
         hboxtop.addStretch (0.5)
-        hboxtop.addLayout(vboxt2)
-        hboxtop.addStretch (0.5)
 
-        #vboxt1.addStretch (1)
 
-        
+
         vboxtop.addStretch (0.5)
         vboxtop.addLayout(hboxtop)
         vboxtop.addStretch (0.9)
-#         vboxtop.addWidget(sizer3)
-#         vboxtop.addStretch (0.5)
-#         vboxtop.addWidget(sizer4)
-#         vboxtop.addStretch (0.5)
 
         vboxtop.setContentsMargins(20,20,20,20)
         self.setLayout(vboxtop)
@@ -616,7 +645,9 @@ class PageTomo(QtGui.QWidget):
                 data = np.swapaxes(data, 0, 2)
                 
                 
+            print 'angle num:', ntheta
             dims = data.shape
+            print 'Data shape', dims
             self.n_cols = dims[0]
             self.n_rows = dims[1]
             self.tomodata = np.zeros((dims[0], dims[1], 1, dims[2]))
@@ -1253,7 +1284,37 @@ class PageTomo(QtGui.QWidget):
         self.axes = axes
         
         self.xys = np.dstack(np.meshgrid(np.arange(self.n_cols), np.arange(self.n_rows))).reshape(-1,2)
+        
+        
+        #Show orthogonal slices
+        dims = self.tr.tomorec.shape
+        image2 = self.tr.tomorec[:,int(dims[1]/2),:]
+
+        fig = self.absimgfig2
+        fig.clf()
+        fig.add_axes(((0.0,0.0,1.0,1.0)))
+        axes2 = fig.gca()
+        fig.patch.set_alpha(1.0)
          
+        im = axes2.imshow(np.rot90(image2), cmap=matplotlib.cm.get_cmap("gray"))         
+
+        axes2.axis("off")      
+        self.AbsImagePanel2.draw()
+
+
+        image3 = self.tr.tomorec[int(dims[0]/2),:,:].T
+
+        fig = self.absimgfig3
+        fig.clf()
+        fig.add_axes(((0.0,0.0,1.0,1.0)))
+        axes3 = fig.gca()
+        fig.patch.set_alpha(1.0)
+         
+        im = axes3.imshow(np.rot90(image3), cmap=matplotlib.cm.get_cmap("gray"))         
+
+        axes3.axis("off")      
+        self.AbsImagePanel3.draw()         
+        
 
 #----------------------------------------------------------------------        
     def MakeHistogramROI(self, histmin, histmax):        
