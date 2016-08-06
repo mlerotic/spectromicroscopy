@@ -60,7 +60,7 @@ from file_plugins import file_tif
 from file_plugins import file_stk
 
 
-version = '2.2.09'
+version = '2.3.00'
 
 Winsizex = 1000
 Winsizey = 700
@@ -72,7 +72,7 @@ ImgDpi = 40
 
 verbose = False
 
-showtomotab = 0
+showtomotab = 1
 
 
 def rebin(a, shape):
@@ -677,11 +677,7 @@ class PageTomo(QtGui.QWidget):
         self.full_tomo_calculated = 0
         
         
-
-
-        fig = self.absimgfig
-        fig.clf()
-        self.AbsImagePanel.draw()   
+        self.NewStackClear()
         
         self.button_save.setEnabled(False)
         self.tc_comp.setText('Component: ')
@@ -1370,6 +1366,15 @@ class PageTomo(QtGui.QWidget):
         fig.clf()
         self.AbsImagePanel.draw()   
         
+        fig = self.absimgfig2
+        fig.clf()
+        self.AbsImagePanel2.draw() 
+        
+        
+        fig = self.absimgfig3
+        fig.clf()
+        self.AbsImagePanel3.draw() 
+                
         self.button_spcomp.setEnabled(False)
         self.button_engdata.setEnabled(False)
         self.button_expdata.setEnabled(False)
@@ -14583,8 +14588,8 @@ class MainFrame(QtGui.QMainWindow):
 
         try:
             
-            print self.data_struct.exchange.data.shape
-            print self.data_struct.exchange.data_axes
+            #print self.data_struct.exchange.data.shape
+            #print self.data_struct.exchange.data_axes
 
             wildcard = "HDF5 files (*.hdf5)"
 
