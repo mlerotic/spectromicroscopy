@@ -13505,6 +13505,11 @@ class PageLoadData(QtGui.QWidget):
         button_sm.clicked.connect( self.OnBuildStack)
         vbox2.addWidget(button_sm)
         
+        button_builder = QtGui.QPushButton( ' Stack Builder ')
+        button_builder.setToolTip('Build a stack from a variety of files')
+        button_builder.clicked.connect( self.OnStackBuilder)
+        vbox2.addWidget(button_builder)
+        
         sizer2.setLayout(vbox2)
 
 
@@ -13639,6 +13644,14 @@ class PageLoadData(QtGui.QWidget):
 
         self.window().BuildStack()
         
+        
+#----------------------------------------------------------------------          
+    def OnStackBuilder(self, event):
+
+        stackframe = StackBuilderFrame(self.window(), self.window().common, self.window().stk, self.window().data_struct)
+        stackframe.show()
+        
+        
 #----------------------------------------------------------------------            
     def OnScrollEng(self, value):
         self.iev = value
@@ -13710,6 +13723,119 @@ class PageLoadData(QtGui.QWidget):
         self.tc_file.setText(filename)
         self.tc_path.setText(filepath)
         
+#---------------------------------------------------------------------- 
+class StackBuilderFrame(QtGui.QDialog):
+
+    def __init__(self, parent, com, stack, data_struct):    
+        QtGui.QWidget.__init__(self, parent)
+        
+        self.parent = parent
+
+        self.data_struct = data_struct
+        self.stk = stack
+        self.common = com
+        
+        self.resize(600, 500)
+        self.setWindowTitle('Stack File List')
+        
+        pal = QtGui.QPalette()
+        self.setAutoFillBackground(True)
+        pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
+        self.setPalette(pal)
+        
+        self.filetype = ''
+        
+        vbox = QtGui.QVBoxLayout()
+                
+        self.textt = QtGui.QLabel(self)
+        self.textt.setText('Select first stack file')    
+      
+        vbox.addStretch(1)
+        vbox.addWidget(self.textt)  
+        
+
+        self.filelist = QtGui.QTableWidget()
+        self.filelist.setMinimumHeight(450)
+        self.filelist.setColumnCount(4)
+        self.filelist.setHorizontalHeaderLabels(('File list', 'X', 'Y', 'eV'))
+        self.filelist.setShowGrid(False)
+        self.filelist.verticalHeader().setVisible(False)
+        
+        self.filelist.setColumnWidth(0,400)
+        self.filelist.setColumnWidth(1,50)
+        self.filelist.setColumnWidth(2,50)
+        self.filelist.setColumnWidth(3,50)
+        
+        self.filelist.setRowCount(0)
+        
+        #self.filelist.cellClicked.connect(self.OnFileList)
+
+
+
+        vbox.addWidget(self.filelist)
+        vbox.addStretch(1) 
+        
+        self.tc_first = QtGui.QLabel(self)
+        self.tc_first.setText('First stack file: ')
+        self.tc_last = QtGui.QLabel(self)
+        self.tc_last.setText('Last stack file: ')
+
+        
+        vbox.addWidget(self.tc_first)
+        vbox.addWidget(self.tc_last)
+        vbox.addStretch(1)
+        
+        
+        hbox = QtGui.QHBoxLayout()
+        
+        button_add_file = QtGui.QPushButton('Add File')
+        button_add_file.clicked.connect( self.OnAddFile)
+        hbox.addWidget(button_add_file)
+        
+        self.button_accept = QtGui.QPushButton('Accept')
+        ###self.button_accept.setEnabled(False)
+        self.button_accept.clicked.connect( self.OnAccept)
+        hbox.addWidget(self.button_accept)
+        
+        vbox.addLayout(hbox)
+        
+        vbox.addStretch(0.5)
+                        
+        
+        self.setLayout(vbox)
+        
+        #self.ShowFileList()
+
+#---------------------------
+    def OnAddFile(self, evt):
+        
+        filepath, plugin = File_GUI.SelectFile('read','stack')
+        if filepath is not None:
+            if plugin is None:
+                plugin = file_plugins.identify(filepath)
+            FileStruct = file_plugins.GetFileStructure(filepath, plugin=plugin)
+            print filepath, FileStruct['entry1'].data_shape
+            
+            
+            count = self.filelist.rowCount()
+
+            self.filelist.insertRow(count)
+            self.filelist.setRowHeight(count,20)
+
+            self.filelist.setItem(count, 0, QtGui.QTableWidgetItem(os.path.basename(filepath)))
+            #self.filelist.setItem(count, 1, QtGui.QTableWidgetItem(str(ncols)))
+            #self.filelist.setItem(count, 2, QtGui.QTableWidgetItem(str(nrows)))
+            #self.filelist.setItem(count, 3, QtGui.QTableWidgetItem('{0:5.2f}'.format(iev)))
+                
+
+#---------------------------
+    def OnAccept(self, evt):
+        
+        count = self.filelist.rowCount()
+        print "Concatenating ", count, " files"
+        for i in range(count):
+            print self.filelist.item(i, 0).text()
+
 #---------------------------------------------------------------------- 
 class StackListFrame(QtGui.QDialog):
 
