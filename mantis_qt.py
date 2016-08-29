@@ -13811,10 +13811,10 @@ class StackBuilderFrame(QtGui.QDialog):
         
         filepath, plugin = File_GUI.SelectFile('read','stack')
         if filepath is not None:
-            if plugin is None:
-                plugin = file_plugins.identify(filepath)
-            FileStruct = file_plugins.GetFileStructure(filepath, plugin=plugin)
-            print filepath, FileStruct['entry1'].data_shape
+            #if plugin is None:
+                #plugin = file_plugins.identify(filepath)
+            #FileStruct = file_plugins.GetFileStructure(filepath, plugin=plugin)
+            #print filepath, FileStruct['entry1'].data_shape
             
             
             count = self.filelist.rowCount()
@@ -13823,6 +13823,7 @@ class StackBuilderFrame(QtGui.QDialog):
             self.filelist.setRowHeight(count,20)
 
             self.filelist.setItem(count, 0, QtGui.QTableWidgetItem(os.path.basename(filepath)))
+            self.filelist.item(count, 0).setData(QtCore.Qt.UserRole,filepath)
             #self.filelist.setItem(count, 1, QtGui.QTableWidgetItem(str(ncols)))
             #self.filelist.setItem(count, 2, QtGui.QTableWidgetItem(str(nrows)))
             #self.filelist.setItem(count, 3, QtGui.QTableWidgetItem('{0:5.2f}'.format(iev)))
@@ -13831,10 +13832,78 @@ class StackBuilderFrame(QtGui.QDialog):
 #---------------------------
     def OnAccept(self, evt):
         
+        QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+        
+        self.parent.new_stack_refresh()
+        self.stk.new_data()
         count = self.filelist.rowCount()
         print "Concatenating ", count, " files"
-        for i in range(count):
-            print self.filelist.item(i, 0).text()
+        file_plugins.load(str(self.filelist.item(0, 0).data(QtCore.Qt.UserRole).toString()), stack_object=self.stk)
+        cumulative_data = self.stk.absdata
+        cumulative_ev = self.data_struct.exchange.energy
+        for i in range(1,count):
+            file_plugins.load(str(self.filelist.item(i, 0).data(QtCore.Qt.UserRole).toString()), stack_object=self.stk)
+            if cumulative_data.shape[:2]!=self.stk.absdata.shape[:2]:
+                cum_padding = ((0,max(0,self.stk.absdata.shape[0]-cumulative_data.shape[0])),(0,max(0,self.stk.absdata.shape[1]-cumulative_data.shape[1])),(0,0))
+                stk_padding = ((0,max(0,cumulative_data.shape[0]-self.stk.absdata.shape[0])),(0,max(0,cumulative_data.shape[1]-self.stk.absdata.shape[1])),(0,0))
+                cumulative_data = np.dstack((np.pad(cumulative_data,cum_padding,'edge'),np.pad(self.stk.absdata,stk_padding,'edge'))) #pad smaller images to fit combined stack
+                cumulative_ev = np.hstack((cumulative_ev,self.data_struct.exchange.energy))
+        sorted_index = np.argsort(cumulative_ev)
+        cumulative_ev = cumulative_ev[sorted_index]
+        cumulative_data = cumulative_data[:,:,sorted_index]
+        #print "Final array is:", cumulative_data.shape
+            
+        ##fill the gui structure data
+        self.stk.absdata = cumulative_data
+        
+        datadim = np.int32(self.stk.absdata.shape)
+        self.stk.n_cols = datadim[0].copy()
+        self.stk.n_rows =  datadim[1].copy()
+        self.stk.ev = cumulative_ev
+        self.stk.n_ev = np.int32(cumulative_ev.shape[0]).copy()
+        
+        npixels = self.stk.n_cols*self.stk.n_rows*self.stk.n_ev
+        
+        if len(self.data_struct.exchange.x) != self.stk.n_cols:
+            self.stk.x_dist = np.linspace(self.data_struct.exchange.x[0],self.data_struct.exchange.x[0]+(self.data_struct.exchange.x[-1]-self.data_struct.exchange.x[0])*self.stk.n_cols/float(len(self.data_struct.exchange.x)),self.stk.n_cols)
+        if len(self.data_struct.exchange.y) != self.stk.n_rows:
+            self.stk.y_dist = np.linspace(self.data_struct.exchange.y[0],self.data_struct.exchange.y[0]+(self.data_struct.exchange.y[-1]-self.data_struct.exchange.y[0])*self.stk.n_rows/float(len(self.data_struct.exchange.y)),self.stk.n_rows)
+        self.stk.data_dwell = self.data_struct.spectromicroscopy.data_dwell
+        
+        
+        self.stk.fill_h5_struct_from_stk()
+        
+        self.stk.scale_bar()
+                   
+
+        self.parent.page1.iev = int(self.stk.n_ev/3)
+   
+        self.parent.ix = int(self.stk.n_cols/2)
+        self.parent.iy = int(self.stk.n_rows/2)
+                        
+        self.common.stack_loaded = 1
+        
+        self.parent.refresh_widgets()
+        self.parent.page1.ResetDisplaySettings()
+        self.parent.page1.filename = self.filelist.item(0, 0).text()
+        self.parent.page1.textctrl.setText(self.filelist.item(0, 0).text()+" +"+str(count-1))
+ 
+        self.parent.page0.slider_eng.setRange(0,self.stk.n_ev-1)
+        self.parent.page0.iev = self.stk.n_ev/2
+        self.parent.page0.slider_eng.setValue(self.parent.page1.iev)       
+        
+        self.parent.page1.slider_eng.setRange(0,self.stk.n_ev-1)
+        self.parent.page1.iev = self.stk.n_ev/2
+        self.parent.page1.slider_eng.setValue(self.parent.page1.iev)
+        
+        self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
+        self.parent.page1.loadImage()
+        
+        self.parent.page0.ShowInfo(str(self.filelist.item(0, 0).text()), os.path.dirname(str(self.filelist.item(i, 0).data(QtCore.Qt.UserRole).toString())))
+        
+        QtGui.QApplication.restoreOverrideCursor()
+        self.close()
+
 
 #---------------------------------------------------------------------- 
 class StackListFrame(QtGui.QDialog):

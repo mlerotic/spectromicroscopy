@@ -90,9 +90,9 @@ def load(filename,stack_object=None,plugin=None,selection=None):
         print "load", filename, "with the", plugin.title, "plugin."
         if selection is None or len(selection) == 1:
             if stack_object is None:
-                return plugin.read(filename,None,selection[0]) #should this ever be used?
+                return plugin.read(filename,None) #should this ever be used?
             else:
-                plugin.read(filename,stack_object,selection[0])
+                plugin.read(filename,stack_object)
                 return
         else:
             plugin.read(filename,stack_object,selection[0])
