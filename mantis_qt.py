@@ -28,9 +28,6 @@ from PyQt4.QtCore import Qt, QCoreApplication
 
 from PIL import Image  
 
-import Tkinter
-import FileDialog
-
 
 import matplotlib 
 from numpy import NAN
@@ -60,7 +57,7 @@ from file_plugins import file_tif
 from file_plugins import file_stk
 
 
-version = '2.3.00'
+version = '2.3.01'
 
 Winsizex = 1000
 Winsizey = 700
@@ -9061,14 +9058,15 @@ class PageStack(QtGui.QWidget):
         vbox3.setSpacing(0)
 
         
-        self.button_addROI = QtGui.QPushButton('Add ROI')
+        self.button_addROI = QtGui.QPushButton('Select ROI (Lasso)')
         self.button_addROI.clicked.connect( self.OnAddROI)
         self.button_addROI.setEnabled(False)
         vbox3.addWidget(self.button_addROI)
         
         self.button_acceptROI = QtGui.QPushButton('Accept ROI')
         self.button_acceptROI.clicked.connect( self.OnAcceptROI)   
-        self.button_acceptROI.setEnabled(False)     
+        self.button_acceptROI.setEnabled(False)   
+        self.button_acceptROI.setVisible(False)
         vbox3.addWidget(self.button_acceptROI)
         
         self.button_resetROI = QtGui.QPushButton('Reset ROI')
@@ -9116,7 +9114,7 @@ class PageStack(QtGui.QWidget):
         self.absimgfig = Figure((PlotH, PlotH))
         self.AbsImagePanel = FigureCanvas(self.absimgfig)
         self.AbsImagePanel.setParent(self)
-        self.AbsImagePanel.mpl_connect('button_press_event', self.OnPointAbsimage)
+        self.cid1 = self.AbsImagePanel.mpl_connect('button_press_event', self.OnPointAbsimage)
         fbox.addWidget(self.AbsImagePanel)
         frame.setLayout(fbox)
         gridsizer4.addWidget(frame, 1, 0, QtCore .Qt. AlignLeft)
@@ -9858,7 +9856,7 @@ class PageStack(QtGui.QWidget):
          
             axes.set_position([0.03,0.03,0.8,0.94])
              
- 
+        self.axes = axes
         fig.patch.set_alpha(1.0)
          
         if (self.line != None) and (self.addroi == 1):
@@ -9885,6 +9883,7 @@ class PageStack(QtGui.QWidget):
 
         if (self.showROImask == 1) and (self.addroi == 1):
             im_red = axes.imshow(np.rot90( self.ROIpix_masked), cmap=matplotlib.cm.get_cmap("autumn")) 
+            
         
           
         axes.axis("off") 
@@ -9997,13 +9996,25 @@ class PageStack(QtGui.QWidget):
         
 #----------------------------------------------------------------------    
     def OnAddROI(self, evt):    
+#         self.addroi = 1
+#         self.previous_point = []
+#         self.start_point = []
+#         self.end_point = []
+#         self.line = None
+#         self.roixdata = []
+#         self.roiydata = []
+        
         self.addroi = 1
-        self.previous_point = []
-        self.start_point = []
-        self.end_point = []
-        self.line = None
-        self.roixdata = []
-        self.roiydata = []
+        
+        self.AbsImagePanel.mpl_disconnect(self.cid1)
+
+        
+        
+        lineprops = dict(color='red', linestyle='-', linewidth = 1, alpha=1)
+
+
+        self.lasso = LassoSelector(self.axes, onselect=self.OnSelectLasso, useblit=False, lineprops=lineprops)
+        
                 
         fig = self.specfig
         fig.clf()
@@ -10022,9 +10033,13 @@ class PageStack(QtGui.QWidget):
     def CalcROISpectrum(self):
               
         self.ROIspectrum = np.zeros((self.stk.n_ev))
-               
-        indices = np.where(self.ROIpix == 255)
-        numroipix = self.ROIpix[indices].shape[0]
+
+
+        indices = np.where(self.ROIarray == 255)
+        numroipix = self.ROIarray[indices].shape[0] 
+
+    
+    
             
         for ie in range(self.stk.n_ev):
             thiseng_od = self.stk.od3d[:,:,ie]
@@ -10061,6 +10076,9 @@ class PageStack(QtGui.QWidget):
         #find pixels inside the polygon 
         if self.ROIpix == None:
             self.ROIpix = np.zeros((self.stk.n_cols,self.stk.n_rows))    
+            
+            
+        print self.stk.n_cols, self.stk.n_rows
         
         for i in range(self.stk.n_cols):
             for j in range(self.stk.n_rows):
@@ -10095,9 +10113,61 @@ class PageStack(QtGui.QWidget):
             
         QtGui.QApplication.restoreOverrideCursor()
         
+        
+        
+#---------------------------------------------------------------------- 
+
+    def OnSelectLasso(self,verts):
+
+
+        path = matplotlib.path.Path(verts)
+        #find pixels inside the polygon 
+
+        ROIpix = np.zeros((self.stk.n_cols,self.stk.n_rows))    
+        
+        for i in range(self.stk.n_cols):
+            for j in range(self.stk.n_rows):
+                Pinside = path.contains_point((i,j))
+                if Pinside == True:
+                    ROIpix[i, self.stk.n_rows-1-j] = 255
+              
+
+
+        ROIpix = np.ma.array(ROIpix)
+        
+        self.ROIpix_masked =  np.ma.masked_values(ROIpix, 0)
+        
+        self.ROIarray = ROIpix[:]
+        
+        
+        self.showROImask = 1
+        self.line = None
+        self.previous_point = []
+        self.start_point = []
+        self.end_point = []
+        self.roixdata = []
+        self.roiydata = []
+
+        self.button_saveROIspectr.setEnabled(True)
+        self.button_setROII0.setEnabled(True)
+        self.button_ROIdosecalc.setEnabled(True) 
+        self.window().refresh_widgets()
+                
+        self.loadImage()
+        if (self.com.i0_loaded == 1):
+            self.ShowROISpectrum()
+            
+        QtGui.QApplication.restoreOverrideCursor()
+        
     
 #----------------------------------------------------------------------    
     def OnResetROI(self, evt): 
+        
+        self.ResetROI()
+        
+#----------------------------------------------------------------------    
+    def ResetROI(self): 
+                
         self.addroi = 0   
         self.showROImask = 0
         self.ROIpix = None
@@ -10119,8 +10189,9 @@ class PageStack(QtGui.QWidget):
    
         self.ROIspectrum = np.zeros((self.stk.n_ev))
                
-        indices = np.where(self.ROIpix == 255)
-        numroipix = self.ROIpix[indices].shape[0]
+
+        indices = np.where(self.ROIarray == 255)
+        numroipix = self.ROIarray[indices].shape[0] 
             
         for ie in range(self.stk.n_ev):
             thiseng_abs = self.stk.absdata[:,:,ie]
@@ -14824,6 +14895,8 @@ class MainFrame(QtGui.QMainWindow):
         self.page1.tc_imageeng.setText("Image at energy: ")
          
         self.page1.textctrl.setText(' ')
+        
+        self.page1.ResetROI()
          
         self.page1.ResetDisplaySettings()
         #page 0
