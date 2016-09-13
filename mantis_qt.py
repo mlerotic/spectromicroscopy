@@ -31,6 +31,7 @@ from PIL import Image
 import Tkinter
 import FileDialog
 
+
 import matplotlib 
 from numpy import NAN
 matplotlib.rcParams['backend.qt4'] = 'PyQt4'
