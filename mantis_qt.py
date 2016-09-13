@@ -63,7 +63,7 @@ from file_plugins import file_stk
 version = '2.3.01'
 
 Winsizex = 1000
-Winsizey = 700
+Winsizey = 800
 
 PlotH = 4.0
 PlotW = PlotH*1.61803
@@ -315,8 +315,6 @@ class PageTomo(QtGui.QWidget):
         
         sizer2.setLayout(vbox2)
         
-        
-        sizer1.setLayout(vbox1)
 
         #panel 3
         sizer3 = QtGui.QGroupBox('ROI')
@@ -13626,6 +13624,7 @@ class PageLoadData(QtGui.QWidget):
 
         self.AbsImagePanel = FigureCanvas(self.absimgfig)
         self.AbsImagePanel.setParent(self)
+        self.AbsImagePanel.setMinimumSize(300,300)
         
         
         fbox.addWidget(self.AbsImagePanel)
@@ -14279,6 +14278,7 @@ class MainFrame(QtGui.QMainWindow):
             self.page8 = PageTomo(self.common, self.data_struct, self.stk, self.anlz)
             tabs.addTab(self.page8, "Tomography")  
             
+        tabs.setMinimumHeight(750)
                     
         tabs.tabBar().setTabTextColor(0, QtGui.QColor('green'))
         tabs.tabBar().setTabTextColor(1, QtGui.QColor('green'))
@@ -14308,13 +14308,29 @@ class MainFrame(QtGui.QMainWindow):
 #                 tabs.addTab(self.page7, "NNMA Analysis")
 
         
-        
+
 
     
         layout = QVBoxLayout()
 
         layout.addWidget(tabs)
-        self.setCentralWidget(tabs)
+        #self.setCentralWidget(tabs)
+        
+        self.scrollArea = QtGui.QScrollArea()
+        #self.scrollArea.setBackgroundRole(QtGui.QPalette.Dark)
+        self.scrollArea.setWidget(tabs)
+        #self.scrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        #self.scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.scrollArea.setWidgetResizable(True)
+        self.setCentralWidget(self.scrollArea)
+        
+        
+        screen = QtGui.QDesktopWidget().screenGeometry()
+        
+        print screen.height()
+        
+        if screen.height() < Winsizey - 50:
+            self.showMaximized()
        
                               
         self.show()
