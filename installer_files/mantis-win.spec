@@ -3,12 +3,16 @@
 block_cipher = None
 
 
-a = Analysis(['mantis.py'],
-             pathex=['D:\\mirna\\Phyton\\SpecMicViewer\\src'],
-             hiddenimports=[],
+a = Analysis(['mantis_qt.py'],
+             pathex=['C:\\projects\\Mantis'],
+             hiddenimports=['scipy.special._ufuncs_cxx','h5py.h5ac'],
              hookspath=None,
-             runtime_hooks=None,
-             cipher=block_cipher)
+             runtime_hooks=None)
+
+for d in a.datas:
+    if 'pyconfig' in d[0]: 
+        a.datas.remove(d)
+        break
 
 ##### include mydir in distribution #######
 def extra_datas(mydir):
@@ -30,9 +34,11 @@ def extra_datas(mydir):
 
 # append the 'data' dir
 a.datas += extra_datas('images')
+a.datas += extra_datas('file_plugins')
+a.datas += extra_datas('TomoCS')
 
-pyz = PYZ(a.pure,
-             cipher=block_cipher)
+pyz = PYZ(a.pure)
+
 exe = EXE(pyz,
           a.scripts,
           a.binaries,
