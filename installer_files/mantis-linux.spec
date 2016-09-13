@@ -30,6 +30,8 @@ def extra_datas(mydir):
 
 # append the 'data' dir
 a.datas += extra_datas('images')
+a.datas += extra_datas('file_plugins')
+a.datas += extra_datas('TomoCS')
 
 pyz = PYZ(a.pure,
              cipher=block_cipher)

@@ -62,8 +62,12 @@ from file_plugins import file_stk
 
 version = '2.3.02'
 
-Winsizex = 1000
-Winsizey = 800
+if sys.platform == 'win32':
+    Winsizex = 1000
+    Winsizey = 800
+else:
+    Winsizex = 1250
+    Winsizey = 900
 
 PlotH = 4.0
 PlotW = PlotH*1.61803
@@ -14278,7 +14282,10 @@ class MainFrame(QtGui.QMainWindow):
             self.page8 = PageTomo(self.common, self.data_struct, self.stk, self.anlz)
             tabs.addTab(self.page8, "Tomography")  
             
-        tabs.setMinimumHeight(750)
+        if sys.platform == 'win32':
+            tabs.setMinimumHeight(750)
+        else:
+            tabs.setMinimumHeight(850)
                     
         tabs.tabBar().setTabTextColor(0, QtGui.QColor('green'))
         tabs.tabBar().setTabTextColor(1, QtGui.QColor('green'))
