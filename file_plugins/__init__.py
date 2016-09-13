@@ -46,19 +46,19 @@ data_types = ['spectrum','image','stack','results']
 # Go through the directory and try to load each plugin
 plugins = []
 
-    for m in pkgutil.iter_modules(path=__path__):
-        if verbose: print "Loading file plugin:", m[1], ".",
-        try:
-            details = imp.find_module(m[1],__path__)
-            # check if there is a read() function in plugin
-            if 'read' in dir(imp.load_module(m[1],*details)):
-                plugins.append(imp.load_module(m[1],*details))
-                if verbose: print "("+plugins[-1].title+") Success!"
-            else:
-                if verbose: print 'Not a valid plugin - skipping.'
-     
-        except ImportError as e:
-            if verbose: print "prerequisites not satisfied:", e
+for m in pkgutil.iter_modules(path=__path__):
+    if verbose: print "Loading file plugin:", m[1], ".",
+    try:
+        details = imp.find_module(m[1],__path__)
+        # check if there is a read() function in plugin
+        if 'read' in dir(imp.load_module(m[1],*details)):
+            plugins.append(imp.load_module(m[1],*details))
+            if verbose: print "("+plugins[-1].title+") Success!"
+        else:
+            if verbose: print 'Not a valid plugin - skipping.'
+ 
+    except ImportError as e:
+        if verbose: print "prerequisites not satisfied:", e
 
 
 # if getattr(sys, 'frozen', False):
