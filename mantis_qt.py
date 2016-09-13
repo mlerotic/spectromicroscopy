@@ -60,7 +60,7 @@ from file_plugins import file_tif
 from file_plugins import file_stk
 
 
-version = '2.3.01'
+version = '2.3.02'
 
 Winsizex = 1000
 Winsizey = 800
@@ -14327,7 +14327,6 @@ class MainFrame(QtGui.QMainWindow):
         
         screen = QtGui.QDesktopWidget().screenGeometry()
         
-        print screen.height()
         
         if screen.height() < Winsizey - 50:
             self.showMaximized()

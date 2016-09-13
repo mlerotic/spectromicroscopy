@@ -53,7 +53,7 @@ if getattr(sys, 'frozen', False):
         if verbose: print "Loading file plugin:", m, "...",
         try:
             
-			#details = imp.find_module(m,__path__)
+
             details = imp.find_module(m)
             # check if there is a read() function in plugin
             if 'read' in dir(imp.load_module(m,*details)):
@@ -64,22 +64,22 @@ if getattr(sys, 'frozen', False):
      
         except ImportError as e:
             if verbose: print "prerequisites not satisfied:", e	
-		
-	for m in pkgutil.iter_modules(path=__path__):
-		if verbose: print "Loading file plugin:", m[1], ".",
-		try:
-			details = imp.find_module(m[1],__path__)
-			# check if there is a read() function in plugin
-			if 'read' in dir(imp.load_module(m[1],*details)):
-				plugins.append(imp.load_module(m[1],*details))
-				if verbose: print "("+plugins[-1].title+") Success!"
-			else:
-				if verbose: print 'Not a valid plugin - skipping.'
+else:		
+    for m in pkgutil.iter_modules(path=__path__):
+        if verbose: print "Loading file plugin:", m[1], ".",
+        try:
+            details = imp.find_module(m[1],__path__)
+            # check if there is a read() function in plugin
+            if 'read' in dir(imp.load_module(m[1],*details)):
+                plugins.append(imp.load_module(m[1],*details))
+                if verbose: print "("+plugins[-1].title+") Success!"
+            else:
+                if verbose: print 'Not a valid plugin - skipping.'
      
-		except ImportError as e:
-			if verbose: print "prerequisites not satisfied:", e
+        except ImportError as e:
+            if verbose: print "prerequisites not satisfied:", e
 
-	
+
         
 
 # Go through set of plugins and assemble lists of supported file types for each action and data type
