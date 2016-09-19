@@ -60,7 +60,7 @@ from file_plugins import file_tif
 from file_plugins import file_stk
 
 
-version = '2.3.02'
+version = '2.3.03'
 
 if sys.platform == 'win32':
     Winsizex = 1000
@@ -150,11 +150,13 @@ class PageTomo(QtGui.QWidget):
         self.engpar = 0.001
         self.useengreg = 0
         self.samplethick = 0
+        self.nonnegconst = 1
         
 
         #panel 1
         sizer1 = QtGui.QGroupBox('Tomo Data')
         vbox1 = QtGui.QVBoxLayout()
+
         
         self.button_spcomp = QtGui.QPushButton('Load Tomo Data for Spectral Components')
         self.button_spcomp.clicked.connect( self.OnLoadTomoComponents)
@@ -280,9 +282,6 @@ class PageTomo(QtGui.QWidget):
         vbox2.addLayout(hbox23) 
         
 
-
-        
-        
         hbox25 = QtGui.QHBoxLayout()
    
         self.cb_ereg = QtGui.QCheckBox('CS Energy Reg Parameter', self)
@@ -315,6 +314,11 @@ class PageTomo(QtGui.QWidget):
         hbox24.addWidget(self.ntc_samplethick)  
   
         vbox2.addLayout(hbox24) 
+        
+        self.cb_nneg = QtGui.QCheckBox('Non-Negativity Constraints', self)
+        self.cb_nneg.setChecked(True)
+        self.cb_nneg.stateChanged.connect(self.OnNonNegConst)
+        vbox2.addWidget(self.cb_nneg)     
       
         
         sizer2.setLayout(vbox2)
@@ -359,29 +363,7 @@ class PageTomo(QtGui.QWidget):
         sizer3.setLayout(vbox3)
 
 
-#         #panel 3
-#         sizer3 = QtGui.QGroupBox('File')
-#         vbox3 = QtGui.QVBoxLayout()
-#  
-#   
-#         self.tc_file = QtGui.QLabel(self)
-#         vbox3.addWidget(self.tc_file)
-#         self.tc_file.setText('File name')
-#         
-#         vbox3.setContentsMargins(20,20,20,30)
-#         sizer3.setLayout(vbox3)
-#         
-# 
-#         #panel 4
-#         sizer4 = QtGui.QGroupBox('Path')
-#         vbox4 = QtGui.QVBoxLayout()
-#   
-#         self.tc_path = QtGui.QLabel(self)
-#         vbox4.addWidget(self.tc_path)
-#         self.tc_path.setText('D:/')
-#        
-#         vbox4.setContentsMargins(20,20,20,30)
-#         sizer4.setLayout(vbox4)
+
                 
  
         #panel 5    
@@ -464,7 +446,9 @@ class PageTomo(QtGui.QWidget):
         
         fbox3.addWidget(self.AbsImagePanel3)
         frame3.setLayout(fbox3)
-        gridsizer5.addWidget(frame3, 1, 2, QtCore .Qt. AlignLeft)     
+        gridsizer5.addWidget(frame3, 2, 2, QtCore .Qt. AlignLeft)     
+        
+        gridsizer5.addWidget(sizer3, 1, 2, QtCore .Qt. AlignCenter)
         
         
 
@@ -476,18 +460,20 @@ class PageTomo(QtGui.QWidget):
         
         hboxtop = QtGui.QHBoxLayout()
         vboxt1 = QtGui.QVBoxLayout()
+        vboxt1.addStretch (1)
         vboxt1.addWidget(sizer1)
         vboxt1.addStretch (1)
         vboxt1.addWidget(sizer2)
         vboxt1.addStretch (1)
-        vboxt1.addWidget(sizer3)
-        vboxt1.addStretch (1)
+        #vboxt1.addWidget(sizer3)
+        #vboxt1.addStretch (1)
         
         hboxtop.addStretch (0.5)
         hboxtop.addLayout(vboxt1)
         hboxtop.addStretch (0.5)
         hboxtop.addLayout(vbox5)
         hboxtop.addStretch (0.5)
+        
 
 
 
@@ -507,9 +493,7 @@ class PageTomo(QtGui.QWidget):
         self.tomo_calculated = 0
         self.full_tomo_calculated = 0
 
-        fig = self.absimgfig
-        fig.clf()
-        self.AbsImagePanel.draw()   
+        self.NewStackClear()
         
         self.button_save.setEnabled(False)
         self.tc_comp.setText('Component: ')
@@ -547,10 +531,9 @@ class PageTomo(QtGui.QWidget):
         self.fulltomorecdata = []        
         self.tomo_calculated = 0
         self.full_tomo_calculated = 0
+        
+        self.NewStackClear()
 
-        fig = self.absimgfig
-        fig.clf()
-        self.AbsImagePanel.draw()   
         
         self.button_save.setEnabled(False)
         self.button_save.setEnabled(False)
@@ -754,7 +737,8 @@ class PageTomo(QtGui.QWidget):
                                    self.maxIters,
                                    self.beta,
                                    0,
-                                   algorithm = self.algo)
+                                   algorithm = self.algo,
+                                   nonnegconst = self.nonnegconst)
                     
                 initrecs.append(np.swapaxes(np.array(self.tr.tomorec.copy()), 0, 1))
                 
@@ -779,7 +763,8 @@ class PageTomo(QtGui.QWidget):
                                    self.samplethick,
                                    algorithm = 2,
                                    x0=initrecs,
-                                   comp = i, beta2=beta2)
+                                   comp = i, beta2=beta2,
+                                   nonnegconst = self.nonnegconst)
                 
                 self.fulltomorecdata.append(self.tr.tomorec.copy()) 
                 
@@ -805,7 +790,8 @@ class PageTomo(QtGui.QWidget):
                                    self.maxIters,
                                    self.beta,
                                    self.samplethick,
-                                   algorithm = self.algo)
+                                   algorithm = self.algo,
+                                   nonnegconst = self.nonnegconst)
                 
                 self.fulltomorecdata.append(self.tr.tomorec.copy())
          
@@ -882,7 +868,8 @@ class PageTomo(QtGui.QWidget):
                            self.maxIters,
                            self.beta,
                            self.samplethick,
-                           algorithm = self.algo)
+                           algorithm = self.algo,
+                           nonnegconst=self.nonnegconst)
         
         self.tomo_calculated = 1
         self.full_tomo_calculated = 0
@@ -947,6 +934,14 @@ class PageTomo(QtGui.QWidget):
             self.useengreg = 0
             self.ntc_ereg.setEnabled(False)
         
+ #----------------------------------------------------------------------           
+    def OnNonNegConst(self, state):
+        
+        if state == QtCore.Qt.Checked:
+            self.nonnegconst = 1
+        else: 
+            self.nonnegconst = 0
+
         
 #----------------------------------------------------------------------            
     def OnScrollSlice(self, value):

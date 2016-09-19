@@ -239,7 +239,7 @@ def ista_tv(y, beta, niter, H=None):
     return res, energies
 
 def gfb_tv(y, beta, niter, H=None, val_min=0, val_max=1, x0=None,
-           stop_tol=1.e-4):
+           stop_tol=1.e-4, nonnegconst=1):
     """
     TV regression + interval constraint using the generalized
     forward backward splitting (GFB).
@@ -336,7 +336,9 @@ def gfb_tv(y, beta, niter, H=None, val_min=0, val_max=1, x0=None,
                 eps=eps).ravel()[:, np.newaxis] - x
         # Projection on the interval
         tmp_z_2 = 2 * x - z_2 - gamma * back_proj
-        tmp_z_2[tmp_z_2 < val_min] = val_min
+        if nonnegconst == 1: 
+            tmp_z_2[tmp_z_2 < val_min] = val_min
+            #print 'Non negative constraint imposed.'
         tmp_z_2[tmp_z_2 > val_max] = val_max
         z_2 = z_2 - x + tmp_z_2
         # update x: average of z_i
@@ -354,7 +356,7 @@ def gfb_tv(y, beta, niter, H=None, val_min=0, val_max=1, x0=None,
 
 
 def gfb_tv_weng(y, beta, niter, H=None, val_min=0, val_max=1, x0=None,
-           stop_tol=1.e-4, xb=None, xa=None, beta2=None):
+           stop_tol=1.e-4, xb=None, xa=None, beta2=None, nonnegconst=1):
     """
     TV regression + interval constraint using the generalized
     forward backward splitting (GFB) with adjacent energies TV regularization 
@@ -468,7 +470,8 @@ def gfb_tv_weng(y, beta, niter, H=None, val_min=0, val_max=1, x0=None,
                 eps=eps).ravel()[:, np.newaxis] - x
         # Projection on the interval
         tmp_z_2 = 2 * x - z_2 - gamma * back_proj
-        tmp_z_2[tmp_z_2 < val_min] = val_min
+        if nonnegconst:
+            tmp_z_2[tmp_z_2 < val_min] = val_min
         tmp_z_2[tmp_z_2 > val_max] = val_max
         z_2 = z_2 - x + tmp_z_2
         if beta2 != 0:

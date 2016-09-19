@@ -66,22 +66,24 @@ class Ctomo:
 # Algorithm = 0 : CS reconstruction for 1 dataset 
 # Algorithm = 1 : SIRT reconstruction for 1 dataset 
     def calc_tomo(self, tomodata, theta, maxiter, beta, samplethickness, algorithm = 0,
-                  x0=[], comp = 0, beta2 = 0):     
+                  x0=[], comp = 0, beta2 = 0, nonnegconst = 1):     
         
         tomodata = tomodata
         #Algorithm 
         if algorithm == 0:
-            self.calc_tomo_cs(tomodata.astype(np.float32), theta, maxiter, beta, samplethickness)  
+            self.calc_tomo_cs(tomodata.astype(np.float32), theta, maxiter, beta, samplethickness, 
+                              nonnegconst = nonnegconst)  
         elif algorithm == 1:
-            self.calc_tomo_sirt(tomodata.astype(np.float32), theta, maxiter, beta, samplethickness) 
+            self.calc_tomo_sirt(tomodata.astype(np.float32), theta, maxiter, beta, samplethickness, 
+                                nonnegconst = nonnegconst) 
         else:
             self.calc_tomo_cs_tveng(tomodata.astype(np.float32), theta, maxiter, beta, samplethickness,
-                                    x0, comp, beta2)  
+                                    x0, comp, beta2, nonnegconst = nonnegconst)  
              
         
 #----------------------------------------------------------------------   
 # Calculate tomo - CS reconstruction for 1 dataset 
-    def calc_tomo_cs(self, tomodata, theta, maxiter, beta, samplethickness):
+    def calc_tomo_cs(self, tomodata, theta, maxiter, beta, samplethickness, nonnegconst = 1):
         
 
         print 'Compressed sensing TV regression'
@@ -141,7 +143,7 @@ class Ctomo:
             # Reconstruction
             
             #res, energies = fista_tv(proj, 5, 100, proj_operator) 
-            res, engs = gfb_tv(proj, beta, maxiter, H=proj_operator, x0=initx0)
+            res, engs = gfb_tv(proj, beta, maxiter, H=proj_operator, x0=initx0, nonnegconst = nonnegconst)
 
     
         
@@ -173,7 +175,7 @@ class Ctomo:
 
 #----------------------------------------------------------------------   
 # Calculate tomo - SIRT reconstruction for 1 dataset 
-    def calc_tomo_sirt(self, tomodata, theta, maxiter, beta, samplethickness):
+    def calc_tomo_sirt(self, tomodata, theta, maxiter, beta, samplethickness, nonnegconst = 1):
         
         try:
             from skimage.transform import iradon, radon
@@ -269,8 +271,10 @@ class Ctomo:
                 #update using (At g - At A x_k) 
                 #new xk = xk + difference between reconstruction At_starting - t_previuous_step
                 xk = xk + At - t
-                #delete values <0 aka not real!
-                xk = xk.clip(min=0)
+                
+                if nonnegconst == 1:
+                    #delete values <0 aka not real!
+                    xk = xk.clip(min=0)
 
              
 
@@ -310,7 +314,7 @@ class Ctomo:
     
 #----------------------------------------------------------------------   
 # Calculate tomo - CS reconstruction for 1 dataset with energy TV regularization
-    def calc_tomo_cs_tveng(self, tomodata, theta, maxiter, beta, samplethickness, initrecs, comp, beta2):
+    def calc_tomo_cs_tveng(self, tomodata, theta, maxiter, beta, samplethickness, initrecs, comp, beta2, nonnegconst = 1):
         
 
         print 'Compressed sensing TV regression with Energy Regularization'
@@ -379,7 +383,8 @@ class Ctomo:
             # Reconstruction            
             res, engs = gfb_tv_weng(proj, beta, maxiter, H=proj_operator, 
                                         x0=np.array(initrecs[comp][j]),
-                                        xb=xb, xa=xa, beta2=beta2)
+                                        xb=xb, xa=xa, beta2=beta2,
+                                        nonnegconst = nonnegconst)
 
     
         
