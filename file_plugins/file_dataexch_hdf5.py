@@ -474,7 +474,7 @@ def read(filename, self, selection=None):
         self.y_dist = range(self.n_rows)
             
     
-    self.i0data = data_struct.spectromicroscopy.normalization.white_spectrum           
+    self.i0data = data_struct.spectromicroscopy.normalization.white_spectrum
     self.evi0 = data_struct.spectromicroscopy.normalization.white_spectrum_energy
     
     self.data_dwell = np.ones((self.n_ev))

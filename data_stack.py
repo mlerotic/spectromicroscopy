@@ -442,9 +442,9 @@ class data:
         self.evi0[0] -= 0.001
         
         if len(self.evi0) > 2:
-            fi0int = scipy.interpolate.interp1d(self.evi0,self.i0data, kind='cubic', bounds_error=False, fill_value=0.0)      
+            fi0int = scipy.interpolate.interp1d(self.evi0.astype(np.double),self.i0data.astype(np.double), kind='cubic', bounds_error=False, fill_value=0.0)
         else:
-            fi0int = scipy.interpolate.interp1d(self.evi0,self.i0data, bounds_error=False, fill_value=0.0)      
+            fi0int = scipy.interpolate.interp1d(self.evi0.astype(np.double),self.i0data.astype(np.double), bounds_error=False, fill_value=0.0)
         i0 = fi0int(self.ev)
         
          
