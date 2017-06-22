@@ -24,7 +24,6 @@ import time
 import getopt
 
 from PyQt4 import QtCore, QtGui
-from PyQt4.QtGui import *
 from PyQt4.QtCore import Qt, QCoreApplication
 
 from PIL import Image  
@@ -381,7 +380,7 @@ class PageTomo(QtGui.QWidget):
         gridsizer5.setSpacing(5)
         
         frame = QtGui.QFrame()
-        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        frame.setFrameStyle(QtGui.QFrame.StyledPanel|QtGui.QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
    
         self.absimgfig = Figure((PlotH*0.9, PlotH*0.9))
@@ -419,7 +418,7 @@ class PageTomo(QtGui.QWidget):
         
         
         frame2 = QtGui.QFrame()
-        frame2.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        frame2.setFrameStyle(QtGui.QFrame.StyledPanel|QtGui.QFrame.Sunken)
         fbox2 = QtGui.QHBoxLayout()
    
         self.absimgfig2 = Figure((PlotH*0.9, PlotH*0.9))
@@ -436,7 +435,7 @@ class PageTomo(QtGui.QWidget):
         
         
         frame3 = QtGui.QFrame()
-        frame3.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        frame3.setFrameStyle(QtGui.QFrame.StyledPanel|QtGui.QFrame.Sunken)
         fbox3 = QtGui.QHBoxLayout()
    
         self.absimgfig3 = Figure((PlotH*0.9, PlotH*0.9))
@@ -1426,7 +1425,7 @@ class ROIHistogram(QtGui.QDialog):
         vbox = QtGui.QVBoxLayout()
                
         frame = QtGui.QFrame()
-        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        frame.setFrameStyle(QtGui.QFrame.StyledPanel|QtGui.QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
    
         self.histfig = Figure((6.0, 4.2))
@@ -2018,7 +2017,7 @@ class PageNNMA(QtGui.QWidget):
         hbox21 = QtGui.QHBoxLayout()
 
         frame = QtGui.QFrame()
-        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        frame.setFrameStyle(QtGui.QFrame.StyledPanel|QtGui.QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
         self.nnmaimgfig = Figure((PlotH*1.10, PlotH))
         self.NNMAImagePan = FigureCanvas(self.nnmaimgfig)
@@ -2048,7 +2047,7 @@ class PageNNMA(QtGui.QWidget):
         vbox3.addWidget(self.tc_nnmaspec)
                         
         frame = QtGui.QFrame()
-        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        frame.setFrameStyle(QtGui.QFrame.StyledPanel|QtGui.QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
 
         self.nnmaspecfig = Figure((PlotW, PlotH))
@@ -2068,7 +2067,7 @@ class PageNNMA(QtGui.QWidget):
         vbox4.addWidget(text4)
 
         frame = QtGui.QFrame()
-        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        frame.setFrameStyle(QtGui.QFrame.StyledPanel|QtGui.QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
        
         self.costffig = Figure((PlotW*0.7, PlotH*0.7))
@@ -3353,7 +3352,7 @@ class PageXrayPeakFitting(QtGui.QWidget):
         hbox11 = QtGui.QHBoxLayout()       
          
         frame = QtGui.QFrame()
-        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        frame.setFrameStyle(QtGui.QFrame.StyledPanel|QtGui.QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
         self.Specfig = Figure((PlotW*1.25, PlotH*1.25))
         self.SpectrumPanel = FigureCanvas(self.Specfig)
@@ -4333,7 +4332,7 @@ class PagePeakID(QtGui.QWidget):
         hbox11 = QtGui.QHBoxLayout() 
         
         frame = QtGui.QFrame()
-        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        frame.setFrameStyle(QtGui.QFrame.StyledPanel|QtGui.QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
    
         self.kespecfig = Figure((pw, ph))
@@ -4389,7 +4388,7 @@ class PagePeakID(QtGui.QWidget):
         t1 = QtGui.QLabel(self)
         t1.setText("Peak ID Energies")       
          
-        self.lc_1 = QListWidget()   
+        self.lc_1 = QtGui.QListWidget()
         self.lc_1.itemClicked.connect(self.OnEngListClick)
         self.lc_1.setMinimumSize(200, 400)
          
@@ -4407,7 +4406,7 @@ class PagePeakID(QtGui.QWidget):
         hbox41 = QtGui.QHBoxLayout()
 
         frame = QtGui.QFrame()
-        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        frame.setFrameStyle(QtGui.QFrame.StyledPanel|QtGui.QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
   
         self.absimgfig = Figure((ph, ph))
@@ -4812,7 +4811,7 @@ class PageSpectral(QtGui.QWidget):
         sizer5 = QtGui.QGroupBox('Target Spectra')
         vbox5 = QtGui.QVBoxLayout()
  
-        self.tc_speclist =  QListWidget()  
+        self.tc_speclist = QtGui.QListWidget()
         self.tc_speclist.itemClicked.connect(self.OnSpectraListClick)
         #self.tc_speclist.doubleClicked.connect(self.OnEditSpectraListClick)      
         vbox5.addWidget(self.tc_speclist)
@@ -4827,7 +4826,7 @@ class PageSpectral(QtGui.QWidget):
         self.tc_spmap.setText("Spectrum composition map")
 
         frame = QtGui.QFrame()
-        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        frame.setFrameStyle(QtGui.QFrame.StyledPanel|QtGui.QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
 
         self.mapfig = Figure((PlotH, PlotH))
@@ -4850,7 +4849,7 @@ class PageSpectral(QtGui.QWidget):
         hbox11 = QtGui.QHBoxLayout()       
          
         frame = QtGui.QFrame()
-        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        frame.setFrameStyle(QtGui.QFrame.StyledPanel|QtGui.QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
         self.TSpecfig = Figure((PlotW, PlotH))
         self.TSpectrumPanel = FigureCanvas(self.TSpecfig)
@@ -4987,7 +4986,7 @@ class PageSpectral(QtGui.QWidget):
         sb = QtGui.QGroupBox('Fit Weights')
         vbox43 = QtGui.QVBoxLayout()
 
-        self.tc_spfitlist = QListWidget()
+        self.tc_spfitlist = QtGui.QListWidget()
         vbox43.addWidget(self.tc_spfitlist)
           
         sb.setLayout(vbox43)
@@ -5944,7 +5943,7 @@ class ShowCompositeRBGmap(QtGui.QDialog):
         hbox1.addLayout(vbox1)
         
         frame = QtGui.QFrame()
-        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        frame.setFrameStyle(QtGui.QFrame.StyledPanel|QtGui.QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
         self.RGBImagefig = Figure((PlotH, PlotH))
         self.RGBImagePanel = FigureCanvas(self.RGBImagefig)
@@ -6259,7 +6258,7 @@ class ShowMapHistogram(QtGui.QDialog):
         vbox = QtGui.QVBoxLayout()
                
         frame = QtGui.QFrame()
-        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        frame.setFrameStyle(QtGui.QFrame.StyledPanel|QtGui.QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
    
         self.histfig = Figure((6.0, 4.2))
@@ -6740,7 +6739,7 @@ class PageCluster(QtGui.QWidget):
         vbox2.addWidget(tc_clustercomp)      
           
         frame = QtGui.QFrame()
-        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        frame.setFrameStyle(QtGui.QFrame.StyledPanel|QtGui.QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
    
         self.clusterimgfig = Figure((PlotH, PlotH))
@@ -6760,7 +6759,7 @@ class PageCluster(QtGui.QWidget):
         fgs.addWidget(self.tc_cluster, 0, 0, QtCore .Qt. AlignLeft)
 
         frame = QtGui.QFrame()
-        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        frame.setFrameStyle(QtGui.QFrame.StyledPanel|QtGui.QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
 
         self.clusterindvimgfig = Figure((PlotH*0.73, PlotH*0.73))
@@ -6782,7 +6781,7 @@ class PageCluster(QtGui.QWidget):
         text3.setText('Cluster Error Map')
         fgs.addWidget(text3, 0, 2, QtCore .Qt. AlignLeft)
         frame = QtGui.QFrame()
-        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        frame.setFrameStyle(QtGui.QFrame.StyledPanel|QtGui.QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
         self.clusterdistmapfig = Figure((PlotH*0.73, PlotH*0.73))
         self.ClusterDistMapPan = FigureCanvas(self.clusterdistmapfig)
@@ -6804,7 +6803,7 @@ class PageCluster(QtGui.QWidget):
         vbox4.addWidget(self.tc_clustersp)      
  
         frame = QtGui.QFrame()
-        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        frame.setFrameStyle(QtGui.QFrame.StyledPanel|QtGui.QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
 
         self.clusterspecfig = Figure((PlotW, PlotH))
@@ -7608,7 +7607,7 @@ class Scatterplots(QtGui.QDialog):
         grid1 = QtGui.QGridLayout()
 
         frame = QtGui.QFrame()
-        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        frame.setFrameStyle(QtGui.QFrame.StyledPanel|QtGui.QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
         self.scattplfig = Figure((5.0, 4.8))
         self.ScatterPPanel = FigureCanvas(self.scattplfig)
@@ -7951,7 +7950,7 @@ class PagePCA(QtGui.QWidget):
         hbox11 = QtGui.QHBoxLayout()
 
         frame = QtGui.QFrame()
-        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        frame.setFrameStyle(QtGui.QFrame.StyledPanel|QtGui.QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
         self.pcaimgfig = Figure((PlotH*1.10, PlotH))
         self.PCAImagePan = FigureCanvas(self.pcaimgfig)
@@ -8064,7 +8063,7 @@ class PagePCA(QtGui.QWidget):
         vbox3.addWidget(self.text_pcaspec)
                         
         frame = QtGui.QFrame()
-        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        frame.setFrameStyle(QtGui.QFrame.StyledPanel|QtGui.QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
 
         self.pcaspecfig = Figure((PlotW, PlotH))
@@ -8084,7 +8083,7 @@ class PagePCA(QtGui.QWidget):
         vbox4.addWidget(text4)
 
         frame = QtGui.QFrame()
-        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        frame.setFrameStyle(QtGui.QFrame.StyledPanel|QtGui.QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
        
         self.pcaevalsfig = Figure((PlotW, PlotH*0.75))
@@ -9109,7 +9108,7 @@ class PageStack(QtGui.QWidget):
         
 
         frame = QtGui.QFrame()
-        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        frame.setFrameStyle(QtGui.QFrame.StyledPanel|QtGui.QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
    
         self.absimgfig = Figure((PlotH, PlotH))
@@ -9147,7 +9146,7 @@ class PageStack(QtGui.QWidget):
         gridsizer4.addWidget(self.tc_spec, 0, 2, QtCore.Qt.AlignLeft)
         
         frame = QtGui.QFrame()
-        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        frame.setFrameStyle(QtGui.QFrame.StyledPanel|QtGui.QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
       
         self.specfig = Figure((PlotW, PlotH))
@@ -10521,7 +10520,7 @@ class ShowHistogram(QtGui.QDialog):
         vbox = QtGui.QVBoxLayout()
                
         frame = QtGui.QFrame()
-        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        frame.setFrameStyle(QtGui.QFrame.StyledPanel|QtGui.QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
    
         self.histfig = Figure((6.0, 4.2))
@@ -10725,7 +10724,7 @@ class LimitEv(QtGui.QDialog):
         
         
         frame = QtGui.QFrame()
-        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        frame.setFrameStyle(QtGui.QFrame.StyledPanel|QtGui.QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
    
         self.specfig = Figure((6.0, 4.2))
@@ -11232,7 +11231,7 @@ class ImageRegistration(QtGui.QDialog):
         gridsizertop = QtGui.QGridLayout()
         
         frame = QtGui.QFrame()
-        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        frame.setFrameStyle(QtGui.QFrame.StyledPanel|QtGui.QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
    
         self.absimgfig = Figure((4.0, 4.0))
@@ -11294,7 +11293,7 @@ class ImageRegistration(QtGui.QDialog):
         tc2.setText('Cross-correlation')
 
         frame = QtGui.QFrame()
-        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        frame.setFrameStyle(QtGui.QFrame.StyledPanel|QtGui.QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
    
         self.cscorrfig = Figure((2.4, 2.4))
@@ -11316,7 +11315,7 @@ class ImageRegistration(QtGui.QDialog):
         tc3.setText('Image shifts')
          
         frame = QtGui.QFrame()
-        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        frame.setFrameStyle(QtGui.QFrame.StyledPanel|QtGui.QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
     
         self.shiftsfig = Figure((4.0, 2.4))
@@ -11456,7 +11455,7 @@ class ImageRegistration(QtGui.QDialog):
         self.tc_refimg.setText('Reference image')
          
         frame = QtGui.QFrame()
-        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        frame.setFrameStyle(QtGui.QFrame.StyledPanel|QtGui.QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
     
         self.refimgfig = Figure((4.0, 4.0))
@@ -12770,7 +12769,7 @@ class SpectralROI(QtGui.QDialog):
         vbox.addWidget(text)
         
         frame = QtGui.QFrame()
-        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        frame.setFrameStyle(QtGui.QFrame.StyledPanel|QtGui.QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
    
         self.specfig = Figure((6.0, 4.2))
@@ -12810,7 +12809,7 @@ class SpectralROI(QtGui.QDialog):
         vbox.addWidget(text)
 
         frame = QtGui.QFrame()
-        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        frame.setFrameStyle(QtGui.QFrame.StyledPanel|QtGui.QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
    
         self.odmfig = Figure((2.4,2.4))
@@ -13289,7 +13288,7 @@ class PlotFrame(QtGui.QDialog):
         vbox = QtGui.QVBoxLayout()
         
         frame = QtGui.QFrame()
-        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        frame.setFrameStyle(QtGui.QFrame.StyledPanel|QtGui.QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
    
         self.plotfig = Figure((6.0, 4.2))
@@ -13617,7 +13616,7 @@ class PageLoadData(QtGui.QWidget):
         gridsizertop = QtGui.QGridLayout()
         
         frame = QtGui.QFrame()
-        frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        frame.setFrameStyle(QtGui.QFrame.StyledPanel|QtGui.QFrame.Sunken)
         fbox = QtGui.QHBoxLayout()
    
         self.absimgfig = Figure((PlotH, PlotH))
@@ -14149,8 +14148,6 @@ class AboutFrame(QtGui.QDialog):
         self.setPalette(pal)
         
         vbox = QtGui.QVBoxLayout()
-        
-       
 
         self.image = QtGui.QImage(resource_path(os.path.join('images','Mantis_logo_about.png')))
         
@@ -14310,11 +14307,8 @@ class MainFrame(QtGui.QMainWindow):
 #                 self.page7 = PageNNMA(self.common, self.data_struct, self.stk, self.anlz, self.nnma)
 #                 tabs.addTab(self.page7, "NNMA Analysis")
 
-        
-
-
-    
-        layout = QVBoxLayout()
+           
+        layout = QtGui.QVBoxLayout()
 
         layout.addWidget(tabs)
         #self.setCentralWidget(tabs)
