@@ -693,7 +693,7 @@ class PageTomo(QtGui.QWidget):
 #----------------------------------------------------------------------          
     def OnCalcTomoFull(self, event):
         
-        QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+        QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
         
         
         value = self.ntc_niterations.text()
@@ -835,7 +835,7 @@ class PageTomo(QtGui.QWidget):
 #----------------------------------------------------------------------          
     def OnCalcTomo1(self, event):
         
-        QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+        QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
         
         
         value = self.ntc_niterations.text()
@@ -2232,7 +2232,7 @@ class PageNNMA(QtGui.QWidget):
 #----------------------------------------------------------------------          
     def OnCalcNNMA(self, event):
         
-        QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+        QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
 
         value = self.ntc_niterations.text()
         self.maxIters = int(value)  
@@ -3495,7 +3495,7 @@ class PageXrayPeakFitting(QtGui.QWidget):
             directory =  os.path.dirname(str(filepath))
             self.com.path = directory            
                                                         
-            QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))    
+            QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
                                             
             self.anlz.load_xraypeakfit_spectrum(filename=filepath)
 
@@ -3533,7 +3533,7 @@ class PageXrayPeakFitting(QtGui.QWidget):
         
         try:
 
-            QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor)) 
+            QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
             
 
             for i in range(self.anlz.nclusters):
@@ -3600,7 +3600,7 @@ class PageXrayPeakFitting(QtGui.QWidget):
 #----------------------------------------------------------------------
     def OnFitSpectrum(self, event):
         
-        QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+        QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
         
         self.SetFitParams()
         
@@ -4477,7 +4477,7 @@ class PagePeakID(QtGui.QWidget):
             directory =  os.path.dirname(str(filepath))
             self.com.path = directory            
                                                         
-            QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))    
+            QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
                                             
             self.anlz.load_xraypeakfit_spectrum(filename=filepath)
 
@@ -4524,7 +4524,7 @@ class PagePeakID(QtGui.QWidget):
         
         try:
 
-            QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor)) 
+            QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
             
 
             for i in range(self.anlz.nclusters):
@@ -5055,7 +5055,7 @@ class PageSpectral(QtGui.QWidget):
             self.com.path = directory
                        
                                                         
-            QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))    
+            QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
                                             
             self.anlz.read_target_spectrum(filename=filepath)
             self.com.spec_anl_calculated = 1
@@ -5085,7 +5085,7 @@ class PageSpectral(QtGui.QWidget):
     def OnFlatTSpec(self, event):
 
         try: 
-            QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor)) 
+            QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
             self.anlz.read_target_spectrum(flat=True)
             self.com.spec_anl_calculated = 1
             
@@ -5114,7 +5114,7 @@ class PageSpectral(QtGui.QWidget):
 
         try:
 
-            QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor)) 
+            QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
             self.anlz.add_cluster_target_spectra()
             self.com.spec_anl_calculated = 1
             
@@ -5163,7 +5163,7 @@ class PageSpectral(QtGui.QWidget):
         #if True:
         try:
 
-            QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor)) 
+            QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
             self.anlz.calculate_targetmaps_4D()
             self.com.spec_anl4D_calculated = 1
             
@@ -5510,7 +5510,7 @@ class PageSpectral(QtGui.QWidget):
             
 #----------------------------------------------------------------------           
     def OnRemoveSpectrum(self, event):
-        QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor)) 
+        QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
         self.anlz.remove_spectrum(self.i_tspec-1)
         self.com.spec_anl_calculated = 1
             
@@ -6903,7 +6903,7 @@ class PageCluster(QtGui.QWidget):
 #----------------------------------------------------------------------
     def OnCalcClusters(self, event):
        
-        QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+        QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
         self.calcclusters = False  
         
 
@@ -7487,7 +7487,7 @@ class PageCluster(QtGui.QWidget):
         
    
         try: 
-            QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+            QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
             
             suffix = "." + ext
             
@@ -8114,7 +8114,7 @@ class PagePCA(QtGui.QWidget):
 #----------------------------------------------------------------------
     def OnCalcPCA(self, event):
        
-        QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+        QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
         self.calcpca = False  
         self.selpca = 1       
         self.numsigpca = 2
@@ -8142,7 +8142,7 @@ class PagePCA(QtGui.QWidget):
 #----------------------------------------------------------------------
     def OnCalcPCA4D(self, event):
        
-        QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+        QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
         self.calcpca = False  
         self.selpca = 1       
         self.numsigpca = 2
@@ -9207,7 +9207,7 @@ class PageStack(QtGui.QWidget):
             
             
             if extension == '.hdr':
-                QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))                           
+                QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
 
                 x=self.stk.n_cols
                 y=self.stk.n_rows
@@ -9224,7 +9224,7 @@ class PageStack(QtGui.QWidget):
                 
                 
             elif extension == '.xas':
-                QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))                          
+                QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
 
                 x=self.stk.n_cols
                 y=self.stk.n_rows
@@ -9242,7 +9242,7 @@ class PageStack(QtGui.QWidget):
                 QtGui.QApplication.restoreOverrideCursor()
 
             elif extension == '.csv':
-                QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))                          
+                QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
 
                 x=self.stk.n_cols
                 y=self.stk.n_rows
@@ -9260,7 +9260,7 @@ class PageStack(QtGui.QWidget):
                 QtGui.QApplication.restoreOverrideCursor()
             
         except:
-            QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))  
+            QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
             self.com.i0_loaded = 0        
             QtGui.QApplication.restoreOverrideCursor()
             QtGui.QMessageBox.warning(self,'Error',"I0 file not loaded.")
@@ -9330,7 +9330,7 @@ class PageStack(QtGui.QWidget):
                 QtGui.QMessageBox.warning(self,'Error',"Wrong number of Reference image files.")
                 return
 
-            QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))                           
+            QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
             
 
             self.stk.read_xrm_ReferenceImages(filepaths)
@@ -9347,7 +9347,7 @@ class PageStack(QtGui.QWidget):
                           
             
         except:
-            QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))  
+            QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
             self.com.i0_loaded = 0        
             QtGui.QApplication.restoreOverrideCursor()
             QtGui.QMessageBox.warning(self,'Error',"Reference image file not loaded.")
@@ -9420,7 +9420,7 @@ class PageStack(QtGui.QWidget):
                 
             #Save all images in the stack
             if img_all:
-                QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+                QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
                 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
                 matplotlib.rcParams['pdf.fonttype'] = 42
 
@@ -9446,7 +9446,7 @@ class PageStack(QtGui.QWidget):
                 
             #Save all images in the stack
             if img_all_tif:
-                QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+                QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
      
                 for i in range (self.stk.n_ev):
                     if self.showflux:
@@ -9531,7 +9531,7 @@ class PageStack(QtGui.QWidget):
             
             directory =  os.path.dirname(str(filepath))
         
-            QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+            QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
             
             
             self.stk.write_tif(filepath, self.stk.od3d) 
@@ -10067,7 +10067,7 @@ class PageStack(QtGui.QWidget):
         
 #----------------------------------------------------------------------    
     def OnAcceptROI(self, evt):    
-        QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+        QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
         self.roixdata.append(self.start_point[0])
         self.roiydata.append(self.start_point[1])
         self.line.set_data(self.roixdata,self.roiydata)
@@ -11929,7 +11929,7 @@ class ImageRegistration(QtGui.QDialog):
             self.CalcRegistration4D()
             return
         
-        QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+        QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
         
         #Get Edge enhancement info
         edge = 0
@@ -12021,7 +12021,7 @@ class ImageRegistration(QtGui.QDialog):
 #----------------------------------------------------------------------            
     def CalcRegistration4D(self):
         
-        QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+        QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
         
         #Get Edge enhancement info
         edge = 0
@@ -12119,7 +12119,7 @@ class ImageRegistration(QtGui.QDialog):
 #----------------------------------------------------------------------            
     def OnCropShifts(self, event):
         
-        QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+        QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
         
         self.aligned_stack, self.xleft, self.xright, self.ybottom, self.ytop, = self.stack.crop_registed_images(self.aligned_stack, 
                                                              self.minxs, self.maxxs, self.minys, self.maxys)
@@ -13157,7 +13157,7 @@ class DoseCalculation(QtGui.QDialog):
 #---------------------------------------------------------------------- 
     def OnCalcDose(self, evt):
 
-        QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+        QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
         self.CalcDose()
         QtGui.QApplication.restoreOverrideCursor()
         
@@ -13225,7 +13225,7 @@ class DarkSignal(QtGui.QDialog):
 #---------------------------------------------------------------------- 
     def OnDSCalc(self):
                       
-        QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+        QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
         
         darksig = 0.0
         
@@ -13351,7 +13351,7 @@ class PlotFrame(QtGui.QDialog):
                 return
         
                             
-            QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))                 
+            QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
             self.Save(filepath)    
             QtGui.QApplication.restoreOverrideCursor()    
 
@@ -14011,7 +14011,7 @@ class StackListFrame(QtGui.QDialog):
 #----------------------------------------------------------------------        
     def OnAccept(self, evt):
         
-        QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+        QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
         
         self.parent.new_stack_refresh()
         self.stk.new_data()
@@ -14307,7 +14307,7 @@ class MainFrame(QtGui.QMainWindow):
 #                 self.page7 = PageNNMA(self.common, self.data_struct, self.stk, self.anlz, self.nnma)
 #                 tabs.addTab(self.page7, "NNMA Analysis")
 
-           
+
         layout = QtGui.QVBoxLayout()
 
         layout.addWidget(tabs)
@@ -14333,8 +14333,6 @@ class MainFrame(QtGui.QMainWindow):
         if sys.platform == "darwin":
             self.raise_()
 
-        
-        
 
 #----------------------------------------------------------------------   
     def initToolbar(self):   
@@ -14387,7 +14385,7 @@ class MainFrame(QtGui.QMainWindow):
                     plugin = file_plugins.identify(dlg.filepath)
                     
                     
-            QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+            QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
             
             if self.common.stack_loaded == 1:
                 self.new_stack_refresh()
@@ -14499,7 +14497,7 @@ class MainFrame(QtGui.QMainWindow):
             directory =  os.path.dirname(str(filenames[0]))
             self.page1.filename =  os.path.basename(str(filenames[0]))
         
-            QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+            QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
             basename, extension = os.path.splitext(self.page1.filename)      
             
             self.common.path = directory
@@ -14632,7 +14630,7 @@ class MainFrame(QtGui.QMainWindow):
                
             directory =  os.path.dirname(str(filepath))
         
-            QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+            QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
 
             
             basename, extension = os.path.splitext(filepath)      
@@ -14689,7 +14687,7 @@ class MainFrame(QtGui.QMainWindow):
             directory =  os.path.dirname(str(filepath))
             self.page1.filename =  os.path.basename(str(filepath))
         
-            QtGui.QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+            QtGui.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
             
             self.common.path = directory
             self.common.filename = self.page1.filename
