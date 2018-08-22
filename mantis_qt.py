@@ -20,6 +20,7 @@ from __future__ import division
 import sys
 import os
 import numpy as np
+from numpy import NAN
 import time
 import getopt
 
@@ -31,14 +32,11 @@ from PIL import Image
 import Tkinter
 import FileDialog
 
-
-import matplotlib 
-from numpy import NAN
-matplotlib.rcParams['backend.qt4'] = 'PyQt4'
-from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.backends.backend_qt4agg import (
+        FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 from matplotlib.figure import Figure
-from mpl_toolkits.axes_grid import make_axes_locatable
+import matplotlib
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.widgets import LassoSelector
 matplotlib.interactive( True )
 matplotlib.rcParams['svg.fonttype'] = 'none'
