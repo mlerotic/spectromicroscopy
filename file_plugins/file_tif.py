@@ -58,8 +58,7 @@ def read(filename, self, selection=None):
     imgstack = np.array((imgstack))
     
     imgstack = np.transpose(imgstack, axes=(1,2,0))
-      
-        
+
     self.n_cols = imgstack.shape[0]
     self.n_rows = imgstack.shape[1]
     self.n_ev = imgstack.shape[2]
@@ -83,7 +82,7 @@ def read(filename, self, selection=None):
         else:
             e = float(line)
             elist.append(e)
-            
+
     self.ev = np.array(elist)
             
     f.close()

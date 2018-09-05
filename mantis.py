@@ -723,7 +723,6 @@ def batch_mode():
                 shifted_img = stk.apply_image_registration(img, xshifts[i], yshifts[i])
                 stk.absdata[:,:,i] = shifted_img
 
-                    
     
     if datastruct.spectromicroscopy.normalization.white_spectrum is not None:
         print "I0 loaded"
@@ -838,7 +837,6 @@ def main():
             run_qt = 0
             run_cl = 1   
                
-            
     if run_qt == 1:
         import mantis_qt
         m_qt = mantis_qt.main()
@@ -848,12 +846,9 @@ def main():
     elif run_cl == 1:
         print 'Running Mantis in batch mode.'
         batch_mode()
-
-
     
     sys.exit()
 
 
 if __name__ == '__main__':
     main()
-    

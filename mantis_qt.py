@@ -360,9 +360,6 @@ class PageTomo(QtGui.QWidget):
         
         sizer3.setLayout(vbox3)
 
-
-
-                
  
         #panel 5    
          
@@ -4768,8 +4765,7 @@ class PagePeakID(QtGui.QWidget):
                 err = e.strerror 
             else: 
                 err = e 
-   
-            
+
             QtGui.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % err)
             
               
@@ -9199,9 +9195,7 @@ class PageStack(QtGui.QWidget):
             filepath_i0 =  os.path.dirname(str(filepath))
             self.filename =  os.path.basename(str(filepath))
             
-
-                                                        
-            basename, extension = os.path.splitext(self.filename)      
+            basename, extension = os.path.splitext(self.filename)
             
             
             if extension == '.hdr':
@@ -14245,8 +14239,6 @@ class MainFrame(QtGui.QMainWindow):
         self.setWindowIcon(ico)  
         
         tabs = QtGui.QTabWidget()
-        
-
 
         
         # create the page windows as tabs
@@ -14452,8 +14444,6 @@ class MainFrame(QtGui.QMainWindow):
         if True:
             directory = QtGui.QFileDialog.getExistingDirectory(self, "Choose a directory", '', QtGui.QFileDialog.ShowDirsOnly|QtGui.QFileDialog.ReadOnly )       
                                                         
-        
-       
             if directory == '':
                 return
                  
@@ -14992,7 +14982,6 @@ class MainFrame(QtGui.QMainWindow):
         
                 
 """ ------------------------------------------------------------------------------------------------"""
-                        
 def main():
     
     
