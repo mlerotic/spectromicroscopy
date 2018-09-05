@@ -58,7 +58,7 @@ from file_plugins import file_tif
 from file_plugins import file_stk
 
 
-version = '2.3.03'
+version = '2.3.05'
 
 if sys.platform == 'win32':
     Winsizex = 1000
