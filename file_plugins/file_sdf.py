@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-# 
+#
 #   This file is part of Mantis, a Multivariate ANalysis Tool for Spectromicroscopy.
-# 
+#
 #   Copyright (C) 2015 Benjamin Watts, Paul Scherrer Institut
 #   License: GNU GPL v3
 #
@@ -16,8 +16,10 @@
 #   GNU General Public License for more details <http://www.gnu.org/licenses/>.
 
 
+from __future__ import print_function
+import json
 import re, numpy, sys
-from os.path import splitext, exists
+from os.path import splitext, join, dirname, isfile
 from collections import OrderedDict
 
 
@@ -25,18 +27,20 @@ title = 'SDF'
 extension = ['*.hdr']
 read_types = ['spectrum','image','stack']
 write_types = ['spectrum','image','stack']
-
 def identify(filename):
     try:
-        HDR = HDR_FileParser(filename)
-        return HDR.num_regions>0 # return true if file contains at least one region
+        if isfile(splitext(filename)[0] + '.json'):
+            print("JSON-file found. No need to fetch again.")
+            return False
+        else:
+            HDR = HDR_FileParser(filename)
+            return HDR.num_regions > 0  # return true if file contains at least one region
     except:
-        print "Error in SDF plugin:", sys.exc_info()
         return False
 
 def GetFileStructure(FileName):
     HDR = HDR_FileParser(FileName)
-    if HDR.num_regions<2 and HDR.num_channels<2:
+    if HDR.num_regions<2 and HDR.num_channels<2 and isfile(splitext(FileName)[0] + '.json'): #if json file exists, skip datachoicedialog
         return None # exit if only one choice
     D = OrderedDict()
     for i,R in enumerate(['Region_'+str(r) for r in range(HDR.num_regions)]):
@@ -54,13 +58,21 @@ def GetFileStructure(FileName):
 #----------------------------------------------------------------------
 class HDR_FileParser:
   """Parse .hdr file for metadata."""
+  hdr = []
+  f = []
   def __init__(self, fileName,identify=False):
-    self.__file = open(fileName)
-    # compile some regular expressions
-    self.MatchReStruct = re.compile('[\s\{\}\(\)=";]')
-    self.MatchReArray = re.compile('[,\s\{\(\);]')
-    #Parse the HDR file
-    self.hdr = self.parseStructure()
+    if not HDR_FileParser.hdr or HDR_FileParser.f != fileName: # prevent class from fetching and parsing the *.hdr file multiple times. Use the class attribute "hdr" instead if available and check if a new file (not "f") is loaded.
+        # compile some regular expressions
+        self.MatchReStruct = re.compile('[\s\{\}\(\)=";]')
+        self.MatchReArray = re.compile('[,\s\{\(\);]')
+        self.__file = open(fileName)
+        # Parse the HDR file
+        HDR_FileParser.hdr = self.parseStructure()
+        HDR_FileParser.f = fileName
+        self.__file.close()
+    else:
+        None
+    self.hdr = HDR_FileParser.hdr
     if 'ScanDefinition' in self.hdr:
       self.num_regions = int(self.hdr['ScanDefinition']['Regions'][0])
       self.num_channels = int(self.hdr['Channels'][0])
@@ -70,7 +82,7 @@ class HDR_FileParser:
     else:
       self.num_regions = 0
       self.num_channels = 0
-    self.__file.close()
+
 
 
 #----------------------------------------------------------------------
@@ -94,7 +106,15 @@ class HDR_FileParser:
         BuildWord=''
         BeforeEq=False
       elif matched.group() == ';':
-        Structure[FieldName]=BuildWord
+        try:  # convert numbers into ints or floats or end up with a string
+            Structure[FieldName] = int(BuildWord)
+        except ValueError:
+            try:
+                Structure[FieldName] = float(BuildWord)
+            except ValueError:
+                Structure[FieldName] = BuildWord
+        except TypeError:
+            Structure[FieldName] = BuildWord
         BuildWord=''
         BeforeEq=True
       elif matched.group() == '{':
@@ -108,10 +128,10 @@ class HDR_FileParser:
         BuildWord= self.parseArray()
       elif matched.group() == ')':
         #This should not happen
-        print ') in structure'
+        print(') in structure')
       raw = self.__file.read(1)
     return Structure
-  
+
 #----------------------------------------------------------------------
   def parseArray(self):
     """.hdr files consist of structures and arrays. This rountine sorts through the array parts."""
@@ -124,23 +144,32 @@ class HDR_FileParser:
         BuildWord+=raw
       elif matched.group() == ',':
         if len(BuildWord) > 0:
-          Array.append(BuildWord)
-          BuildWord=''
+            try:    #convert numbers in array into ints or floats
+                Array.append(int(BuildWord))
+            except ValueError:
+                Array.append(float(BuildWord))
+            BuildWord=''
       elif matched.group() == ';':
-        print '; in array'
+        print('; in array')
       elif matched.group() == '{':
         Array.append(self.parseStructure())
       elif matched.group() == '(':
         Array.append(self.parseArray())
       elif matched.group() == ')':
         if len(BuildWord) > 0:
-          Array.append(BuildWord)
+            try:  #convert numbers in array into ints or floats
+                Array.append(int(BuildWord))
+            except ValueError:
+                try:
+                    Array.append(float(BuildWord))
+                except ValueError: # There is an error in the HDF5toSDF conversion script at the SLS/PolLux which appends arrays with a superfluous "}". Obviously, this char cannot be converted to int or float. We therefore just skip it here.
+                    pass
         break
       raw = self.__file.read(1)
     return Array
-  
+
 #----------------------------------------------------------------------
-  def parseDataNames(self):
+  def parseDataNames(self): #ToDo: Assigning Scan types by DataFlags is prone to errors. Better detect automatically via (HDR.hdr['ScanDefinition']['Regions'][0]) etc.
     """Figure out names for the .xsp or .xim files that contain the actual data, then check that the files actually exist, printing warnings if they don't."""
     DataNames = []#Regions
     DataNames2 = []#Channels
@@ -158,7 +187,7 @@ class HDR_FileParser:
       for num_Ch in range(self.num_channels):
         DataNames2.append([self.file_path+'_'+Alphabet[num_Ch]+'.xim'])
       DataNames.append(DataNames2)
-    elif DataFlag == 'Multi-Region Image':
+    elif DataFlag in ['Multi-Region Image', 'Multi-Region Image Stack']:
       for num_R in range(self.num_regions):
         DataNames2 = []
         for num_Ch in range(self.num_channels):
@@ -173,14 +202,14 @@ class HDR_FileParser:
         DataNames2.append(DataNames3)
       DataNames = [DataNames2]
     else:
-      print "WARNING! Unknown flag:", DataFlag
+      print("WARNING! Unknown flag:", DataFlag)
     #for num_R in range(len(DataNames)):#Check that names correspond to existing files
       #for num_Ch in range(len(DataNames[num_R])):
         #for num_E in range(len(DataNames[num_R][num_Ch])):
           #if exists(DataNames[num_R][num_Ch][num_E]) == False:
             #print "WARNING! Data file doesn't exist:", DataNames[num_R][num_Ch][num_E]
     return DataNames
- 
+
 #----------------------------------------------------------------------
   def parse_DataSize(self):
     """Calculate data array size. This is useful for making sure all of the lists of data are the correct length."""
@@ -202,11 +231,14 @@ class HDR_FileParser:
 
 #----------------------------------------------------------------------
 #----------------------------------------------------------------------
-def read(filename, self, selection=None):
+def read(filename, self, selection=None, JSONstatus=None):
     HDR = HDR_FileParser(filename)
-    
+    if JSONstatus:
+        with open(splitext(filename)[0] + '.json', 'w') as outfile:
+            json.dump(HDR.hdr, outfile, indent=4, sort_keys=True, ensure_ascii=True)
+            print("JSON-file written at "+ splitext(filename)[0] + '.json')
     if HDR.hdr['ScanDefinition']['Flags'] == 'Image Stack':
-        
+
         self.x_dist = numpy.array([float(i) for i in HDR.hdr['ScanDefinition']['Regions'][selection[0]+1]['PAxis']['Points'][1:] ])
         self.y_dist = numpy.array([float(i) for i in HDR.hdr['ScanDefinition']['Regions'][selection[0]+1]['QAxis']['Points'][1:] ])
         self.ev = numpy.array([float(i) for i in HDR.hdr['ScanDefinition']['StackAxis']['Points'][1:] ])
@@ -222,24 +254,24 @@ def read(filename, self, selection=None):
         for i in range(len(HDR.data_names[selection[0]][selection[1]])):
             try:
                 imagestack[:,:,i] = numpy.loadtxt(HDR.data_names[selection[0]][selection[1]][i], numpy.int32).T
-            except IOError:
+            except ValueError:
+                print("Aborted Stack detected.")
                 imagestack[:,:,i] = numpy.nan
-
         self.absdata = numpy.empty((self.n_cols,self.n_rows, self.n_ev))
 
-        self.absdata = numpy.reshape(imagestack, (self.n_cols,self.n_rows, self.n_ev), order='F')       
+        self.absdata = numpy.reshape(imagestack, (self.n_cols,self.n_rows, self.n_ev), order='F')
 
         self.fill_h5_struct_from_stk()
 
     else:
-        print "Only Image Stack files are supported."
-    
+        print("Only Image Stack files are supported.") # ToDo: Urgent need to add support for multi-region image stacks and single images
+
     return
 
 #----------------------------------------------------------------------
 def read_sdf_i0(self, filename):
     HDR = HDR_FileParser(filename)
-    
+
     if 'ScanType' in HDR.hdr['ScanDefinition'] and HDR.hdr['ScanDefinition']['ScanType'] == 'Spectra':
         Energies = HDR.hdr['ScanDefinition']['Regions'][1]['PAxis']['Points'][1:]
         tempimage = numpy.loadtxt(HDR.data_names[0][0][0], numpy.float32)
@@ -256,9 +288,8 @@ def read_sdf_i0(self, filename):
             tempimage = numpy.loadtxt(HDR.data_names[0][0][i], numpy.int32)
             Data[i] = numpy.mean(tempimage)
 
-    
     msec = float(HDR.hdr['ScanDefinition']['Dwell'])#shouldn't this be needed?
     self.i0_dwell = msec
     self.evi0 = numpy.array([float(i) for i in Energies])
-    self.i0data = Data                
+    self.i0data = Data
     return

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-# 
+#
 #   This file is part of Mantis, a Multivariate ANalysis Tool for Spectromicroscopy.
-# 
+#
 #   Copyright (C) 2015 Benjamin Watts, Paul Scherrer Institute
 #   License: GNU GPL v3
 #
@@ -35,9 +35,10 @@ GetFileStructure(filename)      : Returns a structure describing the internal or
 read(filename,stack_object,..)  : Loads data from the URL 'filename' into the object (data_stack type) 'stack_object'.
 
 """
+from __future__ import print_function
 
 import pkgutil, imp, os, data_stack, numpy, sys
-verbose = False
+verbose = True
 
 # These variables declare the options that each plugin can claim the ability to handle
 actions = ['read','write']
@@ -47,18 +48,18 @@ data_types = ['spectrum','image','stack','results']
 plugins = []
 
 for m in pkgutil.iter_modules(path=__path__):
-    if verbose: print "Loading file plugin:", m[1], ".",
+    if verbose: print("Loading file plugin:", m[1], ".", end=' ')
     try:
         details = imp.find_module(m[1],__path__)
         # check if there is a read() function in plugin
         if 'read' in dir(imp.load_module(m[1],*details)):
             plugins.append(imp.load_module(m[1],*details))
-            if verbose: print "("+plugins[-1].title+") Success!"
+            if verbose: print("("+plugins[-1].title+") Success!")
         else:
-            if verbose: print 'Not a valid plugin - skipping.'
- 
+            if verbose: print('Not a valid plugin - skipping.')
+
     except ImportError as e:
-        if verbose: print "prerequisites not satisfied:", e
+        if verbose: print("prerequisites not satisfied:", e)
 
 
 # if getattr(sys, 'frozen', False):
@@ -66,8 +67,8 @@ for m in pkgutil.iter_modules(path=__path__):
 #     for m in module_names:
 #         if verbose: print "Loading file plugin:", m, "...",
 #         try:
-#             
-# 
+#
+#
 #             details = imp.find_module(m)
 #             # check if there is a read() function in plugin
 #             if 'read' in dir(imp.load_module(m,*details)):
@@ -75,12 +76,12 @@ for m in pkgutil.iter_modules(path=__path__):
 #                 if verbose: print "("+plugins[-1].title+") Success!"
 #             else:
 #                 if verbose: print 'Not a valid plugin - skipping.'
-#      
+#
 #         except ImportError as e:
-#             if verbose: print "prerequisites not satisfied:", e	
+#             if verbose: print "prerequisites not satisfied:", e
 
 
-        
+
 
 # Go through set of plugins and assemble lists of supported file types for each action and data type
 supported_filters = dict([a,dict([t,[]] for t in data_types)] for a in actions)
@@ -101,7 +102,7 @@ for data_type in data_types:
 
 
 
-def load(filename,stack_object=None,plugin=None,selection=None):
+def load(filename,stack_object=None,plugin=None,selection=None,json=None):
     """
     Pass the load command over to the appropriate plugin so that it can import data from the named file.
     """
@@ -110,15 +111,15 @@ def load(filename,stack_object=None,plugin=None,selection=None):
     if plugin is None:
         return None
     else:
-        print "load", filename, "with the", plugin.title, "plugin."
+        print("load", filename, "with the", plugin.title, "plugin.")
         if selection is None or len(selection) == 1:
             if stack_object is None:
                 return plugin.read(filename,None,selection[0]) #should this ever be used?
             else:
-                plugin.read(filename,stack_object,selection[0])
+                plugin.read(filename,stack_object,selection[0],json)
                 return
         else:
-            plugin.read(filename,stack_object,selection[0])
+            plugin.read(filename,stack_object,selection[0],json)
             temp_stack = data_stack.data(stack_object.data_struct)
             full_stack = stack_object.absdata.copy()
             for s in selection[1:]:
@@ -145,34 +146,30 @@ def GetFileStructure(filename,plugin=None):
     if plugin is None:
         return None
     else:
-        print "get info from", filename, "with the", plugin.title, "plugin."
+        print("get info from", filename, "with the", plugin.title, "plugin.")
         FileInfo = plugin.GetFileStructure(filename)
         #if FileInfo is not None:
             #print len(FileInfo), len(FileInfo[next(iter(FileInfo))])
             #print FileInfo
         return FileInfo
-    
+
 def identify(filename):
     """
     Cycle through plugins until finding one that claims to understand the file format.
     First it tries those claiming corresponding file extensions, followed by all other plugins until an appropriate plugin is found.
     """
-    print "Identifying file:", filename, "...",
+    print("Identifying file:", filename, "...", end=' ')
     ext = os.path.splitext(filename)[1]
-    #print "identify", filename, ext
     flag = [True]*len(plugins)
     for i,P in enumerate(plugins):
         if '*'+ext in P.extension:
             if P.identify(filename):
-                print "as type:", P.title
                 return P
-            else:
+            elif flag[i] == True: #if plugin returns False, e.g. dataexch_hdf5 does not match, try the next plugin and find the same extension
                 flag[i] = False
-    for i,P in enumerate(plugins):
-        if flag[i]:
-            if P.identify(filename):
-                print "as type:", P.title
-                return P
-    print "Error! unknown file type."
+                continue
+            else:
+                break
+    print("Error! unknown file type.")
     return None
 

@@ -1,6 +1,7 @@
-# 
+from __future__ import print_function
+#
 #   This file is part of Mantis, a Multivariate ANalysis Tool for Spectromicroscopy.
-# 
+#
 #   Copyright (C) 2015 Mirna Lerotic, 2nd Look
 #   http://2ndlookconsulting.com
 #   License: GNU GPL v3
@@ -32,7 +33,7 @@ def div(grad):
     return res
 
 def gradient(img):
-    """ 
+    """
     Compute gradient of an image
 
     Parameters
@@ -180,7 +181,7 @@ if __name__ == '__main__':
     t0 = time()
     res = tv_denoise_fista(l, weight=0.05, eps=5.e-5)
     t1 = time()
-    print t1 - t0
+    print(t1 - t0)
     plt.figure()
     plt.subplot(121)
     plt.imshow(l, cmap='gray')

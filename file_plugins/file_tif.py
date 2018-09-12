@@ -1,6 +1,7 @@
-# 
+from __future__ import print_function
+#
 #   This file is part of Mantis, a Multivariate ANalysis Tool for Spectromicroscopy.
-# 
+#
 #   Copyright (C) 2011 Mirna Lerotic, 2nd Look
 #   http://2ndlookconsulting.com
 #   License: GNU GPL v3
@@ -16,8 +17,8 @@
 #   GNU General Public License for more details <http://www.gnu.org/licenses/>.
 
 import numpy as np
-from PIL import Image     
-import os 
+from PIL import Image
+import os
 
 
 title = 'Tiff'
@@ -35,16 +36,16 @@ def identify(filename):
         return False
 
 def GetFileStructure(FileName):
-    return None  
+    return None
 
 
 #----------------------------------------------------------------------
-def read(filename, self, selection=None):
-  
+def read(filename, self, selection=None,*args, **kwargs):
+
     img = Image.open(filename)
-     
+
     imgstack = []
-     
+
     i = 0
     while True:
         try:
@@ -52,29 +53,30 @@ def read(filename, self, selection=None):
             i += 1
             imgstack.append(np.array((img)))
         except EOFError:
-            break        
+            break
 
 
     imgstack = np.array((imgstack))
-    
+
     imgstack = np.transpose(imgstack, axes=(1,2,0))
+
 
     self.n_cols = imgstack.shape[0]
     self.n_rows = imgstack.shape[1]
     self.n_ev = imgstack.shape[2]
-    
-    
+
+
     pixelsize = 1
     #Since we do not have a scanning microscope we fill the x_dist and y_dist from pixel_size
     self.x_dist = np.arange(np.float(self.n_cols))*pixelsize
     self.y_dist = np.arange(np.float(self.n_rows))*pixelsize
 
     #Read energies from file
-    basename, extension = os.path.splitext(filename) 
+    basename, extension = os.path.splitext(filename)
     engfilename = basename+'.txt'
     f = open(str(engfilename),'r')
-    
-    elist = []   
+
+    elist = []
 
     for line in f:
         if line.startswith("*"):
@@ -84,16 +86,16 @@ def read(filename, self, selection=None):
             elist.append(e)
 
     self.ev = np.array(elist)
-            
+
     f.close()
-    
-    
+
+
     msec = np.ones((self.n_ev))
-     
+
     self.data_dwell = msec
-                   
+
     self.absdata = imgstack
-            
+
     #Check if the energies are consecutive, if they are not sort the data
     sort = 0
     for i in range(self.n_ev - 1):
@@ -108,25 +110,25 @@ def read(filename, self, selection=None):
 
     self.fill_h5_struct_from_stk()
 
-#---------------------------------------------------------------------- 
-      
-def write_tif(filename, data, energies = []):   
+#----------------------------------------------------------------------
+
+def write_tif(filename, data, energies = []):
 
     dims = data.shape
     for i in range(dims[2]):
-        basename, extension = os.path.splitext(filename) 
+        basename, extension = os.path.splitext(filename)
         thisfn = basename + '_' + str(i+1) + extension
-    
+
         img1 = Image.fromarray(data[:,:,i])
         img1.save(thisfn)
-        
-        
+
+
     if len(energies) > 0:
         thisfn = basename + '.txt'
         f = open(thisfn, 'w')
         for i in range(len(energies)):
-            print>>f, '%.6f' %(energies[i])
+            print('%.6f' %(energies[i]), file=f)
         f.close()
-        
-     
-        
+
+
+
