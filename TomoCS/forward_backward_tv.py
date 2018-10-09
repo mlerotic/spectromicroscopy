@@ -18,9 +18,11 @@
 #   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #   GNU General Public License for more details <http://www.gnu.org/licenses/>.
 
+from __future__ import absolute_import
+
 import numpy as np
-from tv_denoising import tv_denoise_fista
-from projections import back_projection, projection
+from TomoCS.tv_denoising import tv_denoise_fista
+from TomoCS.projections import back_projection, projection
 from scipy import sparse
 
 # ------------------ Computing energies ---------------------------
@@ -111,7 +113,7 @@ def fista_tv(y, beta, niter, H, verbose=0, mask=None):
     t_old = 1
     for i in range(niter):
         if verbose:
-            print i
+            print(i)
         eps = 1.e-4
         err = H * x - y
         back_proj = Ht * err

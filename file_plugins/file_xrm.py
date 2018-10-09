@@ -70,7 +70,7 @@ def read(filename, self, selection=None):
 def read_xrm_fileinfo(filename, readimgdata = False): 
     
     if not isOleFile(filename):
-        print "File not valid OLE type."
+        print ("File not valid OLE type.")
         return
     # Open OLE file:
     ole = OleFileIO(filename)
@@ -81,12 +81,12 @@ def read_xrm_fileinfo(filename, readimgdata = False):
         stream = ole.openstream('ImageInfo/ImagesTaken')
         data = stream.read()
         nev = struct.unpack('<I', data)
-        if verbose: print "ImageInfo/ImagesTaken = %i" % nev[0]  
+        if verbose: print ("ImageInfo/ImagesTaken = %i" % nev[0])
         nimgs = nev[0]
         nimgs = np.int(nimgs)
         
     if nimgs > 1:
-        print 'This file has more than one image and cannot be used to make a stack.'
+        print ('This file has more than one image and cannot be used to make a stack.')
         return 0, 0, 0
 
             
@@ -94,7 +94,7 @@ def read_xrm_fileinfo(filename, readimgdata = False):
         stream = ole.openstream('ImageInfo/ImageWidth')
         data = stream.read()
         nev = struct.unpack('<I', data)
-        if verbose: print "ImageInfo/ImageWidth = %i" % nev[0]  
+        if verbose: print ("ImageInfo/ImageWidth = %i" % nev[0])
         n_cols = np.int(nev[0])
 
             
@@ -102,7 +102,7 @@ def read_xrm_fileinfo(filename, readimgdata = False):
         stream = ole.openstream('ImageInfo/ImageHeight')
         data = stream.read()
         nev = struct.unpack('<I', data)
-        if verbose: print "ImageInfo/ImageHeight = %i" % nev[0]  
+        if verbose: print ("ImageInfo/ImageHeight = %i" % nev[0])
         n_rows = np.int(nev[0])
         
     if ole.exists('ImageInfo/Energy'):                  
@@ -111,7 +111,7 @@ def read_xrm_fileinfo(filename, readimgdata = False):
         size = ole.get_size('ImageInfo/Energy')
         struct_fmt = "<{}f".format(size/4)
         eV = struct.unpack(struct_fmt, data)
-        if verbose: print "ImageInfo/Energy: \n ",  eV 
+        if verbose: print ("ImageInfo/Energy: \n ",  eV)
         
         
         
@@ -124,7 +124,7 @@ def read_xrm_fileinfo(filename, readimgdata = False):
             struct_fmt = '<1I'
             datatype = struct.unpack(struct_fmt, data)
             datatype = int(datatype[0])
-            if verbose: print "ImageInfo/DataType: %f " %  datatype  
+            if verbose: print ("ImageInfo/DataType: %f " %  datatype)
         
         npix = n_cols*n_rows
         i = 1
@@ -139,7 +139,7 @@ def read_xrm_fileinfo(filename, readimgdata = False):
             struct_fmt = "<{}h".format(npix)
             imgdata = struct.unpack(struct_fmt, data)
         else:                            
-            print "Wrong data type"
+            print ("Wrong data type")
             return
                      
         
@@ -160,12 +160,12 @@ def read_xrm_fileinfo(filename, readimgdata = False):
                     # In this case energy is stored like this: _0250.52_eV_
                     this_ev = str_list[i-1].strip()
                     this_ev = float(this_ev)
-                if verbose: print "Successfully read energy value from file name.", this_ev
+                if verbose: print ("Successfully read energy value from file name.", this_ev)
                 eV = this_ev
                 break
     except:
         eV = eV[0]
-        print 'Using energy stored in the file.', eV
+        print ('Using energy stored in the file.', eV)
         
     ole.close()
         
@@ -183,7 +183,7 @@ def read_xrm_list(self, filelist, filepath, ds):
 
 
     if not isOleFile(file1):
-        print "File not valid OLE type."
+        print ("File not valid OLE type.")
         return
     # Open OLE file:
     ole = OleFileIO(file1)
@@ -195,14 +195,14 @@ def read_xrm_list(self, filelist, filepath, ds):
         stream = ole.openstream('Version')
         data = stream.read()
         version = struct.unpack('<f', data)
-        if verbose: print "version = ", version[0]  
+        if verbose: print ("version = ", version[0])
                        
     if ole.exists('SampleInfo/Analyst'):
         stream = ole.openstream('SampleInfo/Analyst')
         data = stream.read()
         analyst = struct.unpack('<50s', data)
         analyst = analyst[0]
-        if verbose: print "SampleInfo/Analyst = %s" % analyst
+        if verbose: print ("SampleInfo/Analyst = %s" % analyst)
         
         
     if ole.exists('SampleInfo/Facility'):
@@ -210,21 +210,21 @@ def read_xrm_list(self, filelist, filepath, ds):
         data = stream.read()
         facility = struct.unpack('<50s', data)
         facility = facility[0]
-        if verbose: print "SampleInfo/Facility = %s" % facility
+        if verbose: print ("SampleInfo/Facility = %s" % facility)
             
     if ole.exists('SampleInfo/SampleID'):
         stream = ole.openstream('SampleInfo/SampleID')
         data = stream.read()
         sample = struct.unpack('<50s', data)
         sample = sample[0]
-        if verbose: print "SampleInfo/SampleID = %s" % sample
+        if verbose: print ("SampleInfo/SampleID = %s" % sample)
     
         
     if ole.exists('ImageInfo/ImageWidth'):                 
         stream = ole.openstream('ImageInfo/ImageWidth')
         data = stream.read()
         nev = struct.unpack('<I', data)
-        if verbose: print "ImageInfo/ImageWidth = %i" % nev[0]  
+        if verbose: print ("ImageInfo/ImageWidth = %i" % nev[0])
         ncols = np.int(nev[0])
 
             
@@ -232,7 +232,7 @@ def read_xrm_list(self, filelist, filepath, ds):
         stream = ole.openstream('ImageInfo/ImageHeight')
         data = stream.read()
         nev = struct.unpack('<I', data)
-        if verbose: print "ImageInfo/ImageHeight = %i" % nev[0]  
+        if verbose: print ("ImageInfo/ImageHeight = %i" % nev[0])
         nrows = np.int(nev[0])
         
        
@@ -249,13 +249,13 @@ def read_xrm_list(self, filelist, filepath, ds):
         struct_fmt = '<1f'
         pixelsize = struct.unpack(struct_fmt, data)
         pixelsize = pixelsize[0]
-        if verbose: print "ImageInfo/PixelSize: %f " %  pixelsize  
+        if verbose: print ("ImageInfo/PixelSize: %f " %  pixelsize)
         
     if ole.exists('ImageInfo/ImagesTaken'):                  
         stream = ole.openstream('ImageInfo/ImagesTaken')
         data = stream.read()
         data = struct.unpack('<I', data)
-        if verbose: print "ImageInfo/ImagesTaken = %i" % data[0]  
+        if verbose: print ("ImageInfo/ImagesTaken = %i" % data[0])
         nimgs = data[0]
         nimgs = np.int(nimgs)
 
@@ -265,7 +265,7 @@ def read_xrm_list(self, filelist, filepath, ds):
         data = stream.read()
         struct_fmt = "<{}f".format(nimgs)
         exptimes = struct.unpack(struct_fmt, data)
-        if verbose: print "ImageInfo/ExpTimes: \n ",  exptimes
+        if verbose: print ("ImageInfo/ExpTimes: \n ",  exptimes)
         
             
     # 10 float; 5 uint16 (unsigned 16-bit (2-byte) integers)
@@ -275,7 +275,7 @@ def read_xrm_list(self, filelist, filepath, ds):
         struct_fmt = '<1I'
         datatype = struct.unpack(struct_fmt, data)
         datatype = int(datatype[0])
-        if verbose: print "ImageInfo/DataType: %f " %  datatype  
+        if verbose: print ("ImageInfo/DataType: %f " %  datatype)
         
                
     #Read the image data        
@@ -297,7 +297,7 @@ def read_xrm_list(self, filelist, filepath, ds):
                 struct_fmt = "<{}h".format(npix)
                 imgdata = struct.unpack(struct_fmt, data)
             else:                            
-                print "Wrong data type"
+                print ("Wrong data type")
                 return
                 
         absdata[:,:,j] = np.reshape(imgdata, (ncols, nrows), order='F')
@@ -320,12 +320,12 @@ def read_xrm_list(self, filelist, filepath, ds):
                         # In this case energy is stored like this: _0250.52_eV_
                         this_ev = str_list[i-1]
                         this_ev = float(this_ev)
-                    if verbose: print "Successfully read energy value from file name.", this_ev
+                    if verbose: print ("Successfully read energy value from file name.", this_ev)
                     eV = this_ev
                     break
         except:
             eV = eV[0]
-            print 'Using energy stored in the file.', eV 
+            print ('Using energy stored in the file.', eV)
                 
         ev[j] = this_ev
         
@@ -381,7 +381,7 @@ def read_xrm_list(self, filelist, filepath, ds):
 def read_xrm(filename, self):
         
     if not isOleFile(filename):
-        print "File not valid OLE type."
+        print ("File not valid OLE type.")
         return
     # Open OLE file:
     ole = OleFileIO(filename)
@@ -397,7 +397,7 @@ def read_xrm(filename, self):
         stream = ole.openstream('Version')
         data = stream.read()
         version = struct.unpack('<f', data)
-        if verbose: print "version = ", version[0]  
+        if verbose: print ("version = ", version[0])
                        
     analyst = ''
     if ole.exists('SampleInfo/Analyst'):
@@ -405,7 +405,7 @@ def read_xrm(filename, self):
         data = stream.read()
         analyst = struct.unpack('<50s', data)
         analyst = analyst[0]
-        if verbose: print "SampleInfo/Analyst = %s" % analyst
+        if verbose: print ("SampleInfo/Analyst = %s" % analyst)
             
     facility = ''
     if ole.exists('SampleInfo/Facility'):
@@ -413,7 +413,7 @@ def read_xrm(filename, self):
         data = stream.read()
         facility = struct.unpack('<50s', data)
         facility = facility[0]
-        if verbose: print "SampleInfo/Facility = %s" % facility
+        if verbose: print ("SampleInfo/Facility = %s" % facility)
             
     sample =''
     if ole.exists('SampleInfo/SampleID'):
@@ -421,7 +421,7 @@ def read_xrm(filename, self):
         data = stream.read()
         sample = struct.unpack('<50s', data)
         sample = sample[0]
-        if verbose: print "SampleInfo/SampleID = %s" % sample
+        if verbose: print ("SampleInfo/SampleID = %s" % sample)
             
             
             
@@ -430,7 +430,7 @@ def read_xrm(filename, self):
         stream = ole.openstream('ImageInfo/ImagesTaken')
         data = stream.read()
         nev = struct.unpack('<I', data)
-        if verbose: print "ImageInfo/ImagesTaken = %i" % nev[0]  
+        if verbose: print ("ImageInfo/ImagesTaken = %i" % nev[0])
         nimgs = nev[0]
         datasize[2] = np.int(nimgs)
         self.n_ev = datasize[2]
@@ -439,7 +439,7 @@ def read_xrm(filename, self):
         stream = ole.openstream('ImageInfo/ImageWidth')
         data = stream.read()
         nev = struct.unpack('<I', data)
-        if verbose: print "ImageInfo/ImageWidth = %i" % nev[0]  
+        if verbose: print ("ImageInfo/ImageWidth = %i" % nev[0])
         datasize[0] = np.int(nev[0])
         self.n_cols = datasize[0]
             
@@ -447,7 +447,7 @@ def read_xrm(filename, self):
         stream = ole.openstream('ImageInfo/ImageHeight')
         data = stream.read()
         nev = struct.unpack('<I', data)
-        if verbose: print "ImageInfo/ImageHeight = %i" % nev[0]  
+        if verbose: print ("ImageInfo/ImageHeight = %i" % nev[0])
         datasize[1] = np.int(nev[0])
         self.n_rows = datasize[1]
             
@@ -457,7 +457,7 @@ def read_xrm(filename, self):
         data = stream.read()
         struct_fmt = "<{}f".format(nimgs)
         angles = struct.unpack(struct_fmt, data)
-        if verbose: print "ImageInfo/Angles: \n ",  angles  
+        if verbose: print ("ImageInfo/Angles: \n ",  angles)
             
     if ole.exists('ImageInfo/Energy'):                  
         stream = ole.openstream('ImageInfo/Energy')
@@ -465,18 +465,18 @@ def read_xrm(filename, self):
         size = ole.get_size('ImageInfo/Energy')
         struct_fmt = "<{}f".format(size/4)
         eng = struct.unpack(struct_fmt, data)
-        if verbose: print "ImageInfo/Energy: \n ",  eng  
+        if verbose: print ("ImageInfo/Energy: \n ",  eng)
         self.ev = np.array(eng)
         
     #Energy saved in the file is too coarse - read it from the filename
     str_list = filename[:-4].split('_')
     try: #look for 'eV' filed in the filename
         ev_ind = str_list.index('eV')
-        if verbose: print 'Energy value from filename = ', str_list[ev_ind-1]
+        if verbose: print ('Energy value from filename = ', str_list[ev_ind-1])
         eng = float(str_list[ev_ind-1])
         self.ev = [eng]
     except:
-        print 'Using energy stored in the file.'
+        print ('Using energy stored in the file.')
         
     self.ev = np.array(self.ev)
             
@@ -486,14 +486,14 @@ def read_xrm(filename, self):
         struct_fmt = '<1f'
         pixelsize = struct.unpack(struct_fmt, data)
         pixelsize = pixelsize[0]
-        if verbose: print "ImageInfo/PixelSize: %f " %  pixelsize  
+        if verbose: print( "ImageInfo/PixelSize: %f " %  pixelsize)
             
     if ole.exists('ImageInfo/ExpTimes'):                  
         stream = ole.openstream('ImageInfo/ExpTimes')
         data = stream.read()
         struct_fmt = "<{}f".format(nimgs)
         exptimes = struct.unpack(struct_fmt, data)
-        if verbose: print "ImageInfo/ExpTimes: \n ",  exptimes
+        if verbose: print( "ImageInfo/ExpTimes: \n ",  exptimes)
         
             
     # 10 float; 5 uint16 (unsigned 16-bit (2-byte) integers)
@@ -503,10 +503,10 @@ def read_xrm(filename, self):
         struct_fmt = '<1I'
         datatype = struct.unpack(struct_fmt, data)
         datatype = int(datatype[0])
-        if verbose: print "ImageInfo/DataType: %f " %  datatype  
+        if verbose: print( "ImageInfo/DataType: %f " %  datatype)
      
     
-    if verbose: print 'Reading images - please wait...'
+    if verbose: print( 'Reading images - please wait...')
     self.absdata = np.empty((self.n_cols, self.n_rows, self.n_ev), dtype=np.float32)
     #Read the images - They are stored in ImageData1, ImageData2... Each
     #folder contains 100 images 1-100, 101-200...           
@@ -522,13 +522,13 @@ def read_xrm(filename, self):
             struct_fmt = "<{}h".format(self.n_cols*self.n_rows)
             imgdata = struct.unpack(struct_fmt, data)
         else:                            
-            print "Wrong data type"
+            print( "Wrong data type")
             return
                 
         self.absdata[:,:,i-1] = np.reshape(imgdata, (self.n_cols, self.n_rows), order='F')
             
     
-    if verbose: print 'Finished reading images'
+    if verbose: print ('Finished reading images')
     ole.close()
             
     #Fill the data structure with data: 
@@ -576,14 +576,13 @@ def read_xrm(filename, self):
 def read_txrm(filename, self):
         
     if not isOleFile(filename):
-        print "File not valid OLE type."
+        print( "File not valid OLE type.")
         return
     # Open OLE file:
     ole = OleFileIO(filename)
     # Get list of streams:
     #list = ole.listdir()
-    #print list
-    
+
     verbose = False
 
 
@@ -592,7 +591,7 @@ def read_txrm(filename, self):
         stream = ole.openstream('Version')
         data = stream.read()
         version = struct.unpack('<f', data)
-        if verbose: print "version = ", version[0]  
+        if verbose: print( "version = ", version[0])
                        
     analyst = ''
     if ole.exists('SampleInfo/Analyst'):
@@ -600,7 +599,7 @@ def read_txrm(filename, self):
         data = stream.read()
         analyst = struct.unpack('<50s', data)
         analyst = analyst[0]
-        if verbose: print "SampleInfo/Analyst = %s" % analyst
+        if verbose: print( "SampleInfo/Analyst = %s" % analyst)
             
     facility = ''
     if ole.exists('SampleInfo/Facility'):
@@ -608,7 +607,7 @@ def read_txrm(filename, self):
         data = stream.read()
         facility = struct.unpack('<50s', data)
         facility = facility[0]
-        if verbose: print "SampleInfo/Facility = %s" % facility
+        if verbose: print( "SampleInfo/Facility = %s" % facility)
             
     sample = ''
     if ole.exists('SampleInfo/SampleID'):
@@ -616,7 +615,7 @@ def read_txrm(filename, self):
         data = stream.read()
         sample = struct.unpack('<50s', data)
         sample = sample[0]
-        if verbose: print "SampleInfo/SampleID = %s" % sample
+        if verbose: print( "SampleInfo/SampleID = %s" % sample)
             
             
     datasize = np.empty((3), dtype=np.int)
@@ -624,7 +623,7 @@ def read_txrm(filename, self):
         stream = ole.openstream('ImageInfo/NoOfImages')
         data = stream.read()
         nev = struct.unpack('<I', data)
-        if verbose: print "ImageInfo/NoOfImages = %i" % nev[0]  
+        if verbose: print ("ImageInfo/NoOfImages = %i" % nev[0])
         nimgs = nev[0]
         datasize[2] = np.int(nimgs)
         self.n_ev = datasize[2]
@@ -637,7 +636,7 @@ def read_txrm(filename, self):
             data = stream.read()
             dates = struct.unpack('<'+'17s23x'*nimgs, data)
             date = dates[0]
-            if verbose: print "ImageInfo/Date = %s" % date    
+            if verbose: print ("ImageInfo/Date = %s" % date)
     except:
         pass
 
@@ -645,7 +644,7 @@ def read_txrm(filename, self):
         stream = ole.openstream('Alignment/StageShiftsApplied')
         data = stream.read()
         shift = struct.unpack('<I', data)
-        if verbose: print "shift = ", shift[0]  
+        if verbose: print( "shift = ", shift[0])
 
     if ole.exists('Alignment/X-Shifts'):                  
         stream = ole.openstream('Alignment/X-Shifts')
@@ -653,7 +652,7 @@ def read_txrm(filename, self):
         size = ole.get_size('Alignment/X-Shifts')
         struct_fmt = "<{}f".format(size/4)
         XShift = struct.unpack(struct_fmt, data)
-        if verbose: print "Alignment/X-Shifts: \n ",  XShift  
+        if verbose: print ("Alignment/X-Shifts: \n ",  XShift)
 
     if ole.exists('Alignment/Y-Shifts'):                  
         stream = ole.openstream('Alignment/Y-Shifts')
@@ -661,7 +660,7 @@ def read_txrm(filename, self):
         size = ole.get_size('Alignment/Y-Shifts')
         struct_fmt = "<{}f".format(size/4)
         YShift = struct.unpack(struct_fmt, data)
-        if verbose: print "Alignment/Y-Shifts: \n ",  YShift  
+        if verbose: print ("Alignment/Y-Shifts: \n ",  YShift)
 
     if ole.exists('ImageInfo/XPosition'):                  
         stream = ole.openstream('ImageInfo/XPosition')
@@ -669,7 +668,7 @@ def read_txrm(filename, self):
         size = ole.get_size('ImageInfo/XPosition')
         struct_fmt = "<{}f".format(size/4)
         XPosition = struct.unpack(struct_fmt, data)
-        if verbose: print "ImageInfo/XPosition: \n ",  XPosition  
+        if verbose: print ("ImageInfo/XPosition: \n ",  XPosition)
 
     if ole.exists('ImageInfo/YPosition'):                  
         stream = ole.openstream('ImageInfo/YPosition')
@@ -677,7 +676,7 @@ def read_txrm(filename, self):
         size = ole.get_size('ImageInfo/YPosition')
         struct_fmt = "<{}f".format(size/4)
         YPosition = struct.unpack(struct_fmt, data)
-        if verbose: print "ImageInfo/YPosition: \n ",  YPosition  
+        if verbose: print( "ImageInfo/YPosition: \n ",  YPosition)
 
     if ole.exists('ImageInfo/ZPosition'):                  
         stream = ole.openstream('ImageInfo/ZPosition')
@@ -685,13 +684,13 @@ def read_txrm(filename, self):
         size = ole.get_size('ImageInfo/ZPosition')
         struct_fmt = "<{}f".format(size/4)
         ZPosition = struct.unpack(struct_fmt, data)
-        if verbose: print "ImageInfo/ZPosition: \n ",  ZPosition  
+        if verbose: print( "ImageInfo/ZPosition: \n ",  ZPosition )
             
     if ole.exists('ImageInfo/ImageWidth'):                 
         stream = ole.openstream('ImageInfo/ImageWidth')
         data = stream.read()
         nev = struct.unpack('<I', data)
-        if verbose: print "ImageInfo/ImageWidth = %i" % nev[0]  
+        if verbose: print( "ImageInfo/ImageWidth = %i" % nev[0])
         datasize[0] = np.int(nev[0])
         self.n_cols = datasize[0]
             
@@ -699,7 +698,7 @@ def read_txrm(filename, self):
         stream = ole.openstream('ImageInfo/ImageHeight')
         data = stream.read()
         nev = struct.unpack('<I', data)
-        if verbose: print "ImageInfo/ImageHeight = %i" % nev[0]  
+        if verbose: print( "ImageInfo/ImageHeight = %i" % nev[0])
         datasize[1] = np.int(nev[0])
         self.n_rows = datasize[1]
             
@@ -709,7 +708,7 @@ def read_txrm(filename, self):
         data = stream.read()
         struct_fmt = "<{}f".format(nimgs)
         angles = struct.unpack(struct_fmt, data)
-        if verbose: print "ImageInfo/Angles: \n ",  angles  
+        if verbose: print( "ImageInfo/Angles: \n ",  angles)
             
     
     if ole.exists('ImageInfo/Energy'):                  
@@ -718,7 +717,7 @@ def read_txrm(filename, self):
         size = ole.get_size('ImageInfo/Energy')
         struct_fmt = "<{}f".format(size/4)
         eng = struct.unpack(struct_fmt, data)
-        if verbose: print "ImageInfo/Energy: \n ",  eng  
+        if verbose: print( "ImageInfo/Energy: \n ",  eng)
         self.ev = np.array(eng)
 
                        
@@ -729,14 +728,14 @@ def read_txrm(filename, self):
         struct_fmt = '<1f'
         pixelsize = struct.unpack(struct_fmt, data)
         pixelsize = pixelsize[0]
-        if verbose: print "ImageInfo/PixelSize: %f " %  pixelsize  
+        if verbose: print ("ImageInfo/PixelSize: %f " %  pixelsize)
             
     if ole.exists('ImageInfo/ExpTimes'):                  
         stream = ole.openstream('ImageInfo/ExpTimes')
         data = stream.read()
         struct_fmt = "<{}f".format(nimgs)
         exptimes = struct.unpack(struct_fmt, data)
-        if verbose: print "ImageInfo/ExpTimes: \n ",  exptimes
+        if verbose: print ("ImageInfo/ExpTimes: \n ",  exptimes)
         
             
     # 10 float; 5 uint16 (unsigned 16-bit (2-byte) integers)
@@ -746,7 +745,7 @@ def read_txrm(filename, self):
         struct_fmt = '<1I'
         datatype = struct.unpack(struct_fmt, data)
         datatype = int(datatype[0])
-        if verbose: print "ImageInfo/DataType: %f " %  datatype  
+        if verbose: print( "ImageInfo/DataType: %f " %  datatype)
      
         
     self.absdata = np.empty((self.n_cols, self.n_rows, self.n_ev), dtype=np.float32)
@@ -764,7 +763,7 @@ def read_txrm(filename, self):
             struct_fmt = "<{}h".format(self.n_cols*self.n_rows)
             imgdata = struct.unpack(struct_fmt, data)
         else:                            
-            print "Wrong data type"
+            print ("Wrong data type")
             return
                 
         self.absdata[:,:,i-1] = np.reshape(imgdata, (self.n_cols, self.n_rows), order='F')

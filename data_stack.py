@@ -566,7 +566,7 @@ class data:
             
         for i in range(self.n_ev):
             if self.ev[i] != refimgs_ev[i]:
-                print 'Error, wrong reference image energy'
+                print ('Error, wrong reference image energy')
                 return
             
             self.od[:,:,i] = - np.log(self.absdata[:,:,i]/refimgs[:,:,i])
@@ -929,12 +929,12 @@ class data:
         c_denom=x2x0sq*x1x0-x1x0sq*x2x0
         
         if c_denom == 0:
-            print 'Divide by zero error'
+            print ('Divide by zero error')
             return 
 
         c=c_num/np.float(c_denom)
         if x1x0 == 0:
-            print 'Divide by zero error'
+            print ('Divide by zero error')
             return
 
         b=(y1y0-c*x1x0sq)/np.float(x1x0)
@@ -943,7 +943,7 @@ class data:
         fit=[a,b,c]
         if c == 0:
             xpeak=0.
-            print 'Cannot find xpeak'
+            print ('Cannot find xpeak')
             return
         else:
             #Constrain the fit to be within these three points. 
@@ -984,7 +984,7 @@ class data:
             for i in range(n_spikes):
                 ix = xsp[i]
                 iy = ysp[i]
-                print ix,iy
+                print(ix,iy)
                 if ix == 0:
                     ix1 = 1
                     ix2 = 2
@@ -1005,10 +1005,10 @@ class data:
                     iy1 = iy - 1
                     iy2 = iy + 1      
                  
-                print result_img[ix,iy]
+                print(result_img[ix,iy])
                 result_img[ix,iy] = 0.25*(image[ix1,iy]+image[ix2,iy]+
                                           image[ix,iy1]+image[ix,iy2])  
-                print result_img[ix,iy]
+                print (result_img[ix,iy])
             
         return result_img        
                                         

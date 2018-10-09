@@ -260,7 +260,7 @@ class analyze:
 
                         
         except:
-            print "pca not converging"
+            print( "pca not converging")
             
         self.pca_calculated = 1
         
@@ -354,7 +354,7 @@ class analyze:
     
                             
             except:
-                print "pca not converging"
+                print ("pca not converging")
                 
             self.pca_calculated = 1
             
@@ -535,12 +535,10 @@ class analyze:
                 clind = np.where(self.cluster_indices == i)
                 cl_sse_mean = np.mean(self.sse[clind])
                 cl_see_std = np.std(self.sse[clind])
-                #print i, cl_sse_mean, cl_see_std 
-                
+
                 sigma9 = cl_sse_mean+9*cl_see_std
                 maxsse = np.max(self.sse[clind])
                 if (maxsse > sigma9): 
-                    #print 'have new cluster', max, sigma6
                     recalc_clusters = True
                     sse_helper = np.zeros((self.stack.n_cols, self.stack.n_rows), dtype=np.int)
                     sse_helper[clind] = self.sse[clind]
@@ -682,12 +680,10 @@ class analyze:
                 clind = np.where(self.cluster_indices == i)
                 cl_sse_mean = np.mean(self.sse[clind])
                 cl_see_std = np.std(self.sse[clind])
-                #print i, cl_sse_mean, cl_see_std 
-                
+
                 sigma9 = cl_sse_mean+9*cl_see_std
                 maxsse = np.max(self.sse[clind])
                 if (maxsse > sigma9): 
-                    #print 'have new cluster', max, sigma6
                     recalc_clusters = True
                     sse_helper = np.zeros((self.stack.n_cols, self.stack.n_rows), dtype=np.int)
                     sse_helper[clind] = self.sse[clind]
@@ -1382,13 +1378,13 @@ class analyze:
             x = np.arange(len(v))
         v = np.asarray(v)
         if len(v) != len(x):
-            print 'Input vectors v and x must have same length'
+            print ('Input vectors v and x must have same length')
             return -1
         if not np.isscalar(delta):
-            print 'Input argument delta must be a scalar'
+            print ('Input argument delta must be a scalar')
             return -1
         if delta <= 0:
-            print 'Input argument delta must be positive'
+            print ('Input argument delta must be positive')
             return -1
         mn, mx = np.Inf, -np.Inf
         mnpos, mxpos = np.NaN, np.NaN
@@ -1630,7 +1626,7 @@ class analyze:
 
         mixedsig = mixedsig.transpose()
         
-        print 'msig', mixedsig.shape
+        print ('msig', mixedsig.shape)
 
         # Remove the mean and check the data
         mixedmean = np.mean(mixedsig, axis=1)
@@ -1639,7 +1635,7 @@ class analyze:
         Dim = mixedsig.shape[0]
         NumOfSampl = mixedsig.shape[1]
         
-        print 'Dim, NumOfSampl',Dim,NumOfSampl
+        print ('Dim, NumOfSampl',Dim,NumOfSampl)
 
 
         # Default values for optional parameters
@@ -1674,8 +1670,8 @@ class analyze:
 
         # print information about data
         if b_verbose:
-            print 'Number of signals:', Dim
-            print 'Number of samples: ', NumOfSampl
+            print ('Number of signals:', Dim)
+            print ('Number of samples: ', NumOfSampl)
 
 
         # Check if the data has been entered the wrong way,
@@ -1683,17 +1679,17 @@ class analyze:
 
         if (Dim > NumOfSampl):
             if b_verbose:
-                print 'Warning: '
-                print 'The signal matrix may be oriented in the wrong way.'
-                print 'In that case transpose the matrix.'
+                print ('Warning: ')
+                print ('The signal matrix may be oriented in the wrong way.')
+                print ('In that case transpose the matrix.')
 
     
         # Calculating PCA
         # We already have the PCA data
 
         if b_verbose:
-            print 'Values for PCA calculations supplied.\n'
-            print 'PCA calculations not needed.\n' 
+            print ('Values for PCA calculations supplied.\n')
+            print ('PCA calculations not needed.\n')
     
         # PCA was already calculated:
         D = np.identity(self.numsigpca)*self.eigenvals[0:self.numsigpca] 
@@ -1707,18 +1703,18 @@ class analyze:
         whiteningMatrix = mmult(np.linalg.inv (np.sqrt(D)), E.transpose())
         dewhiteningMatrix = mmult(E, np.sqrt(D))
         
-        print 'wd=', whiteningMatrix.shape, dewhiteningMatrix.shape
+        print ('wd=', whiteningMatrix.shape, dewhiteningMatrix.shape)
         
         # Project to the eigenvectors of the covariance matrix.
         # Whiten the samples and reduce dimension simultaneously.
         if b_verbose:
-            print 'Whitening...'
+            print ('Whitening...')
             whitesig =  np.dot(whiteningMatrix,mixedsig)
-            print 'whitesig', whitesig.shape
+            print ('whitesig', whitesig.shape)
             
         # Just some security...
         if np.sum(np.imag(whitesig)) != 0:
-            print 'Whitened vectors have imaginary values.'
+            print ('Whitened vectors have imaginary values.')
             
 
         # Calculating the ICA
@@ -1735,8 +1731,8 @@ class analyze:
             numOfIC = Dim
             # Show warning only if verbose = 'on' and user supplied a value for 'numOfIC'
             if b_verbose:
-                print 'Warning: estimating only ,', numOfIC, '  independent components' 
-                print '(Cannot estimate more independent components than dimension of data)'
+                print( 'Warning: estimating only ,', numOfIC, '  independent components' )
+                print( '(Cannot estimate more independent components than dimension of data)')
 
   
         # Calculate the ICA with fixed point algorithm.
@@ -1745,12 +1741,12 @@ class analyze:
           maxNumIterations, maxFinetune, initState, guess, sampleSize, 
           displayMode, displayInterval, verbose)
         
-        print 'A,W', A.shape, W.shape
+        print ('A,W', A.shape, W.shape)
         # Check for valid return
         if W.any():
             # Add the mean back in.
             if b_verbose:
-                print 'Adding the mean back to the data.'
+                print ('Adding the mean back to the data.')
     
             icasig = mmult(W, mixedsig) + mmult(mmult(W, mixedmean), np.ones((1, NumOfSampl)))
 
@@ -1758,8 +1754,7 @@ class analyze:
         else:
             icasig = []
             
-        print icasig.shape
- 
+
         return icasig
 
 #----------------------------------------------------------------------   
@@ -1817,31 +1812,31 @@ class analyze:
         elif approach == 'defl':
             approachMode = 2    
         else:
-            print 'Illegal value for parameter approach:', approach
+            print ('Illegal value for parameter approach:', approach)
             return
         if b_verbose:
-            print 'Used approach:', approach     
+            print ('Used approach:', approach)
             
         #Checking the value for numOfIC
         if vectorSize < numOfIC:
-            print 'Must have numOfIC <= Dimension!'     
+            print ('Must have numOfIC <= Dimension!')
             return
         
         # Checking the sampleSize
         if sampleSize > 1:
             sampleSize = 1
             if b_verbose:
-                print 'Warning: Setting sampleSize to 1.\n'
+                print ('Warning: Setting sampleSize to 1.\n')
    
         elif sampleSize < 1:
             if (sampleSize * numSamples) < 1000:
                 sampleSize = np.min(1000/numSamples, 1)
                 if b_verbose:
-                    print 'Warning: Setting ampleSize to ',sampleSize,' samples=', np.floor(sampleSize * numSamples)
+                    print ('Warning: Setting ampleSize to ',sampleSize,' samples=', np.floor(sampleSize * numSamples))
 
-        print 'sample size', sampleSize
+        print ('sample size', sampleSize)
         if  b_verbose and (sampleSize < 1):
-            print 'Using about  ',sampleSize*100,' of the samples in random order in every step.'
+            print ('Using about  ',sampleSize*100,' of the samples in random order in every step.')
        
         
         # Checking the value for nonlinearity.
@@ -1855,7 +1850,7 @@ class analyze:
         elif g == 'skew':
             gOrig = 40
         else:
-            print 'Illegal value for parameter g: ', g
+            print ('Illegal value for parameter g: ', g)
 
         if sampleSize != 1:
             gOrig = gOrig + 2
@@ -1865,7 +1860,7 @@ class analyze:
 
 
         if b_verbose:
-            print 'Used nonlinearity: ', g
+            print ('Used nonlinearity: ', g)
 
 
         finetuningEnabled = 1
@@ -1885,11 +1880,11 @@ class analyze:
   
             finetuningEnabled = 0
         else:
-            print 'Illegal value for parameter finetune :', finetune
+            print ('Illegal value for parameter finetune :', finetune)
             return
 
         if b_verbose and finetuningEnabled:
-            print 'Finetuning enabled, nonlinearity: ', finetune
+            print ('Finetuning enabled, nonlinearity: ', finetune)
 
 
         if stabilization == 'on':
@@ -1901,11 +1896,11 @@ class analyze:
                 stabilizationEnabled = 0
 
         else:
-            print 'Illegal value for parameter stabilization: ', stabilization 
+            print ('Illegal value for parameter stabilization: ', stabilization)
 
 
         if b_verbose and stabilizationEnabled:
-            print 'Using stabilized algorithm.'
+            print ('Using stabilized algorithm.')
        
         # Some other parameters
         myyOrig = myy
@@ -1929,24 +1924,24 @@ class analyze:
             if guess.shape[0] != whiteningMatrix.shape[1]:
                 initialStateMode = 0
                 if b_verbose:
-                    print 'Warning: size of initial guess is incorrect. Using random initial guess.'
+                    print ('Warning: size of initial guess is incorrect. Using random initial guess.')
     
             else:
                 initialStateMode = 1
                 if guess.shape[0] < numOfIC:
                     if b_verbose:
-                        print 'Warning: initial guess only for first ',guess.shape[0],' components. Using random initial guess for others.' 
+                        print ('Warning: initial guess only for first ',guess.shape[0],' components. Using random initial guess for others.')
     
                     guess[:, guess.shape[0] + 1:numOfIC] = np.random.uniform(-0.5,0.5,(vectorSize,numOfIC-guess.shape[0]))
                 elif guess.shape[0]>numOfIC:
                     guess=guess[:,1:numOfIC]
-                    print 'Warning: Initial guess too large. The excess column are dropped.'
+                    print ('Warning: Initial guess too large. The excess column are dropped.')
   
                 if b_verbose:
-                    print 'Using initial guess.'
+                    print( 'Using initial guess.')
 
         else:
-            print 'Illegal value for parameter initState:', initState
+            print ('Illegal value for parameter initState:', initState)
             return        
         
         
@@ -1957,23 +1952,23 @@ class analyze:
         elif (displayMode =='on') or (displayMode == 'signals'):
             usedDisplay = 1
             if (b_verbose and (numSamples > 10000)):
-                print 'Warning: Data vectors are very long. Plotting may take long time.'
+                print ('Warning: Data vectors are very long. Plotting may take long time.')
  
             if (b_verbose and (numOfIC > 25)):
-                print 'Warning: There are too many signals to plot. Plot may not look good.'
+                print ('Warning: There are too many signals to plot. Plot may not look good.')
  
         elif (displayMode =='basis'):
             usedDisplay = 2
             if (b_verbose and (numOfIC > 25)):
-                print 'Warning: There are too many signals to plot. Plot may not look good.'
+                print( 'Warning: There are too many signals to plot. Plot may not look good.')
  
         elif (displayMode =='filters'):
             usedDisplay = 3
             if (b_verbose and (vectorSize > 25)):
-                print 'Warning: There are too many signals to plot. Plot may not look good.'
+                print ('Warning: There are too many signals to plot. Plot may not look good.')
 
         else:
-            print 'Illegal value for parameter displayMode:', displayMode
+            print( 'Illegal value for parameter displayMode:', displayMode)
             return
 
 
@@ -1983,12 +1978,12 @@ class analyze:
 
         # Start ICA calculation
         if b_verbose:
-            print 'Starting ICA calculation...'
+            print ('Starting ICA calculation...')
             
             
         # SYMMETRIC APPROACH
         if approachMode == 1:
-            print 'Symmetric approach under construction'
+            print ('Symmetric approach under construction')
             return
         
         
@@ -2013,7 +2008,7 @@ class analyze:
                 
                 # Show the progress...
                 if b_verbose:
-                    print 'IC :', round
+                    print ('IC :', round)
         
                 # Take a random initial vector of length 1 and orthogonalize it
                 # with respect to the other vectors.
@@ -2039,7 +2034,7 @@ class analyze:
                 gabba = 1
                 while (i <= (maxNumIterations + gabba)):
                     if (usedDisplay > 0):
-                        print 'display'
+                        print ('display')
           
                     #Project the vector into the space orthogonal to the space
                     # spanned by the earlier found basis vectors. Note that we can do
@@ -2052,13 +2047,13 @@ class analyze:
                     if notFine:
                         if i == (maxNumIterations + 1):   
                             if b_verbose:
-                                print 'Component number',round,'  did not converge in ',maxNumIterations, 'iterations.'
+                                print ('Component number',round,'  did not converge in ',maxNumIterations, 'iterations.')
           
                             round = round - 1
                             numFailures = numFailures + 1
                             if numFailures > failureLimit:
                                 if b_verbose:
-                                    print 'Too many failures to converge ', numFailures,' Giving up.'
+                                    print ('Too many failures to converge ', numFailures,' Giving up.')
             
                                 if round == 0:
                                     A=[]
@@ -2072,7 +2067,7 @@ class analyze:
                             
                     # Show the progress...
                     if b_verbose:
-                        print '.'
+                        print( '.')
                         
                     # Test for termination condition. Note that the algorithm has
                     # converged if the direction of w and wOld is the same, this
@@ -2083,7 +2078,7 @@ class analyze:
                     if  (conv < epsilon):
                         if finetuningEnabled and notFine:
                             if b_verbose:
-                                print 'Initial convergence, fine-tuning: '
+                                print ('Initial convergence, fine-tuning: ')
                             notFine = 0
                             gabba = maxFinetune
                             wOld = np.zeros(w.shape)
@@ -2106,7 +2101,7 @@ class analyze:
                             
                             # Show the progress...
                             if b_verbose:
-                                print 'computed ( ',i,' steps ) '
+                                print ('computed ( ',i,' steps ) ')
                                 
                             break
                     elif stabilizationEnabled:
@@ -2114,7 +2109,7 @@ class analyze:
                         if (not stroke) and (np.linalg.norm(w - wOld2) < epsilon or np.linalg.norm(w + wOld2) < epsilon):
                             stroke = myy
                             if b_verbose:
-                                print 'Stroke!'
+                                print ('Stroke!')
                             myy = .5*myy
                             if np.mod(usedNlinearity,2) == 0:
                                 usedNlinearity = usedNlinearity + 1
@@ -2127,7 +2122,7 @@ class analyze:
          
                         elif (notFine) and (not long) and (i > maxNumIterations / 2):
                             if b_verbose:
-                                print 'Taking long (reducing step size) '
+                                print( 'Taking long (reducing step size) ')
                                 long = 1
                                 myy = .5*myy
                                 if np.mod(usedNlinearity,2) == 0:
@@ -2256,7 +2251,7 @@ class analyze:
                         w = w - myy * (EXGskew - Beta*w)/(-Beta)
                         
                     else:
-                        print 'Code for desired nonlinearity not found!'
+                        print ('Code for desired nonlinearity not found!')
                         return
                                  
                     # Normalize the new w.
@@ -2266,13 +2261,13 @@ class analyze:
                 round = round + 1
             
             if b_verbose:
-                print 'Done.'
+                print ('Done.')
             
 
         # In the end let's check the data for some security
         if A.imag.any():
             if b_verbose:
-                print 'Warning: removing the imaginary part from the result.'
+                print ('Warning: removing the imaginary part from the result.')
             A = A.real
             W = W.imag
 

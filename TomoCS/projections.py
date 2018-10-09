@@ -18,11 +18,13 @@
 #   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #   GNU General Public License for more details <http://www.gnu.org/licenses/>.
 
+from __future__ import absolute_import
+
 import numpy as np
 from scipy import sparse
 from scipy import ndimage
 from scipy import fftpack
-from _rank_order import rank_order
+from TomoCS._rank_order import rank_order
 
 # --------------- Tomo projection operator  --------------------
 

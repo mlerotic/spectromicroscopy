@@ -93,7 +93,7 @@ class henke:
     def zcompound(self, compound_string, z_array, paren_multiplier=False):
         
         verbose = False
-        if verbose: print 'compound_string', compound_string
+        if verbose: print ('compound_string', compound_string)
         if paren_multiplier == False:
             z_array = np.zeros(92)
             paren_multiplier=1.
@@ -124,7 +124,7 @@ class henke:
                 this_element_name = this_element_name + ' '
                 num_start_index = 1
       
-        if verbose: print 'this_element_name:',this_element_name,', num_start_index:', num_start_index      
+        if verbose: print ('this_element_name:',this_element_name,', num_start_index:', num_start_index)
         
         this_z=0
         if   this_element_name == 'H ': this_z=1
@@ -223,7 +223,7 @@ class henke:
         
             
         if (this_z == 0) :
-            print 'zcompound is confused: ',compound_string
+            print ('zcompound is confused: ',compound_string)
             compound_string=''
             z_array = 0
             return
@@ -254,7 +254,7 @@ class henke:
         if (num_start_index != postnum_index) :
             number_string=compound_string[num_start_index:postnum_index]
             num_multiplier=1.
-            if verbose: print 'Trying to interpret ',number_string,' as a number.'
+            if verbose: print( 'Trying to interpret ',number_string,' as a number.')
             if (len(number_string) != 0) :
                 num_multiplier = float(number_string)
         else:
@@ -265,7 +265,7 @@ class henke:
         if (this_z <= max_z_index) :
             z_array[this_z-1] = z_array[this_z-1] + num_multiplier 
         else:
-            print 'zcompound: z_array smaller than ',max_z_index
+            print ('zcompound: z_array smaller than ',max_z_index)
             z_array = 0
             return
 
@@ -422,11 +422,11 @@ class henke:
 #         try:
 #             file = open(str(filename),'rb')
 #         except:
-#             print 'Could not open file ', filename
+#             print ('Could not open file ', filename)
 #             return -1
         
         if verbose:
-            print 'File: ', filename   
+            print ('File: ', filename)
     
         buf = file.read()        
         u = Unpacker(buf)
@@ -436,16 +436,16 @@ class henke:
             n_energies = u.unpack_int()
         
             if verbose:
-                print 'n_energies: ', n_energies  
-                print 'n_elements: ', n_elements    
+                print ('n_energies: ', n_energies)
+                print ('n_elements: ', n_elements)
                 expected_pos = expected_pos+2*4
-                print 'Actual, expected file position before reading energies: ' ,u.get_position(), expected_pos
+                print ('Actual, expected file position before reading energies: ' ,u.get_position(), expected_pos)
             
             
             energies = u.unpack_farray(n_energies, u.unpack_float)   
             energies = np.array(energies) 
             if verbose:
-                print 'energies: ', energies  
+                print ('energies: ', energies)
             
             f1 = np.zeros((n_elements, n_energies))
             f2 = np.zeros((n_elements, n_energies))
@@ -454,7 +454,7 @@ class henke:
 
             if verbose:        
                 expected_pos = expected_pos+4*n_energies
-                print 'Actual, expected file position before reading elements: ',u.get_position(), expected_pos
+                print ('Actual, expected file position before reading elements: ',u.get_position(), expected_pos)
         
             for i_element in range(n_elements):
                 this_f1 = u.unpack_farray(n_energies, u.unpack_float)
@@ -462,19 +462,17 @@ class henke:
                 f1[i_element, :] = this_f1
                 f2[i_element, :] = this_f2
             
-                #print f1
-
-            if verbose:        
+            if verbose:
                 expected_pos =expected_pos+n_elements*n_energies*2*4
-                print 'Actual, expected file position before reading n_extra_energies: ', u.get_position(), expected_pos
+                print ('Actual, expected file position before reading n_extra_energies: ', u.get_position(), expected_pos)
 
             n_extra_energies  = u.unpack_int()
             if verbose:
-                print 'n_extra_energies: ', n_extra_energies 
+                print ('n_extra_energies: ', n_extra_energies)
             
             if verbose:        
                 expected_pos = expected_pos+4
-                print 'Actual, expected file position before reading extras: ',u.get_position(), expected_pos
+                print ('Actual, expected file position before reading extras: ',u.get_position(), expected_pos)
             
             
             n_extra = np.zeros((n_elements), dtype = np.int)
@@ -503,7 +501,7 @@ class henke:
             energies = u.unpack_farray(n_energies, u.unpack_float)   
             energies = np.array(energies)  
             if verbose:
-                print 'energies: ', energies  
+                print ('energies: ', energies)
             
             byte_offset = 4+4+4*n_energies + 8*ielement*n_energies
             u.set_position(byte_offset)
@@ -515,12 +513,12 @@ class henke:
             u.set_position(byte_offset)
             
             n_extra_energies = u.unpack_int()
-            if verbose: print 'n_extra_energies ', n_extra_energies
+            if verbose: print ('n_extra_energies ', n_extra_energies)
             
             
             # Now we have the above plus i_element times the quantity:
             #   (2 for n_extra, and n_extra_energies each of three floats)
-            byte_offset = 4l+4l+4l*n_energies + 8l*n_elements*n_energies + 4l + ielement*(4l+12l*n_extra_energies)
+            byte_offset = long(4)+long(4)+long(4)*n_energies + long(8)*n_elements*n_energies + long(4) + ielement*(4+12*n_extra_energies)
             u.set_position(byte_offset)
             
             n_extra = u.unpack_int()

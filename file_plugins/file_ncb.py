@@ -114,7 +114,7 @@ def read(filename, self, selection=None):
     
     if scale > 0 and scale != 1 :
         image_stack = big_array.astype(np.float)/scale
-        print "data rescaled by ", 1./scale
+        print ("data rescaled by ", 1./scale)
     else:
         image_stack = big_array.astype(np.float)
 
@@ -124,14 +124,14 @@ def read(filename, self, selection=None):
         t = x_start 
         x_start = x_stop 
         x_stop = t
-        print 'x data reversed'
+        print ('x data reversed')
 
     if (y_start > y_stop) :
         image_stack = image_stack[:,::-1,:]
         t = y_start 
         y_start = y_stop 
         y_stop = t
-        print 'y data reversed'
+        print ('y data reversed')
 
         
     xstep = (x_stop-x_start)/(self.n_cols-1)
@@ -155,13 +155,13 @@ def read(filename, self, selection=None):
 #----------------------------------------------------------------------
 def read_ncb4D(self, filenames):
     
-    if verbose: print 'First energy stack:', filenames[0]
+    if verbose: print ('First energy stack:', filenames[0])
     
     
     data_files = natural_sort(filenames)
 
     neng = len(data_files)
-    if verbose: print 'Number of energies ', neng
+    if verbose: print ('Number of energies ', neng)
     
     self.stack4D = []
     theta = []
@@ -214,7 +214,7 @@ def read_ncb_data(self, filename):
     scale = float(temp[2])
 
     if verbose:
-        print 'self.n_cols, self.n_rows, scale', self.n_cols, self.n_rows, scale
+        print ('self.n_cols, self.n_rows, scale', self.n_cols, self.n_rows, scale)
         
     
     
@@ -267,7 +267,7 @@ def read_ncb_data(self, filename):
     
     if scale > 0 and scale != 1 :
         image_stack = big_array.astype(np.float)/scale
-        if verbose: print "data rescaled by ", 1./scale
+        if verbose: print ("data rescaled by ", 1./scale)
     else:
         image_stack = big_array.astype(np.float)
 
@@ -277,14 +277,14 @@ def read_ncb_data(self, filename):
         t = x_start 
         x_start = x_stop 
         x_stop = t
-        if verbose: print 'x data reversed'
+        if verbose: print ('x data reversed')
 
     if (y_start > y_stop) :
         image_stack = image_stack[:,::-1,:]
         t = y_start 
         y_start = y_stop 
         y_stop = t
-        if verbose: print 'y data reversed'
+        if verbose: print ('y data reversed')
 
         
     xstep = (x_stop-x_start)/(self.n_cols-1)
@@ -304,7 +304,7 @@ def read_ncb_data(self, filename):
 def write_ncb(filename, stack):
     
     
-    print 'Writing .ncb stack:', filename
+    print ('Writing .ncb stack:', filename)
     
     
     basename, extension = os.path.splitext(filename) 
@@ -328,7 +328,7 @@ def write_ncb(filename, stack):
     #Save image stack to a binary .dat file
     f = open(str(filename),'wb')
     if scale != 1.0:
-        print 'Scaling the data by ', scale
+        print ('Scaling the data by ', scale)
         saveddata = image_stack*scale
         saveddata.astype(np.int16).tofile(f)
     else:
@@ -389,7 +389,7 @@ class Cncb:
 #----------------------------------------------------------------------
     def read_ncb(self, filename):
         
-        print 'Reading stack:', filename
+        print ('Reading stack:', filename)
         
         basename, extension = os.path.splitext(filename) 
         dat_fn = basename + '.dat'
@@ -457,7 +457,7 @@ class Cncb:
         
         if scale > 0 and scale != 1 :
             image_stack = big_array.astype(np.float)/scale
-            print "data rescaled by ", 1./scale
+            print ("data rescaled by ", 1./scale)
         else:
             image_stack = big_array.astype(np.float)
 
@@ -467,14 +467,14 @@ class Cncb:
             t = x_start 
             x_start = x_stop 
             x_stop = t
-            print 'x data reversed'
+            print ('x data reversed')
 
         if (y_start > y_stop) :
             image_stack = image_stack[:,::-1,:]
             t = y_start 
             y_start = y_stop 
             y_stop = t
-            print 'y data reversed'
+            print ('y data reversed')
 
             
         xstep = (x_stop-x_start)/(self.n_cols-1)
@@ -499,7 +499,7 @@ class Cncb:
     def write_ncb(self, filename, data_struct):
         
         
-        print 'Writing .ncb stack:', filename
+        print ('Writing .ncb stack:', filename)
         
         
         basename, extension = os.path.splitext(filename) 
@@ -523,7 +523,7 @@ class Cncb:
         #Save image stack to a binary .dat file
         f = open(str(filename),'wb')
         if scale != 1.0:
-            print 'Scaling the data by ', scale
+            print ('Scaling the data by ', scale)
             saveddata = image_stack*scale
             saveddata.astype(np.int16).tofile(f)
         else:
@@ -586,7 +586,7 @@ class Cncb:
         scale = float(temp[2])
     
         if verbose:
-            print 'self.n_cols, self.n_rows, scale', self.n_cols, self.n_rows, scale
+            print ('self.n_cols, self.n_rows, scale', self.n_cols, self.n_rows, scale)
         
         temp = lines[1].split()
         x_start = float(temp[0])
@@ -640,7 +640,7 @@ class Cncb:
         
         if scale > 0 and scale != 1 :
             image_stack = big_array.astype(np.float)/scale
-            if verbose: print "data rescaled by ", 1./scale
+            if verbose: print ("data rescaled by ", 1./scale)
         else:
             image_stack = big_array.astype(np.float)
 
@@ -650,14 +650,14 @@ class Cncb:
             t = x_start 
             x_start = x_stop 
             x_stop = t
-            if verbose: print 'x data reversed'
+            if verbose: print ('x data reversed')
 
         if (y_start > y_stop) :
             image_stack = image_stack[:,::-1,:]
             t = y_start 
             y_start = y_stop 
             y_stop = t
-            if verbose: print 'y data reversed'
+            if verbose: print ('y data reversed')
 
             
         xstep = (x_stop-x_start)/(self.n_cols-1)
@@ -674,13 +674,13 @@ class Cncb:
 #----------------------------------------------------------------------
     def read_ncb4D(self, filenames):
         
-        if verbose: print 'First energy stack:', filenames[0]
+        if verbose: print ('First energy stack:', filenames[0])
         
         
         data_files = natural_sort(filenames)
 
         neng = len(data_files)
-        if verbose: print 'Number of energies ', neng
+        if verbose: print ('Number of energies ', neng)
         
         self.stack4D = []
         theta = []

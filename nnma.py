@@ -57,7 +57,7 @@ class nnma():
 
     # Fill initial matrices depending on user-specified initialization method
     def fillInitMatrices(self):
-        print 'Init method:', self.initMatrices
+        print ('Init method:', self.initMatrices)
         if self.initMatrices == 'Random':
             muInit = np.random.rand(self.nEnergies, self.kNNMA)
             tInit = np.random.rand(self.kNNMA, self.nPixels)
@@ -134,7 +134,7 @@ class nnma():
 #---------------------------------------------------------------------------------------
     def calcNNMA(self, initmatrices = 'Random'):
       
-        print 'calculating nnma'
+        print ('calculating nnma')
         
         self.initMatrices = initmatrices
 
@@ -200,7 +200,7 @@ class nnma():
             costCurrent, deltaErrorCurrent = self.calcCostFn(muCurrent, tCurrent, count)
 
             count = count + 1
-            print 'Iteration number {0}/{1}'.format(count,self.maxIters)
+            print ('Iteration number {0}/{1}'.format(count,self.maxIters))
 
         endTime = time.time()
         self.timeTaken = endTime - startTime

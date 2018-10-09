@@ -29,7 +29,7 @@ import data_struct
 def read_sm_header(filename):
     
     try:
-        print filename
+        print (filename)
         f = netCDF4.Dataset(filename, 'r', format='NETCDF4')
 
         
@@ -78,7 +78,7 @@ def read_sm_list(self, filelist, filepath, ds):
         y_center_um = getattr(fcdf,'y_center_um')   
         
     if (x_center_um == -1) or (y_center_um == -1):
-        print 'Error in stack build: Not piezo scan'
+        print ('Error in stack build: Not piezo scan')
         return
     
     x_pixel_um = getattr(fcdf,'fast_pixel_um')
@@ -214,7 +214,7 @@ class sm:
             y_center_um = getattr(fcdf,'y_center_um')   
             
         if (x_center_um == -1) or (y_center_um == -1):
-            print 'Error in stack build: Not piezo scan'
+            print ('Error in stack build: Not piezo scan')
             return
         
         x_pixel_um = getattr(fcdf,'fast_pixel_um')
