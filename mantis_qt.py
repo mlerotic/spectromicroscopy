@@ -29,9 +29,6 @@ from PyQt4.QtCore import Qt, QCoreApplication
 
 from PIL import Image  
 
-import Tkinter
-import FileDialog
-
 from matplotlib.backends.backend_qt4agg import (
         FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 from matplotlib.figure import Figure
