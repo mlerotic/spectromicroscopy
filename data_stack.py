@@ -632,34 +632,34 @@ class data:
 #----------------------------------------------------------------------   
     def write_xas(self, filename, evdata, data):
         f = open(filename, 'w')
-        print>>f, '*********************  X-ray Absorption Data  ********************'
-        print>>f, '*'
-        print>>f, '* Formula: '
-        print>>f, '* Common name: '
-        print>>f, '* Edge: '
-        print>>f, '* Acquisition mode: '
-        print>>f, '* Source and purity: ' 
-        print>>f, '* Comments: Stack list ROI ""'
-        print>>f, '* Delta eV: '
-        print>>f, '* Min eV: '
-        print>>f, '* Max eV: '
-        print>>f, '* Y axis: '
-        print>>f, '* Contact person: '
-        print>>f, '* Write date: '
-        print>>f, '* Journal: '
-        print>>f, '* Authors: '
-        print>>f, '* Title: '
-        print>>f, '* Volume: '
-        print>>f, '* Issue number: '
-        print>>f, '* Year: '
-        print>>f, '* Pages: '
-        print>>f, '* Booktitle: '
-        print>>f, '* Editors: '
-        print>>f, '* Publisher: '
-        print>>f, '* Address: '
-        print>>f, '*--------------------------------------------------------------'
+        print('*********************  X-ray Absorption Data  ********************', file=f)
+        print('*', file=f)
+        print('* Formula: ', file=f)
+        print('* Common name: ', file=f)
+        print('* Edge: ', file=f)
+        print('* Acquisition mode: ', file=f)
+        print('* Source and purity: ' , file=f)
+        print('* Comments: Stack list ROI ""', file=f)
+        print('* Delta eV: ', file=f)
+        print('* Min eV: ', file=f)
+        print('* Max eV: ', file=f)
+        print('* Y axis: ', file=f)
+        print('* Contact person: ', file=f)
+        print('* Write date: ', file=f)
+        print('* Journal: ', file=f)
+        print('* Authors: ', file=f)
+        print('* Title: ', file=f)
+        print('* Volume: ', file=f)
+        print('* Issue number: ', file=f)
+        print('* Year: ', file=f)
+        print('* Pages: ', file=f)
+        print('* Booktitle: ', file=f)
+        print('* Editors: ', file=f)
+        print('* Publisher: ', file=f)
+        print('* Address: ', file=f)
+        print('*--------------------------------------------------------------', file=f)
         for ie in range(self.n_ev):
-            print>>f, '\t {0:06.2f}, {1:06f}'.format(evdata[ie], data[ie])
+            print('\t {0:06.2f}, {1:06f}'.format(evdata[ie], data[ie]), file=f)
         
         f.close()
     
@@ -668,34 +668,34 @@ class data:
 #----------------------------------------------------------------------   
     def write_csv(self, filename, evdata, data, cname = ''):
         f = open(filename, 'w')
-        print>>f, '*********************  X-ray Absorption Data  ********************'
-        print>>f, '*'
-        print>>f, '* Formula: '
-        print>>f, '* Common name: ', cname
-        print>>f, '* Edge: '
-        print>>f, '* Acquisition mode: '
-        print>>f, '* Source and purity: ' 
-        print>>f, '* Comments: Stack list ROI ""'
-        print>>f, '* Delta eV: '
-        print>>f, '* Min eV: '
-        print>>f, '* Max eV: '
-        print>>f, '* Y axis: '
-        print>>f, '* Contact person: '
-        print>>f, '* Write date: '
-        print>>f, '* Journal: '
-        print>>f, '* Authors: '
-        print>>f, '* Title: '
-        print>>f, '* Volume: '
-        print>>f, '* Issue number: '
-        print>>f, '* Year: '
-        print>>f, '* Pages: '
-        print>>f, '* Booktitle: '
-        print>>f, '* Editors: '
-        print>>f, '* Publisher: '
-        print>>f, '* Address: '
-        print>>f, '*--------------------------------------------------------------'
+        print('*********************  X-ray Absorption Data  ********************', file=f)
+        print('*', file=f)
+        print('* Formula: ', file=f)
+        print('* Common name: {0}'.format(cname), file=f)
+        print('* Edge: ', file=f)
+        print('* Acquisition mode: ', file=f)
+        print('* Source and purity: ' , file=f)
+        print('* Comments: Stack list ROI ""', file=f)
+        print('* Delta eV: ', file=f)
+        print('* Min eV: ', file=f)
+        print('* Max eV: ', file=f)
+        print('* Y axis: ', file=f)
+        print('* Contact person: ', file=f)
+        print('* Write date: ', file=f)
+        print('* Journal: ', file=f)
+        print('* Authors: ', file=f)
+        print('* Title: ', file=f)
+        print('* Volume: ', file=f)
+        print('* Issue number: ', file=f)
+        print('* Year: ', file=f)
+        print('* Pages: ', file=f)
+        print('* Booktitle: ', file=f)
+        print('* Editors: ', file=f)
+        print('* Publisher: ', file=f)
+        print('* Address: ', file=f)
+        print('*--------------------------------------------------------------', file=f)
         for ie in range(self.n_ev):
-            print>>f, '{0:06.2f}, {1:06f}'.format(evdata[ie], data[ie])
+            print('{0:06.2f}, {1:06f}'.format(evdata[ie], data[ie]), file=f)
         
         f.close()
     

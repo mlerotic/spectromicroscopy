@@ -41,7 +41,7 @@ def identify(filename):
     except:
         return False
 
-def read(FileName,stack_object,selection=(0,0),*args, **kwargs):
+def read(FileName,stack_object,selection=(0,0), *args, **kwargs):
     """Todo: Add support for single images!"""
     D = GetFileStructure(FileName)
     entry = list(D.keys())[selection[0]]

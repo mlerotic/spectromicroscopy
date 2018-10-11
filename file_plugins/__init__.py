@@ -101,8 +101,7 @@ for data_type in data_types:
     filter_list['read'][data_type].append('All files (*.*)')
 
 
-
-def load(filename,stack_object=None,plugin=None,selection=None,json=None):
+def load(filename, stack_object=None, plugin=None, selection=None, json=None):
     """
     Pass the load command over to the appropriate plugin so that it can import data from the named file.
     """
@@ -112,12 +111,10 @@ def load(filename,stack_object=None,plugin=None,selection=None,json=None):
         return None
     else:
         print("load", filename, "with the", plugin.title, "plugin.")
-        if selection is None or len(selection) == 1:
-            if stack_object is None:
-                return plugin.read(filename,None,selection[0]) #should this ever be used?
-            else:
-                plugin.read(filename,stack_object,selection[0],json)
-                return
+        if selection is None:
+            plugin.read(filename, stack_object, selection, json)
+        elif len(selection) == 1:
+            plugin.read(filename, stack_object, selection[0], json)
         else:
             plugin.read(filename,stack_object,selection[0],json)
             temp_stack = data_stack.data(stack_object.data_struct)
@@ -136,7 +133,8 @@ def load(filename,stack_object=None,plugin=None,selection=None,json=None):
             stack_object.n_rows = len(stack_object.y_dist)
             return
 
-def GetFileStructure(filename,plugin=None):
+
+def GetFileStructure(filename, plugin=None):
     """
     Use the plugin to skim-read the file and return the structure of the data.
     Returns None if there is only a single data array (i.e. no choices to be made).

@@ -15,10 +15,6 @@
 #   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #   GNU General Public License for more details <http://www.gnu.org/licenses/>.
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
 import sys
 import os
 import numpy as np
@@ -31,8 +27,9 @@ from PyQt5.QtCore import Qt, QCoreApplication
 
 from PIL import Image
 
-from matplotlib.backends.backend_qt4agg import (
-        FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import (
+        NavigationToolbar2QT as NavigationToolbar)
 from matplotlib.figure import Figure
 import matplotlib
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -576,7 +573,7 @@ class PageTomo(QtWidgets.QWidget):
         wildcard = "Supported 4D formats (*.mrc *.ali *.ncb);;Mrc files (*.mrc *.ali);;NCB files (*.ncb);;"
 
 
-        OpenFileName = QtWidgets.QFileDialog.getOpenFileName(self, 'Load Tomo Dataset', '', wildcard,
+        OpenFileName, _filter = QtWidgets.QFileDialog.getOpenFileName(self, 'Load Tomo Dataset', '', wildcard,
                                                          None, QtWidgets.QFileDialog.DontUseNativeDialog)
 
         OpenFileName = str(OpenFileName)
@@ -597,7 +594,7 @@ class PageTomo(QtWidgets.QWidget):
 
             #Read energies from file
             wildcard = "Angle files (*.*);;"
-            OpenFileName2 = QtWidgets.QFileDialog.getOpenFileName(self, 'Load Angle data', '', wildcard,
+            OpenFileName2, _filter = QtWidgets.QFileDialog.getOpenFileName(self, 'Load Angle data', '', wildcard,
                                                              None, QtWidgets.QFileDialog.DontUseNativeDialog)
 
             OpenFileName2 = str(OpenFileName2)
@@ -1004,7 +1001,7 @@ class PageTomo(QtWidgets.QWidget):
 
         wildcard = "Mrc files (*.mrc);;"
 
-        SaveFileName = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Tomo Reconstructions', '', wildcard)
+        SaveFileName, _filter = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Tomo Reconstructions', '', wildcard)
 
         SaveFileName = str(SaveFileName)
         if SaveFileName == '':
@@ -1036,7 +1033,7 @@ class PageTomo(QtWidgets.QWidget):
 
         wildcard = "Mrc files (*.mrc);;"
 
-        SaveFileName = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Tomo Reconstructions', '', wildcard)
+        SaveFileName, _filter = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Tomo Reconstructions', '', wildcard)
 
         SaveFileName = str(SaveFileName)
         if SaveFileName == '':
@@ -1054,7 +1051,7 @@ class PageTomo(QtWidgets.QWidget):
 
         wildcard = "Mrc files (*.mrc);;"
 
-        SaveFileName = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Tomo Reconstructions', '', wildcard)
+        SaveFileName, _filter = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Tomo Reconstructions', '', wildcard)
 
         SaveFileName = str(SaveFileName)
         if SaveFileName == '':
@@ -1077,7 +1074,7 @@ class PageTomo(QtWidgets.QWidget):
 
         wildcard = "Mrc files (*.mrc);;"
 
-        SaveFileName = QtWidgets.QFileDialog.getSaveFileName(self, 'Save ROI Selection', '', wildcard)
+        SaveFileName, _filter = QtWidgets.QFileDialog.getSaveFileName(self, 'Save ROI Selection', '', wildcard)
 
         SaveFileName = str(SaveFileName)
         if SaveFileName == '':
@@ -1095,7 +1092,7 @@ class PageTomo(QtWidgets.QWidget):
 
         wildcard = "Mrc files (*.mrc);;"
 
-        OpenFileName = QtWidgets.QFileDialog.getOpenFileName(self, 'Load ROI Selection', '', wildcard)
+        OpenFileName, _filter = QtWidgets.QFileDialog.getOpenFileName(self, 'Load ROI Selection', '', wildcard)
 
         OpenFileName = str(OpenFileName)
         if OpenFileName == '':
@@ -1642,8 +1639,6 @@ class File_GUI():
             return (None,None)
 
 
-
-
 #----------------------------------------------------------------------
     class DataChoiceDialog(QtWidgets.QDialog):
 
@@ -2188,7 +2183,7 @@ class PageNNMA(QtWidgets.QWidget):
 
             wildcard = "Spectrum files (*.csv);;Spectrum files (*.xas);;"
 
-            filepath = QtWidgets.QFileDialog.getOpenFileNames(self, 'Choose Spectra files', '', wildcard)
+            filepath, _filter = QtWidgets.QFileDialog.getOpenFileNames(self, 'Choose Spectra files', '', wildcard)
 
             if filepath == '':
                 return
@@ -3488,7 +3483,7 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
 
             wildcard = "Spectrum files (*.csv)"
 
-            filepath = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', self.com.path, wildcard)
+            filepath, _filter = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', self.com.path, wildcard)
 
 
             filepath = str(filepath)
@@ -4470,7 +4465,7 @@ class PagePeakID(QtWidgets.QWidget):
 
             wildcard = "Spectrum files (*.csv)"
 
-            filepath = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', self.com.path, wildcard)
+            filepath, _filter = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', self.com.path, wildcard)
 
 
             filepath = str(filepath)
@@ -4741,7 +4736,7 @@ class PagePeakID(QtWidgets.QWidget):
         #Save images
         wildcard = "Portable Network Graphics (*.png);;Adobe PDF Files (*.pdf);;"
 
-        fileName = QtWidgets.QFileDialog.getSaveFileName(self, 'Save OD Plot with Key Energies', '', wildcard)
+        fileName, _filter = QtWidgets.QFileDialog.getSaveFileName(self, 'Save OD Plot with Key Energies', '', wildcard)
 
         fileName = str(fileName)
         if fileName == '':
@@ -5046,8 +5041,8 @@ class PageSpectral(QtWidgets.QWidget):
             wildcard = "Supported spectrum formats (*.csv *.xas *.txt);;Spectrum files (*.csv);;Spectrum files (*.xas);;Spectrum files (*.txt);;"
             directory = self.com.path
 
-            filepath = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', directory, wildcard)
-            #filepath = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', '', wildcard)
+            filepath, _filter = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', directory, wildcard)
+            #filepath, _filter = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', '', wildcard)
 
 
             filepath = str(filepath)
@@ -6208,7 +6203,7 @@ class ShowCompositeRBGmap(QtWidgets.QDialog):
 
         wildcard = "Portable Network Graphics (*.png);;Adobe PDF Files (*.pdf);;"
 
-        SaveFileName = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Plot', '', wildcard)
+        SaveFileName, _filter = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Plot', '', wildcard)
 
         SaveFileName = str(SaveFileName)
         if SaveFileName == '':
@@ -9195,7 +9190,7 @@ class PageStack(QtWidgets.QWidget):
         try:
             wildcard = "I0 CSV files (*.csv);; I0 files (*.xas);;SDF I0 files (*.hdr)"
 
-            filepath = QtWidgets.QFileDialog.getOpenFileName(self, 'Open file', '', wildcard)
+            filepath, _filter = QtWidgets.QFileDialog.getOpenFileName(self, 'Open file', '', wildcard)
 
 
             filepath = str(filepath)
@@ -9205,10 +9200,7 @@ class PageStack(QtWidgets.QWidget):
             filepath_i0 =  os.path.dirname(str(filepath))
             self.filename =  os.path.basename(str(filepath))
 
-
-
             basename, extension = os.path.splitext(self.filename)
-
 
             if extension == '.hdr':
                 QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
@@ -9217,8 +9209,8 @@ class PageStack(QtWidgets.QWidget):
                 y=self.stk.n_rows
                 z=self.iev
 
-                self.ix = x/2
-                self.iy = y/2
+                self.ix = int(x/2)
+                self.iy = int(y/2)
                 self.stk.read_sdf_i0(filepath)
                 self.com.i0_loaded = 1
                 self.loadSpectrum(self.ix, self.iy)
@@ -9234,8 +9226,8 @@ class PageStack(QtWidgets.QWidget):
                 y=self.stk.n_rows
                 z=self.iev
 
-                self.ix = x/2
-                self.iy = y/2
+                self.ix = int(x/2)
+                self.iy = int(y/2)
 
                 self.stk.read_stk_i0(filepath, extension)
 
@@ -9252,8 +9244,8 @@ class PageStack(QtWidgets.QWidget):
                 y=self.stk.n_rows
                 z=self.iev
 
-                self.ix = x/2
-                self.iy = y/2
+                self.ix = int(x/2)
+                self.iy = int(y/2)
 
                 self.stk.read_stk_i0(filepath, extension)
 
@@ -9270,10 +9262,7 @@ class PageStack(QtWidgets.QWidget):
             QtGui.QMessageBox.warning(self,'Error',"I0 file not loaded.")
             import sys; print(sys.exc_info())
 
-
         self.window().refresh_widgets()
-
-
 
 
 #----------------------------------------------------------------------
@@ -9326,7 +9315,7 @@ class PageStack(QtWidgets.QWidget):
         #if True:
             wildcard = "Reference images (*.xrm)"
 
-            filepaths = QtWidgets.QFileDialog.getOpenFileNames(self, 'Select reference files', '', wildcard)
+            filepaths, _filter = QtWidgets.QFileDialog.getOpenFileNames(self, 'Select reference files', '', wildcard)
 
 
             #Check reference files
@@ -9341,8 +9330,8 @@ class PageStack(QtWidgets.QWidget):
 
             x=self.stk.n_cols
             y=self.stk.n_rows
-            self.ix = x/2
-            self.iy = y/2
+            self.ix = int(x/2)
+            self.iy = int(y/2)
 
             self.loadSpectrum(self.ix, self.iy)
             self.loadImage()
@@ -9526,7 +9515,7 @@ class PageStack(QtWidgets.QWidget):
         #if True:
             wildcard = "TIFF files (.tif)"
 
-            filepath = QtWidgets.QFileDialog.getSaveFileName(self, 'Save OD', '', wildcard)
+            filepath, _filter = QtWidgets.QFileDialog.getSaveFileName(self, 'Save OD', '', wildcard)
 
             filepath = str(filepath)
             if filepath == '':
@@ -10249,7 +10238,7 @@ class PageStack(QtWidgets.QWidget):
 
         wildcard = "CSV files (*.csv)"
 
-        fileName = QtWidgets.QFileDialog.getSaveFileName(self, 'Save ROI Spectrum (.csv)', '', wildcard)
+        fileName, _filter = QtWidgets.QFileDialog.getSaveFileName(self, 'Save ROI Spectrum (.csv)', '', wildcard)
 
         fileName = str(fileName)
         if fileName == '':
@@ -11689,7 +11678,7 @@ class ImageRegistration(QtWidgets.QDialog):
 
         wildcard = "TIFF File (*.tif);;"
 
-        fileName = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Reference Image', '', wildcard)
+        fileName, _filter = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Reference Image', '', wildcard)
 
         fileName = str(fileName)
         if fileName == '':
@@ -11705,7 +11694,7 @@ class ImageRegistration(QtWidgets.QDialog):
 
         wildcard = "TIFF File (*.tif);;"
 
-        fileName = QtWidgets.QFileDialog.getOpenFileName(self, 'Save Reference Image', '', wildcard)
+        fileName, _filter = QtWidgets.QFileDialog.getOpenFileName(self, 'Save Reference Image', '', wildcard)
 
         fileName = str(fileName)
         if fileName == '':
@@ -12430,7 +12419,7 @@ class ImageRegistration(QtWidgets.QDialog):
 
         wildcard = "Portable Network Graphics (*.png);;Adobe PDF Files (*.pdf);;"
 
-        self.SaveFileName = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Image Shifts Plot', '', wildcard)
+        self.SaveFileName, _filter = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Image Shifts Plot', '', wildcard)
 
         self.SaveFileName = str(self.SaveFileName)
         if self.SaveFileName == '':
@@ -12576,7 +12565,7 @@ class ImageRegistration(QtWidgets.QDialog):
 
         wildcard = "CSV files (*.csv)"
 
-        filepath = QtWidgets.QFileDialog.getSaveFileName(self, 'Please select an alignment file (.csv)', '', wildcard)
+        filepath, _filter = QtWidgets.QFileDialog.getSaveFileName(self, 'Please select an alignment file (.csv)', '', wildcard)
 
         filepath = str(filepath)
         if filepath == '':
@@ -12611,7 +12600,7 @@ class ImageRegistration(QtWidgets.QDialog):
 
         wildcard = "I0 CSV files (*.csv)"
 
-        filepath = QtWidgets.QFileDialog.getOpenFileName(self, 'Please select an alignment file (.csv)', '', wildcard)
+        filepath, _filter = QtWidgets.QFileDialog.getOpenFileName(self, 'Please select an alignment file (.csv)', '', wildcard)
 
 
         filepath = str(filepath)
@@ -12998,7 +12987,7 @@ class SpectralROI(QtWidgets.QDialog):
 
         wildcard = "Portable Network Graphics (*.png);;Adobe PDF Files (*.pdf);;TIFF File (*.tif);;"
 
-        fileName = QtWidgets.QFileDialog.getSaveFileName(self, 'Save OD Map', '', wildcard)
+        fileName, _filter = QtWidgets.QFileDialog.getSaveFileName(self, 'Save OD Map', '', wildcard)
 
         fileName = str(fileName)
         if fileName == '':
@@ -13347,7 +13336,7 @@ class PlotFrame(QtWidgets.QDialog):
         try:
             wildcard = "CSV files (*.csv)"
 
-            filepath = QtWidgets.QFileDialog.getSaveFileName(self, 'Save plot as .csv (.csv)', '', wildcard)
+            filepath, _filter = QtWidgets.QFileDialog.getSaveFileName(self, 'Save plot as .csv (.csv)', '', wildcard)
 
             filepath = str(filepath)
             if filepath == '':
@@ -14400,9 +14389,9 @@ class MainFrame(QtWidgets.QMainWindow):
                 JSONconvert = dlg.jsoncheck.isChecked()
             except UnboundLocalError:
                 print("DataChoiceDialog skipped")
-            file_plugins.load(filepath, stack_object=self.stk, plugin=plugin,selection=FileInternalSelection,json=JSONconvert)
-            directory =  os.path.dirname(str(filepath))
-            self.page1.filename =  os.path.basename(str(filepath))
+            file_plugins.load(filepath, stack_object=self.stk, plugin=plugin, selection=FileInternalSelection,json=JSONconvert)
+            directory = os.path.dirname(str(filepath))
+            self.page1.filename = os.path.basename(str(filepath))
 
 
             #Update widgets
@@ -14489,10 +14478,9 @@ class MainFrame(QtWidgets.QMainWindow):
         try:
         #if True:
 
-            wildcard =  "Supported 4D formats (*.hdf5 *.ncb);;HDF5 files (*.hdf5);;NCB files (*.ncb);;"
+            wildcard = "Supported 4D formats (*.hdf5 *.ncb);;HDF5 files (*.hdf5);;NCB files (*.ncb);;"
 
-            filepath = QtWidgets.QFileDialog.getOpenFileNames(self, 'Open files', '', wildcard)
-
+            filepath, _filter = QtWidgets.QFileDialog.getOpenFileNames(self, 'Open files', '', wildcard)
 
             if filepath == '':
                 return
@@ -14501,26 +14489,26 @@ class MainFrame(QtWidgets.QMainWindow):
             for name in filepath:
                 filenames.append(str(name))
 
+            print (filenames)
 
             directory =  os.path.dirname(str(filenames[0]))
-            self.page1.filename =  os.path.basename(str(filenames[0]))
+            self.page1.filename = os.path.basename(filenames[0])
 
             QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
             basename, extension = os.path.splitext(self.page1.filename)
+            extension = extension.strip()
 
             self.common.path = directory
             self.common.filename = self.page1.filename
-
 
             if extension == '.hdf5':
                 if self.common.stack_loaded == 1:
                     self.new_stack_refresh()
                     self.stk.new_data()
                     self.anlz.delete_data()
-
-
                 self.stk.read_h54D(filenames[0])
 
+                print('Finished reading 4D stack', filenames[0])
 
             elif extension == '.ncb':
                 if self.common.stack_loaded == 1:
@@ -14531,7 +14519,7 @@ class MainFrame(QtWidgets.QMainWindow):
                 self.stk.read_ncb4D(filenames)
                 #Get energy list
                 wildcard =  "Text file (*.txt);;"
-                engfilepath = QtWidgets.QFileDialog.getOpenFileName(self, 'Open file', directory, wildcard)
+                engfilepath, _filter = QtWidgets.QFileDialog.getOpenFileName(self, 'Open file', directory, wildcard)
                 self.stk.read_ncb4Denergy(str(engfilepath))
 
 
@@ -14630,7 +14618,7 @@ class MainFrame(QtWidgets.QMainWindow):
             #wildcard = "HDF5 file (*.hdf5);;aXis2000 NCB file (*.ncb);;TIFF file (.tif);;STK file (*.stk);;"
             wildcard = "HDF5 file (*.hdf5);;aXis2000 NCB file (*.ncb);;TIFF file (.tif)"
 
-            filepath = QtWidgets.QFileDialog.getSaveFileName(self, 'Save processed stack', '', wildcard)
+            filepath, _filter = QtWidgets.QFileDialog.getSaveFileName(self, 'Save processed stack', '', wildcard)
 
             filepath = str(filepath)
             if filepath == '':
@@ -14685,7 +14673,7 @@ class MainFrame(QtWidgets.QMainWindow):
 
             wildcard = "HDF5 files (*.hdf5)"
 
-            filepath = QtWidgets.QFileDialog.getSaveFileName(self, 'Save as .hdf5', '', wildcard)
+            filepath, _filter = QtWidgets.QFileDialog.getSaveFileName(self, 'Save as .hdf5', '', wildcard)
 
             filepath = str(filepath)
             if filepath == '':
@@ -15002,9 +14990,7 @@ class MainFrame(QtWidgets.QMainWindow):
 
 
 """ ------------------------------------------------------------------------------------------------"""
-
 def main():
-
 
     app = QtWidgets.QApplication(sys.argv)
     frame = MainFrame()

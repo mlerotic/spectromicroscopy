@@ -47,12 +47,13 @@ def read_old( filepath, data_stk):
     data_stk.read_h5(filepath)
     return
 
+
 def GetFileStructure(FileName):
     return None
 
 
 #----------------------------------------------------------------------
-def read(filename, self, selection=None):
+def read(filename, self, selection=None, *args, **kwargs):
     f = open(str(filename),'rb')
     data = np.fromfile(f, np.int32, 3)
     data.byteswap(True)
@@ -232,6 +233,7 @@ class x1astk:
         ilist = []    
     
         for line in f:
+            print(line)
             if line.startswith("*"):
                 pass
             else:

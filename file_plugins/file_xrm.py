@@ -32,8 +32,7 @@ write_types = ['spectrum','image','stack']
 
 def identify(filename):
 
-    #try:
-    if True:    
+    try:
         xrm_format = False
         if isOleFile(filename):
             ole = OleFileIO(filename)
@@ -44,8 +43,8 @@ def identify(filename):
             xrm_format = False
 
         return xrm_format
-#     except:
-#         return False
+    except:
+        return False
 
 
 
@@ -54,16 +53,18 @@ def GetFileStructure(FileName):
 
 
 #----------------------------------------------------------------------
-def read(filename, self, selection=None):
-    
+def read(filename, self, selection=None, *args, **kwargs):
+
     basename, extension = os.path.splitext(filename)
-    
+
     if extension == '.xrm':
         read_xrm(filename, self)
     elif extension == '.txrm':
         read_txrm(filename, self)
         
     self.fill_h5_struct_from_stk()
+
+    return
     
  
 #----------------------------------------------------------------------
@@ -109,11 +110,10 @@ def read_xrm_fileinfo(filename, readimgdata = False):
         stream = ole.openstream('ImageInfo/Energy')
         data = stream.read()
         size = ole.get_size('ImageInfo/Energy')
-        struct_fmt = "<{}f".format(size/4)
+        struct_fmt = "<{}f".format(int(size/4))
         eV = struct.unpack(struct_fmt, data)
         if verbose: print ("ImageInfo/Energy: \n ",  eV)
-        
-        
+
         
     if readimgdata == True:
         
@@ -463,7 +463,7 @@ def read_xrm(filename, self):
         stream = ole.openstream('ImageInfo/Energy')
         data = stream.read()
         size = ole.get_size('ImageInfo/Energy')
-        struct_fmt = "<{}f".format(size/4)
+        struct_fmt = "<{}f".format(int(size/4))
         eng = struct.unpack(struct_fmt, data)
         if verbose: print ("ImageInfo/Energy: \n ",  eng)
         self.ev = np.array(eng)
@@ -650,7 +650,7 @@ def read_txrm(filename, self):
         stream = ole.openstream('Alignment/X-Shifts')
         data = stream.read()
         size = ole.get_size('Alignment/X-Shifts')
-        struct_fmt = "<{}f".format(size/4)
+        struct_fmt = "<{}f".format(int(size/4))
         XShift = struct.unpack(struct_fmt, data)
         if verbose: print ("Alignment/X-Shifts: \n ",  XShift)
 
@@ -658,7 +658,7 @@ def read_txrm(filename, self):
         stream = ole.openstream('Alignment/Y-Shifts')
         data = stream.read()
         size = ole.get_size('Alignment/Y-Shifts')
-        struct_fmt = "<{}f".format(size/4)
+        struct_fmt = "<{}f".format(int(size/4))
         YShift = struct.unpack(struct_fmt, data)
         if verbose: print ("Alignment/Y-Shifts: \n ",  YShift)
 
@@ -666,7 +666,7 @@ def read_txrm(filename, self):
         stream = ole.openstream('ImageInfo/XPosition')
         data = stream.read()
         size = ole.get_size('ImageInfo/XPosition')
-        struct_fmt = "<{}f".format(size/4)
+        struct_fmt = "<{}f".format(int(size/4))
         XPosition = struct.unpack(struct_fmt, data)
         if verbose: print ("ImageInfo/XPosition: \n ",  XPosition)
 
@@ -674,7 +674,7 @@ def read_txrm(filename, self):
         stream = ole.openstream('ImageInfo/YPosition')
         data = stream.read()
         size = ole.get_size('ImageInfo/YPosition')
-        struct_fmt = "<{}f".format(size/4)
+        struct_fmt = "<{}f".format(int(size/4))
         YPosition = struct.unpack(struct_fmt, data)
         if verbose: print( "ImageInfo/YPosition: \n ",  YPosition)
 
@@ -682,7 +682,7 @@ def read_txrm(filename, self):
         stream = ole.openstream('ImageInfo/ZPosition')
         data = stream.read()
         size = ole.get_size('ImageInfo/ZPosition')
-        struct_fmt = "<{}f".format(size/4)
+        struct_fmt = "<{}f".format(int(size/4))
         ZPosition = struct.unpack(struct_fmt, data)
         if verbose: print( "ImageInfo/ZPosition: \n ",  ZPosition )
             
@@ -709,19 +709,16 @@ def read_txrm(filename, self):
         struct_fmt = "<{}f".format(nimgs)
         angles = struct.unpack(struct_fmt, data)
         if verbose: print( "ImageInfo/Angles: \n ",  angles)
-            
-    
+
     if ole.exists('ImageInfo/Energy'):                  
         stream = ole.openstream('ImageInfo/Energy')
         data = stream.read()
         size = ole.get_size('ImageInfo/Energy')
-        struct_fmt = "<{}f".format(size/4)
+        struct_fmt = "<{}f".format(int(size/4))
         eng = struct.unpack(struct_fmt, data)
         if verbose: print( "ImageInfo/Energy: \n ",  eng)
         self.ev = np.array(eng)
 
-                       
-            
     if ole.exists('ImageInfo/PixelSize'):                  
         stream = ole.openstream('ImageInfo/PixelSize')
         data = stream.read()

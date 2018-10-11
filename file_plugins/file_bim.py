@@ -228,6 +228,3 @@ def read_bim_list(self, filelist, filepath, ds):
     
     return
 
-       
-            
-    
