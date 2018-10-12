@@ -2365,7 +2365,7 @@ class PageNNMA(QtWidgets.QWidget):
                     axes.axis("off")
 
                     fileName_img = self.SaveFileName+"_NNMA_" +str(i+1)+"."+ext
-                    fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
+                    fig.savefig(fileName_img, pad_inches = 0.0)
 
             if spec_png:
                 for i in range(self.nComponents):
@@ -2434,7 +2434,7 @@ class PageNNMA(QtWidgets.QWidget):
                     axes.axis("off")
 
                     fileName_img = self.SaveFileName+"_NNMA_" +str(i+1)+"."+ext
-                    fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
+                    fig.savefig(fileName_img, pad_inches = 0.0)
 
             if spec_pdf:
                 for i in range(self.nComponents):
@@ -2496,7 +2496,7 @@ class PageNNMA(QtWidgets.QWidget):
                     axes.axis("off")
 
                     fileName_img = self.SaveFileName+"_NNMA_" +str(i+1)+"."+ext
-                    fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
+                    fig.savefig(fileName_img, pad_inches = 0.0)
 
             if spec_svg:
                 for i in range(self.nComponents):
@@ -5401,7 +5401,7 @@ class PageSpectral(QtWidgets.QWidget):
 
 
                 fileName_img = self.SaveFileName+"_TSmap_" +str(i+1)+"."+ext
-                fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
+                fig.savefig(fileName_img, pad_inches = 0.0)
 
         else:
             for i in range (self.anlz.n_target_spectra):
@@ -6226,7 +6226,7 @@ class ShowCompositeRBGmap(QtWidgets.QDialog):
 
 
         fig = self.RGBImagefig
-        fig.savefig(SaveFileName, bbox_inches='tight', pad_inches = 0.0)
+        fig.savefig(SaveFileName, pad_inches = 0.0)
 
 
 
@@ -8379,7 +8379,7 @@ class PagePCA(QtWidgets.QWidget):
                     axes.axis("off")
 
                     fileName_img = self.SaveFileName+"_PCA_" +str(i+1)+"."+ext
-                    fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
+                    fig.savefig(fileName_img, pad_inches = 0.0)
 
             if spec_png:
                 for i in range (self.numsigpca):
@@ -8426,7 +8426,7 @@ class PagePCA(QtWidgets.QWidget):
                     axes.axis("off")
 
                     fileName_img = self.SaveFileName+"_PCA_" +str(i+1)+"."+ext
-                    fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
+                    fig.savefig(fileName_img, pad_inches = 0.0)
 
             if spec_pdf:
                 for i in range (self.numsigpca):
@@ -8465,7 +8465,7 @@ class PagePCA(QtWidgets.QWidget):
                     axes.axis("off")
 
                     fileName_img = self.SaveFileName+"_PCA_" +str(i+1)+"."+ext
-                    fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
+                    fig.savefig(fileName_img, pad_inches = 0.0)
 
             if spec_svg:
                 for i in range (self.numsigpca):
@@ -9466,7 +9466,7 @@ class PageStack(QtWidgets.QWidget):
             if img_pdf:
                 fileName_img = self.SaveFileName+"_" +str(self.stk.ev[self.iev])+"eV."+ext
                 fig = self.absimgfig
-                fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
+                fig.savefig(fileName_img, pad_inches = 0.0)
 
             if sp_csv:
                 fileName_spec = self.SaveFileName+"_spectrum.csv"
@@ -9483,7 +9483,7 @@ class PageStack(QtWidgets.QWidget):
             if img_svg:
                 fileName_img = self.SaveFileName+"_" +str(self.stk.ev[self.iev])+"eV."+ext
                 fig = self.absimgfig
-                fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
+                fig.savefig(fileName_img, pad_inches = 0.0)
 
             if img_tif:
                 fileName_img = self.SaveFileName+"_" +str(self.stk.ev[self.iev])+"eV.tif"

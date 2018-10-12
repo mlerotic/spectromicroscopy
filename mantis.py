@@ -24,7 +24,9 @@ import matplotlib
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 #from matplotlib.backends.backend_qt5agg import FigureCanvas
 from matplotlib.figure import Figure
-from mpl_toolkits.axes_grid1 import make_axes_locatable
+from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
+from mpl_toolkits.axes_grid1.colorbar import colorbar
+#from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import data_struct
 import data_stack
@@ -72,15 +74,15 @@ def save_keyeng(key_engs, odir, filename, stk, anlz, png, pdf, svg):
     if png == 1:
         ext = 'png'
         fileName_img = SaveFileName+"_keyengs."+ext
-        fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
+        fig.savefig(fileName_img, pad_inches = 0.0)
     if pdf == 1:
         ext = 'pdf'
         fileName_img = SaveFileName+"_keyengs."+ext
-        fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
+        fig.savefig(fileName_img, pad_inches = 0.0)
     if svg == 1:
         ext = 'svg'
         fileName_img = SaveFileName+"_keyengs."+ext
-        fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
+        fig.savefig(fileName_img, pad_inches = 0.0)
 
 
     #Save text file with list of energies
@@ -137,15 +139,15 @@ def save_spa(odir, filename, stk, anlz, png, pdf, svg):
         if png == 1:
             ext = 'png'
             fileName_img = SaveFileName+"_TSmap_" +str(i+1)+"."+ext
-            fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
+            fig.savefig(fileName_img, pad_inches = 0.0)
         if pdf == 1:
             ext = 'pdf'
             fileName_img = SaveFileName+"_TSmap_" +str(i+1)+"."+ext
-            fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
+            fig.savefig(fileName_img, pad_inches = 0.0)
         if svg == 1:
             ext = 'svg'
             fileName_img = SaveFileName+"_TSmap_" +str(i+1)+"."+ext
-            fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
+            fig.savefig(fileName_img, pad_inches = 0.0)
 
     #Save spectra
     for i in range (anlz.n_target_spectra):
@@ -455,15 +457,15 @@ def save_pca(odir, filename, stk, anlz, png, pdf, svg):
     if png == 1:
         ext = 'png'
         fileName_evals = SaveFileName+"_PCAevals."+ext
-        fig.savefig(fileName_evals, bbox_inches='tight', pad_inches = 0.0)
+        fig.savefig(fileName_evals, pad_inches = 0.0)
     if pdf == 1:
         ext = 'pdf'
         fileName_evals = SaveFileName+"_PCAevals."+ext
-        fig.savefig(fileName_evals, bbox_inches='tight', pad_inches = 0.0)
+        fig.savefig(fileName_evals, pad_inches = 0.0)
     if svg == 1:
         ext = 'svg'
         fileName_evals = SaveFileName+"_PCAevals."+ext
-        fig.savefig(fileName_evals, bbox_inches='tight', pad_inches = 0.0)
+        fig.savefig(fileName_evals, pad_inches = 0.0)
 
     for i in range(10):
         pcaimage = anlz.pcaimages[:,:,i]
@@ -478,21 +480,22 @@ def save_pca(odir, filename, stk, anlz, png, pdf, svg):
         bound = anlz.pcaimagebounds[i]
 
         im = axes.imshow(pcaimage, cmap=matplotlib.cm.get_cmap("seismic_r"), vmin = -bound, vmax = bound)
-        cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)
+
+        cbar = colorbar(im, orientation='vertical', cax=ax_cb)
         axes.axis("off")
 
         if png == 1:
             ext = 'png'
             fileName_img = SaveFileName+"_PCA_" +str(i+1)+"."+ext
-            fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
+            fig.savefig(fileName_img, pad_inches = 0.0)
         if pdf == 1:
             ext = 'pdf'
             fileName_img = SaveFileName+"_PCA_" +str(i+1)+"."+ext
-            fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
+            fig.savefig(fileName_img, pad_inches = 0.0)
         if svg == 1:
             ext = 'svg'
             fileName_img = SaveFileName+"_PCA_" +str(i+1)+"."+ext
-            fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
+            fig.savefig(fileName_img, pad_inches = 0.0)
 
     for i in range(10):
         pcaspectrum = anlz.eigenvecs[:,i]
