@@ -61,7 +61,7 @@ def GetFileStructure(FileName):
 
 
 #----------------------------------------------------------------------
-def read(filename, self, selection=None,*args, **kwargs):
+def read(filename, self, selection=None, *args, **kwargs):
     """ToDo: .attrs returns a list in py2 and a set in py3! .attrs and .keys() need to be wrapped in list()"""
     have4d = 0
 
@@ -76,9 +76,7 @@ def read(filename, self, selection=None,*args, **kwargs):
     ds = f['version']
     data_struct.version = ds[...]
 
-
     self.have_dimscale = 0
-
 
     #Information HDF5 group
     if 'information' in f:

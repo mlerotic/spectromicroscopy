@@ -17,6 +17,7 @@
 
 
 from __future__ import division
+from __future__ import print_function
 
 import numpy as np
 import os
@@ -45,7 +46,7 @@ def GetFileStructure(FileName):
 
 
 #---------------------------------------------------------------------- 
-def read(filename, self, selection=None):
+def read(filename, self, selection=None, *args, **kwargs):
     
     
     basename, extension = os.path.splitext(filename) 
@@ -341,33 +342,31 @@ def write_ncb(filename, stack):
 
     f = open(str(dat_fn),'w')
 
-    print>>f, '\t%d\t%d\t%.6f' %(stack.n_rows, stack.n_cols, scale)
-    #print>>f, '\t%d\t%d\t%.6f' %(stack.n_cols, stack.n_rows, scale)
-    
-    
+    print('\t%d\t%d\t%.6f' %(stack.n_rows, stack.n_cols, scale), file=f)
+
     x_start = stack.y_dist[0]
     x_stop = stack.y_dist[-1]
     if x_start != 0. :
         x_stop = x_stop - x_start
         x_start = 0.
 
-    print>>f, '\t%.6f\t%.6f' %(x_start, x_stop)
+    print('\t%.6f\t%.6f' %(x_start, x_stop), file=f)
     
     y_start = stack.x_dist[0]
     y_stop = stack.x_dist[-1]
     if y_start != 0. :
         y_stop = y_stop - y_start
         y_start = 0.
-    print>>f, '\t%.6f\t%.6f' %(y_start, y_stop)
+    print('\t%.6f\t%.6f' %(y_start, y_stop), file=f)
     
-    print>>f, '\t%d' %(stack.n_ev)
+    print('\t%d' %(stack.n_ev), file=f)
     
     for i in range(stack.n_ev):
-        print>>f, '\t%.6f' %(stack.ev[i])
+        print('\t%.6f' %(stack.ev[i]), file=f)
     
     for i in range(stack.n_ev):
         thisstr = 'image'+str(i+1)
-        print>>f, '%s\t%.6f\t%.6f' %(thisstr, stack.ev[i], stack.data_dwell[i])
+        print('%s\t%.6f\t%.6f' %(thisstr, stack.ev[i], stack.data_dwell[i]), file=f)
 
     f.close()
     
@@ -536,8 +535,8 @@ class Cncb:
     
         f = open(str(dat_fn),'w')
 
-        print>>f, '\t%d\t%d\t%.6f' %(self.n_rows, self.n_cols, scale)
-        #print>>f, '\t%d\t%d\t%.6f' %(self.n_cols, self.n_rows, scale)
+        print('\t%d\t%d\t%.6f' %(self.n_rows, self.n_cols, scale), file=f)
+        #print('\t%d\t%d\t%.6f' %(self.n_cols, self.n_rows, scale)
         
         
         x_start = self.y_dist[0]
@@ -546,23 +545,23 @@ class Cncb:
             x_stop = x_stop - x_start
             x_start = 0.
 
-        print>>f, '\t%.6f\t%.6f' %(x_start, x_stop)
+        print('\t%.6f\t%.6f' %(x_start, x_stop), file=f)
         
         y_start = self.x_dist[0]
         y_stop = self.x_dist[-1]
         if y_start != 0. :
             y_stop = y_stop - y_start
             y_start = 0.
-        print>>f, '\t%.6f\t%.6f' %(y_start, y_stop)
+        print('\t%.6f\t%.6f' %(y_start, y_stop), file=f)
         
-        print>>f, '\t%d' %(self.n_ev)
+        print('\t%d' %(self.n_ev), file=f)
         
         for i in range(self.n_ev):
-            print>>f, '\t%.6f' %(self.ev[i])
+            print('\t%.6f' %(self.ev[i]), file=f)
         
         for i in range(self.n_ev):
             thisstr = 'image'+str(i+1)
-            print>>f, '%s\t%.6f\t%.6f' %(thisstr, self.ev[i], self.data_dwell[i])
+            print('%s\t%.6f\t%.6f' %(thisstr, self.ev[i], self.data_dwell[i]), file=f)
 
         f.close()
         

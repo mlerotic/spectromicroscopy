@@ -15,23 +15,31 @@
 #   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #   GNU General Public License for more details <http://www.gnu.org/licenses/>.
 
-from __future__ import division
-from __future__ import print_function
 
 import sys
 import os
 import getopt
 import numpy as np
 import matplotlib
-matplotlib.rcParams['backend.qt4'] = 'PyQt4'
-from mpl_toolkits.axes_grid import make_axes_locatable
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+#from matplotlib.backends.backend_qt5agg import FigureCanvas
+from matplotlib.figure import Figure
+from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
+from mpl_toolkits.axes_grid1.colorbar import colorbar
+#from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import data_struct
 import data_stack
 import analyze
-#import nnma
 import henke
-#import file_plugins
+
+import file_plugins
+from file_plugins import file_xrm
+from file_plugins import file_bim
+from file_plugins import file_dataexch_hdf5
+from file_plugins import file_ncb
+from file_plugins import file_tif
+from file_plugins import file_stk
 
 PlotH = 4.0
 PlotW = PlotH*1.61803
@@ -43,9 +51,7 @@ def save_keyeng(key_engs, odir, filename, stk, anlz, png, pdf, svg):
 
     SaveFileName = os.path.join(odir,filename)
 
-    from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
     matplotlib.rcParams['pdf.fonttype'] = 42
-
 
     fig = matplotlib.figure.Figure(figsize =(PlotW, PlotH))
     canvas = FigureCanvas(fig)
@@ -53,15 +59,11 @@ def save_keyeng(key_engs, odir, filename, stk, anlz, png, pdf, svg):
     fig.add_axes((0.15,0.15,0.75,0.75))
     axes = fig.gca()
 
-
     odtotal = stk.od3d.sum(axis=0)
     odtotal = odtotal.sum(axis=0)/(stk.n_rows*stk.n_cols)
     odtotal /= odtotal.max()/0.7
 
-
     specplot = axes.plot(stk.ev,odtotal)
-
-
 
     for i in range(len(key_engs)):
         axes.axvline(x=key_engs[i], color = 'g', alpha=0.5)
@@ -72,15 +74,15 @@ def save_keyeng(key_engs, odir, filename, stk, anlz, png, pdf, svg):
     if png == 1:
         ext = 'png'
         fileName_img = SaveFileName+"_keyengs."+ext
-        fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
+        fig.savefig(fileName_img, pad_inches = 0.0)
     if pdf == 1:
         ext = 'pdf'
         fileName_img = SaveFileName+"_keyengs."+ext
-        fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
+        fig.savefig(fileName_img, pad_inches = 0.0)
     if svg == 1:
         ext = 'svg'
         fileName_img = SaveFileName+"_keyengs."+ext
-        fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
+        fig.savefig(fileName_img, pad_inches = 0.0)
 
 
     #Save text file with list of energies
@@ -100,12 +102,10 @@ def save_spa(odir, filename, stk, anlz, png, pdf, svg):
 
     SaveFileName = os.path.join(odir,filename)
 
-    from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
     matplotlib.rcParams['pdf.fonttype'] = 42
 
     colors=['#FF0000','#000000','#FFFFFF']
     spanclrmap=matplotlib.colors.LinearSegmentedColormap.from_list('spancm',colors)
-
 
     for i in range (anlz.n_target_spectra):
 
@@ -126,7 +126,6 @@ def save_spa(odir, filename, stk, anlz, png, pdf, svg):
         fig.add_axes(ax_cb)
         axes.set_position([0.03,0.03,0.8,0.94])
 
-
         min_val = np.min(tsmapimage)
         max_val = np.max(tsmapimage)
         bound = np.max((np.abs(min_val), np.abs(max_val)))
@@ -140,30 +139,26 @@ def save_spa(odir, filename, stk, anlz, png, pdf, svg):
         if png == 1:
             ext = 'png'
             fileName_img = SaveFileName+"_TSmap_" +str(i+1)+"."+ext
-            fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
+            fig.savefig(fileName_img, pad_inches = 0.0)
         if pdf == 1:
             ext = 'pdf'
             fileName_img = SaveFileName+"_TSmap_" +str(i+1)+"."+ext
-            fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
+            fig.savefig(fileName_img, pad_inches = 0.0)
         if svg == 1:
             ext = 'svg'
             fileName_img = SaveFileName+"_TSmap_" +str(i+1)+"."+ext
-            fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
-
-
+            fig.savefig(fileName_img, pad_inches = 0.0)
 
     #Save spectra
     for i in range (anlz.n_target_spectra):
 
         tspectrum = anlz.target_spectra[i, :]
 
-
         fig = matplotlib.figure.Figure(figsize =(PlotW, PlotH))
         canvas = FigureCanvas(fig)
         fig.clf()
         fig.add_axes((0.15,0.15,0.75,0.75))
         axes = fig.gca()
-
 
         line1 = axes.plot(stk.ev,tspectrum, color='black', label = 'Raw data')
 
@@ -198,7 +193,6 @@ def save_spa(odir, filename, stk, anlz, png, pdf, svg):
         cname = "Tspectrum_" +str(i+1)
         stk.write_csv(fileName_spec, stk.ev, tspectrum, cname = cname)
 
-
     return
 
 
@@ -207,12 +201,9 @@ def MakeColorTable():
     maxclcolors = 11
     colors_i = np.linspace(0, maxclcolors, maxclcolors+1)
 
-
     colors=['#0000FF','#FF0000','#DFE32D','#36F200','#B366FF',
             '#FF470A','#33FFFF','#006600','#CCCC99','#993300',
             '#000000']
-
-
 
     clusterclrmap1=matplotlib.colors.LinearSegmentedColormap.from_list('clustercm',colors)
 
@@ -246,14 +237,12 @@ def SaveScatt(SaveFileName, stk, anlz, png_pdf = 1):
     clindices = anlz.cluster_indices
     clindices = np.reshape(clindices, (stk.n_cols*stk.n_rows), order='F')
 
-
     if png_pdf == 1:
         ext = 'png'
     elif png_pdf == 2:
         ext = 'pdf'
     elif png_pdf == 3:
         ext = 'svg'
-
 
     nplots = 0
     for ip in range(anlz.numsigpca):
@@ -263,8 +252,6 @@ def SaveScatt(SaveFileName, stk, anlz, png_pdf = 1):
     nplotsrows = np.ceil(nplots/2)
 
     plotsize = 2.5
-
-    from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 
     if nplots > 1 :
         fig = matplotlib.figure.Figure(figsize =(6.0,plotsize*nplotsrows))
@@ -276,7 +263,6 @@ def SaveScatt(SaveFileName, stk, anlz, png_pdf = 1):
     canvas = FigureCanvas(fig)
     #axes = fig.gca()
     matplotlib.rcParams['font.size'] = 6
-
 
     pplot = 1
     for ip in range(anlz.numsigpca):
@@ -299,18 +285,13 @@ def SaveScatt(SaveFileName, stk, anlz, png_pdf = 1):
                 axes.set_xlabel('Component '+str(ip+1))
                 axes.set_ylabel('Component '+str(jp+1))
 
-
     fileName_sct = SaveFileName+"_CAscatterplots."+ext
     matplotlib.rcParams['pdf.fonttype'] = 42
     fig.savefig(fileName_sct)
 
 
-
-
 #----------------------------------------------------------------------
 def save_ca(odir, filename, stk, anlz, png, pdf, svg):
-
-
 
     clusterclrmap1, bnorm1, clusterclrmap2, bnorm2 = MakeColorTable()
     maxclcolors = 11
@@ -318,12 +299,9 @@ def save_ca(odir, filename, stk, anlz, png, pdf, svg):
             '#FF470A','#33FFFF','#006600','#CCCC99','#993300',
             '#000000']
 
-
     SaveFileName = os.path.join(odir,filename)
 
-    from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
     matplotlib.rcParams['pdf.fonttype'] = 42
-
 
     #Save image with composite cluster indices
     fig = matplotlib.figure.Figure(figsize = (float(stk.n_rows)/30, float(stk.n_cols)/30))
@@ -347,7 +325,6 @@ def save_ca(odir, filename, stk, anlz, png, pdf, svg):
         ext = 'svg'
         fileName_caimg = SaveFileName+"_CAcimg."+ext
         fig.savefig(fileName_caimg, dpi=300, pad_inches = 0.0)
-
 
     #Save individual cluster images
     for i in range (anlz.nclusters):
@@ -376,8 +353,6 @@ def save_ca(odir, filename, stk, anlz, png, pdf, svg):
             ext = 'svg'
             fileName_img = SaveFileName+"_CAimg_" +str(i+1)+"."+ext
             fig.savefig(fileName_img, dpi=300, pad_inches = 0.0)
-
-
 
     for i in range (anlz.nclusters):
 
@@ -408,7 +383,6 @@ def save_ca(odir, filename, stk, anlz, png, pdf, svg):
             ext = 'svg'
             fileName_spec = SaveFileName+"_CAspectrum_" +str(i+1)+"."+ext
             fig.savefig(fileName_spec)
-
 
         #Save all spectra in one plot
         fig = matplotlib.figure.Figure(figsize =(PlotW, PlotH))
@@ -442,7 +416,6 @@ def save_ca(odir, filename, stk, anlz, png, pdf, svg):
             fileName_spec = SaveFileName+"_CAspectra"+"."+ext
             fig.savefig(fileName_spec)
 
-
     for i in range (anlz.nclusters):
         clusterspectrum = anlz.clusterspectra[i, ]
         fileName_spec = SaveFileName+"_CAspectrum_" +str(i+1)+".csv"
@@ -458,18 +431,18 @@ def save_ca(odir, filename, stk, anlz, png, pdf, svg):
 
     return
 
+
 #----------------------------------------------------------------------
 def save_pca(odir, filename, stk, anlz, png, pdf, svg):
 
     SaveFileName = os.path.join(odir,filename)
 
-    from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
     matplotlib.rcParams['pdf.fonttype'] = 42
 
     #Save evals
     evalmax = np.min([stk.n_ev, 40])
     pcaevals = anlz.eigenvals[0:evalmax]
-    fig = matplotlib.figure.Figure(figsize =(PlotW, PlotH))
+    fig = Figure(figsize =(PlotW, PlotH))
     canvas = FigureCanvas(fig)
 
     fig.clf()
@@ -481,26 +454,23 @@ def save_pca(odir, filename, stk, anlz, png, pdf, svg):
     axes.set_xlabel('Principal Component')
     axes.set_ylabel('Log(Eigenvalue)')
 
-
     if png == 1:
         ext = 'png'
         fileName_evals = SaveFileName+"_PCAevals."+ext
-        fig.savefig(fileName_evals, bbox_inches='tight', pad_inches = 0.0)
+        fig.savefig(fileName_evals, pad_inches = 0.0)
     if pdf == 1:
         ext = 'pdf'
         fileName_evals = SaveFileName+"_PCAevals."+ext
-        fig.savefig(fileName_evals, bbox_inches='tight', pad_inches = 0.0)
+        fig.savefig(fileName_evals, pad_inches = 0.0)
     if svg == 1:
         ext = 'svg'
         fileName_evals = SaveFileName+"_PCAevals."+ext
-        fig.savefig(fileName_evals, bbox_inches='tight', pad_inches = 0.0)
-
+        fig.savefig(fileName_evals, pad_inches = 0.0)
 
     for i in range(10):
-
         pcaimage = anlz.pcaimages[:,:,i]
 
-        fig = matplotlib.figure.Figure(figsize =(PlotH*1.15, PlotH))
+        fig = Figure(figsize =(PlotH*1.15, PlotH))
         canvas = FigureCanvas(fig)
         axes = fig.gca()
         divider = make_axes_locatable(axes)
@@ -510,27 +480,26 @@ def save_pca(odir, filename, stk, anlz, png, pdf, svg):
         bound = anlz.pcaimagebounds[i]
 
         im = axes.imshow(pcaimage, cmap=matplotlib.cm.get_cmap("seismic_r"), vmin = -bound, vmax = bound)
-        cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)
+
+        cbar = colorbar(im, orientation='vertical', cax=ax_cb)
         axes.axis("off")
 
         if png == 1:
             ext = 'png'
             fileName_img = SaveFileName+"_PCA_" +str(i+1)+"."+ext
-            fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
+            fig.savefig(fileName_img, pad_inches = 0.0)
         if pdf == 1:
             ext = 'pdf'
             fileName_img = SaveFileName+"_PCA_" +str(i+1)+"."+ext
-            fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
+            fig.savefig(fileName_img, pad_inches = 0.0)
         if svg == 1:
             ext = 'svg'
             fileName_img = SaveFileName+"_PCA_" +str(i+1)+"."+ext
-            fig.savefig(fileName_img, bbox_inches='tight', pad_inches = 0.0)
-
+            fig.savefig(fileName_img, pad_inches = 0.0)
 
     for i in range(10):
-
         pcaspectrum = anlz.eigenvecs[:,i]
-        fig = matplotlib.figure.Figure(figsize =(PlotW, PlotH))
+        fig = Figure(figsize =(PlotW, PlotH))
         canvas = FigureCanvas(fig)
         fig.add_axes((0.15,0.15,0.75,0.75))
         axes = fig.gca()
@@ -555,7 +524,6 @@ def save_pca(odir, filename, stk, anlz, png, pdf, svg):
         fileName_spec = SaveFileName+"_PCAspectrum_" +str(i+1)+".csv"
         cname = "PCAspectrum_" +str(i+1)
         stk.write_csv(fileName_spec, stk.ev, pcaspectrum, cname=cname)
-
 
     return
 
@@ -588,8 +556,6 @@ def batch_mode():
     save_png = 1
     save_pdf = 0
     save_svg = 0
-
-
 
     try:
         f = open(settingsfile, 'rt')
@@ -624,16 +590,13 @@ def batch_mode():
                 elif tag == 'SAVE_PDF' : save_pdf = int(value)
                 elif tag == 'SAVE_SVG' : save_svg = int(value)
 
-
         f.close()
 
     except:
         print('Error: Could not read in Mantis_batch_settings.txt.')
         return
 
-
     wdir = os.path.normpath(wdir)
-
 
     if verbose:
         print('Version: ', version)
@@ -664,27 +627,17 @@ def batch_mode():
     basename, extension = os.path.splitext(filename)
     filepath = os.path.join(wdir, filename)
 
-    try:
-        if extension == '.hdf5':
-            stk.read_h5(filepath)
+    supported_filters = file_plugins.supported_filters
+    filter_list = file_plugins.filter_list
 
-        if extension == '.hdr':
-            stk.read_sdf(filepath)
+    action = 'read'
+    data_type = 'stack'
 
-        if extension == '.stk':
-            stk.read_stk(filepath)
+    print (filter_list[action][data_type])
 
-        if extension == '.txrm':
-            stk.read_txrm(filepath)
+    plugin = file_plugins.identify(filepath)
 
-        if extension == '.xrm':
-            stk.read_xrm(filepath)
-
-        if extension == '.tif':
-            stk.read_tiff(filepath)
-    except:
-        print("Error: Could not load stack.")
-        return
+    file_plugins.load(filepath, stack_object=stk, plugin=plugin, selection=None, json=None)
 
 
     if align_stack:
@@ -697,7 +650,6 @@ def batch_mode():
         for i in range(stk.n_ev):
 
             img2 = stk.absdata[:,:,i]
-
 
             if i==0:
                 xshift, yshift, ccorr = stk.register_images(referenceimage, img2,
@@ -716,15 +668,12 @@ def batch_mode():
             xshifts[i] = xshift
             yshifts[i] = yshift
 
-
         #Apply shifts
         for i in range(stk.n_ev):
             img = stk.absdata[:,:,i]
             if (abs(xshifts[i])>0.02) or (abs(yshifts[i])>0.02):
                 shifted_img = stk.apply_image_registration(img, xshifts[i], yshifts[i])
                 stk.absdata[:,:,i] = shifted_img
-
-
 
     if datastruct.spectromicroscopy.normalization.white_spectrum is not None:
         print("I0 loaded")
@@ -756,7 +705,6 @@ def batch_mode():
         fnameh5 =  os.path.join(wdir,basename+'_MantisBatch.hdf5')
         stk.write_h5(fnameh5, data_struct)
         print('Saving data to HDF5 file:', fnameh5)
-
 
     pca_calculated = 0
     if run_pca == 1:
@@ -816,25 +764,20 @@ def batch_mode():
 
 
 """ ------------------------------------------------------------------------------------------------"""
-
 def main():
 
     verbose = True
 
     run_qt = 1
-    run_wx = 0
     run_cl = 0
     arguments = sys.argv[1:]
     try:
-        options, extraParams = getopt.getopt(arguments, '', ['wx', 'batch', 'nnma'])
+        options, extraParams = getopt.getopt(arguments, '', ['batch', 'nnma'])
     except:
-        print('Error - wrong command line option used. Available options are --wx, --batch and --nnma')
+        print('Error - wrong command line option used. Available options are --batch and --nnma')
         return
 
     for opt, arg in options:
-        if opt in '--wx':
-            run_qt = 0
-            run_wx = 1
         if opt in '--batch':
             run_qt = 0
             run_cl = 1
@@ -843,17 +786,11 @@ def main():
     if run_qt == 1:
         import mantis_qt
         m_qt = mantis_qt.main()
-    elif run_wx == 1:
-        import mantis_wx
-        m_wx = mantis_wx.main()
     elif run_cl == 1:
         print('Running Mantis in batch mode.')
         batch_mode()
 
-
-
     sys.exit()
-
 
 if __name__ == '__main__':
     main()

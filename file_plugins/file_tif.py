@@ -40,7 +40,7 @@ def GetFileStructure(FileName):
 
 
 #----------------------------------------------------------------------
-def read(filename, self, selection=None,*args, **kwargs):
+def read(filename, self, selection=None, *args, **kwargs):
 
     img = Image.open(filename)
 
