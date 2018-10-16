@@ -54,6 +54,14 @@ class data:
                
         self.x_dist = 0       
         self.y_dist = 0
+
+        self.x_start = 0
+        self.x_stop = 0
+        self.y_start = 0
+        self.y_stop = 0
+        self.x_pxsize = 0
+        self.y_pxsize = 0
+        self.squarepx = True
         
         self.i0_dwell = None 
 
@@ -296,7 +304,6 @@ class data:
         
         self.data_struct.exchange.x = self.x_dist
         self.data_struct.exchange.y = self.y_dist
-        
 
         
 #---------------------------------------------------------------------- 
@@ -551,7 +558,7 @@ class data:
             ncols, nrows, iev, imgdata = file_xrm.read_xrm_fileinfo(files[i], readimgdata = True)
             refimgs[:,:,i] = np.reshape(imgdata, (ncols, nrows), order='F')
             refimgs_ev.append(iev)
- 
+
         #Check if the energies are consecutive, if they are not sort the data
         consec = 0
         for i in range(len(refimgs_ev) - 1):
@@ -592,14 +599,20 @@ class data:
 
 
 #----------------------------------------------------------------------   
-    def scale_bar(self): 
-           
-        x_start = np.amin(self.x_dist)
-        x_stop = np.amax(self.x_dist)
-        
-        onepixsize = np.abs(self.x_dist[1]-self.x_dist[0])
-                
-        bar_microns = 0.2*np.abs(x_stop-x_start)
+    def scale_bar(self):
+        self.x_start = np.min(self.x_dist)
+        self.x_stop = np.max(self.x_dist)
+        self.x_pxsize = np.round(np.abs(self.x_stop-self.x_start)/(self.n_cols-1),5) # um per px in y direction, "-1" because stop-start is 1 px shorter than n_rows
+
+        self.y_start = np.min(self.y_dist)
+        self.y_stop = np.max(self.y_dist)
+        self.y_pxsize = np.round(np.abs(self.y_stop-self.y_start)/(self.n_rows-1),5) # um per px in y direction, "-1" because stop-start is 1 px shorter than n_rows
+
+        if self.x_pxsize == self.y_pxsize:
+            self.squarepx = True
+        else:
+            self.squarepx = False
+        bar_microns = 0.2*np.abs(self.x_stop-self.x_start)
         
         
         if bar_microns >= 10.:
@@ -619,7 +632,7 @@ class data:
 
 
         self.scale_bar_pixels_x = int(0.5+float(self.n_cols)*
-                       float(bar_microns)/float(abs(x_stop-x_start)))
+                       float(bar_microns)/float(abs(self.x_stop-self.x_start)))
         
         self.scale_bar_pixels_y = int(0.01*self.n_rows)
         

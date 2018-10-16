@@ -13833,6 +13833,7 @@ class PageMap(QtWidgets.QWidget):
     def initUI(self, common, data_struct, stack):
         self.xoffset = 0
         self.yoffset = 0
+        self.scale = 0.000001
         self.pbRST.clicked.connect(lambda: self.Offset(0, 0))
         self.pbL.clicked.connect(lambda: self.Offset(-0.2,0))
         self.pbR.clicked.connect(lambda: self.Offset(0.2,0))
@@ -13851,6 +13852,15 @@ class PageMap(QtWidgets.QWidget):
         self.pbLLUU.clicked.connect(lambda: self.Offset(-1,1))
         self.pbRRDD.clicked.connect(lambda: self.Offset(1,-1))
 
+        self.MetricCheckBox.toggled.connect(lambda: self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
+        self.ZeroOriginCheckBox.toggled.connect(lambda: self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
+        self.SquarePxCheckBox.toggled.connect(lambda: self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
+        self.SquarePxCheckBox.setVisible(False)
+        self.ShiftLabel.setText("x = %0.1f \ny = %0.1f" % (0, 0))
+        self.ODHighSpinBox.valueChanged.connect(lambda: self.setODlimits(self.ODLowSpinBox.value(),self.ODHighSpinBox.value()))
+        self.ODLowSpinBox.valueChanged.connect(lambda: self.setODlimits(self.ODLowSpinBox.value(),self.ODHighSpinBox.value()))
+        self.RSTODpb.clicked.connect(lambda: self.ShowMap(self.MapSelectWidget.selectedItems()))
+
         self.CMCatBox.addItems([self.cmaps[0][0],self.cmaps[1][0],self.cmaps[2][0],self.cmaps[3][0],self.cmaps[4][0],self.cmaps[5][0]])
         self.CMMapBox.addItems(self.cmaps[2][1])
         self.CMCatBox.setCurrentIndex(2)
@@ -13859,7 +13869,7 @@ class PageMap(QtWidgets.QWidget):
         self.CMMapBox.currentIndexChanged.connect(lambda: self.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value()))
         self.StepSpin.valueChanged.connect(lambda: self.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value()))
 
-        self.MapSelectWidget.itemClicked.connect(self.OnSelect)
+        self.MapSelectWidget.itemSelectionChanged.connect(self.OnSelect)
         self.slider_eng = QtWidgets.QScrollBar(QtCore.Qt.Vertical)
         self.slider_eng.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
@@ -13881,41 +13891,47 @@ class PageMap(QtWidgets.QWidget):
         self.p1.setMouseEnabled(x=False, y=False)
         self.i_item = pg.ImageItem(border="k")
         self.p1.setAspectLocked(lock=True, ratio=1)
+        self.p1.enableAutoRange(enable=True)
         self.p1.showAxis("top", show=True)
         self.p1.showAxis("bottom", show=True)
         self.p1.showAxis("left", show=True)
         self.p1.showAxis("right", show=True)
-        ay1 = self.p1.getAxis("left")
+        self.ay1 = self.p1.getAxis("left")
         by1 = self.p1.getAxis("right")
-        ax1 = self.p1.getAxis("bottom")
+        self.ax1 = self.p1.getAxis("bottom")
         bx1 = self.p1.getAxis("top")
-        ay1.setLabel(text="y",units="px")
-        ay1.enableAutoSIPrefix(enable=True)
-        ax1.setLabel(text="x",units="px")
-        ax1.enableAutoSIPrefix(enable=True)
-        ay1.setStyle(tickLength=8)
-        ax1.setStyle(tickLength=8)
+        self.ay1.setLabel(text="y",units="px")
+        self.ay1.enableAutoSIPrefix(enable=True)
+        self.ax1.setLabel(text="x",units="px")
+        self.ax1.enableAutoSIPrefix(enable=True)
+        self.ay1.setStyle(tickLength=8)
+        self.ax1.setStyle(tickLength=8)
         by1.setStyle(showValues=False,tickLength=0)
         bx1.setStyle(showValues=False,tickLength=0)
 
         self.p2 = self.pglayout.addPlot(row=2, col=1, rowspan=1, colspan=1)
         self.p2.setMouseEnabled(x=False, y=False)
         self.m_item = pg.ImageItem(border="k")
+        self.m_item.setZValue(1000)
         self.p2.setAspectLocked(lock=True, ratio=1)
         self.p2.showAxis("top", show=True)
         self.p2.showAxis("bottom", show=True)
         self.p2.showAxis("left", show=True)
         self.p2.showAxis("right", show=True)
-        ay2 = self.p2.getAxis("left")
+        self.ay2 = self.p2.getAxis("left")
+        self.ay2.setZValue(1000)
         by2 = self.p2.getAxis("right")
-        ax2 = self.p2.getAxis("bottom")
+        by2.setZValue(1000)
+        self.ax2 = self.p2.getAxis("bottom")
+        self.ax2.setZValue(1000)
         bx2 = self.p2.getAxis("top")
-        ay2.setLabel(text="y",units="px")
-        ay2.enableAutoSIPrefix(enable=True)
-        ax2.setLabel(text="x",units="px")
-        ax2.enableAutoSIPrefix(enable=True)
-        ay2.setStyle(tickLength=8)
-        ax2.setStyle(tickLength=8)
+        bx2.setZValue(1000)
+        self.ay2.setLabel(text="y",units="px")
+        self.ay2.enableAutoSIPrefix(enable=True)
+        self.ax2.setLabel(text="x",units="px")
+        self.ax2.enableAutoSIPrefix(enable=True)
+        self.ay2.setStyle(tickLength=8)
+        self.ax2.setStyle(tickLength=8)
         by2.setStyle(showValues=False,tickLength=0)
         bx2.setStyle(showValues=False,tickLength=0)
         self.p1.setTitle("No images loaded")
@@ -13925,28 +13941,28 @@ class PageMap(QtWidgets.QWidget):
         self.cm = self.pglayout.addPlot(row=2, col=2, rowspan=1, colspan=1)
         self.cm.addItem(self.cmimg)
         self.cm.setMouseEnabled(x=False, y=False)
-
+        self.cm.getViewBox().autoRange(padding=0)
         self.cm.showAxis("top", show=True)
         self.cm.showAxis("bottom", show=True)
         self.cm.showAxis("left", show=True)
         self.cm.showAxis("right", show=True)
         self.cm.setTitle("")
-        ay = self.cm.getAxis("left")
-        ay.setZValue(1000)
-        by = self.cm.getAxis("right")
-        by.setZValue(1000)
-        bx = self.cm.getAxis("top")
-        bx.setZValue(1000)
-        ax = self.cm.getAxis("bottom")
-        ax.setZValue(1000)
-        ax.setTicks([])
-        ax.setLabel(text="", units="")
-        ax.setStyle(tickLength=8)
-        by = self.cm.getAxis("right")
-        by.setLabel(text="OD", units="")
-        by.setStyle(tickLength=8)
-        ay.setStyle(showValues=False,tickLength=0)
-        bx.setStyle(showValues=False,tickLength=0)
+        ay3 = self.cm.getAxis("left")
+        ay3.setZValue(1000)
+        by3 = self.cm.getAxis("right")
+        by3.setZValue(1000)
+        bx3 = self.cm.getAxis("top")
+        bx3.setZValue(1000)
+        ax3 = self.cm.getAxis("bottom")
+        ax3.setZValue(1000)
+        ax3.setTicks([])
+        ax3.setLabel(text="", units="")
+        ax3.setStyle(tickLength=8)
+        by3 = self.cm.getAxis("right")
+        by3.setLabel(text="OD", units="")
+        by3.setStyle(tickLength=8)
+        ay3.setStyle(showValues=False,tickLength=0)
+        bx3.setStyle(showValues=False,tickLength=0)
 
         self.pglayout.layout.setColumnMinimumWidth(2, 80)
         self.pglayout.layout.setColumnMaximumWidth(2, 80)
@@ -13954,9 +13970,17 @@ class PageMap(QtWidgets.QWidget):
     def OnCatChanged(self):
         self.CMMapBox.currentIndexChanged.disconnect()
         self.CMMapBox.clear()
-        self.CMMapBox.addItems(self.cmaps[self.CMCatBox.currentIndex()][1])
         self.CMMapBox.currentIndexChanged.connect(lambda: self.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value()))
-
+        self.CMMapBox.addItems(self.cmaps[self.CMCatBox.currentIndex()][1])
+    def setODlimits(self,low, high):
+        self.ODHighSpinBox.setMaximum(self.ODmax)
+        self.ODHighSpinBox.setMinimum(low)
+        self.ODLowSpinBox.setMaximum(high)
+        self.ODLowSpinBox.setMinimum(self.ODmin)
+        OD = np.clip(self.OD,low,high)
+        self.OnColormap(map=self.CMMapBox.currentText(), colors=self.StepSpin.value())
+        self.setODbar(low, high)
+        self.m_item.setImage(OD)
     def setCrosshair(self):
         if hasattr(self, 'vLine'):
             self.p2.removeItem(self.vLine)
@@ -13969,10 +13993,11 @@ class PageMap(QtWidgets.QWidget):
         self.canvas.addItem(self.ODlabel)
         self.p2.addItem(self.vLine, ignoreBounds=True)
         self.p2.addItem(self.hLine, ignoreBounds=True)
-        self.proxy = pg.SignalProxy(self.p2.scene().sigMouseMoved, rateLimit=60, slot=self.OnMouseHover)
+        self.proxy = pg.SignalProxy(self.p2.scene().sigMouseMoved, rateLimit=30, slot=self.OnMouseHover)
 
     def OnMouseHover(self,evt):
         pos = evt[0]
+        #print(pos)
         if hasattr(self, 'OD'):
             if self.p2.sceneBoundingRect().contains(pos):
                 self.vLine.setPen("r")
@@ -13980,12 +14005,39 @@ class PageMap(QtWidgets.QWidget):
                 self.vLine.setZValue(1000)
                 self.hLine.setZValue(1000)
                 mousePoint = self.p2.getViewBox().mapSceneToView(pos)
-                x = int(mousePoint.x()) + 0.5
-                y = int(mousePoint.y()) + 0.5
-                if np.shape(self.OD)[0] > int(x) and np.shape(self.OD)[1] > int(y):
-                    self.ODlabel.setText(
-                        "<span style='font-size: 8pt; color: red'> x = %0.0f, <span style='color: red'> y = %0.0f</span>, <span style='color: red'> OD = %0.2f</span>" % (
-                        x+1, y+1,self.OD[int(x),int(y)]))
+                if self.MetricCheckBox.isChecked():
+                    x_min = (self.p2.getViewBox().itemBoundingRect(self.m_item).x() / (self.scale * self.stk.x_pxsize)) # minimum x value in px
+                    y_min = (self.p2.getViewBox().itemBoundingRect(self.m_item).y() / (self.scale * self.stk.y_pxsize)) # minimum y value in px
+                    x_off = x_min - int(x_min)
+                    y_off = y_min - int(y_min)
+                    x_pos = mousePoint.x() / (self.scale * self.stk.x_pxsize) +1 #x mousepos in number of rows
+                    y_pos = mousePoint.y() / (self.scale * self.stk.y_pxsize) +1 #y mousepos in number of rows
+
+                    if mousePoint.x() < 0:
+                        xi = int(x_pos - x_off-1)
+                    else:
+                        xi = int(x_pos - x_off)
+                    if mousePoint.y() < 0:
+                        yi = int(y_pos - y_off -1)
+                    else:
+                        yi = int(y_pos - y_off)
+
+                    x = (xi - 0.5 + x_off) * self.scale * self.stk.x_pxsize
+                    y = (yi - 0.5 + y_off) * self.scale * self.stk.y_pxsize
+                    pt = QtCore.QPointF(x,y)
+                    if self.p2.getViewBox().itemBoundingRect(self.m_item).contains(pt):
+                        self.ODlabel.setText("<span style='font-size: 8pt; color: red'> x = %0.3f  µm, <span style='color: red'> y = %0.3f µm</span>, <span style='color: red'> OD = %0.2f</span>" % (x/self.scale - 0.5 * self.stk.x_pxsize, y/self.scale - 0.5 * self.stk.y_pxsize, self.OD[xi-1-int(x_min),yi-1-int(y_min)]))
+                    else: self.ODlabel.setText("")
+                else:
+                    x = int(mousePoint.x()) + 0.5
+                    y = int(mousePoint.y()) + 0.5
+                    pt = QtCore.QPointF(x,y)
+                    if self.p2.getViewBox().itemBoundingRect(self.m_item).contains(pt):
+                        self.ODlabel.setText(
+                            "<span style='font-size: 8pt; color: red'> x = %0.0f, <span style='color: red'> y = %0.0f</span>, <span style='color: red'> OD = %0.2f</span>" % (
+                            x, y,self.OD[int(x),int(y)]))
+                    else: self.ODlabel.setText("")
+                #print(x,y)
                 self.vLine.setPos(x)
                 self.hLine.setPos(y)
             else:
@@ -13996,7 +14048,7 @@ class PageMap(QtWidgets.QWidget):
 
     def setODbar(self,min=None,max=None):
         if min and max:
-            self.cm.setRange(yRange=[min,max], update=False, disableAutoRange=True,padding=0)
+            self.cm.setRange(xRange=[0,1], yRange=[min,max], update=False, disableAutoRange=True,padding=0)
             self.cmimg.setRect(QtCore.QRectF(0,min,1,max-min))
 
     def keyPressEvent(self, e):
@@ -14064,8 +14116,10 @@ class PageMap(QtWidgets.QWidget):
         if len(selectionlst) == 2:
             self.xoffset = 0
             self.yoffset = 0
-            self.OnScrollEng(self.MapSelectWidget.currentRow())
             self.ShowMap(selectionlst)
+            self.OnScrollEng(self.MapSelectWidget.currentRow())
+            self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),
+                               self.SquarePxCheckBox.isChecked())
 
     def Clear(self):
         self.p1.clear()
@@ -14075,6 +14129,8 @@ class PageMap(QtWidgets.QWidget):
     def ShowImage(self):
         self.p1.addItem(self.i_item)
         self.OnScrollEng(0)
+        self.OnMetricScale(self.MetricCheckBox.isChecked(), True,
+                           False)
         for e in self.stk.ev:
             item = QtGui.QListWidgetItem("Image at "+str(round(e,2))+" eV")
             self.MapSelectWidget.addItem(item)
@@ -14087,18 +14143,60 @@ class PageMap(QtWidgets.QWidget):
             self.p1.setTitle("Image at energy {0:5.2f} eV".format(float(self.stk.ev[self.iev])))
             self.i_item.setImage(self.data)
 
+    def OnMetricScale(self, setmetric= True, zeroorigin= True, square= False):
+        if self.com.stack_loaded == 1:
+            if setmetric==True:
+                self.SquarePxCheckBox.setVisible(False)
+                self.ZeroOriginCheckBox.setVisible(True)
+                self.p1.setAspectLocked(lock=True, ratio=1)
+                self.p2.setAspectLocked(lock=True, ratio=1)
+                if not zeroorigin:
+                    x_start = self.stk.x_start*self.scale
+                    y_start = self.stk.y_start*self.scale
+                else:
+                    x_start = 0
+                    y_start = 0
+                self.ay1.setLabel(text="y", units="m")
+                self.ax1.setLabel(text="x", units="m")
+                self.ay2.setLabel(text="y", units="m")
+                self.ax2.setLabel(text="x", units="m")
+
+                self.i_item.setRect(QtCore.QRectF(x_start, y_start, self.scale*self.stk.n_cols*self.stk.x_pxsize, self.scale*self.stk.n_rows*self.stk.y_pxsize))
+                if hasattr(self, "OD"):
+                    self.m_item.setRect(QtCore.QRectF(x_start, y_start, self.scale*np.shape(self.OD)[0]*self.stk.x_pxsize, self.scale*np.shape(self.OD)[1]*self.stk.y_pxsize))
+                    self.setCrosshair()
+            else:
+                self.ZeroOriginCheckBox.setVisible(False)
+                self.SquarePxCheckBox.setVisible(True)
+                if square == True:
+                    aspect = 1
+                else:
+                    aspect = self.stk.x_pxsize/self.stk.y_pxsize
+                    #print(aspect)
+                self.p1.setAspectLocked(lock=True, ratio=aspect)
+                self.ay1.setLabel(text="y", units="px")
+                self.ax1.setLabel(text="x", units="px")
+                self.i_item.setRect(QtCore.QRectF(0, 0, self.stk.n_cols, self.stk.n_rows))
+                if hasattr(self, "OD"):
+                    self.ay2.setLabel(text="y", units="px")
+                    self.ax2.setLabel(text="x", units="px")
+                    self.p2.setAspectLocked(lock=True, ratio=aspect)
+                    self.m_item.setRect(QtCore.QRectF(0, 0, np.shape(self.OD)[0], np.shape(self.OD)[1]))
+
     def Offset(self,shift_x, shift_y):
-        if shift_x == 0 and shift_y == 0:
-            self.xoffset = 0
-            self.yoffset = 0
-        else:
-            self.xoffset = self.xoffset + shift_x
-            self.yoffset = self.yoffset + shift_y
-        self.ShowMap(self.MapSelectWidget.selectedItems())
+        if hasattr(self, "OD"):
+            if shift_x == 0 and shift_y == 0:
+                self.xoffset = 0
+                self.yoffset = 0
+            else:
+                self.xoffset = self.xoffset + shift_x
+                self.yoffset = self.yoffset + shift_y
+            self.ShowMap(self.MapSelectWidget.selectedItems())
 
     def Shift(self,img):
         if self.xoffset == 0 and self.yoffset == 0:
             self.crop=[0,0]
+            self.ShiftLabel.setText("x = %0.1f \ny = %0.1f" % (self.xoffset, self.yoffset))
             return img
         else:
             shifted = ndimage.fourier_shift(np.fft.fft2(img), [float(self.xoffset), float(self.yoffset)])
@@ -14111,7 +14209,7 @@ class PageMap(QtWidgets.QWidget):
                 self.crop[1]=int(np.floor(self.yoffset))
             else:
                 self.crop[1]=int(np.ceil(self.yoffset))
-
+            self.ShiftLabel.setText("x = %0.1f \ny = %0.1f" % (self.xoffset, self.yoffset))
             return shifted.real
     def CalcODMap(self,im_idx1,im_idx2):
 
@@ -14133,29 +14231,26 @@ class PageMap(QtWidgets.QWidget):
             im1 = im1[:,:crop[1]]
             im2 = im2[:,:crop[1]]
 
-        self.OD = np.log(im1/im2)
-        return self.OD
+        OD = np.log(im1/im2)
+        return OD
 
     def calcBinSize(self,i,N):
         return int(round(256*(i+1)/N) - round(256*i/N))
 
     def OnColormap(self,map="afmhot", colors=256):
-        colormap = cm.get_cmap(map, colors)
-        colormap = colormap(np.arange(colors))
-        cm_lst = []
-        for idx in range(np.shape(colormap)[0]):
-            cm_lst.append([colormap[idx][0], colormap[idx][1], colormap[idx][2], colormap[idx][3]])
-        cm_array = np.asarray(cm_lst)
-        cm_array = np.array([cm_array])
-        cm_lst = [item for sub in [[cm_lst[i]]*self.calcBinSize(i,len(cm_lst)) for i in range(len(cm_lst))] for item in sub]
-        cm_lst.extend((cm_lst[0],cm_lst[-1],cm_lst[-1]))
-        lut = np.asarray(cm_lst)
-        lut = (lut * 255).view(np.ndarray)
-        self.cmimg.setImage(cm_array)
-        self.cm.getViewBox().autoRange(padding=0)
-        self.m_item.setLookupTable(lut)
         if hasattr(self, "OD"):
-            self.setODbar(np.min(self.OD), np.max(self.OD))
+            colormap = cm.get_cmap(map, colors)
+            colormap = colormap(np.arange(colors))
+            cm_lst = [[colormap[idx][0], colormap[idx][1], colormap[idx][2], colormap[idx][3]] for idx in range(np.shape(colormap)[0])] #convert to r,g,b,a list
+            cm_lst = [item for sub in [[cm_lst[i]]*self.calcBinSize(i,colors) for i in range(colors)] for item in sub] #fills 256 bins as equal as possible with n colors
+            cm_array = np.array([np.asarray(cm_lst)]) #vertical colorbar
+            cm_lst.extend((cm_lst[-1],cm_lst[-1],cm_lst[-1]))
+            lut = np.asarray(cm_lst)
+            lut = (lut * 255).view(np.ndarray) #lut for OD map
+            self.cmimg.setImage(cm_array)
+            self.m_item.setLookupTable(lut)
+            if hasattr(self, "OD"):
+                self.setODbar(self.ODmin, self.ODmax)
 
     def ShowMap(self,selection):
         self.p2.clear()
@@ -14164,9 +14259,23 @@ class PageMap(QtWidgets.QWidget):
         selection = [self.MapSelectWidget.row(selection[1]),self.MapSelectWidget.row(selection[0])]
         selection.sort()
         self.p2.setTitle("Map from energies "+str(round(self.stk.ev[selection[0]],2))+" and "+str(round(self.stk.ev[selection[1]],2))+" eV")
-        ODimg = self.CalcODMap(selection[0], selection[1])
-        self.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value())
-        self.m_item.setImage(ODimg)
+        self.OD = self.CalcODMap(selection[0], selection[1])
+        self.ODmin = np.min(self.OD)
+        self.ODmax = np.max(self.OD)
+        print(self.ODmin)
+        self.ODHighSpinBox.valueChanged.disconnect()
+        self.ODLowSpinBox.valueChanged.disconnect()
+        self.ODHighSpinBox.setMaximum(self.ODmax)
+        self.ODHighSpinBox.setMinimum(self.ODmin)
+        self.ODLowSpinBox.setMaximum(self.ODmax)
+        self.ODLowSpinBox.setMinimum(self.ODmin)
+        self.ODLowSpinBox.setValue(self.ODmin)
+        self.ODHighSpinBox.setValue(self.ODmax)
+        self.setODlimits(self.ODmin, self.ODmax)
+        self.ODHighSpinBox.valueChanged.connect(lambda: self.setODlimits(self.ODLowSpinBox.value(),self.ODHighSpinBox.value()))
+        self.ODLowSpinBox.valueChanged.connect(lambda: self.setODlimits(self.ODLowSpinBox.value(),self.ODHighSpinBox.value()))
+        #self.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value())
+        #self.m_item.setImage(self.OD)
 
 #----------------------------------------------------------------------
 class StackListFrame(QtWidgets.QDialog):
@@ -14650,11 +14759,6 @@ class MainFrame(QtWidgets.QMainWindow):
 
         tabs.addTab(self.page0,"Load Data")
         tabs.addTab(self.page1, "Preprocess Data")
-
-        if showmaptab:
-            self.page9 = PageMap(self.common, self.data_struct, self.stk)
-            tabs.addTab(self.page9, "Process Map")
-
         tabs.addTab(self.page2,"PCA")
         tabs.addTab(self.page3,"Cluster Analysis")
         tabs.addTab(self.page4,"Spectral Maps")
@@ -14666,6 +14770,10 @@ class MainFrame(QtWidgets.QMainWindow):
             self.page8 = PageTomo(self.common, self.data_struct, self.stk, self.anlz)
             tabs.addTab(self.page8, "Tomography")
 
+        if showmaptab:
+            self.page9 = PageMap(self.common, self.data_struct, self.stk)
+            tabs.addTab(self.page9, "Image Maps")
+
         if sys.platform == 'win32':
             tabs.setMinimumHeight(750)
         else:
@@ -14673,16 +14781,16 @@ class MainFrame(QtWidgets.QMainWindow):
 
         tabs.tabBar().setTabTextColor(0, QtGui.QColor('green'))
         tabs.tabBar().setTabTextColor(1, QtGui.QColor('green'))
+        tabs.tabBar().setTabTextColor(2, QtGui.QColor('darkRed'))
         tabs.tabBar().setTabTextColor(3, QtGui.QColor('darkRed'))
         tabs.tabBar().setTabTextColor(4, QtGui.QColor('darkRed'))
         tabs.tabBar().setTabTextColor(5, QtGui.QColor('darkRed'))
-        tabs.tabBar().setTabTextColor(6, QtGui.QColor('darkRed'))
+        tabs.tabBar().setTabTextColor(6, QtGui.QColor('purple'))
         tabs.tabBar().setTabTextColor(7, QtGui.QColor('purple'))
-        tabs.tabBar().setTabTextColor(8, QtGui.QColor('purple'))
         if showtomotab:
-            tabs.tabBar().setTabTextColor(9, QtGui.QColor('darkblue'))
+            tabs.tabBar().setTabTextColor(8, QtGui.QColor('darkblue'))
         if showmaptab:
-            tabs.tabBar().setTabTextColor(2, QtGui.QColor('darkblue'))
+            tabs.tabBar().setTabTextColor(9, QtGui.QColor('darkblue'))
 
 
 
