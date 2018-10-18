@@ -1,3 +1,4 @@
+# coding: utf8
 #
 #   This file is part of Mantis, a Multivariate ANalysis Tool for Spectromicroscopy.
 #
@@ -10493,196 +10494,118 @@ class SaveWinP1(QtWidgets.QDialog):
 
 #----------------------------------------------------------------------
 class ShowHistogram(QtWidgets.QDialog):
-
     def __init__(self, parent, stack):
-        QtWidgets.QWidget.__init__(self, parent)
+        super(ShowHistogram, self).__init__()
+        uic.loadUi('showhistogram.ui', self)
+
+        self.HistoWidget.setBackground("w")  # canvas is a pg.PlotWidget widget
+        self.I0Widget.setBackground("w")
+
+        self.button_ok.clicked.connect(self.OnAccept)
+        self.button_cancel.clicked.connect(self.close)
 
         self.parent = parent
-
-
-        self.resize(600, 600)
-        self.setWindowTitle('Histogram')
-
-        pal = QtGui.QPalette()
-        self.setAutoFillBackground(True)
-        pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
-        self.setPalette(pal)
+        self.setWindowTitle('Select I0')
 
         self.stack = stack
-
-
         self.stack.calc_histogram()
-        averagefluxmax = np.max(self.stack.histogram)
-        self.histmin = 0.98*averagefluxmax
-        self.histmax = averagefluxmax
 
+        self.vb = self.I0Widget.addViewBox()
+        self.vb.setAspectLocked()
+        self.AbsImage = pg.ImageItem(border="k")
 
-        vbox = QtWidgets.QVBoxLayout()
+        #self.proxy = pg.SignalProxy(self.vb.scene().sigMouseMoved, rateLimit=30, slot=self.OnMouseHover)
+        #self.vb.scene().sigMouseClicked.connect(self.OnClick) #ToDo: Select region alternatively by ROI polygon
 
-        frame = QtWidgets.QFrame()
-        frame.setFrameStyle(QtWidgets.QFrame.StyledPanel|QtWidgets.QFrame.Sunken)
-        fbox = QtWidgets.QHBoxLayout()
-
-        self.histfig = Figure((6.0, 4.2))
-        self.HistogramPanel = FigureCanvas(self.histfig)
-        self.HistogramPanel.setParent(self)
-        self.HistogramPanel.mpl_connect('button_press_event', self.OnSelection1)
-        self.HistogramPanel.mpl_connect('button_release_event', self.OnSelection2)
-
-
-        fbox.addWidget(self.HistogramPanel)
-        frame.setLayout(fbox)
-        vbox.addWidget(frame)
-
-        vbox1 = QtWidgets.QVBoxLayout()
-        sizer1 = QtWidgets.QGroupBox('I0 pixels')
-
-        self.textctrl = QtWidgets.QLabel(self)
-        self.textctrl.setText('Selection: [ {0:5.2f} kHz, {1:5.2f} kHz ]'.format(float(self.histmin), float(self.histmax)))
-        vbox1.addWidget(self.textctrl)
-
-
-        self.absimgfig = Figure((2.5,2.5))
-        self.AbsImagePanel = FigureCanvas(self.absimgfig)
-        self.AbsImagePanel.setParent(self)
-
-        vbox1.addWidget(self.AbsImagePanel,0,QtCore .Qt. AlignLeft)
-        sizer1.setLayout(vbox1)
-        vbox.addWidget(sizer1)
-
-        hbox2 = QtWidgets.QHBoxLayout()
-        button_ok = QtWidgets.QPushButton('Accept')
-        button_ok.clicked.connect(self.OnAccept)
-        hbox2.addWidget(button_ok)
-
-        button_cancel = QtWidgets.QPushButton('Cancel')
-        button_cancel.clicked.connect(self.close)
-        hbox2.addWidget(button_cancel)
-
-        vbox.addLayout(hbox2)
-
-        self.setLayout(vbox)
-
+        self.vb.setMouseEnabled(x=False, y=False)
+        self.vb.addItem(self.AbsImage)
+        self.MaskImage = pg.ImageItem(border="k")
+        self.vb.addItem(self.MaskImage)
+        px = int(self.stack.n_cols*self.stack.n_rows * 0.98)  # 98% of total pixels
+        fluxmax_limit = np.mean(np.partition(np.ravel(self.stack.averageflux), px)[:px]) # average brightness of the 2% of pixels with highest flux
+        self.histmin = fluxmax_limit
+        self.histmax = np.max(self.stack.averageflux)+1
         self.draw_histogram()
-        self.draw_image()
-
-
+        self.draw_image(self.histmin,self.histmax)
 
 #----------------------------------------------------------------------
     def draw_histogram(self):
 
+        histogram_data =  np.reshape(self.stack.histogram, (self.stack.n_cols*self.stack.n_rows), order='F')
 
-        fig = self.histfig
-        fig.clf()
-        fig.add_axes((0.15,0.15,0.75,0.75))
-        self.axes = fig.gca()
+        y, x = np.histogram(histogram_data, bins=100)
 
+        self.region = pg.LinearRegionItem(brush=[255,0,0,45],bounds=[np.min(x)-1,np.max(x)+1])
 
-        histdata =  np.reshape(self.stack.histogram, (self.stack.n_cols*self.stack.n_rows), order='F')
+        self.region.setZValue(10)
 
-        self.n, self.bins, patches = self.axes.hist(histdata, 200, normed=1, facecolor='green', alpha=0.75)
+        plot = self.HistoWidget
+        plot.addItem(self.region, ignoreBounds=True)
+        plot.setMouseEnabled(x=False, y=False)
+        plot.setLogMode(x=False, y=True)
+        plot.showGrid(y=True)
 
-        self.axes.set_xlabel('Average Flux [kHz]')
-        self.axes.set_ylabel('Percentage of Pixels')
+        plot.showAxis("top", show=True)
+        plot.showAxis("right", show=True)
+        by = plot.getAxis("right")
+        bx = plot.getAxis("top")
+        by.setStyle(showValues=False,tickLength=0)
+        bx.setStyle(showValues=False,tickLength=0)
+        ay = plot.getAxis("left")
+        ax = plot.getAxis("bottom")
+        ay.setLabel(text="Number of pixels")
+        ax.setLabel(text="Average Flux")
 
-        self.patch = self.axes.axvspan(self.histmin, self.histmax, facecolor='r', alpha=0.3)
+        plot.plot(x, y, stepMode=True, fillLevel=0, brush=(0, 0, 255, 150))
+        def update(region):
+            self.region.setZValue(10)
+            minX, maxX = region
+            self.draw_image(minX, maxX)
+            #self.vb.scene().sigMouseClicked.connect(self.OnClick)
 
-
-        self.HistogramPanel.draw()
-
-
-
+        self.region.setRegion((self.histmin,self.histmax))
+        self.region.sigRegionChanged.connect(lambda: update(self.region.getRegion()))
 
 #----------------------------------------------------------------------
-    def draw_image(self):
+    # def OnClick(self,ev):
+    #     try:
+    #         pos = self.vb.mapToView(ev.pos())
+    #     except (AttributeError, UnboundLocalError) as e:
+    #         pass
+    #
+    #     if hasattr(self, 'AbsImage'):
+    #         self.draw_image(0, 0)
+    #         if self.vb.itemBoundingRect(self.AbsImage).contains(pos):
+    #         #if self.vb.sceneBoundingRect().contains(pos):
+    #             print(pos)
+    #             try:
+    #                 self.vb.removeItem(self.I0box)
+    #             except:
+    #                 pass
+    #             self.I0box = pg.PolyLineROI([[0,0], [0,20], [20,20], [20,0]],pen=(6,7), closed=True)
+    #             self.vb.addItem(self.I0box)
+    #             self.vb.scene().sigMouseClicked.disconnect()
+
+    def draw_image(self,fluxmin, fluxmax):
 
 
-        image = self.stack.absdata[:,:,int(self.stack.n_ev/2)].copy()
+        hist_indices = np.where((fluxmin<self.stack.histogram)&(self.stack.histogram<fluxmax))
 
-        fluxmin = self.histmin
-        fluxmax = self.histmax
-
-        hist_indices = np.where((fluxmin<self.stack.averageflux)&(self.stack.averageflux<fluxmax))
-
-        redpix = np.zeros((self.stack.n_cols,self.stack.n_rows))
-        redpix[hist_indices] = 255
-
+        redpix = np.ones((self.stack.n_cols,self.stack.n_rows))
+        redpix[hist_indices] = 0
         redpix = np.ma.array(redpix)
+        redpix_masked =  np.ma.masked_values(redpix, 1)
+        colormap = cm.get_cmap("autumn")
+        colormap._init()
+        lut = (colormap._lut * 255).view(np.ndarray)
+        self.MaskImage.setLookupTable(lut)
 
-        redpix_masked =  np.ma.masked_values(redpix, 0)
-
-
-        fig = self.absimgfig
-        fig.clf()
-        fig.add_axes(((0.0,0.0,1.0,1.0)))
-
-
-        axes = fig.gca()
-        fig.patch.set_alpha(1.0)
-
-        im = axes.imshow(np.rot90(image), cmap=matplotlib.cm.get_cmap("gray"))
-
-        im_red = axes.imshow(np.rot90(redpix_masked),cmap=matplotlib.cm.get_cmap("autumn"))
-
-        axes.axis("off")
-        self.AbsImagePanel.draw()
-
-#----------------------------------------------------------------------
-    def OnSelection1(self, evt):
-
-        x1 = evt.xdata
-
-        self.button_pressed = True
-        self.conn = self.HistogramPanel.mpl_connect('motion_notify_event', self.OnSelectionMotion)
-
-        if x1 == None:
-            return
-
-        self.histmin = x1
-
-
-
-
-#----------------------------------------------------------------------
-    def OnSelection2(self, evt):
-
-        x2 = evt.xdata
-
-
-        self.button_pressed = False
-        self.HistogramPanel.mpl_disconnect(self.conn)
-
-        if x2 == None:
-            return
-
-        self.histmax = x2
-
-        self.textctrl.setText('Selection: [ {0:5.2f} kHz, {1:5.2f} kHz ]'.format(float(self.histmin), float(self.histmax)))
-
-
-        self.draw_histogram()
-        self.draw_image()
-
-
-#----------------------------------------------------------------------
-    def OnSelectionMotion(self, event):
-
-        x2 = event.xdata
-
-        if x2 == None:
-            return
-        self.histmax = x2
-
-        fig = self.histfig
-
-        axes = fig.gca()
-
-        if self.patch != None:
-            self.patch.remove()
-        self.patch = axes.axvspan(self.histmin, self.histmax, facecolor='white', alpha=0.3)
-
-        self.HistogramPanel.draw()
-
+        self.AbsImage.setImage(self.stack.histogram)
+        if fluxmin == fluxmax:
+            self.MaskImage.setZValue(-10)
+        else:
+            self.MaskImage.setZValue(10)
+            self.MaskImage.setImage(redpix_masked,opacity = 0.3)
 
 #----------------------------------------------------------------------
     def OnAccept(self, evt):
@@ -10690,9 +10613,6 @@ class ShowHistogram(QtWidgets.QDialog):
         self.stack.i0_from_histogram(self.histmin, self.histmax)
         self.parent.I0histogramCalculated()
         self.close()
-
-
-
 
 #----------------------------------------------------------------------
 class LimitEv(QtWidgets.QDialog):
@@ -13870,8 +13790,6 @@ class PageMap(QtWidgets.QWidget):
         self.StepSpin.valueChanged.connect(lambda: self.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value()))
 
         self.MapSelectWidget.itemSelectionChanged.connect(self.OnSelect)
-        self.slider_eng = QtWidgets.QScrollBar(QtCore.Qt.Vertical)
-        self.slider_eng.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
         self.data_struct = data_struct
         self.stk = stack
@@ -13879,13 +13797,8 @@ class PageMap(QtWidgets.QWidget):
         self.iev = 0
 
         self.pglayout = pg.GraphicsLayout()
-        self.scene = pg.GraphicsScene()
-        self.canvas = pg.GraphicsView(self.scene)
-        self.canvas.setBackground("w")
+        self.canvas.setBackground("w") # canvas is a pg.GraphicsView widget
         self.canvas.setCentralWidget(self.pglayout)
-
-        self.graphbox.addWidget(self.canvas,0,0)
-        self.graphbox.addWidget(self.slider_eng,0,1)
 
         self.p1 = self.pglayout.addPlot(row=1, col=1, rowspan=1, colspan=1)
         self.p1.setMouseEnabled(x=False, y=False)
@@ -14262,7 +14175,6 @@ class PageMap(QtWidgets.QWidget):
         self.OD = self.CalcODMap(selection[0], selection[1])
         self.ODmin = np.min(self.OD)
         self.ODmax = np.max(self.OD)
-        print(self.ODmin)
         self.ODHighSpinBox.valueChanged.disconnect()
         self.ODLowSpinBox.valueChanged.disconnect()
         self.ODHighSpinBox.setMaximum(self.ODmax)

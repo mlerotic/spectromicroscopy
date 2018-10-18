@@ -61,9 +61,16 @@
         <property name="frameShadow">
          <enum>QFrame::Raised</enum>
         </property>
-        <layout class="QVBoxLayout" name="verticalLayout_3">
+        <layout class="QHBoxLayout" name="horizontalLayout_3">
          <item>
-          <layout class="QGridLayout" name="graphbox"/>
+          <widget class="GraphicsView" name="canvas"/>
+         </item>
+         <item>
+          <widget class="QScrollBar" name="slider_eng">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+          </widget>
          </item>
         </layout>
        </widget>
@@ -884,31 +891,6 @@ Align</string>
                <layout class="QVBoxLayout" name="verticalLayout_5">
                 <item>
                  <layout class="QGridLayout" name="gridLayout_4">
-                  <item row="1" column="1">
-                   <widget class="QPushButton" name="HistoI0pb">
-                    <property name="enabled">
-                     <bool>false</bool>
-                    </property>
-                    <property name="text">
-                     <string>I0 from histogram</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="1">
-                   <widget class="QPushButton" name="autoI0pb">
-                    <property name="enabled">
-                     <bool>false</bool>
-                    </property>
-                    <property name="font">
-                     <font>
-                      <underline>false</underline>
-                     </font>
-                    </property>
-                    <property name="text">
-                     <string>Auto I0</string>
-                    </property>
-                   </widget>
-                  </item>
                   <item row="0" column="0">
                    <widget class="QDoubleSpinBox" name="ODOffSpinBox">
                     <property name="enabled">
@@ -931,6 +913,26 @@ Align</string>
                     </property>
                     <property name="singleStep">
                      <double>0.010000000000000</double>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="1">
+                   <widget class="QPushButton" name="HistoI0pb">
+                    <property name="enabled">
+                     <bool>false</bool>
+                    </property>
+                    <property name="text">
+                     <string>Select I0</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="2">
+                   <widget class="QPushButton" name="pushButton">
+                    <property name="enabled">
+                     <bool>false</bool>
+                    </property>
+                    <property name="text">
+                     <string>Reset I0</string>
                     </property>
                    </widget>
                   </item>
@@ -1258,6 +1260,13 @@ OD limits</string>
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>GraphicsView</class>
+   <extends>QGraphicsView</extends>
+   <header>pyqtgraph</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>
