@@ -10180,8 +10180,8 @@ class PageStack(QtWidgets.QWidget):
         self.button_ROIdosecalc.setEnabled(False)
         self.window().refresh_widgets()
 
-        self.loadImage()
         if (self.com.i0_loaded == 1):
+            self.loadImage()
             self.loadSpectrum(self.ix, self.iy)
         pass
 
@@ -10489,16 +10489,13 @@ class SaveWinP1(QtWidgets.QDialog):
                                          img_all = im_all,
                                          img_all_tif = im_all_tif)
 
-
-
-
 #----------------------------------------------------------------------
-class ShowHistogram(QtWidgets.QDialog):
+class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
     def __init__(self, parent, stack):
-        super(ShowHistogram, self).__init__()
+        QtWidgets.QWidget.__init__(self, parent)
         uic.loadUi('showhistogram.ui', self)
 
-        self.HistoWidget.setBackground("w")  # canvas is a pg.PlotWidget widget
+        self.HistoWidget.setBackground("w")
         self.I0Widget.setBackground("w")
 
         self.button_ok.clicked.connect(self.OnAccept)
@@ -10512,13 +10509,12 @@ class ShowHistogram(QtWidgets.QDialog):
 
         self.vb = self.I0Widget.addViewBox()
         self.vb.setAspectLocked()
-        self.AbsImage = pg.ImageItem(border="k")
+        self.AbsImage = pg.ImageItem(border="k",parent= self)
 
-        #self.proxy = pg.SignalProxy(self.vb.scene().sigMouseMoved, rateLimit=30, slot=self.OnMouseHover)
-        #self.vb.scene().sigMouseClicked.connect(self.OnClick) #ToDo: Select region alternatively by ROI polygon
-
+        self.PolygonROI = False
+        self.proxy = pg.SignalProxy(self.vb.scene().sigMouseMoved, rateLimit=30, slot=self.OnMouseHover)
         self.vb.setMouseEnabled(x=False, y=False)
-        self.vb.addItem(self.AbsImage)
+        self.vb.addItem(self.AbsImage, ignoreBounds=True)
         self.MaskImage = pg.ImageItem(border="k")
         self.vb.addItem(self.MaskImage)
         px = int(self.stack.n_cols*self.stack.n_rows * 0.98)  # 98% of total pixels
@@ -10528,9 +10524,18 @@ class ShowHistogram(QtWidgets.QDialog):
         self.draw_histogram()
         self.draw_image(self.histmin,self.histmax)
 
+        self.I0box = pg.PolyLineROI([[1, 1], [0, 1], [0, 0], [1, 0]], pen=(5, 8), closed=True)
+
+        self.I0box.handlePen = QtGui.QPen(QtGui.QColor(255, 0, 128))
+        self.vb.addItem(self.I0box, ignoreBounds=True)
+        self.I0box.clearPoints()
+        self.I0box.setZValue(-10)
+
+        self.clickdetector = QtCore.QTimer()
+        self.clickdetector.timeout.connect(self.OnRelease)
+
 #----------------------------------------------------------------------
     def draw_histogram(self):
-
         histogram_data =  np.reshape(self.stack.histogram, (self.stack.n_cols*self.stack.n_rows), order='F')
 
         y, x = np.histogram(histogram_data, bins=100)
@@ -10558,39 +10563,67 @@ class ShowHistogram(QtWidgets.QDialog):
 
         plot.plot(x, y, stepMode=True, fillLevel=0, brush=(0, 0, 255, 150))
         def update(region):
+            self.PolygonROI = False
             self.region.setZValue(10)
             minX, maxX = region
             self.draw_image(minX, maxX)
-            #self.vb.scene().sigMouseClicked.connect(self.OnClick)
+            try:
+                self.I0box.sigRegionChangeFinished.disconnect(self.DrawROI)
+                self.I0box.clearPoints()
+                self.proxy.block = False
+            except:
+                pass
 
         self.region.setRegion((self.histmin,self.histmax))
         self.region.sigRegionChanged.connect(lambda: update(self.region.getRegion()))
-
 #----------------------------------------------------------------------
-    # def OnClick(self,ev):
-    #     try:
-    #         pos = self.vb.mapToView(ev.pos())
-    #     except (AttributeError, UnboundLocalError) as e:
-    #         pass
-    #
-    #     if hasattr(self, 'AbsImage'):
-    #         self.draw_image(0, 0)
-    #         if self.vb.itemBoundingRect(self.AbsImage).contains(pos):
-    #         #if self.vb.sceneBoundingRect().contains(pos):
-    #             print(pos)
-    #             try:
-    #                 self.vb.removeItem(self.I0box)
-    #             except:
-    #                 pass
-    #             self.I0box = pg.PolyLineROI([[0,0], [0,20], [20,20], [20,0]],pen=(6,7), closed=True)
-    #             self.vb.addItem(self.I0box)
-    #             self.vb.scene().sigMouseClicked.disconnect()
+    def OnRelease(self):
+        if not self.vb.scene().clickEvents:
+            self.proxy.block = True
+            self.DrawROI()
+            self.I0box.sigRegionChangeFinished.connect(self.DrawROI)
+            self.clickdetector.stop()
+            self.I0instructions.setText("Drag the polygon or the handles. Add handles by clicking on a line segment.")
+
+    def DrawROI(self):
+        self.PolygonROI = True
+        left = int(np.round(self.vb.itemBoundingRect(self.I0box).left(),0))
+        right = int(np.round(self.vb.itemBoundingRect(self.I0box).right(),0))
+        bottom = int(np.round(self.vb.itemBoundingRect(self.I0box).bottom(),0))
+        top = int(np.round(self.vb.itemBoundingRect(self.I0box).top(),0))
+        io = self.I0box.getArrayRegion(np.ones((self.stack.n_cols,self.stack.n_rows)),self.MaskImage)
+        io = np.hstack((np.zeros((np.shape(io)[0],max(0,top)), dtype=io.dtype),io))
+        io = np.hstack((io,np.zeros((np.shape(io)[0],max(0,self.stack.n_rows-bottom)), dtype=io.dtype)))
+        io = np.vstack((np.zeros((max(0,left),np.shape(io)[1]), dtype=io.dtype), io))
+        io = np.vstack((io,np.zeros((max(0,self.stack.n_cols-right), np.shape(io)[1]), dtype=io.dtype)))
+        io = io[abs(min(left,0)):self.stack.n_cols-(min(0,left)),abs(min(top,0)):self.stack.n_rows-(min(0,top))]
+        io = 1 - io
+        self.MaskImage.setImage(io, opacity=0.3)
+        self.MaskImage.setZValue(10)
+
+    def OnMouseHover(self,ev):
+        pos = self.vb.mapSceneToView(ev[0])
+        roipos = pos-self.vb.mapFromViewToItem(self.I0box,pos)
+        if self.vb.itemBoundingRect(self.AbsImage).contains(pos):
+            if self.vb.scene().clickEvents:
+                self.MaskImage.setZValue(-10)
+                self.I0box.setZValue(10)
+                self.clickdetector.start(10)
+                origin = self.vb.mapSceneToView(self.vb.scene().clickEvents[0].scenePos())
+                if origin.x() < 0:
+                    x0 = 0-roipos.x()
+                else:
+                    x0 = np.round(origin.x()-roipos.x(),0)
+                if origin.y() < 0:
+                    y0 = 0-roipos.y()
+                else:
+                    y0 = np.round(origin.y()-roipos.y(),0)
+                self.I0box.setPoints([(np.round(pos.x()-roipos.x(),0),np.round(pos.y()-roipos.y(),0)), (x0,np.round(pos.y()-roipos.y(),0)),(x0,y0),(np.round(pos.x()-roipos.x(),0),y0)], closed=True)
 
     def draw_image(self,fluxmin, fluxmax):
-
-
+        self.I0instructions.setText(
+            "Select the I0 region either from the histogram or from the image by drawing a polygon.")
         hist_indices = np.where((fluxmin<self.stack.histogram)&(self.stack.histogram<fluxmax))
-
         redpix = np.ones((self.stack.n_cols,self.stack.n_rows))
         redpix[hist_indices] = 0
         redpix = np.ma.array(redpix)
@@ -10609,10 +10642,12 @@ class ShowHistogram(QtWidgets.QDialog):
 
 #----------------------------------------------------------------------
     def OnAccept(self, evt):
-
-        self.stack.i0_from_histogram(self.histmin, self.histmax)
-        self.parent.I0histogramCalculated()
-        self.close()
+        if self.PolygonROI == True:
+            QtWidgets.QMessageBox.warning(self, 'Error', 'I0 selection via polygon ROI is currently under construction.')
+        else:
+            self.stack.i0_from_histogram(self.histmin, self.histmax)
+            self.parent.I0histogramCalculated()
+            self.close()
 
 #----------------------------------------------------------------------
 class LimitEv(QtWidgets.QDialog):
@@ -12290,7 +12325,7 @@ class ImageRegistration(QtWidgets.QDialog):
 
         self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
         self.parent.page1.loadImage()
-        self.parent.page9.loadImage()
+        #self.parent.page9.loadImage()
 
         self.close()
 
@@ -13912,7 +13947,7 @@ class PageMap(QtWidgets.QWidget):
         pos = evt[0]
         #print(pos)
         if hasattr(self, 'OD'):
-            if self.p2.sceneBoundingRect().contains(pos):
+            if self.p2.getViewBox().itemBoundingRect(self.m_item).contains(self.p2.getViewBox().mapSceneToView(pos)):
                 self.vLine.setPen("r")
                 self.hLine.setPen("r")
                 self.vLine.setZValue(1000)
@@ -13938,22 +13973,17 @@ class PageMap(QtWidgets.QWidget):
                     x = (xi - 0.5 + x_off) * self.scale * self.stk.x_pxsize
                     y = (yi - 0.5 + y_off) * self.scale * self.stk.y_pxsize
                     pt = QtCore.QPointF(x,y)
-                    if self.p2.getViewBox().itemBoundingRect(self.m_item).contains(pt):
-                        self.ODlabel.setText("<span style='font-size: 8pt; color: red'> x = %0.3f  µm, <span style='color: red'> y = %0.3f µm</span>, <span style='color: red'> OD = %0.2f</span>" % (x/self.scale - 0.5 * self.stk.x_pxsize, y/self.scale - 0.5 * self.stk.y_pxsize, self.OD[xi-1-int(x_min),yi-1-int(y_min)]))
-                    else: self.ODlabel.setText("")
+                    self.ODlabel.setText("<span style='font-size: 8pt; color: red'> x = %0.3f  µm, <span style='color: red'> y = %0.3f µm</span>, <span style='color: red'> OD = %0.2f</span>" % (x/self.scale - 0.5 * self.stk.x_pxsize, y/self.scale - 0.5 * self.stk.y_pxsize, self.OD[xi-1-int(x_min),yi-1-int(y_min)]))
                 else:
                     x = int(mousePoint.x()) + 0.5
                     y = int(mousePoint.y()) + 0.5
                     pt = QtCore.QPointF(x,y)
-                    if self.p2.getViewBox().itemBoundingRect(self.m_item).contains(pt):
-                        self.ODlabel.setText(
-                            "<span style='font-size: 8pt; color: red'> x = %0.0f, <span style='color: red'> y = %0.0f</span>, <span style='color: red'> OD = %0.2f</span>" % (
-                            x, y,self.OD[int(x),int(y)]))
-                    else: self.ODlabel.setText("")
+                    self.ODlabel.setText("<span style='font-size: 8pt; color: red'> x = %0.0f, <span style='color: red'> y = %0.0f</span>, <span style='color: red'> OD = %0.2f</span>" % (x, y,self.OD[int(x),int(y)]))
                 #print(x,y)
                 self.vLine.setPos(x)
                 self.hLine.setPos(y)
             else:
+                self.ODlabel.setText("")
                 self.vLine.setZValue(-1000)
                 self.hLine.setZValue(-1000)
                 self.vLine.setPen("w")

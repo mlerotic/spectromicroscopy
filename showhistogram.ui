@@ -76,6 +76,31 @@
        </layout>
       </widget>
      </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="I0instructions">
+       <property name="maximumSize">
+        <size>
+         <width>425</width>
+         <height>16777215</height>
+        </size>
+       </property>
+       <property name="frameShadow">
+        <enum>QFrame::Sunken</enum>
+       </property>
+       <property name="lineWidth">
+        <number>5</number>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="margin">
+        <number>0</number>
+       </property>
+       <property name="indent">
+        <number>12</number>
+       </property>
+      </widget>
+     </item>
     </layout>
    </item>
   </layout>
