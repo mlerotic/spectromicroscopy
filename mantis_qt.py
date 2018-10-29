@@ -10517,6 +10517,7 @@ class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.vb.addItem(self.AbsImage, ignoreBounds=True)
         self.MaskImage = pg.ImageItem(border="k")
         self.vb.addItem(self.MaskImage)
+        self.redpix = np.zeros([self.stack.n_cols, self.stack.n_rows, 4], dtype=np.uint8)
         px = int(self.stack.n_cols*self.stack.n_rows * 0.98)  # 98% of total pixels
         fluxmax_limit = np.mean(np.partition(np.ravel(self.stack.averageflux), px)[:px]) # average brightness of the 2% of pixels with highest flux
         self.histmin = fluxmax_limit
@@ -10540,7 +10541,7 @@ class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
 
         y, x = np.histogram(histogram_data, bins=100)
 
-        self.region = pg.LinearRegionItem(brush=[255,0,0,45],bounds=[np.min(x)-1,np.max(x)+1])
+        self.region = pg.LinearRegionItem(brush=[255,0,0,45],bounds=[np.min(x),np.max(x)])
 
         self.region.setZValue(10)
 
@@ -10597,8 +10598,10 @@ class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
         io = np.vstack((np.zeros((max(0,left),np.shape(io)[1]), dtype=io.dtype), io))
         io = np.vstack((io,np.zeros((max(0,self.stack.n_cols-right), np.shape(io)[1]), dtype=io.dtype)))
         io = io[abs(min(left,0)):self.stack.n_cols-(min(0,left)),abs(min(top,0)):self.stack.n_rows-(min(0,top))]
-        io = 1 - io
-        self.MaskImage.setImage(io, opacity=0.3)
+        io_indices = np.where(io == 1)
+        self.redpix[:, :] = [0, 0, 0, 0]
+        self.redpix[io_indices] = (255,0,0,255)
+        self.MaskImage.setImage(self.redpix, opacity=0.3)
         self.MaskImage.setZValue(10)
 
     def OnMouseHover(self,ev):
@@ -10623,22 +10626,13 @@ class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
     def draw_image(self,fluxmin, fluxmax):
         self.I0instructions.setText(
             "Select the I0 region either from the histogram or from the image by drawing a polygon.")
-        hist_indices = np.where((fluxmin<self.stack.histogram)&(self.stack.histogram<fluxmax))
-        redpix = np.ones((self.stack.n_cols,self.stack.n_rows))
-        redpix[hist_indices] = 0
-        redpix = np.ma.array(redpix)
-        redpix_masked =  np.ma.masked_values(redpix, 1)
-        colormap = cm.get_cmap("autumn")
-        colormap._init()
-        lut = (colormap._lut * 255).view(np.ndarray)
-        self.MaskImage.setLookupTable(lut)
-
+        hist_indices = np.where((fluxmin<=self.stack.histogram)&(self.stack.histogram<=fluxmax))
+        self.redpix[:, :] = [0, 0, 0, 0]
+        self.redpix[hist_indices] = (255,0,0,255)
         self.AbsImage.setImage(self.stack.histogram)
-        if fluxmin == fluxmax:
-            self.MaskImage.setZValue(-10)
-        else:
-            self.MaskImage.setZValue(10)
-            self.MaskImage.setImage(redpix_masked,opacity = 0.3)
+        self.MaskImage.setImage(self.redpix, opacity = 0.3)
+        self.histmin = fluxmin
+        self.histmax = fluxmax
 
 #----------------------------------------------------------------------
     def OnAccept(self, evt):
