@@ -328,14 +328,12 @@ class data:
         return
         
         
-#----------------------------------------------------------------------   
-    def i0_from_histogram(self, fluxmin, fluxmax):
+#----------------------------------------------------------------------
+    def i0_from_histogram(self, i0_indices):
 
         self.evi0hist = self.ev.copy()
 
-
-        
-        i0_indices = np.where((fluxmin<self.averageflux)&(self.averageflux<fluxmax))
+        #i0_indices = np.where((fluxmin<=self.averageflux)&(self.averageflux<=fluxmax))
 
         self.evi0 = self.ev.copy()
         
@@ -350,7 +348,6 @@ class data:
                     thiseng_abs = self.absdata[:,:,ie]
                     self.i0datahist[ie] = np.sum(thiseng_abs[i0_indices])*invnumel
 
-        
             self.calculate_optical_density()   
             
         else:

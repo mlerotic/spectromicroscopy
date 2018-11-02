@@ -8884,7 +8884,7 @@ class PageStack(QtWidgets.QWidget):
         self.button_i0ffile.clicked.connect(self.OnI0FFile)
         self.button_i0ffile.setEnabled(False)
         vbox1b.addWidget(self.button_i0ffile)
-        self.button_i0histogram = QtWidgets.QPushButton('I0 from histogram...')
+        self.button_i0histogram = QtWidgets.QPushButton('Select I0...')
         self.button_i0histogram.clicked.connect( self.OnI0histogram)
         self.button_i0histogram.setEnabled(False)
         vbox1b.addWidget(self.button_i0histogram)
@@ -10511,7 +10511,6 @@ class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.vb.setAspectLocked()
         self.AbsImage = pg.ImageItem(border="k",parent= self)
 
-        self.PolygonROI = False
         self.proxy = pg.SignalProxy(self.vb.scene().sigMouseMoved, rateLimit=30, slot=self.OnMouseHover)
         self.vb.setMouseEnabled(x=False, y=False)
         self.vb.addItem(self.AbsImage, ignoreBounds=True)
@@ -10564,7 +10563,6 @@ class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
 
         plot.plot(x, y, stepMode=True, fillLevel=0, brush=(0, 0, 255, 150))
         def update(region):
-            self.PolygonROI = False
             self.region.setZValue(10)
             minX, maxX = region
             self.draw_image(minX, maxX)
@@ -10587,20 +10585,34 @@ class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
             self.I0instructions.setText("Drag the polygon or the handles. Add handles by clicking on a line segment.")
 
     def DrawROI(self):
-        self.PolygonROI = True
-        left = int(np.round(self.vb.itemBoundingRect(self.I0box).left(),0))
-        right = int(np.round(self.vb.itemBoundingRect(self.I0box).right(),0))
-        bottom = int(np.round(self.vb.itemBoundingRect(self.I0box).bottom(),0))
-        top = int(np.round(self.vb.itemBoundingRect(self.I0box).top(),0))
-        io = self.I0box.getArrayRegion(np.ones((self.stack.n_cols,self.stack.n_rows)),self.MaskImage)
-        io = np.hstack((np.zeros((np.shape(io)[0],max(0,top)), dtype=io.dtype),io))
-        io = np.hstack((io,np.zeros((np.shape(io)[0],max(0,self.stack.n_rows-bottom)), dtype=io.dtype)))
-        io = np.vstack((np.zeros((max(0,left),np.shape(io)[1]), dtype=io.dtype), io))
-        io = np.vstack((io,np.zeros((max(0,self.stack.n_cols-right), np.shape(io)[1]), dtype=io.dtype)))
-        io = io[abs(min(left,0)):self.stack.n_cols-(min(0,left)),abs(min(top,0)):self.stack.n_rows-(min(0,top))]
-        io_indices = np.where(io == 1)
+        left = int(round(self.vb.itemBoundingRect(self.I0box).left(),0))
+        right = int(round(self.vb.itemBoundingRect(self.I0box).right(),0))
+        top = int(round(self.vb.itemBoundingRect(self.I0box).bottom(),0))
+        bottom = int(round(self.vb.itemBoundingRect(self.I0box).top(),0))
+        #fill the selection polygon with ones and map to image coords
+        io = self.I0box.getArrayRegion(np.ones((self.stack.n_cols,self.stack.n_rows)),self.AbsImage)
+        #fill left and right margins with zeros
+        lzeros = np.zeros((max(0,left),np.shape(io)[1]), dtype=io.dtype)
+        rzeros = np.zeros((max(0,self.stack.n_cols-right), np.shape(io)[1]), dtype=io.dtype)
+        io = np.vstack((lzeros, io,rzeros))
+        # fill bottom and top margins with zeros
+        bzeros = np.zeros((np.shape(io)[0],(max(0,bottom))), dtype=io.dtype)
+        tzeros = np.zeros((np.shape(io)[0],(max(0,self.stack.n_rows-top))), dtype=io.dtype)
+        io = np.hstack((bzeros, io,tzeros))
+        #dilate mask to include border pixels:
+        if left <= 0:
+            io = ndimage.binary_dilation(io,structure=([[0, 1, 0], [0, 1, 0], [0, 0, 0]]))
+        if right >= self.stack.n_cols:
+            io = ndimage.binary_dilation(io,structure=([[0, 0, 0], [0, 1, 0], [0, 1, 0]]))
+        if bottom <= 0:
+            io = ndimage.binary_dilation(io,structure=([[0, 0, 0], [1, 1, 0], [0, 0, 0]]))
+        if top >= self.stack.n_rows:
+            io = ndimage.binary_dilation(io,structure=([[0, 0, 0], [0, 1, 1], [0, 0, 0]]))
+        #crop mask to common region:
+        io = io[abs(min(left,0)):self.stack.n_cols+abs(min(left,0)),abs(min(bottom,0)):self.stack.n_rows+abs(min(bottom,0))]
+        self.i0_indices = np.where(io == 1)
         self.redpix[:, :] = [0, 0, 0, 0]
-        self.redpix[io_indices] = (255,0,0,255)
+        self.redpix[self.i0_indices] = (255,0,0,255)
         self.MaskImage.setImage(self.redpix, opacity=0.3)
         self.MaskImage.setZValue(10)
 
@@ -10615,10 +10627,14 @@ class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
                 origin = self.vb.mapSceneToView(self.vb.scene().clickEvents[0].scenePos())
                 if origin.x() < 0:
                     x0 = 0-roipos.x()
+                elif origin.x() > self.stack.n_cols:
+                    x0 = self.stack.n_cols - roipos.x()
                 else:
                     x0 = np.round(origin.x()-roipos.x(),0)
                 if origin.y() < 0:
                     y0 = 0-roipos.y()
+                elif origin.y() > self.stack.n_rows:
+                    y0 = self.stack.n_rows - roipos.y()
                 else:
                     y0 = np.round(origin.y()-roipos.y(),0)
                 self.I0box.setPoints([(np.round(pos.x()-roipos.x(),0),np.round(pos.y()-roipos.y(),0)), (x0,np.round(pos.y()-roipos.y(),0)),(x0,y0),(np.round(pos.x()-roipos.x(),0),y0)], closed=True)
@@ -10626,22 +10642,17 @@ class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
     def draw_image(self,fluxmin, fluxmax):
         self.I0instructions.setText(
             "Select the I0 region either from the histogram or from the image by drawing a polygon.")
-        hist_indices = np.where((fluxmin<=self.stack.histogram)&(self.stack.histogram<=fluxmax))
+        self.i0_indices = np.where((fluxmin<=self.stack.histogram)&(self.stack.histogram<=fluxmax))
         self.redpix[:, :] = [0, 0, 0, 0]
-        self.redpix[hist_indices] = (255,0,0,255)
+        self.redpix[self.i0_indices] = (255,0,0,255)
         self.AbsImage.setImage(self.stack.histogram)
         self.MaskImage.setImage(self.redpix, opacity = 0.3)
-        self.histmin = fluxmin
-        self.histmax = fluxmax
 
 #----------------------------------------------------------------------
     def OnAccept(self, evt):
-        if self.PolygonROI == True:
-            QtWidgets.QMessageBox.warning(self, 'Error', 'I0 selection via polygon ROI is currently under construction.')
-        else:
-            self.stack.i0_from_histogram(self.histmin, self.histmax)
-            self.parent.I0histogramCalculated()
-            self.close()
+        self.stack.i0_from_histogram(self.i0_indices)
+        self.parent.I0histogramCalculated()
+        self.close()
 
 #----------------------------------------------------------------------
 class LimitEv(QtWidgets.QDialog):
