@@ -10510,8 +10510,7 @@ class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.vb = self.I0Widget.addViewBox()
         self.vb.setAspectLocked()
         self.AbsImage = pg.ImageItem(border="k",parent= self)
-
-        self.proxy = pg.SignalProxy(self.vb.scene().sigMouseMoved, rateLimit=30, slot=self.OnMouseHover)
+        self.lassopoints= []
         self.vb.setMouseEnabled(x=False, y=False)
         self.vb.addItem(self.AbsImage, ignoreBounds=True)
         self.MaskImage = pg.ImageItem(border="k")
@@ -10525,14 +10524,30 @@ class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.draw_image(self.histmin,self.histmax)
 
         self.I0box = pg.PolyLineROI([[1, 1], [0, 1], [0, 0], [1, 0]], pen=(5, 8), closed=True)
-
-        self.I0box.handlePen = QtGui.QPen(QtGui.QColor(255, 0, 128))
         self.vb.addItem(self.I0box, ignoreBounds=True)
         self.I0box.clearPoints()
-        self.I0box.setZValue(-10)
 
         self.clickdetector = QtCore.QTimer()
         self.clickdetector.timeout.connect(self.OnRelease)
+        self.radioLassoROI.toggled.connect(self.SetupROI)
+        self.SetupROI()
+
+    def SetupROI(self):
+        self.lassopoints = []
+        self.I0box.setZValue(-10)
+        self.MaskImage.setZValue(-10)
+        if self.radioLassoROI.isChecked():
+            self.proxy = pg.SignalProxy(self.vb.scene().sigMouseMoved, rateLimit=15, slot=self.OnMouseHover) # rate limit to avoid too many handles
+            self.I0box.handlePen = QtGui.QPen(QtGui.QColor(255, 0, 128, 0))
+        elif self.radioPolyROI.isChecked():
+            self.proxy = pg.SignalProxy(self.vb.scene().sigMouseMoved, rateLimit=30, slot=self.OnMouseHover)
+            self.I0box.handlePen = QtGui.QPen(QtGui.QColor(255, 0, 128, 255))
+        try:
+            self.I0box.sigRegionChangeFinished.disconnect(self.DrawROI)
+            self.I0box.clearPoints()
+            self.proxy.block = False
+        except:
+            pass
 
 #----------------------------------------------------------------------
     def draw_histogram(self):
@@ -10566,12 +10581,8 @@ class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
             self.region.setZValue(10)
             minX, maxX = region
             self.draw_image(minX, maxX)
-            try:
-                self.I0box.sigRegionChangeFinished.disconnect(self.DrawROI)
-                self.I0box.clearPoints()
-                self.proxy.block = False
-            except:
-                pass
+            self.SetupROI()
+            self.MaskImage.setZValue(10)
 
         self.region.setRegion((self.histmin,self.histmax))
         self.region.sigRegionChanged.connect(lambda: update(self.region.getRegion()))
@@ -10580,9 +10591,15 @@ class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
         if not self.vb.scene().clickEvents:
             self.proxy.block = True
             self.DrawROI()
+            self.I0instructions.setText("Drag the polygon or the handles. Add handles by clicking on a line segment.")
+            if self.radioLassoROI.isChecked():
+                self.lassopoints= []
+                while len(self.I0box.getHandles()) > 0:
+                    self.I0box.removeHandle(self.I0box.getHandles()[0], updateSegments=True)
+                    self.I0instructions.setText("")
             self.I0box.sigRegionChangeFinished.connect(self.DrawROI)
             self.clickdetector.stop()
-            self.I0instructions.setText("Drag the polygon or the handles. Add handles by clicking on a line segment.")
+
 
     def DrawROI(self):
         left = int(round(self.vb.itemBoundingRect(self.I0box).left(),0))
@@ -10624,24 +10641,32 @@ class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
                 self.MaskImage.setZValue(-10)
                 self.I0box.setZValue(10)
                 self.clickdetector.start(10)
-                origin = self.vb.mapSceneToView(self.vb.scene().clickEvents[0].scenePos())
-                if origin.x() < 0:
-                    x0 = 0-roipos.x()
-                elif origin.x() > self.stack.n_cols:
-                    x0 = self.stack.n_cols - roipos.x()
-                else:
-                    x0 = np.round(origin.x()-roipos.x(),0)
-                if origin.y() < 0:
-                    y0 = 0-roipos.y()
-                elif origin.y() > self.stack.n_rows:
-                    y0 = self.stack.n_rows - roipos.y()
-                else:
-                    y0 = np.round(origin.y()-roipos.y(),0)
-                self.I0box.setPoints([(np.round(pos.x()-roipos.x(),0),np.round(pos.y()-roipos.y(),0)), (x0,np.round(pos.y()-roipos.y(),0)),(x0,y0),(np.round(pos.x()-roipos.x(),0),y0)], closed=True)
+                if self.radioPolyROI.isChecked():
+                    origin = self.vb.mapSceneToView(self.vb.scene().clickEvents[0].scenePos())
+                    if origin.x() < 0:
+                        x0 = 0-roipos.x()
+                    elif origin.x() > self.stack.n_cols:
+                        x0 = self.stack.n_cols - roipos.x()
+                    else:
+                        x0 = np.round(origin.x()-roipos.x(),0)
+                    if origin.y() < 0:
+                        y0 = 0-roipos.y()
+                    elif origin.y() > self.stack.n_rows:
+                        y0 = self.stack.n_rows - roipos.y()
+                    else:
+                        y0 = np.round(origin.y()-roipos.y(),0)
+                    self.I0box.setPoints([(np.round(pos.x()-roipos.x(),0),np.round(pos.y()-roipos.y(),0)), (x0,np.round(pos.y()-roipos.y(),0)),(x0,y0),(np.round(pos.x()-roipos.x(),0),y0)], closed=True)
+
+                elif self.radioLassoROI.isChecked():
+                    handle = self.I0box.addFreeHandle((np.round(pos.x()-roipos.x(),0),np.round(pos.y()-roipos.y(),0)))
+                    self.lassopoints.append(handle)
+                    if len(self.lassopoints) > 1:
+                        self.I0box.addSegment(self.lassopoints[0], self.lassopoints[1])
+                        self.lassopoints.pop(0)
 
     def draw_image(self,fluxmin, fluxmax):
         self.I0instructions.setText(
-            "Select the I0 region either from the histogram or from the image by drawing a polygon.")
+            "Select I0 by dragging the histogram lines or by drawing a ROI.")
         self.i0_indices = np.where((fluxmin<=self.stack.histogram)&(self.stack.histogram<=fluxmax))
         self.redpix[:, :] = [0, 0, 0, 0]
         self.redpix[self.i0_indices] = (255,0,0,255)
@@ -10650,9 +10675,13 @@ class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
 
 #----------------------------------------------------------------------
     def OnAccept(self, evt):
-        self.stack.i0_from_histogram(self.i0_indices)
-        self.parent.I0histogramCalculated()
-        self.close()
+        if self.MaskImage.zValue() > 0 and np.any(self.i0_indices[0]):
+            self.stack.i0_from_histogram(self.i0_indices)
+            self.parent.I0histogramCalculated()
+            self.close()
+        else:
+            self.i0_indices = []
+            QtWidgets.QMessageBox.warning(self, 'Error', 'I0 region is empty!')
 
 #----------------------------------------------------------------------
 class LimitEv(QtWidgets.QDialog):
@@ -13995,9 +14024,8 @@ class PageMap(QtWidgets.QWidget):
                 self.hLine.setPen("w")
 
     def setODbar(self,min=None,max=None):
-        if min and max:
-            self.cm.setRange(xRange=[0,1], yRange=[min,max], update=False, disableAutoRange=True,padding=0)
-            self.cmimg.setRect(QtCore.QRectF(0,min,1,max-min))
+        self.cm.setRange(xRange=[0,1], yRange=[min,max], update=False, disableAutoRange=True,padding=0)
+        self.cmimg.setRect(QtCore.QRectF(0,min,1,max-min))
 
     def keyPressEvent(self, e):
         modifiers = QtWidgets.QApplication.keyboardModifiers()
