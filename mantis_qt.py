@@ -577,6 +577,7 @@ class PageTomo(QtWidgets.QWidget):
                                                          None, QtWidgets.QFileDialog.DontUseNativeDialog)
 
         OpenFileName = str(OpenFileName)
+
         if OpenFileName == '':
             return
 
@@ -585,11 +586,6 @@ class PageTomo(QtWidgets.QWidget):
         if extension == '.mrc':
 
             data = tomo_reconstruction.load_mrc(OpenFileName)
-
-            #print data.shape
-
-            #data = data[:,256:768,256:768]
-
             dims = data.shape
 
             #Read energies from file
@@ -1241,6 +1237,7 @@ class PageTomo(QtWidgets.QWidget):
         fig.add_axes(((0.0,0.0,1.0,1.0)))
         axes = fig.gca()
         fig.patch.set_alpha(1.0)
+
 
         im = axes.imshow(np.rot90(image), cmap=matplotlib.cm.get_cmap("gray"))
 
