@@ -12651,7 +12651,25 @@ class ImageRegistration(QtWidgets.QDialog):
         self.ShowImage()
         self.slider_eng.setValue(self.iev)
 
+        self.regist_calculated = 1
+        self.man_align = 0
+
+        self.textctrl_ms1.setText('X manual shift: \n')
+        self.textctrl_ms2.setText('Y manual shift: ')
+
         self.UpdateWidgets()
+
+        min_xshift = np.min(self.xshifts)
+        max_xshift = np.max(self.xshifts)
+
+        min_yshift = np.min(self.yshifts)
+        max_yshift = np.max(self.yshifts)
+
+        if min_xshift < self.minxs : self.minxs = min_xshift
+        if max_xshift > self.maxxs : self.maxxs = max_xshift
+
+        if min_yshift < self.minys : self.minys = min_yshift
+        if max_yshift > self.maxys : self.maxys = max_yshift
 
 
 #----------------------------------------------------------------------

@@ -888,23 +888,23 @@ class data:
 #----------------------------------------------------------------------   
 #Apply image registration
     def crop_registed_images(self, images, min_xshift, max_xshift, min_yshift, max_yshift):
-                
+        
         # if the image is moved to the right (positive) we need to crop the left side 
-        xleft = np.ceil(max_xshift)
+        xleft = int(np.ceil(max_xshift))
         if xleft < 0:
             xleft = 0
         # if the image is moved to the left (negative) we need to crop the right side 
-        xright = np.floor(self.n_cols+min_xshift)
+        xright = int(np.floor(self.n_cols+min_xshift))
         if xright>(self.n_cols):
-            xright = self.n_cols
+            xright = int(self.n_cols)
         
-        ybottom = np.ceil(max_yshift)
-        if ybottom <0:
+        ybottom = int(np.ceil(max_yshift))
+        if ybottom < 0:
             ybottom = 0
-        ytop = np.floor(self.n_rows+min_yshift)
+        ytop = int(np.floor(self.n_rows+min_yshift))
         if ytop > (self.n_rows):
-            ytop = self.n_rows
-            
+            ytop = int(self.n_rows)
+        
         if self.stack4D is not None:
             cropped_stack = images[xleft:xright, ybottom:ytop, :, :]
         else:
