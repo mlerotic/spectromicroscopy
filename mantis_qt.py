@@ -52,6 +52,7 @@ from file_plugins import file_dataexch_hdf5
 from file_plugins import file_ncb
 from file_plugins import file_tif
 from file_plugins import file_stk
+from file_plugins import file_csv
 
 
 version = '2.4.01'
@@ -14631,7 +14632,7 @@ class MainFrame(QtWidgets.QMainWindow):
         try:
         #if True:
             #wildcard = "HDF5 file (*.hdf5);;aXis2000 NCB file (*.ncb);;TIFF file (.tif);;STK file (*.stk);;"
-            wildcard = "HDF5 file (*.hdf5);;aXis2000 NCB file (*.ncb);;TIFF file (.tif)"
+            wildcard = "HDF5 file (*.hdf5);;aXis2000 NCB file (*.ncb);;TIFF file (.tif);;I0 spectrum file (*.csv)"
 
             filepath, _filter = QtWidgets.QFileDialog.getSaveFileName(self, 'Save processed stack', '', wildcard)
 
@@ -14654,6 +14655,9 @@ class MainFrame(QtWidgets.QMainWindow):
 
             elif extension == '.tif':
                 file_tif.write_tif(filepath, self.stk.absdata, energies=self.stk.ev)
+
+            elif extension == '.csv':
+                file_csv.write(filepath, np.average(self.stk.absdata,axis=(0,1)), energies=self.stk.ev, title='I0 Spectrum')
 
 
 
