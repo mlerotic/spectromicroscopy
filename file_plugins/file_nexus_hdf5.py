@@ -24,7 +24,7 @@ from collections import OrderedDict
 title = 'NXstxm'
 extension = ['*.hdf','*.hdf5','*.nxs']
 read_types = ['spectrum','image','stack']
-write_types = ['spectrum','image','stack']
+write_types = []#'spectrum','image','stack']
 
 def identify(filename):
     try:

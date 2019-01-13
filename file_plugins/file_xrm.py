@@ -27,7 +27,7 @@ import data_struct as ds
 title = 'XRM'
 extension = ['*.xrm','*.txrm']
 read_types = ['spectrum','image','stack']
-write_types = ['spectrum','image','stack']
+write_types = []
 
 
 def identify(filename):

@@ -85,19 +85,19 @@ for m in pkgutil.iter_modules(path=__path__):
 
 # Go through set of plugins and assemble lists of supported file types for each action and data type
 supported_filters = dict([a,dict([t,[]] for t in data_types)] for a in actions)
+supported_plugins = dict([a,dict([t,[]] for t in data_types)] for a in actions)
 filter_list = dict([a,dict([t,[]] for t in data_types)] for a in actions)
 for P in plugins:
     for action in actions:
         for data_type in data_types:
             if data_type in getattr(P,action+'_types'):
                 filter_list[action][data_type].append(P.title+' ('+' '.join(P.extension)+')')
+                supported_plugins[action][data_type].append(P)
                 for ext in P.extension:
                     if ext not in supported_filters[action][data_type]:
                         supported_filters[action][data_type].append(ext)
-for action in actions:
-    for data_type in data_types:
-        filter_list[action][data_type] = ['Supported Formats ('+' '.join(supported_filters[action][data_type])+')']+filter_list[action][data_type]
 for data_type in data_types:
+    filter_list['read'][data_type] = ['Supported Formats ('+' '.join(supported_filters['read'][data_type])+')']+filter_list['read'][data_type]
     filter_list['read'][data_type].append('All files (*.*)')
 
 
@@ -133,6 +133,12 @@ def load(filename, stack_object=None, plugin=None, selection=None, json=None):
             stack_object.n_rows = len(stack_object.y_dist)
             return
 
+def save(filename, data_object, data_type, plugin=None):
+    """
+    Pass the save command over to the appropriate plugin so that it can write data to the named file.
+    """
+    print("save", filename, "with the", plugin.title, "plugin.")
+    plugin.write(filename, data_object, data_type)
 
 def GetFileStructure(filename, plugin=None):
     """

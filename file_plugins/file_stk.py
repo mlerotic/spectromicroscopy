@@ -27,7 +27,7 @@ import os
 title = 'STK'
 extension = ['*.stk']
 read_types = ['spectrum','image','stack']
-write_types = ['spectrum','image','stack']
+write_types = []
 
 
 def identify(filename):

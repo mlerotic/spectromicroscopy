@@ -23,7 +23,7 @@ import os
 title = 'text spectrum'
 extension = ['*.csv','*.txt','*.xas']
 read_types = ['spectrum']
-write_types = ['spectrum']
+write_types = ['spectrum','stack']
 
 
 def identify(filename):
@@ -64,8 +64,15 @@ def read(filename, self, selection=None, *args, **kwargs):
     return
     
 #----------------------------------------------------------------------
+def write(filename, data_object, data_type):
+    """Switchyard for writing different types of data."""
+    if data_type in ['spectrum']:
+        write_spectrum(filename, data_object.absdata, data_object.ev)
+    elif data_type in ['stack']:
+        write_spectrum(filename, np.average(data_object.absdata,axis=(0,1)), energies=data_object.ev, title='I0 Spectrum')
 
-def write(filename, data, energies, title=None ):
+#----------------------------------------------------------------------
+def write_spectrum(filename, data, energies, title=None ):
     if title is None:
         title = 'Spectrum'
     

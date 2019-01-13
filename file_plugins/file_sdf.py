@@ -26,7 +26,7 @@ from collections import OrderedDict
 title = 'SDF'
 extension = ['*.hdr']
 read_types = ['spectrum','image','stack']
-write_types = ['spectrum','image','stack']
+write_types = []
 def identify(filename):
     try:
         if isfile(splitext(filename)[0] + '.json'):

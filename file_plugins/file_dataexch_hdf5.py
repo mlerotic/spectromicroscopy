@@ -330,7 +330,7 @@ def read(filename, self, selection=None, *args, **kwargs):
 
             dseng = exchangeGrp['energy']
             data_struct.exchange.energy = dseng[...]
-            #data_struct.exchange.energy_units = dseng.attrs['units']
+            data_struct.exchange.energy_units = dseng.attrs['units']
 
         else:
             # Version 1.0
@@ -503,8 +503,13 @@ def read(filename, self, selection=None, *args, **kwargs):
     return
 
 #----------------------------------------------------------------------
-def write_h5(filename, data_struct):
+def write(filename, data_object, data_type):
+    """Switchyard for writing different types of data."""
+    if data_type in ['stack']:
+        write_h5(filename, data_object.data_struct)
 
+#----------------------------------------------------------------------
+def write_h5(filename, data_struct):
     # Open HDF5 file
     f = h5py.File(filename, 'w')
 
@@ -518,324 +523,328 @@ def write_h5(filename, data_struct):
 
 
     #Information HDF5 group
-    informationGrp = f.create_group('information')
-    if data_struct.information.title is not None:
-        ds = informationGrp.create_dataset('title', data = data_struct.information.title)
-    if data_struct.information.comment is not None:
-        ds = informationGrp.create_dataset('comment', data = str(data_struct.information.comment))
-    if data_struct.information.file_creation_datetime is not None:
-        ds = informationGrp.create_dataset('file_creation_datetime', data = str(data_struct.information.file_creation_datetime))
+    if 'information' in dir(data_struct):
+        informationGrp = f.create_group('information')
+        if data_struct.information.title is not None:
+            ds = informationGrp.create_dataset('title', data = data_struct.information.title)
+        if data_struct.information.comment is not None:
+            ds = informationGrp.create_dataset('comment', data = str(data_struct.information.comment))
+        if data_struct.information.file_creation_datetime is not None:
+            ds = informationGrp.create_dataset('file_creation_datetime', data = str(data_struct.information.file_creation_datetime))
 
-    # /ids
-    idsGrp = informationGrp.create_group('ids')
-    have_ids = 0
-    if data_struct.information.ids.proposal is not None:
-        ds = idsGrp.create_dataset('proposal', data = data_struct.information.ids.proposal)
-        have_ids = 1
-    if data_struct.information.ids.activity is not None:
-        ds = idsGrp.create_dataset('activity', data = data_struct.information.ids.activity)
-        have_ids = 1
-    if data_struct.information.ids.esaf is not None:
-        ds = idsGrp.create_dataset('esaf', data = data_struct.information.ids.esaf)
-        have_ids = 1
-    if have_ids == 0:
-        del informationGrp['ids']
-
-
-
-    # /experimenter
-    experimenterGrp = informationGrp.create_group('experimenter')
-    have_exp = 0
-    if data_struct.information.experimenter.name is not None:
-        ds = experimenterGrp.create_dataset('name', data = str(data_struct.information.experimenter.name))
-        have_exp = 1
-    if data_struct.information.experimenter.role is not None:
-        ds = experimenterGrp.create_dataset('role', data = data_struct.information.experimenter.role)
-        have_exp = 1
-    if data_struct.information.experimenter.affiliation is not None:
-        ds = experimenterGrp.create_dataset('affiliation', data = data_struct.information.experimenter.affiliation)
-        have_exp = 1
-    if data_struct.information.experimenter.address is not None:
-        ds = experimenterGrp.create_dataset('address', data = data_struct.information.experimenter.address)
-        have_exp = 1
-    if data_struct.information.experimenter.phone is not None:
-        ds = experimenterGrp.create_dataset('phone', data = data_struct.information.experimenter.phone)
-        have_exp = 1
-    if data_struct.information.experimenter.email is not None:
-        ds = experimenterGrp.create_dataset('email', data = data_struct.information.experimenter.email)
-        have_exp = 1
-    if data_struct.information.experimenter.facility_user_id is not None:
-        ds = experimenterGrp.create_dataset('facility_user_id', data = data_struct.information.experimenter.facility_user_id)
-        have_exp = 1
-    if have_exp == 0:
-        del informationGrp['experimenter']
-
-
-    # /sample
-    sampleGrp = informationGrp.create_group('sample')
-    have_samp = 0
-    if  data_struct.information.sample.name is not None:
-        ds = sampleGrp.create_dataset('name', data = str(data_struct.information.sample.name))
-        have_samp = 1
-    if  data_struct.information.sample.description is not None:
-        ds = sampleGrp.create_dataset('description', data = data_struct.information.sample.description)
-        have_samp = 1
-    if  data_struct.information.sample.preparation_datetime is not None:
-        ds = sampleGrp.create_dataset('preparation_datetime', data = data_struct.information.sample.preparation_datetime)
-        have_samp = 1
-    if  data_struct.information.sample.chemical_formula is not None:
-        ds = sampleGrp.create_dataset('chemical_formula', data = data_struct.information.chemical_formula)
-        have_samp = 1
-    if  data_struct.information.sample.environment is not None:
-        ds = sampleGrp.create_dataset('environment', data = data_struct.information.sample.environment)
-        have_samp = 1
-    if  data_struct.information.sample.temperature is not None:
-        ds = sampleGrp.create_dataset('temperature', data = data_struct.information.sample.temperature)
-        ds.attrs['units'] = data_struct.information.sample.temperature_units
-        have_samp = 1
-    if  data_struct.information.sample.pressure is not None:
-        ds = sampleGrp.create_dataset('pressure', data = data_struct.information.sample.pressure)
-        ds.attrs['units'] = data_struct.information.sample.pressure_units
-        have_samp = 1
-    if have_samp == 0:
-        del informationGrp['sample']
-
-
-    # /objective
-    objectiveGrp = informationGrp.create_group('objective')
-    have_obj = 0
-    if data_struct.information.objective.manufacturer is not None:
-        ds = objectiveGrp.create_dataset('manufacturer', data = data_struct.information.objective.manufacturer)
-        have_obj = 1
-    if data_struct.information.objective.model is not None:
-        ds = objectiveGrp.create_dataset('model', data = data_struct.information.objective.model)
-        have_obj = 1
-    if data_struct.information.objective.comment is not None:
-        ds = objectiveGrp.create_dataset('comment', data = data_struct.information.objective.comment)
-        have_obj = 1
-    if data_struct.information.objective.magnification is not None:
-        ds = objectiveGrp.create_dataset('magnification', data = data_struct.information.objective.magnification)
-        have_obj = 1
-    if have_obj == 0:
-        del informationGrp['objective']
+        # /ids
+        idsGrp = informationGrp.create_group('ids')
+        have_ids = 0
+        if data_struct.information.ids.proposal is not None:
+            ds = idsGrp.create_dataset('proposal', data = data_struct.information.ids.proposal)
+            have_ids = 1
+        if data_struct.information.ids.activity is not None:
+            ds = idsGrp.create_dataset('activity', data = data_struct.information.ids.activity)
+            have_ids = 1
+        if data_struct.information.ids.esaf is not None:
+            ds = idsGrp.create_dataset('esaf', data = data_struct.information.ids.esaf)
+            have_ids = 1
+        if have_ids == 0:
+            del informationGrp['ids']
 
 
 
-    # /scintillator
-
-    scintGrp = informationGrp.create_group('scintillator')
-    have_scint = 0
-    if data_struct.information.scintillator.name is not None:
-        ds = scintGrp.create_dataset('name', data = data_struct.information.scintillator.name)
-        have_scint = 1
-    if data_struct.information.scintillator.type is not None:
-        ds = scintGrp.create_dataset('type', data = data_struct.information.scintillator.type)
-        have_scint = 1
-    if data_struct.information.scintillator.comment is not None:
-        ds = scintGrp.create_dataset('comment', data = data_struct.information.scintillator.comment)
-        have_scint = 1
-    if data_struct.information.scintillator.scintillating_thickness is not None:
-        ds = scintGrp.create_dataset('scintillating_thickness', data = data_struct.information.scintillator.scintillating_thickness)
-        ds.attrs['units'] = data_struct.information.scintillator.scintillating_thickness_units
-        have_scint = 1
-    if data_struct.information.scintillator.substrate_thickness is not None:
-        ds = scintGrp.create_dataset('substrate_thickness', data = data_struct.information.scintillator.substrate_thickness)
-        ds.attrs['units'] = data_struct.information.scintillator.substrate_thickness_units
-        have_scint = 1
-    if have_scint == 0:
-        del informationGrp['scintillator']
-
-
-    # /facility
-    facilityGrp = informationGrp.create_group('facility')
-    have_fac = 0
-    if data_struct.information.facility.name is not None:
-        ds = facilityGrp.create_dataset('name', data = data_struct.information.facility.name)
-        have_fac = 1
-    if data_struct.information.facility.beamline is not None:
-        ds = facilityGrp.create_dataset('beamline', data = data_struct.information.facility.beamline)
-        have_fac = 1
-    if have_fac == 0:
-        del informationGrp['facility']
+        # /experimenter
+        experimenterGrp = informationGrp.create_group('experimenter')
+        have_exp = 0
+        if data_struct.information.experimenter.name is not None:
+            ds = experimenterGrp.create_dataset('name', data = str(data_struct.information.experimenter.name))
+            have_exp = 1
+        if data_struct.information.experimenter.role is not None:
+            ds = experimenterGrp.create_dataset('role', data = data_struct.information.experimenter.role)
+            have_exp = 1
+        if data_struct.information.experimenter.affiliation is not None:
+            ds = experimenterGrp.create_dataset('affiliation', data = data_struct.information.experimenter.affiliation)
+            have_exp = 1
+        if data_struct.information.experimenter.address is not None:
+            ds = experimenterGrp.create_dataset('address', data = data_struct.information.experimenter.address)
+            have_exp = 1
+        if data_struct.information.experimenter.phone is not None:
+            ds = experimenterGrp.create_dataset('phone', data = data_struct.information.experimenter.phone)
+            have_exp = 1
+        if data_struct.information.experimenter.email is not None:
+            ds = experimenterGrp.create_dataset('email', data = data_struct.information.experimenter.email)
+            have_exp = 1
+        if data_struct.information.experimenter.facility_user_id is not None:
+            ds = experimenterGrp.create_dataset('facility_user_id', data = data_struct.information.experimenter.facility_user_id)
+            have_exp = 1
+        if have_exp == 0:
+            del informationGrp['experimenter']
 
 
-    # /accelerator
-    acceleratorGrp = informationGrp.create_group('accelerator')
-    have_ac = 0
-    if data_struct.information.accelerator.ring_current is not None:
-        ds = acceleratorGrp.create_dataset('ring_current', data = data_struct.information.accelerator.ring_current)
-        ds.attrs['units'] = data_struct.information.accelerator.ring_current_units
-        have_ac = 1
-    if data_struct.information.accelerator.primary_beam_energy is not None:
-        ds = acceleratorGrp.create_dataset('primary_beam_energy', data = data_struct.information.accelerator.primary_beam_energy)
-        ds.attrs['units'] = data_struct.information.accelerator.primary_beam_energy_units
-        have_ac = 1
-    if data_struct.information.accelerator.monostripe is not None:
-        ds = acceleratorGrp.create_dataset('monostripe', data = data_struct.information.accelerator.monostripe)
-        have_ac = 1
-    if have_ac == 0:
-        del informationGrp['accelerator']
+        # /sample
+        sampleGrp = informationGrp.create_group('sample')
+        have_samp = 0
+        if  data_struct.information.sample.name is not None:
+            ds = sampleGrp.create_dataset('name', data = str(data_struct.information.sample.name))
+            have_samp = 1
+        if  data_struct.information.sample.description is not None:
+            ds = sampleGrp.create_dataset('description', data = data_struct.information.sample.description)
+            have_samp = 1
+        if  data_struct.information.sample.preparation_datetime is not None:
+            ds = sampleGrp.create_dataset('preparation_datetime', data = data_struct.information.sample.preparation_datetime)
+            have_samp = 1
+        if  data_struct.information.sample.chemical_formula is not None:
+            ds = sampleGrp.create_dataset('chemical_formula', data = data_struct.information.chemical_formula)
+            have_samp = 1
+        if  data_struct.information.sample.environment is not None:
+            ds = sampleGrp.create_dataset('environment', data = data_struct.information.sample.environment)
+            have_samp = 1
+        if  data_struct.information.sample.temperature is not None:
+            ds = sampleGrp.create_dataset('temperature', data = data_struct.information.sample.temperature)
+            ds.attrs['units'] = data_struct.information.sample.temperature_units
+            have_samp = 1
+        if  data_struct.information.sample.pressure is not None:
+            ds = sampleGrp.create_dataset('pressure', data = data_struct.information.sample.pressure)
+            ds.attrs['units'] = data_struct.information.sample.pressure_units
+            have_samp = 1
+        if have_samp == 0:
+            del informationGrp['sample']
+
+
+        # /objective
+        objectiveGrp = informationGrp.create_group('objective')
+        have_obj = 0
+        if data_struct.information.objective.manufacturer is not None:
+            ds = objectiveGrp.create_dataset('manufacturer', data = data_struct.information.objective.manufacturer)
+            have_obj = 1
+        if data_struct.information.objective.model is not None:
+            ds = objectiveGrp.create_dataset('model', data = data_struct.information.objective.model)
+            have_obj = 1
+        if data_struct.information.objective.comment is not None:
+            ds = objectiveGrp.create_dataset('comment', data = data_struct.information.objective.comment)
+            have_obj = 1
+        if data_struct.information.objective.magnification is not None:
+            ds = objectiveGrp.create_dataset('magnification', data = data_struct.information.objective.magnification)
+            have_obj = 1
+        if have_obj == 0:
+            del informationGrp['objective']
+
+
+
+        # /scintillator
+
+        scintGrp = informationGrp.create_group('scintillator')
+        have_scint = 0
+        if data_struct.information.scintillator.name is not None:
+            ds = scintGrp.create_dataset('name', data = data_struct.information.scintillator.name)
+            have_scint = 1
+        if data_struct.information.scintillator.type is not None:
+            ds = scintGrp.create_dataset('type', data = data_struct.information.scintillator.type)
+            have_scint = 1
+        if data_struct.information.scintillator.comment is not None:
+            ds = scintGrp.create_dataset('comment', data = data_struct.information.scintillator.comment)
+            have_scint = 1
+        if data_struct.information.scintillator.scintillating_thickness is not None:
+            ds = scintGrp.create_dataset('scintillating_thickness', data = data_struct.information.scintillator.scintillating_thickness)
+            ds.attrs['units'] = data_struct.information.scintillator.scintillating_thickness_units
+            have_scint = 1
+        if data_struct.information.scintillator.substrate_thickness is not None:
+            ds = scintGrp.create_dataset('substrate_thickness', data = data_struct.information.scintillator.substrate_thickness)
+            ds.attrs['units'] = data_struct.information.scintillator.substrate_thickness_units
+            have_scint = 1
+        if have_scint == 0:
+            del informationGrp['scintillator']
+
+
+        # /facility
+        facilityGrp = informationGrp.create_group('facility')
+        have_fac = 0
+        if data_struct.information.facility.name is not None:
+            ds = facilityGrp.create_dataset('name', data = data_struct.information.facility.name)
+            have_fac = 1
+        if data_struct.information.facility.beamline is not None:
+            ds = facilityGrp.create_dataset('beamline', data = data_struct.information.facility.beamline)
+            have_fac = 1
+        if have_fac == 0:
+            del informationGrp['facility']
+
+
+        # /accelerator
+        acceleratorGrp = informationGrp.create_group('accelerator')
+        have_ac = 0
+        if data_struct.information.accelerator.ring_current is not None:
+            ds = acceleratorGrp.create_dataset('ring_current', data = data_struct.information.accelerator.ring_current)
+            ds.attrs['units'] = data_struct.information.accelerator.ring_current_units
+            have_ac = 1
+        if data_struct.information.accelerator.primary_beam_energy is not None:
+            ds = acceleratorGrp.create_dataset('primary_beam_energy', data = data_struct.information.accelerator.primary_beam_energy)
+            ds.attrs['units'] = data_struct.information.accelerator.primary_beam_energy_units
+            have_ac = 1
+        if data_struct.information.accelerator.monostripe is not None:
+            ds = acceleratorGrp.create_dataset('monostripe', data = data_struct.information.accelerator.monostripe)
+            have_ac = 1
+        if have_ac == 0:
+            del informationGrp['accelerator']
 
 
 
 
-    # /detector
-    detectorGrp = informationGrp.create_group('detector')
-    have_detc = 0
-    if data_struct.information.detector.manufacturer is not None:
-        ds = detectorGrp.create_dataset('manufacturer', data = data_struct.information.detector.manufacturer)
-        have_detc = 1
-    if data_struct.information.detector.model is not None:
-        ds = detectorGrp.create_dataset('model', data = data_struct.information.detector.model)
-        have_detc = 1
-    if data_struct.information.detector.serial_number is not None:
-        ds = detectorGrp.create_dataset('serial_number', data = data_struct.information.detector.serial_number)
-        have_detc = 1
-    if data_struct.information.detector.bit_depth is not None:
-        ds = detectorGrp.create_dataset('bit_depth', data = data_struct.information.detector.bit_depth)
-        have_detc = 1
-    if data_struct.information.detector.operating_temperature is not None:
-        ds = detectorGrp.create_dataset('operating_temperature', data = data_struct.information.detector.operating_temperature)
-        ds.attrs['units'] = data_struct.information.detector.operating_temperature_units
-        have_detc = 1
-    if data_struct.information.detector.exposure_time is not None:
-        ds = detectorGrp.create_dataset('exposure_time', data = data_struct.information.detector.exposure_time)
-        ds.attrs['units'] = data_struct.information.detector.exposure_time_units
-        have_detc = 1
-    if data_struct.information.detector.frame_rate is not None:
-        ds = detectorGrp.create_dataset('frame_rate', data = data_struct.information.detector.frame_rate)
-        have_detc = 1
+        # /detector
+        detectorGrp = informationGrp.create_group('detector')
+        have_detc = 0
+        if data_struct.information.detector.manufacturer is not None:
+            ds = detectorGrp.create_dataset('manufacturer', data = data_struct.information.detector.manufacturer)
+            have_detc = 1
+        if data_struct.information.detector.model is not None:
+            ds = detectorGrp.create_dataset('model', data = data_struct.information.detector.model)
+            have_detc = 1
+        if data_struct.information.detector.serial_number is not None:
+            ds = detectorGrp.create_dataset('serial_number', data = data_struct.information.detector.serial_number)
+            have_detc = 1
+        if data_struct.information.detector.bit_depth is not None:
+            ds = detectorGrp.create_dataset('bit_depth', data = data_struct.information.detector.bit_depth)
+            have_detc = 1
+        if data_struct.information.detector.operating_temperature is not None:
+            ds = detectorGrp.create_dataset('operating_temperature', data = data_struct.information.detector.operating_temperature)
+            ds.attrs['units'] = data_struct.information.detector.operating_temperature_units
+            have_detc = 1
+        if data_struct.information.detector.exposure_time is not None:
+            ds = detectorGrp.create_dataset('exposure_time', data = data_struct.information.detector.exposure_time)
+            ds.attrs['units'] = data_struct.information.detector.exposure_time_units
+            have_detc = 1
+        if data_struct.information.detector.frame_rate is not None:
+            ds = detectorGrp.create_dataset('frame_rate', data = data_struct.information.detector.frame_rate)
+            have_detc = 1
 
-    if data_struct.information.detector.pixel_size.horizontal is not None:
-        psGrp = detectorGrp.create_group('pixel_size')
-        ds = psGrp.create_dataset('horizontal', data = data_struct.information.detector.pixel_size.horizontal)
-        ds.attrs['units'] = data_struct.information.detector.pixel_size.horizontal_units
-        ds = psGrp.create_dataset('vertical', data = data_struct.information.detector.pixel_size.vertical)
-        ds.attrs['units'] = data_struct.information.detector.pixel_size.vertical_units
-        have_detc = 1
+        if data_struct.information.detector.pixel_size.horizontal is not None:
+            psGrp = detectorGrp.create_group('pixel_size')
+            ds = psGrp.create_dataset('horizontal', data = data_struct.information.detector.pixel_size.horizontal)
+            ds.attrs['units'] = data_struct.information.detector.pixel_size.horizontal_units
+            ds = psGrp.create_dataset('vertical', data = data_struct.information.detector.pixel_size.vertical)
+            ds.attrs['units'] = data_struct.information.detector.pixel_size.vertical_units
+            have_detc = 1
 
-    if data_struct.information.detector.dimensions.horizontal is not None:
-        dimGrp = detectorGrp.create_group('dimensions')
-        ds = dimGrp.create_dataset('horizontal', data = data_struct.information.detector.dimensions.horizontal)
-        ds = dimGrp.create_dataset('vertical', data = data_struct.information.detector.dimensions.vertical)
-        have_detc = 1
+        if data_struct.information.detector.dimensions.horizontal is not None:
+            dimGrp = detectorGrp.create_group('dimensions')
+            ds = dimGrp.create_dataset('horizontal', data = data_struct.information.detector.dimensions.horizontal)
+            ds = dimGrp.create_dataset('vertical', data = data_struct.information.detector.dimensions.vertical)
+            have_detc = 1
 
-    if data_struct.information.detector.binning.horizontal is not None:
-        binningGrp = detectorGrp.create_group('binning')
-        ds = binningGrp.create_dataset('horizontal', data = data_struct.information.detector.binning.horizontal)
-        ds = binningGrp.create_dataset('vertical', data = data_struct.information.detector.binning.vertical)
-        have_detc = 1
+        if data_struct.information.detector.binning.horizontal is not None:
+            binningGrp = detectorGrp.create_group('binning')
+            ds = binningGrp.create_dataset('horizontal', data = data_struct.information.detector.binning.horizontal)
+            ds = binningGrp.create_dataset('vertical', data = data_struct.information.detector.binning.vertical)
+            have_detc = 1
 
-    if data_struct.information.detector.axis_directions.horizontal is not None:
-        axisdirGrp = detectorGrp.create_group('axis_directions')
-        ds = axisdirGrp.create_dataset('horizontal', data = data_struct.information.detector.axis_directions.horizontal)
-        ds = axisdirGrp.create_dataset('vertical', data = data_struct.information.detector.axis_directions.vertical)
-        have_detc = 1
+        if data_struct.information.detector.axis_directions.horizontal is not None:
+            axisdirGrp = detectorGrp.create_group('axis_directions')
+            ds = axisdirGrp.create_dataset('horizontal', data = data_struct.information.detector.axis_directions.horizontal)
+            ds = axisdirGrp.create_dataset('vertical', data = data_struct.information.detector.axis_directions.vertical)
+            have_detc = 1
 
-    if data_struct.information.detector.roi.x1 is not None:
-        roiGrp = detectorGrp.create_group('roi')
-        ds = roiGrp.create_dataset('x1', data = data_struct.information.detector.roi.x1)
-        ds = roiGrp.create_dataset('y1', data = data_struct.information.detector.roi.y1)
-        ds = roiGrp.create_dataset('x2', data = data_struct.information.detector.roi.x2)
-        ds = roiGrp.create_dataset('y2', data = data_struct.information.detector.roi.y2)
-        have_detc = 1
+        if data_struct.information.detector.roi.x1 is not None:
+            roiGrp = detectorGrp.create_group('roi')
+            ds = roiGrp.create_dataset('x1', data = data_struct.information.detector.roi.x1)
+            ds = roiGrp.create_dataset('y1', data = data_struct.information.detector.roi.y1)
+            ds = roiGrp.create_dataset('x2', data = data_struct.information.detector.roi.x2)
+            ds = roiGrp.create_dataset('y2', data = data_struct.information.detector.roi.y2)
+            have_detc = 1
 
-    if have_detc == 0:
-        del informationGrp['detector']
+        if have_detc == 0:
+            del informationGrp['detector']
 
 
     # exchange definition
 
     # exchange HDF5 group
     # /exchange
-    exchangeGrp = f.create_group("exchange")
-    if data_struct.exchange.title is not None:
-        ds = exchangeGrp.create_dataset('title', data = data_struct.exchange.title)
-    if data_struct.exchange.comment is not None:
-        ds = exchangeGrp.create_dataset('comment', data = data_struct.exchange.comment)
-    if data_struct.exchange.data_collection_datetime is not None:
-        ds = exchangeGrp.create_dataset('data_collection_datetime', data = data_struct.exchange.data_collection_datetime)
+    if 'exchange' in dir(data_struct):
+        exchangeGrp = f.create_group("exchange")
+        if data_struct.exchange.title is not None:
+            ds = exchangeGrp.create_dataset('title', data = data_struct.exchange.title)
+        if data_struct.exchange.comment is not None:
+            ds = exchangeGrp.create_dataset('comment', data = data_struct.exchange.comment)
+        if data_struct.exchange.data_collection_datetime is not None:
+            ds = exchangeGrp.create_dataset('data_collection_datetime', data = data_struct.exchange.data_collection_datetime)
 
-    # /exchange/data
-    ds_data = exchangeGrp.create_dataset('data', data = data_struct.exchange.data)
-    if data_struct.exchange.data_signal is not None:
-        ds_data.attrs['signal'] = data_struct.exchange.data_signal
-    if data_struct.exchange.data_description is not None:
-        ds_data.attrs['description'] = data_struct.exchange.data_description
-    if data_struct.exchange.data_units is not None:
-        ds_data.attrs['units'] = data_struct.exchange.data_units
-    if data_struct.exchange.data_detector is not None:
-        ds_data.attrs['detector'] = data_struct.exchange.data_detector
-    if data_struct.exchange.data_axes is not None:
-        ds_data.attrs['axes'] = data_struct.exchange.data_axes
+        # /exchange/data
+        ds_data = exchangeGrp.create_dataset('data', data = data_struct.exchange.data)
+        if data_struct.exchange.data_signal is not None:
+            ds_data.attrs['signal'] = data_struct.exchange.data_signal
+        if data_struct.exchange.data_description is not None:
+            ds_data.attrs['description'] = data_struct.exchange.data_description
+        if data_struct.exchange.data_units is not None:
+            ds_data.attrs['units'] = data_struct.exchange.data_units
+        if data_struct.exchange.data_detector is not None:
+            ds_data.attrs['detector'] = data_struct.exchange.data_detector
+        if data_struct.exchange.data_axes is not None:
+            ds_data.attrs['axes'] = data_struct.exchange.data_axes
 
-    if data_struct.exchange.x is not None:
-        ds = exchangeGrp.create_dataset('x', data = data_struct.exchange.x)
-    if data_struct.exchange.x_units is not None:
-        ds.attrs['units'] = data_struct.exchange.x_units
-    if data_struct.exchange.y is not None:
-        ds = exchangeGrp.create_dataset('y', data = data_struct.exchange.y)
-    if data_struct.exchange.y_units is not None:
-        ds.attrs['units'] = data_struct.exchange.y_units
-    if data_struct.exchange.z is not None:
-        ds = exchangeGrp.create_dataset('z', data = data_struct.exchange.z)
-    if data_struct.exchange.z_units is not None:
-        ds.attrs['units'] = data_struct.exchange.z_units
+        if data_struct.exchange.x is not None:
+            ds = exchangeGrp.create_dataset('x', data = data_struct.exchange.x)
+        if data_struct.exchange.x_units is not None:
+            ds.attrs['units'] = data_struct.exchange.x_units
+        if data_struct.exchange.y is not None:
+            ds = exchangeGrp.create_dataset('y', data = data_struct.exchange.y)
+        if data_struct.exchange.y_units is not None:
+            ds.attrs['units'] = data_struct.exchange.y_units
+        if data_struct.exchange.z is not None:
+            ds = exchangeGrp.create_dataset('z', data = data_struct.exchange.z)
+        if data_struct.exchange.z_units is not None:
+            ds.attrs['units'] = data_struct.exchange.z_units
 
-    if data_struct.exchange.energy is not None:
-        ds = exchangeGrp.create_dataset('energy', data = data_struct.exchange.energy)
-        ds.attrs['units'] = data_struct.exchange.energy_units
+        if data_struct.exchange.energy is not None:
+            ds = exchangeGrp.create_dataset('energy', data = data_struct.exchange.energy)
+        if data_struct.exchange.energy_units is not None:
+            ds.attrs['units'] = data_struct.exchange.energy_units
 
-    if data_struct.exchange.theta is not None:
-        ds = exchangeGrp.create_dataset('theta', data = data_struct.exchange.theta)
-        ds.attrs['units'] = data_struct.exchange.theta_units
+        if data_struct.exchange.theta is not None:
+            ds = exchangeGrp.create_dataset('theta', data = data_struct.exchange.theta)
+            ds.attrs['units'] = data_struct.exchange.theta_units
 
-    # /exchange/white_data
-    if data_struct.exchange.white_data is not None:
-        ds = exchangeGrp.create_dataset('white_data', data = data_struct.exchange.white_data)
-        ds.attrs['units'] = data_struct.exchange.white_data_units
+        # /exchange/white_data
+        if data_struct.exchange.white_data is not None:
+            ds = exchangeGrp.create_dataset('white_data', data = data_struct.exchange.white_data)
+            ds.attrs['units'] = data_struct.exchange.white_data_units
 
-    # /exchange/dark_data
-    if data_struct.exchange.dark_data is not None:
-        ds = exchangeGrp.create_dataset('dark_data', data = data_struct.exchange.dark_data)
-        ds.attrs['units'] = data_struct.exchange.dark_data_units
+        # /exchange/dark_data
+        if data_struct.exchange.dark_data is not None:
+            ds = exchangeGrp.create_dataset('dark_data', data = data_struct.exchange.dark_data)
+            ds.attrs['units'] = data_struct.exchange.dark_data_units
 
-    if data_struct.exchange.rotation is not None:
-        ds = exchangeGrp.create_dataset('rotation', data = data_struct.exchange.rotation)
+        if data_struct.exchange.rotation is not None:
+            ds = exchangeGrp.create_dataset('rotation', data = data_struct.exchange.rotation)
 
 
 
     # Spectromicroscopy HDF5 group
-    spectromicroscopyGrp = f.create_group('spectromicroscopy')
-    if data_struct.spectromicroscopy.positions is not None:
-        ds = spectromicroscopyGrp.create_dataset('positions', data = data_struct.spectromicroscopy.positions)
-    if data_struct.spectromicroscopy.positions_units is not None:
-        ds.attrs['units'] = data_struct.spectromicroscopy.positions_units
-    if data_struct.spectromicroscopy.positions_names is not None:
-        ds.attrs['names'] = data_struct.spectromicroscopy.positions_names
-    if data_struct.spectromicroscopy.xshifts is not None:
-        ds = spectromicroscopyGrp.create_dataset('xshifts', data = data_struct.spectromicroscopy.xshifts)
-    if data_struct.spectromicroscopy.yshifts is not None:
-        ds = spectromicroscopyGrp.create_dataset('yshifts', data = data_struct.spectromicroscopy.yshifts)
-    if data_struct.spectromicroscopy.optical_density is not None:
-        ds = spectromicroscopyGrp.create_dataset('optical_density', data = data_struct.spectromicroscopy.optical_density)
+    if 'spectromicroscopy' in dir(data_struct):
+        spectromicroscopyGrp = f.create_group('spectromicroscopy')
+        if data_struct.spectromicroscopy.positions is not None:
+            ds = spectromicroscopyGrp.create_dataset('positions', data = data_struct.spectromicroscopy.positions)
+        if data_struct.spectromicroscopy.positions_units is not None:
+            ds.attrs['units'] = data_struct.spectromicroscopy.positions_units
+        if data_struct.spectromicroscopy.positions_names is not None:
+            ds.attrs['names'] = data_struct.spectromicroscopy.positions_names
+        if data_struct.spectromicroscopy.xshifts is not None:
+            ds = spectromicroscopyGrp.create_dataset('xshifts', data = data_struct.spectromicroscopy.xshifts)
+        if data_struct.spectromicroscopy.yshifts is not None:
+            ds = spectromicroscopyGrp.create_dataset('yshifts', data = data_struct.spectromicroscopy.yshifts)
+        if data_struct.spectromicroscopy.optical_density is not None:
+            ds = spectromicroscopyGrp.create_dataset('optical_density', data = data_struct.spectromicroscopy.optical_density)
 
-    # /spectromicroscopy/normalization
-    normalizationGrp = spectromicroscopyGrp.create_group('normalization')
-    if data_struct.spectromicroscopy.normalization.white_spectrum is not None:
-        ds = normalizationGrp.create_dataset('white_spectrum',
-                                            data = data_struct.spectromicroscopy.normalization.white_spectrum)
-        if data_struct.spectromicroscopy.normalization.white_spectrum_units is not None:
-            ds.attrs['units'] = data_struct.spectromicroscopy.normalization.white_spectrum_units
-        ds = normalizationGrp.create_dataset('white_spectrum_energy',
-                                                data = data_struct.spectromicroscopy.normalization.white_spectrum_energy)
-        if data_struct.spectromicroscopy.normalization.white_spectrum_energy_units is not None:
-            ds.attrs['units'] = data_struct.spectromicroscopy.normalization.white_spectrum_energy_units
+        # /spectromicroscopy/normalization
+        normalizationGrp = spectromicroscopyGrp.create_group('normalization')
+        if data_struct.spectromicroscopy.normalization.white_spectrum is not None:
+            ds = normalizationGrp.create_dataset('white_spectrum',
+                                                data = data_struct.spectromicroscopy.normalization.white_spectrum)
+            if data_struct.spectromicroscopy.normalization.white_spectrum_units is not None:
+                ds.attrs['units'] = data_struct.spectromicroscopy.normalization.white_spectrum_units
+            ds = normalizationGrp.create_dataset('white_spectrum_energy',
+                                                    data = data_struct.spectromicroscopy.normalization.white_spectrum_energy)
+            if data_struct.spectromicroscopy.normalization.white_spectrum_energy_units is not None:
+                ds.attrs['units'] = data_struct.spectromicroscopy.normalization.white_spectrum_energy_units
 
 
 
-    else:
-        del spectromicroscopyGrp['normalization']
+        else:
+            del spectromicroscopyGrp['normalization']
 
 
     # Close
