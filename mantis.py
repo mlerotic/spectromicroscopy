@@ -88,9 +88,9 @@ def save_keyeng(key_engs, odir, filename, stk, anlz, png, pdf, svg):
     #Save text file with list of energies
     textfilepath = SaveFileName+'_keyenergies.csv'
     f = open(textfilepath, 'w')
-    print('*********************  Key Energies  ********************', file=f)
+    f.write('*********************  Key Energies  ********************\n')
     for i in range(len(key_engs)):
-        print('%.6f' %(key_engs[i]), file=f)
+        f.write('%.6f\n' %(key_engs[i]))
 
     f.close()
 
@@ -784,7 +784,7 @@ def main():
 
 
     if run_qt == 1:
-        import mantis_qt
+        import mantis_py27_PyQt4 as mantis_qt
         m_qt = mantis_qt.main()
     elif run_cl == 1:
         print('Running Mantis in batch mode.')
