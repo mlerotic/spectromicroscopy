@@ -15,7 +15,7 @@
 #   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #   GNU General Public License for more details <http://www.gnu.org/licenses/>.
 
-from __future__ import division
+from __future__ import division, print_function
 
 import sys
 import os
@@ -55,7 +55,7 @@ from file_plugins import file_tif
 from file_plugins import file_stk
 
 
-version = '2.3.05'
+version = '2.3.06'
 
 if sys.platform == 'win32':
     Winsizex = 1000
@@ -587,10 +587,6 @@ class PageTomo(QtGui.QWidget):
         
             data = tomo_reconstruction.load_mrc(OpenFileName)
             
-            #print data.shape
-            
-            #data = data[:,256:768,256:768]
-            
             dims = data.shape
     
             #Read energies from file
@@ -625,9 +621,9 @@ class PageTomo(QtGui.QWidget):
                 data = np.swapaxes(data, 0, 2)
                 
                 
-            print 'angle num:', ntheta
+            print ('angle num:', ntheta)
             dims = data.shape
-            print 'Data shape', dims
+            print ('Data shape', dims)
             self.n_cols = dims[0]
             self.n_rows = dims[1]
             self.tomodata = np.zeros((dims[0], dims[1], 1, dims[2]))
@@ -709,18 +705,16 @@ class PageTomo(QtGui.QWidget):
             value = self.ntc_ereg.text()
             beta2 = float(value)   
             
-            print 'Calculate initial reconstructions'
+            print ('Calculate initial reconstructions')
 
             initrecs = []
             for i in range(self.ncomponents):
                 
-                print 'Progress ',i+1,' / ',self.ncomponents
+                print ('Progress ',i+1,' / ',self.ncomponents)
                 
                 if binningfactor > 1:                   
                     shape = (int(dims[0]/binningfactor), int(dims[1]/binningfactor))
                     projdata = np.zeros((shape[0], shape[1], dims[2]))
-                    #print 'Binning factor:', binningfactor
-                    #print 'Binned data dims', shape
                     for j in range(dims[2]):
                         projdata[:,:,j] = rebin(self.tomodata[0:shape[0]*binningfactor,0:shape[1]*binningfactor,i,j], shape)
                 else:
@@ -739,13 +733,11 @@ class PageTomo(QtGui.QWidget):
                 
             for i in range(self.ncomponents):
                 
-                print 'Progress ',i+1,' / ',self.ncomponents
+                print ('Progress ',i+1,' / ',self.ncomponents)
                 
                 if binningfactor > 1:                   
                     shape = (int(dims[0]/binningfactor), int(dims[1]/binningfactor))
                     projdata = np.zeros((shape[0], shape[1], dims[2]))
-                    #print 'Binning factor:', binningfactor
-                    #print 'Binned data dims', shape
                     for j in range(dims[2]):
                         projdata[:,:,j] = rebin(self.tomodata[0:shape[0]*binningfactor,0:shape[1]*binningfactor,i,j], shape)
                 else:
@@ -768,13 +760,11 @@ class PageTomo(QtGui.QWidget):
                 
             for i in range(self.ncomponents):
                 
-                print 'Progress ',i+1,' / ',self.ncomponents
+                print ('Progress ',i+1,' / ',self.ncomponents)
                 
                 if binningfactor > 1:                   
                     shape = (int(dims[0]/binningfactor), int(dims[1]/binningfactor))
                     projdata = np.zeros((shape[0], shape[1], dims[2]))
-                    #print 'Binning factor:', binningfactor
-                    #print 'Binned data dims', shape
                     for j in range(dims[2]):
                         projdata[:,:,j] = rebin(self.tomodata[0:shape[0]*binningfactor,0:shape[1]*binningfactor,i,j], shape)
                 else:
@@ -841,7 +831,7 @@ class PageTomo(QtGui.QWidget):
         self.samplethick = int(value) 
 
         dims = self.tomodata[:,:,self.select1,:].shape
-        print 'Data dims = ', dims
+        print ('Data dims = ', dims)
         
         projdata = self.tomodata[:,:,self.select1,:]      
         
@@ -851,8 +841,8 @@ class PageTomo(QtGui.QWidget):
             binneddata = []
             shape = (int(dims[0]/binningfactor), int(dims[1]/binningfactor))
             projdata = np.zeros((shape[0], shape[1], dims[2]))
-            print 'Binning factor:', binningfactor
-            print 'Binned data dims', shape
+            print ('Binning factor:', binningfactor)
+            print ('Binned data dims', shape)
             for i in range(dims[2]):
                 projdata[:,:,i] = rebin(self.tomodata[0:shape[0]*binningfactor,0:shape[1]*binningfactor,self.select1,i], shape)
                 
@@ -1023,7 +1013,7 @@ class PageTomo(QtGui.QWidget):
         f = open(str(savefn2),'wt')
         
         for i in range(len(self.theta)):
-            print>>f, self.theta[i]
+            f.write(self.theta[i])
             
         f.close()
         
@@ -1636,7 +1626,7 @@ class File_GUI():
                 self.last_filter[action][data_type] = i+1
             return (str(dlg.selectedFiles()[0]),chosen_plugin)
         else:
-            print "cancelled"
+            print ("cancelled")
             return (None,None)
 
 
@@ -3638,9 +3628,7 @@ class PageXrayPeakFitting(QtGui.QWidget):
             QtGui.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % error_message)
             return 
    
-   
-                          
-        try: 
+        try:
 
             matplotlib.rcParams['pdf.fonttype'] = 42
             
@@ -3661,42 +3649,42 @@ class PageXrayPeakFitting(QtGui.QWidget):
         #Save text file with fit info
         textfilepath = path+'_'+self.anlz.xfspec_names[self.i_spec-1]+'_fitinfo.txt'
         f = open(textfilepath, 'w')
-        print>>f, '*********************  Fit Results  ********************'
+        f.write( '*********************  Fit Results  ********************\n')
 
-        print>>f, '\n'
-        print>>f, 'Base:\t\t'+'{0:04.3f}'.format(self.anlz.xfitpars[self.i_spec-1].base)
+        f.write( '\n')
+        f.write( 'Base:\t\t'+'{0:04.3f}\n'.format(self.anlz.xfitpars[self.i_spec-1].base))
 
-        print>>f, '\n'
+        f.write( '\n')
         text = 'Step Inflection Point [eV]:\t' 
         for i in range(self.nsteps[self.i_spec-1]):
             text = text + '{0:04.3f}'.format(self.anlz.xfitpars[self.i_spec-1].stepfitparams[i*3]) + ',  '
-        print>>f, text
+        f.write( text+'\n')
         
         text = 'Step Height:\t' 
         for i in range(self.nsteps[self.i_spec-1]):
             text = text + '{0:04.3f}'.format(self.anlz.xfitpars[self.i_spec-1].stepfitparams[i*3+1]) + ',  '
-        print>>f, text
+        f.write( text+'\n')
  
         text = 'Step FWHM:\t' 
         for i in range(self.nsteps[self.i_spec-1]):
             text = text + '{0:04.3f}'.format(self.anlz.xfitpars[self.i_spec-1].stepfitparams[i*3+2]) + ',  '
-        print>>f, text       
+        f.write( text+'\n')
         
-        print>>f, '\n'
+        f.write( '\n')
         text = 'Peak Positions:\t'
         for i in range(self.npeaks[self.i_spec-1]):
             text = text + '{0:04.3f}'.format(self.anlz.xfitpars[self.i_spec-1].gauss_fp_m[i]) + ',  '
-        print>>f, text
+        f.write( text+'\n')
 
         text = 'Peak Sigma:\t'
         for i in range(self.npeaks[self.i_spec-1]):
             text = text + '{0:04.3f}'.format(self.anlz.xfitpars[self.i_spec-1].gauss_fp_s[i]) + ',  '
-        print>>f, text
+        f.write( text+'\n')
         
         text = 'Peak Amplitude:\t'
         for i in range(self.npeaks[self.i_spec-1]):
             text = text + '{0:04.3f}'.format(self.anlz.xfitpars[self.i_spec-1].gauss_fp_a[i]) + ',  '
-        print>>f, text        
+        f.write( text+'\n')
         
         f.close()        
             
@@ -9259,7 +9247,8 @@ class PageStack(QtGui.QWidget):
             self.com.i0_loaded = 0        
             QtGui.QApplication.restoreOverrideCursor()
             QtGui.QMessageBox.warning(self,'Error',"I0 file not loaded.")
-            import sys; print sys.exc_info()
+            import sys
+            print (sys.exc_info())
                        
                           
         self.window().refresh_widgets()
@@ -9346,7 +9335,8 @@ class PageStack(QtGui.QWidget):
             self.com.i0_loaded = 0        
             QtGui.QApplication.restoreOverrideCursor()
             QtGui.QMessageBox.warning(self,'Error',"Reference image file not loaded.")
-            import sys; print sys.exc_info()
+            import sys
+            print (sys.exc_info())
                        
                           
         self.window().refresh_widgets()
@@ -10073,7 +10063,7 @@ class PageStack(QtGui.QWidget):
             self.ROIpix = np.zeros((self.stk.n_cols,self.stk.n_rows))    
             
             
-        print self.stk.n_cols, self.stk.n_rows
+        print (self.stk.n_cols, self.stk.n_rows)
         
         for i in range(self.stk.n_cols):
             for j in range(self.stk.n_rows):
@@ -12573,25 +12563,22 @@ class ImageRegistration(QtGui.QDialog):
         filepath = str(filepath)
         if filepath == '':
             return
-        
-        
-        
-        
+
         f = open(filepath, 'w')
         
         if self.com.stack_4d == 0:
-            print>>f, '*********************  Alignment file  ********************'
-            print>>f, '***  for ', self.com.filename
-            print>>f, '***  ev, xshift, yshift'           
+            f.write( '*********************  Alignment file  ********************\n')
+            f.write( '***  for {0}\n'.format(self.com.filename))
+            f.write( '***  ev, xshift, yshift\n')
             for ie in range(self.stack.n_ev):
-                print>>f, '%.6f, %.6f, %.6f' %(self.stack.ev[ie], self.xshifts[ie], self.yshifts[ie])
+                f.write( '%.6f, %.6f, %.6f\n' %(self.stack.ev[ie], self.xshifts[ie], self.yshifts[ie]))
         else:
-            print>>f, '*********************  Alignment file  ********************'
-            print>>f, '***  for ', self.com.filename
-            print>>f, '***  ev, theta, xshift, yshift'           
+            f.write( '*********************  Alignment file  ********************\n')
+            f.write( '***  for {0}\n'.format(self.com.filename))
+            f.write( '***  ev, theta, xshift, yshift\n')
             for i in range(self.stack.n_ev):
                 for j in range(self.stack.n_theta):
-                    print>>f, '%.6f, %.6f, %.6f, %.6f' %(self.stack.ev[i], self.stack.theta[j], self.xshifts[i,j], self.yshifts[i,j])
+                    f.write( '%.6f, %.6f, %.6f, %.6f\n' %(self.stack.ev[i], self.stack.theta[j], self.xshifts[i,j], self.yshifts[i,j]))
   
                                       
         f.close()            
@@ -13121,7 +13108,7 @@ class DoseCalculation(QtGui.QDialog):
             detector_eff = 0.01*float(self.tc_1.text())
         except:
             QtGui.QMessageBox.warning(self, 'Error', 'Please enter numeric number for detector efficiency.')
-            print 'Please enter numeric number for detector efficiency.'
+            print ('Please enter numeric number for detector efficiency.')
             return
             
         
@@ -13364,36 +13351,36 @@ class PlotFrame(QtGui.QDialog):
     def Save(self, filename):
             
         f = open(filename, 'w')
-        print>>f, '*********************  X-ray Absorption Data  ********************'
-        print>>f, '*'
-        print>>f, '* Formula: '
-        print>>f, '* Common name: ', self.title
-        print>>f, '* Edge: '
-        print>>f, '* Acquisition mode: '
-        print>>f, '* Source and purity: ' 
-        print>>f, '* Comments: Stack list ROI ""'
-        print>>f, '* Delta eV: '
-        print>>f, '* Min eV: '
-        print>>f, '* Max eV: '
-        print>>f, '* Y axis: '
-        print>>f, '* Contact person: '
-        print>>f, '* Write date: '
-        print>>f, '* Journal: '
-        print>>f, '* Authors: '
-        print>>f, '* Title: '
-        print>>f, '* Volume: '
-        print>>f, '* Issue number: '
-        print>>f, '* Year: '
-        print>>f, '* Pages: '
-        print>>f, '* Booktitle: '
-        print>>f, '* Editors: '
-        print>>f, '* Publisher: '
-        print>>f, '* Address: '
-        print>>f, '*--------------------------------------------------------------'
+        f.write( '*********************  X-ray Absorption Data  ********************')
+        f.write( '*')
+        f.write( '* Formula: ')
+        f.write( '* Common name: {0}'.format(self.title))
+        f.write( '* Edge: ')
+        f.write( '* Acquisition mode: ')
+        f.write( '* Source and purity: ' )
+        f.write( '* Comments: Stack list ROI ""')
+        f.write( '* Delta eV: ')
+        f.write( '* Min eV: ')
+        f.write( '* Max eV: ')
+        f.write( '* Y axis: ')
+        f.write( '* Contact person: ')
+        f.write( '* Write date: ')
+        f.write( '* Journal: ')
+        f.write( '* Authors: ')
+        f.write( '* Title: ')
+        f.write( '* Volume: ')
+        f.write( '* Issue number: ')
+        f.write( '* Year: ')
+        f.write( '* Pages: ')
+        f.write( '* Booktitle: ')
+        f.write( '* Editors: ')
+        f.write( '* Publisher: ')
+        f.write( '* Address: ')
+        f.write( '*--------------------------------------------------------------')
         dim = self.datax.shape
         n=dim[0]
         for ie in range(n):
-            print>>f, '{0:06.2f}, {1:06f}'.format(self.datax[ie], self.datay[ie])
+            f.write( '{0:06.2f}, {1:06f}'.format(self.datax[ie], self.datay[ie]))
         
         f.close()
     
@@ -14025,7 +14012,7 @@ class StackListFrame(QtGui.QDialog):
         elif self.filetype == 'bim':
             file_bim.read_bim_list(self, filelist, self.filepath, self.data_struct)
         else:
-            print 'Wrong file type'
+            print('Wrong file type')
             return
         
         
@@ -14293,7 +14280,7 @@ class MainFrame(QtGui.QMainWindow):
         try:
             options, extraParams = getopt.getopt(sys.argv[1:], '', ['wx', 'batch', 'nnma', 'ica', 'keyeng'])
         except:
-            print 'Error - wrong command line option used. Available options are --wx, --batch and --nnma'
+            print ('Error - wrong command line option used. Available options are --wx, --batch and --nnma')
             return
         
 #         for opt, arg in options:        
@@ -14595,7 +14582,7 @@ class MainFrame(QtGui.QMainWindow):
             QtGui.QMessageBox.warning(self, 'Error', 'Image stack not loaded.')
          
             import sys
-            print sys.exc_info()
+            print (sys.exc_info())
                    
         
         self.refresh_widgets()
