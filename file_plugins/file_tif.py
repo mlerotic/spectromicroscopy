@@ -55,16 +55,15 @@ def read(filename, self, selection=None, *args, **kwargs):
         except EOFError:
             break
 
-
     imgstack = np.array((imgstack))
 
     imgstack = np.transpose(imgstack, axes=(1,2,0))
-
 
     self.n_cols = imgstack.shape[0]
     self.n_rows = imgstack.shape[1]
     self.n_ev = imgstack.shape[2]
 
+    print('File {0} dims: [{1},{2},{3}]'.format(filename, self.n_cols, self.n_rows, self.n_ev))
 
     pixelsize = 1
     #Since we do not have a scanning microscope we fill the x_dist and y_dist from pixel_size

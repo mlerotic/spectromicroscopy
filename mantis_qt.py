@@ -14719,8 +14719,6 @@ class MainFrame(QtWidgets.QMainWindow):
         tabs = QtWidgets.QTabWidget()
 
 
-
-
         # create the page windows as tabs
         self.page0 = PageLoadData(self.common, self.data_struct, self.stk)
         self.page1 = PageStack(self.common, self.data_struct, self.stk)
