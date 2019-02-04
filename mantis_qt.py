@@ -156,6 +156,8 @@ class PageTomo(QtWidgets.QWidget):
         self.samplethick = 0
         self.nonnegconst = 1
 
+        self.nprocessors = 6
+
 
         #panel 1
         sizer1 = QtWidgets.QGroupBox('Tomo Data')
@@ -176,7 +178,6 @@ class PageTomo(QtWidgets.QWidget):
         self.button_expdata.clicked.connect( self.OnExportData)
         self.button_expdata.setEnabled(False)
         vbox1.addWidget(self.button_expdata)
-
 
         line = QtWidgets.QFrame()
         line.setFrameShape(QtWidgets.QFrame.HLine)
@@ -254,7 +255,6 @@ class PageTomo(QtWidgets.QWidget):
         self.comboalgos.addItems(self.algonames)
         vbox2.addWidget(self.comboalgos)
 
-
         hbox22 = QtWidgets.QHBoxLayout()
         text1 = QtWidgets.QLabel(self)
         text1.setText('Number of iterations')
@@ -262,14 +262,11 @@ class PageTomo(QtWidgets.QWidget):
         hbox22.addStretch(1)
         self.ntc_niterations = QtWidgets.QLineEdit(self)
         self.ntc_niterations.setFixedWidth(65)
-        self.ntc_niterations.setValidator(QtGui.QDoubleValidator(0, 99999, 2, self))
+        self.ntc_niterations.setValidator(QtGui.QIntValidator(1, 99999, self))
         self.ntc_niterations.setAlignment(QtCore.Qt.AlignRight)
         self.ntc_niterations.setText(str(self.maxIters))
         hbox22.addWidget(self.ntc_niterations)
-
-
         vbox2.addLayout(hbox22)
-
 
         hbox23 = QtWidgets.QHBoxLayout()
         self.tc_par = QtWidgets.QLabel(self)
@@ -316,7 +313,6 @@ class PageTomo(QtWidgets.QWidget):
         self.ntc_samplethick.setAlignment(QtCore.Qt.AlignRight)
         self.ntc_samplethick.setText(str(self.samplethick))
         hbox24.addWidget(self.ntc_samplethick)
-
         vbox2.addLayout(hbox24)
 
         self.cb_nneg = QtWidgets.QCheckBox('Non-Negativity Constraints', self)
@@ -324,9 +320,29 @@ class PageTomo(QtWidgets.QWidget):
         self.cb_nneg.stateChanged.connect(self.OnNonNegConst)
         vbox2.addWidget(self.cb_nneg)
 
+        line = QtWidgets.QFrame()
+        line.setFrameShape(QtWidgets.QFrame.HLine)
+        line.setFrameShadow(QtWidgets.QFrame.Sunken)
+        vbox2.addStretch(1)
+        vbox2.addWidget(line)
+        vbox2.addStretch(1)
+
+        vbox2.addWidget(QtWidgets.QLabel('Multiprocessing:'))
+
+        hbox26 = QtWidgets.QHBoxLayout()
+        text1 = QtWidgets.QLabel(self)
+        text1.setText('Number of processors')
+        hbox26.addWidget(text1)
+        hbox26.addStretch(1)
+        self.ntc_processors = QtWidgets.QLineEdit(self)
+        self.ntc_processors.setFixedWidth(65)
+        self.ntc_processors.setValidator(QtGui.QIntValidator(1, 1000, self))
+        self.ntc_processors.setAlignment(QtCore.Qt.AlignRight)
+        self.ntc_processors.setText(str(self.nprocessors))
+        hbox26.addWidget(self.ntc_processors)
+        vbox2.addLayout(hbox26)
 
         sizer2.setLayout(vbox2)
-
 
         #panel 3
         sizer3 = QtWidgets.QGroupBox('ROI')
@@ -695,13 +711,13 @@ class PageTomo(QtWidgets.QWidget):
 
         QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
 
-
         value = self.ntc_niterations.text()
         self.maxIters = int(value)
         value = self.ntc_beta.text()
         self.beta = float(value)
         value = self.ntc_samplethick.text()
         self.samplethick = int(value)
+        self.nprocessors = int(self.ntc_processors.text())
 
         self.fulltomorecdata = []
 
@@ -738,7 +754,8 @@ class PageTomo(QtWidgets.QWidget):
                                    self.beta,
                                    0,
                                    algorithm = self.algo,
-                                   nonnegconst = self.nonnegconst)
+                                   nonnegconst = self.nonnegconst,
+                                   nprocessors = self.nprocessors)
 
                 initrecs.append(np.swapaxes(np.array(self.tr.tomorec.copy()), 0, 1))
 
@@ -764,7 +781,8 @@ class PageTomo(QtWidgets.QWidget):
                                    algorithm = 2,
                                    x0=initrecs,
                                    comp = i, beta2=beta2,
-                                   nonnegconst = self.nonnegconst)
+                                   nonnegconst = self.nonnegconst,
+                                   nprocessors = self.nprocessors)
 
                 self.fulltomorecdata.append(self.tr.tomorec.copy())
 
@@ -791,7 +809,8 @@ class PageTomo(QtWidgets.QWidget):
                                    self.beta,
                                    self.samplethick,
                                    algorithm = self.algo,
-                                   nonnegconst = self.nonnegconst)
+                                   nonnegconst = self.nonnegconst,
+                                   nprocessors = self.nprocessors)
 
                 self.fulltomorecdata.append(self.tr.tomorec.copy())
 
@@ -844,6 +863,7 @@ class PageTomo(QtWidgets.QWidget):
         self.beta = float(value)
         value = self.ntc_samplethick.text()
         self.samplethick = int(value)
+        self.nprocessors = int(self.ntc_processors.text())
 
         dims = self.tomodata[:,:,self.select1,:].shape
         print('Data dims = ', dims)
@@ -861,15 +881,14 @@ class PageTomo(QtWidgets.QWidget):
             for i in range(dims[2]):
                 projdata[:,:,i] = rebin(self.tomodata[0:shape[0]*binningfactor,0:shape[1]*binningfactor,self.select1,i], shape)
 
-
-
         self.tr.calc_tomo(projdata,
                            self.theta,
                            self.maxIters,
                            self.beta,
                            self.samplethick,
                            algorithm = self.algo,
-                           nonnegconst=self.nonnegconst)
+                           nonnegconst=self.nonnegconst,
+                           nprocessors = self.nprocessors)
 
         self.tomo_calculated = 1
         self.full_tomo_calculated = 0
@@ -1252,7 +1271,7 @@ class PageTomo(QtWidgets.QWidget):
         im = axes.imshow(np.rot90(image), cmap=matplotlib.cm.get_cmap("gray"))
 
         if self.haveROI == 1:
-            if self.ROIvol[self.islice] != []:
+            if len(self.ROIvol[self.islice]) > 0:
                 im_red = axes.imshow(np.rot90(self.ROIvol[self.islice]), cmap=matplotlib.cm.get_cmap("autumn"))
 
 #         if self.window().page1.show_scale_bar == 1:
@@ -1313,7 +1332,6 @@ class PageTomo(QtWidgets.QWidget):
 #----------------------------------------------------------------------
     def MakeHistogramROI(self, histmin, histmax):
 
-
         for i in range(self.nslices):
 
             hist_indices = np.where((histmin<self.tr.tomorec[:,:,i])&(self.tr.tomorec[:,:,i]<histmax))
@@ -1323,7 +1341,7 @@ class PageTomo(QtWidgets.QWidget):
 
             ROIpix = np.ma.array(ROIpix)
 
-            ROIpix_masked =  np.ma.masked_values(ROIpix, 0)
+            ROIpix_masked = np.ma.masked_values(ROIpix, 0)
 
 
             self.ROIvol[i] = ROIpix_masked

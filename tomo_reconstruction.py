@@ -109,24 +109,28 @@ class Ctomo:
 # Algorithm = 0 : CS reconstruction for 1 dataset 
 # Algorithm = 1 : SIRT reconstruction for 1 dataset 
     def calc_tomo(self, tomodata, theta, maxiter, beta, samplethickness, algorithm = 0,
-                  x0=[], comp = 0, beta2 = 0, nonnegconst = 1):     
+                  x0=[], comp = 0, beta2 = 0, nonnegconst = 1, nprocessors=1):
         
         tomodata = tomodata
         #Algorithm 
         if algorithm == 0:
-            self.calc_tomo_cs(tomodata.astype(np.float32), theta, maxiter, beta, samplethickness, 
-                              nonnegconst = nonnegconst)  
+            if nprocessors <= 1:
+                self.calc_tomo_cs(tomodata.astype(np.float32), theta, maxiter, beta, samplethickness,
+                              nonnegconst = nonnegconst)
+            else:
+                self.calc_tomo_cs_multi(tomodata.astype(np.float32), theta, maxiter, beta, samplethickness,
+                              nonnegconst = nonnegconst, nprocessors=nprocessors)
         elif algorithm == 1:
             self.calc_tomo_sirt(tomodata.astype(np.float32), theta, maxiter, beta, samplethickness, 
-                                nonnegconst = nonnegconst) 
+                                nonnegconst = nonnegconst, nprocessors=nprocessors)
         else:
             self.calc_tomo_cs_tveng(tomodata.astype(np.float32), theta, maxiter, beta, samplethickness,
                                     x0, comp, beta2, nonnegconst = nonnegconst)  
              
         
 #----------------------------------------------------------------------   
-# Calculate tomo - CS reconstruction for 1 dataset 
-    def calc_tomo_cs_multi(self, tomodata, theta, maxiter, beta, samplethickness, nonnegconst = 1):
+# Calculate tomo - CS reconstruction for 1 dataset  with multiprocessing
+    def calc_tomo_cs_multi(self, tomodata, theta, maxiter, beta, samplethickness, nonnegconst=1, nprocessors=6):
         
 
         print ('Compressed sensing TV regression')
@@ -148,7 +152,6 @@ class Ctomo:
         print ('Dimensions ', dims, tomodata.dtype)
     
         stack = np.swapaxes(tomodata, 0, 1)
-
 
         theta = np.deg2rad(theta)
         
@@ -182,7 +185,6 @@ class Ctomo:
         for j in range(ncols):
 
             projections.append(stack[j,:, :].T)
-
         
         Rmax = np.amax(stack)
         Rmin = np.amin(stack)
@@ -190,7 +192,7 @@ class Ctomo:
         partial_calc_cs = partial(calc_cs, theta=theta, Rmin=Rmin, Rmax=Rmax,
                                   l=l, beta=beta, initx0=initx0, nonnegconst=nonnegconst,
                                   maxiter=maxiter)
-        pool = multiprocessing.Pool(processes=6)
+        pool = multiprocessing.Pool(processes=nprocessors)
 
         res = pool.map(partial_calc_cs, projections)
         pool.close()
@@ -302,7 +304,7 @@ class Ctomo:
 
 #----------------------------------------------------------------------   
 # Calculate tomo - SIRT reconstruction for 1 dataset 
-    def calc_tomo_sirt(self, tomodata, theta, maxiter, beta, samplethickness, nonnegconst = 1):
+    def calc_tomo_sirt(self, tomodata, theta, maxiter, beta, samplethickness, nonnegconst = 1, nprocessors=6):
         
         try:
             from skimage.transform import iradon, radon
@@ -353,7 +355,7 @@ class Ctomo:
 
         partial_calc_sirt = partial(calc_sirt, theta=theta, Rmin=Rmin, Rmax=Rmax,
                                     nonnegconst=nonnegconst, maxiter=maxiter, nrows=nrows)
-        pool = multiprocessing.Pool(processes=4)
+        pool = multiprocessing.Pool(processes=nprocessors)
 
         res = pool.map(partial_calc_sirt, projections)
         pool.close()
