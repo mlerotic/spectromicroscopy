@@ -8879,20 +8879,21 @@ class PageStack(QtWidgets.QWidget):
 
         sizer1.setLayout(vbox1)
 
-
         #panel 1B
         sizer1b = QtWidgets.QGroupBox('Normalize')
         vbox1b = QtWidgets.QVBoxLayout()
         vbox1b.setSpacing(0)
 
-        self.button_i0ffile = QtWidgets.QPushButton('I0 from file...')
-        self.button_i0ffile.clicked.connect(self.OnI0FFile)
-        self.button_i0ffile.setEnabled(False)
-        vbox1b.addWidget(self.button_i0ffile)
         self.button_i0histogram = QtWidgets.QPushButton('Select I0...')
         self.button_i0histogram.clicked.connect( self.OnI0histogram)
         self.button_i0histogram.setEnabled(False)
         vbox1b.addWidget(self.button_i0histogram)
+
+        self.button_i0ffile = QtWidgets.QPushButton('I0 from file...')
+        self.button_i0ffile.clicked.connect(self.OnI0FFile)
+        self.button_i0ffile.setEnabled(False)
+        vbox1b.addWidget(self.button_i0ffile)
+
         self.button_showi0 = QtWidgets.QPushButton('Show I0...')
         self.button_showi0.clicked.connect( self.OnShowI0)
         self.button_showi0.setEnabled(False)
@@ -9089,6 +9090,7 @@ class PageStack(QtWidgets.QWidget):
 
         self.button_setROII0 = QtWidgets.QPushButton('Set ROI As I0')
         self.button_setROII0.clicked.connect( self.OnSetROII0)
+        self.button_setROII0.setHidden(True)
         self.button_setROII0.setEnabled(False)
         vbox3.addWidget(self.button_setROII0)
 
@@ -10922,8 +10924,6 @@ class CliptoSubregion(QtWidgets.QDialog):
         self.new_ncols = self.new_x2 - self.new_x1
         self.new_nrows = self.new_y2 - self.new_y1
 
-
-
         vbox = QtWidgets.QVBoxLayout()
 
         sizer = QtWidgets.QGroupBox('Select new stack size')
@@ -10949,9 +10949,7 @@ class CliptoSubregion(QtWidgets.QDialog):
 
         vbox1.addWidget(self.AbsImagePanel)
         sizer.setLayout(vbox1)
-
         vbox.addWidget(sizer)
-
 
         hbox = QtWidgets.QHBoxLayout()
 
@@ -10970,20 +10968,14 @@ class CliptoSubregion(QtWidgets.QDialog):
         self.draw_image()
 
 
-
-
 #----------------------------------------------------------------------
     def draw_image(self):
 
-
         image = self.stack.absdata[:,:,int(self.stack.n_ev/2)].copy()
-
-
 
         fig = self.absimgfig
         fig.clf()
         fig.add_axes((0.02,0.02,0.96,0.96))
-
 
         axes = fig.gca()
         fig.patch.set_alpha(1.0)
@@ -11024,7 +11016,6 @@ class CliptoSubregion(QtWidgets.QDialog):
 
         self.new_y1 = int(y1)
         self.new_x1 = int(x1)
-
 
         self.new_ncols = self.new_x2 - self.new_x1 + 1
         self.new_nrows = self.new_y1 - self.new_y2 + 1
@@ -11115,22 +11106,17 @@ class CliptoSubregion(QtWidgets.QDialog):
 
         self.stack.absdata = self.stack.absdata[ self.new_x1:self.new_x2+1, self.new_y1:self.new_y2+1, :]
 
-
         self.stack.n_cols = self.stack.absdata.shape[0]
         self.stack.n_rows = self.stack.absdata.shape[1]
 
-
         if self.com.i0_loaded == 1:
             self.stack.od3d = self.stack.od3d[ self.new_x1:self.new_x2+1, self.new_y1:self.new_y2+1, :]
-
             self.stack.od = self.stack.od3d.copy()
-
             self.stack.od = np.reshape(self.stack.od, (self.stack.n_rows*self.stack.n_cols, self.stack.n_ev), order='F')
 
-
         #Fix the slider on Page 1!
-        self.parent.page1.ix = self.stack.n_cols/2
-        self.parent.page1.iy = self.stack.n_rows/2
+        self.parent.page1.ix = int(self.stack.n_cols/2)
+        self.parent.page1.iy = int(self.stack.n_rows/2)
 
         self.stack.fill_h5_struct_from_stk()
 
@@ -11181,8 +11167,6 @@ class ImageRegistration(QtWidgets.QDialog):
         self.ybottom = 0
         self.ytop = self.stack.n_rows
 
-
-
         if self.com.stack_4d == 0:
             self.aligned_stack = self.stack.absdata.copy()
             self.man_xs = np.zeros((self.stack.n_ev))
@@ -11195,8 +11179,6 @@ class ImageRegistration(QtWidgets.QDialog):
             self.man_ys = np.zeros((self.stack.n_ev,self.stack.n_theta))
             self.xshifts = np.zeros((self.stack.n_ev,self.stack.n_theta))
             self.yshifts = np.zeros((self.stack.n_ev,self.stack.n_theta))
-
-
 
         self.minxs = 0
         self.maxxs = 0
@@ -11214,7 +11196,6 @@ class ImageRegistration(QtWidgets.QDialog):
         self.sr_y1 = 0
         self.sr_y2 = 0
         self.patch = None
-
 
         #panel 1
         vbox1 = QtWidgets.QVBoxLayout()
@@ -11301,7 +11282,6 @@ class ImageRegistration(QtWidgets.QDialog):
         vbox2.addWidget(frame)
 
 
-
         #panel 3
         vbox3 = QtWidgets.QVBoxLayout()
 
@@ -11324,7 +11304,6 @@ class ImageRegistration(QtWidgets.QDialog):
         vbox3.addWidget(frame)
 
 
-
         #panel 9
         vbox9 = QtWidgets.QVBoxLayout()
         vbox9.setSpacing(0)
@@ -11339,13 +11318,10 @@ class ImageRegistration(QtWidgets.QDialog):
         vbox9.addWidget(self.rb_man)
         groupBox9.setLayout(vbox9)
 
-
-
         #panel 8
         sizer8 = QtWidgets.QGroupBox('This Image')
         vbox8 = QtWidgets.QVBoxLayout()
         vbox8.setSpacing(0)
-
 
         self.button_refimg = QtWidgets.QPushButton('Set as Reference Image')
         self.button_refimg.clicked.connect(self.SetRefImage)
@@ -11364,18 +11340,15 @@ class ImageRegistration(QtWidgets.QDialog):
         line.setFrameShape(QtWidgets.QFrame.HLine)
         line.setFrameShadow(QtWidgets.QFrame.Sunken)
 
-
         vbox8.addSpacing(5)
         vbox8.addWidget(line)
         vbox8.addSpacing(5)
-
 
         self.button_remove = QtWidgets.QPushButton('Remove energy from stack')
         self.button_remove.clicked.connect(self.OnRemoveImage)
         vbox8.addWidget(self.button_remove)
 
         sizer8.setLayout(vbox8)
-
 
 
         #panel 4
@@ -11463,12 +11436,9 @@ class ImageRegistration(QtWidgets.QDialog):
         self.RefImagePanel.mpl_connect('button_press_event', self.OnPointRefimage)
         self.RefImagePanel.mpl_connect('button_release_event', self.OnSelection)
 
-
-
         vbox5.addWidget(self.tc_refimg)
         vbox5.addWidget(frame)
         vbox5.addStretch(1)
-
 
 
         #panel 6

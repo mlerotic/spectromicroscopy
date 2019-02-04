@@ -1213,6 +1213,7 @@ OD limits</string>
            </widget>
           </widget>
          </item>
+		 <!--
          <item>
           <widget class="QTabWidget" name="tabWidget_2">
            <property name="sizePolicy">
@@ -1252,6 +1253,7 @@ OD limits</string>
            </widget>
           </widget>
          </item>
+		 -->
         </layout>
        </widget>
       </item>
