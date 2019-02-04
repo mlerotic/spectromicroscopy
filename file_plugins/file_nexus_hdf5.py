@@ -24,7 +24,7 @@ from collections import OrderedDict
 title = 'NXstxm'
 extension = ['*.hdf','*.hdf5','*.nxs']
 read_types = ['spectrum','image','stack']
-write_types = ['spectrum','image','stack']
+write_types = []#'spectrum','image','stack']
 
 def identify(filename):
     try:
@@ -73,7 +73,11 @@ def read(FileName,stack_object,selection=(0,0), *args, **kwargs):
         else:
             print("Can't find photon energy!")
         axes_order = [F[entry][detector]['sample_x'].attrs['axis']-1,F[entry][detector]['sample_y'].attrs['axis']-1,energy_axis-1]
-    stack_object.absdata = numpy.transpose(numpy.array(F[entry][detector]['data']),axes=axes_order)
+    if 'signal' in list(F[entry][detector].attrs):
+        signal_name = F[entry][detector].attrs['signal']
+        stack_object.absdata = numpy.transpose(numpy.array(F[entry][detector][signal_name]),axes=axes_order)
+    else:
+        stack_object.absdata = numpy.transpose(numpy.array(F[entry][detector]['data']),axes=axes_order)
 
 
     F.close()

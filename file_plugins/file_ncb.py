@@ -302,7 +302,7 @@ def read_ncb_data(self, filename):
 #----------------------------------------------------------------------
 #  This procedure writes  a whole stack (3d (E,x,y) array) to a binary file
 #  with associated *.dat file to track paramaters
-def write_ncb(filename, stack):
+def write(filename, stack, data_type):
     
     
     print ('Writing .ncb stack:', filename)
@@ -310,6 +310,7 @@ def write_ncb(filename, stack):
     
     basename, extension = os.path.splitext(filename) 
     dat_fn = basename + '.dat'
+    filename = basename + '.ncb'
     
     image_stack = np.transpose(stack.absdata, axes=(1,0,2))
     

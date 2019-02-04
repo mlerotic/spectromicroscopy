@@ -60,6 +60,7 @@ from file_plugins import file_ncb
 from file_plugins import file_json
 from file_plugins import file_tif
 from file_plugins import file_stk
+from file_plugins import file_csv
 
 
 version = '2.4.02'
@@ -586,6 +587,7 @@ class PageTomo(QtWidgets.QWidget):
                                                          None, QtWidgets.QFileDialog.DontUseNativeDialog)
 
         OpenFileName = str(OpenFileName)
+
         if OpenFileName == '':
             return
 
@@ -594,11 +596,6 @@ class PageTomo(QtWidgets.QWidget):
         if extension == '.mrc':
 
             data = tomo_reconstruction.load_mrc(OpenFileName)
-
-            #print data.shape
-
-            #data = data[:,256:768,256:768]
-
             dims = data.shape
 
             #Read energies from file
@@ -1251,6 +1248,7 @@ class PageTomo(QtWidgets.QWidget):
         axes = fig.gca()
         fig.patch.set_alpha(1.0)
 
+
         im = axes.imshow(np.rot90(image), cmap=matplotlib.cm.get_cmap("gray"))
 
         if self.haveROI == 1:
@@ -1623,11 +1621,14 @@ class File_GUI():
         self.last_filter = dict([a,dict([t,0] for t in file_plugins.data_types)] for a in file_plugins.actions)
         self.supported_filters = file_plugins.supported_filters
         self.filter_list = file_plugins.filter_list
+        #print(self.filter_list)
 
     def SelectFile(self,action,data_type):
+        #print(action,data_type)
         dlg=QtWidgets.QFileDialog(None)
         dlg.setWindowTitle('Choose File')
         dlg.setViewMode(QtWidgets.QFileDialog.Detail)
+        dlg.setOption(QtWidgets.QFileDialog.DontUseNativeDialog)
         if action == "write":
             dlg.setAcceptMode(QtWidgets.QFileDialog.AcceptSave)
         dlg.setDirectory(self.last_path[action][data_type])
@@ -1636,12 +1637,16 @@ class File_GUI():
         if dlg.exec_(): #if not cancelled
             self.last_path[action][data_type] = os.path.split(str(dlg.selectedFiles()[0]))[0]
             chosen_plugin = None
-            for i,filt in enumerate(self.filter_list[action][data_type][1:-1]):
+            if action == 'read':
+                checklist = self.filter_list[action][data_type][1:-1] #take into account the extra "Supported" and "All" filter entries
+            else:
+                checklist = self.filter_list[action][data_type]
+            for i,filt in enumerate(checklist):
                 if filt==dlg.selectedNameFilter():
-                    chosen_plugin = file_plugins.plugins[i]
+                    chosen_plugin = file_plugins.supported_plugins[action][data_type][i]
                     break
             if chosen_plugin is not None:
-                self.last_filter[action][data_type] = i+1
+                self.last_filter[action][data_type] = i
             return (str(dlg.selectedFiles()[0]),chosen_plugin)
         else:
             print("cancelled")
@@ -12652,7 +12657,25 @@ class ImageRegistration(QtWidgets.QDialog):
         self.ShowImage()
         self.slider_eng.setValue(self.iev)
 
+        self.regist_calculated = 1
+        self.man_align = 0
+
+        self.textctrl_ms1.setText('X manual shift: \n')
+        self.textctrl_ms2.setText('Y manual shift: ')
+
         self.UpdateWidgets()
+
+        min_xshift = np.min(self.xshifts)
+        max_xshift = np.max(self.xshifts)
+
+        min_yshift = np.min(self.yshifts)
+        max_yshift = np.max(self.yshifts)
+
+        if min_xshift < self.minxs : self.minxs = min_xshift
+        if max_xshift > self.maxxs : self.maxxs = max_xshift
+
+        if min_yshift < self.minys : self.minys = min_yshift
+        if max_yshift > self.maxys : self.maxys = max_yshift
 
 
 #----------------------------------------------------------------------
@@ -14843,6 +14866,7 @@ class MainFrame(QtWidgets.QMainWindow):
         """
 
         filepath, plugin = File_GUI.SelectFile('read','stack')
+        print(filepath, plugin)
         JSONconvert = False
         if filepath is not None:
             if plugin is None:
@@ -15094,50 +15118,23 @@ class MainFrame(QtWidgets.QMainWindow):
     def SaveProcessedStack(self):
 
         """
-        Browse for .hdf5 file or .ncb or tiff
+        Export processed stack to file
         """
-
-        try:
-        #if True:
-            #wildcard = "HDF5 file (*.hdf5);;aXis2000 NCB file (*.ncb);;TIFF file (.tif);;STK file (*.stk);;"
-            wildcard = "HDF5 file (*.hdf5);;aXis2000 NCB file (*.ncb);;TIFF file (.tif)"
-
-            filepath, _filter = QtWidgets.QFileDialog.getSaveFileName(self, 'Save processed stack', '', wildcard)
-
-            filepath = str(filepath)
-            if filepath == '':
-                return
-
-            directory =  os.path.dirname(str(filepath))
-
+        filepath, plugin = File_GUI.SelectFile('write','stack')
+        if filepath is not None and plugin is not None:
             QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
+            try:
+                file_plugins.save(filepath, self.stk, 'stack', plugin=plugin)
+                QtWidgets.QApplication.restoreOverrideCursor()
+            except:
+                QtWidgets.QApplication.restoreOverrideCursor()
+                QtWidgets.QMessageBox.warning(self, 'Error', 'Could not save processed stack file.')
+        
 
-
-            basename, extension = os.path.splitext(filepath)
-
-            if extension == '.hdf5':
-                file_dataexch_hdf5.write_h5(filepath, self.data_struct)
-
-            elif extension == '.ncb':
-                file_ncb.write_ncb(filepath, self.stk)
-
-            elif extension == '.tif':
-                file_tif.write_tif(filepath, self.stk.absdata, energies=self.stk.ev)
-
-
-
-            QtWidgets.QApplication.restoreOverrideCursor()
-
-        except:
-
-            QtWidgets.QApplication.restoreOverrideCursor()
-
-            QtWidgets.QMessageBox.warning(self, 'Error', 'Could not save processed stack file.')
-
-
-        self.refresh_widgets()
-
+        
+        
         return
+        
 
 #----------------------------------------------------------------------
     def onSaveResultsToH5(self, event):
