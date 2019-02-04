@@ -63,7 +63,7 @@ from file_plugins import file_stk
 from file_plugins import file_csv
 
 
-version = '2.4.02'
+version = '3.0.01'
 
 if sys.platform == 'win32':
     Winsizex = 1000
