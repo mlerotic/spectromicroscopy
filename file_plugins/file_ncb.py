@@ -302,9 +302,27 @@ def read_ncb_data(self, filename):
 #----------------------------------------------------------------------
 #  This procedure writes  a whole stack (3d (E,x,y) array) to a binary file
 #  with associated *.dat file to track paramaters
-def write_ncb(filename, stack):
-    
-    
+def write_ncb(filename, stack,norm):
+    #
+    # def operate_on_Narray(A, B, function):
+    #     try:
+    #         return [operate_on_Narray(a, b, function) for a, b in zip(A, B)]
+    #     except TypeError as e:
+    #         # Not iterable
+    #         return function(A, B)
+    # import matplotlib.pyplot as plt
+    # def export_figure_matplotlib(name,arr, dpi=100, resize_fact=1, plt_show=False):
+    #     fig = plt.figure(frameon=False)
+    #     fig.set_size_inches(arr.shape[1] / dpi, arr.shape[0] / dpi)
+    #     ax = plt.Axes(fig, [0., 0., 1., 1.])
+    #     ax.set_axis_off()
+    #     fig.add_axes(ax)
+    #     ax.imshow(arr, cmap='gray', interpolation='none')
+    #     if plt_show:
+    #         plt.show()
+    #     else:
+    #         plt.savefig(name+'.tif', dpi=(dpi * resize_fact))
+    #         plt.close()
     print ('Writing .ncb stack:', filename)
     
     
@@ -312,18 +330,53 @@ def write_ncb(filename, stack):
     dat_fn = basename + '.dat'
     
     image_stack = np.transpose(stack.absdata, axes=(1,0,2))
+    # if norm:
+    #
+    #     image_stack = np.transpose(stack.od3d, axes=(1,0,2))
+    #     #image_stack = stack.od3d.copy()
+    #     OD_filter = np.amax(image_stack, 2)
+    #     #returning the ODmask as tif
+    #     mask = np.where((OD_filter > 2.5), 0, np.ones(np.shape(image_stack[:,:,0])))
+    #     export_figure_matplotlib(basename+"od_mask",mask)
+    #
+    #     for i in range(np.size(image_stack, 2)):
+    #         image_stack[:,:,i] = np.where((OD_filter > 2.5),0, image_stack[:,:,i])
+    #     #image_stack = np.where(image_stack > 2,0, image_stack) #OD > 2 filter
+    #     e0 = 0
+    #     num = 5
+    #     ##pre-edge
+    #     ave = image_stack[:,:,e0]
+    #     for i in range(num-1):
+    #         ave = ave + image_stack[:,:,e0+i+1]
+    #     ave = ave / num
+    #
+    #     #export pre-edge_average for contour plot.
+    #     pre = np.transpose(stack.absdata, axes=(1,0,2))[:,:,e0]
+    #     for i in range(num-1):
+    #         pre = pre + np.transpose(stack.absdata, axes=(1,0,2))[:,:,e0+i+1]
+    #     pre = pre / num
+    #     export_figure_matplotlib(basename,pre)
+    #
+    #     for i in range(np.size(image_stack, 2)):
+    #         image_stack[:,:,i] = image_stack[:,:,i]-ave
+    #
+    #     #post-edge
+    #     ave = image_stack[:,:,-1]
+    #     for i in range(num-1):
+    #         ave = ave + image_stack[:,:,e0-i-2]
+    #     ave = (ave / num) + 0.0001
+    #     #print(ave)
+    #     for i in range(np.size(image_stack, 2)):
+    #         image_stack[:,:,i] = image_stack[:,:,i] - operate_on_Narray(ave, image_stack[:,:,i], lambda a, b: a/((1+ np.exp(-b+0.5*a)**(25*1/a))))
     
-    #image_stack = stack.absdata.copy()
-    
-    image_stack = np.reshape(image_stack, (stack.n_cols*stack.n_rows*stack.n_ev), order='F') 
-    
+    image_stack = np.reshape(image_stack, (stack.n_cols*stack.n_rows*stack.n_ev), order='F')
 
-    tmax = np.amax(image_stack)
-    tmin = np.amin(image_stack)
-    test = np.amax([abs(tmin), abs(tmax)])
+    # tmax = np.amax(image_stack)
+    # tmin = np.amin(image_stack)
+    # test = np.amax([abs(tmin), abs(tmax)])
     scale = 1.
-    if test > 3e4 or test < 1e3 :
-        scale = 10.**(3-np.fix(np.math.log10(test)))
+    # if test > 3e4 or test < 1e3 :
+    #     scale = 10.**(3-np.fix(np.math.log10(test)))
 
 
     #Save image stack to a binary .dat file
@@ -338,7 +391,7 @@ def write_ncb(filename, stack):
     f.close()
 
     #print 'imagedims', image_stack.shape
-    
+
 
     f = open(str(dat_fn),'w')
 
@@ -351,19 +404,19 @@ def write_ncb(filename, stack):
         x_start = 0.
 
     print('\t%.6f\t%.6f' %(x_start, x_stop), file=f)
-    
+
     y_start = stack.x_dist[0]
     y_stop = stack.x_dist[-1]
     if y_start != 0. :
         y_stop = y_stop - y_start
         y_start = 0.
     print('\t%.6f\t%.6f' %(y_start, y_stop), file=f)
-    
+
     print('\t%d' %(stack.n_ev), file=f)
-    
+
     for i in range(stack.n_ev):
         print('\t%.6f' %(stack.ev[i]), file=f)
-    
+
     for i in range(stack.n_ev):
         thisstr = 'image'+str(i+1)
         print('%s\t%.6f\t%.6f' %(thisstr, stack.ev[i], stack.data_dwell[i]), file=f)

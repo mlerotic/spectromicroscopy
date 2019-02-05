@@ -8872,6 +8872,10 @@ class PageStack(QtWidgets.QWidget):
         self.button_savestack.setEnabled(False)
         vbox1.addWidget(self.button_savestack)
 
+        #self.cb_normthick = QtWidgets.QCheckBox('Prenormalize thickness and make OD', self)
+        #self.cb_normthick.setChecked(False)
+        #vbox1.addWidget(self.cb_normthick)
+
         sizer1.setLayout(vbox1)
 
 
@@ -9925,13 +9929,13 @@ class PageStack(QtWidgets.QWidget):
 
 
         if self.com.i0_loaded == 1:
-            self.spectrum = self.stk.od3d[xpos,ypos, :]
+            self.spectrum = self.stk.od3d[int(xpos),int(ypos), :]
 
             axes.set_xlabel('Photon Energy [eV]')
             axes.set_ylabel('Optical Density')
         else:
 
-            self.spectrum = self.stk.absdata[xpos,ypos, :]
+            self.spectrum = self.stk.absdata[int(xpos),int(ypos), :]
             axes.set_xlabel('Photon Energy [eV]')
             axes.set_ylabel('Flux')
 
@@ -9944,7 +9948,7 @@ class PageStack(QtWidgets.QWidget):
         self.SpectrumPanel.draw()
 
 
-        self.tc_spec.setText('Spectrum at pixel [{0}, {1}] or position [{2:5.2f}, {3:5.2f}]'.format(str(xpos),  str(ypos), np.float(self.stk.x_dist[xpos]), np.float(self.stk.y_dist[ypos])))
+        self.tc_spec.setText('Spectrum at pixel [{0}, {1}] or position [{2:5.2f}, {3:5.2f}]'.format(str(xpos),  str(ypos), np.float(self.stk.x_dist[int(xpos)]), np.float(self.stk.y_dist[int(ypos)])))
 
 #----------------------------------------------------------------------
     def ResetDisplaySettings(self):
@@ -10533,6 +10537,7 @@ class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.SetupROI()
 
     def SetupROI(self):
+        self.I0instructions.setText("Select I0 by dragging the histogram lines or by drawing a ROI.")
         self.lassopoints = []
         self.I0box.setZValue(-10)
         self.MaskImage.setZValue(-10)
@@ -10594,9 +10599,9 @@ class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
             self.I0instructions.setText("Drag the polygon or the handles. Add handles by clicking on a line segment.")
             if self.radioLassoROI.isChecked():
                 self.lassopoints= []
+                self.I0instructions.setText("")
                 while len(self.I0box.getHandles()) > 0:
                     self.I0box.removeHandle(self.I0box.getHandles()[0], updateSegments=True)
-                    self.I0instructions.setText("")
             self.I0box.sigRegionChangeFinished.connect(self.DrawROI)
             self.clickdetector.stop()
 
@@ -11107,16 +11112,14 @@ class CliptoSubregion(QtWidgets.QDialog):
     def OnAccept(self, evt):
 
         #change the stack size to [x1,x2], [y1,y2]
-
-        self.stack.absdata = self.stack.absdata[ self.new_x1:self.new_x2+1, self.new_y1:self.new_y2+1, :]
-
+        self.stack.absdata = self.stack.absdata[ self.new_x1:self.new_x2+1, self.stack.n_rows-self.new_y2-1:self.stack.n_rows-self.new_y1, :]
 
         self.stack.n_cols = self.stack.absdata.shape[0]
         self.stack.n_rows = self.stack.absdata.shape[1]
 
 
         if self.com.i0_loaded == 1:
-            self.stack.od3d = self.stack.od3d[ self.new_x1:self.new_x2+1, self.new_y1:self.new_y2+1, :]
+            self.stack.od3d = self.stack.od3d[ self.new_x1:self.new_x2+1, self.stack.n_rows-self.new_y2-1:self.stack.n_rows-self.new_y1, :]
 
             self.stack.od = self.stack.od3d.copy()
 
@@ -14085,17 +14088,18 @@ class PageMap(QtWidgets.QWidget):
         selectionlst = self.MapSelectWidget.selectedItems()
         if len(selectionlst) == 1:
             self.OnScrollEng(self.MapSelectWidget.row(selectionlst[0]))
-        if len(selectionlst) > 2:
-            self.OnScrollEng(self.MapSelectWidget.currentRow())
-            selectionlst[0].setSelected(False)
-            selectionlst = selectionlst[1:3]
-        if len(selectionlst) == 2:
-            self.xoffset = 0
-            self.yoffset = 0
-            self.ShowMap(selectionlst)
-            self.OnScrollEng(self.MapSelectWidget.currentRow())
-            self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),
-                               self.SquarePxCheckBox.isChecked())
+        elif len(selectionlst) > 1:
+            if len(selectionlst) > 2:
+                self.OnScrollEng(self.MapSelectWidget.currentRow())
+                selectionlst[0].setSelected(False)
+            elif len(selectionlst) == 2:
+                self.InfWarning = False
+                self.xoffset = 0
+                self.yoffset = 0
+                self.ShowMap(selectionlst)
+                self.OnScrollEng(self.MapSelectWidget.currentRow())
+                self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),
+                                       self.SquarePxCheckBox.isChecked())
 
     def Clear(self):
         self.p1.clear()
@@ -14206,8 +14210,15 @@ class PageMap(QtWidgets.QWidget):
         elif crop[1] < 0:
             im1 = im1[:,:crop[1]]
             im2 = im2[:,:crop[1]]
-
         OD = np.log(im1/im2)
+        inf_idx = np.where(np.isinf(OD))
+        nan_idx = np.where(np.isnan(OD))
+        if np.any(inf_idx) or np.any(nan_idx):
+            if not self.InfWarning:
+                self.InfWarning = True
+                QtGui.QMessageBox.warning(self, 'Warning!', "The OD map contained infinite or nan values. Please note that they have been zeroed.")
+            OD[inf_idx] = 0 #infinite values get replaced by zero. This is an ugly work around, but with nans the image is not displayed correctly.
+            OD[nan_idx] = 0
         return OD
 
     def calcBinSize(self,i,N):
@@ -14232,25 +14243,30 @@ class PageMap(QtWidgets.QWidget):
         self.p2.clear()
         self.p2.addItem(self.m_item)
         self.setCrosshair()
-        selection = [self.MapSelectWidget.row(selection[1]),self.MapSelectWidget.row(selection[0])]
-        selection.sort()
-        self.p2.setTitle("Map from energies "+str(round(self.stk.ev[selection[0]],2))+" and "+str(round(self.stk.ev[selection[1]],2))+" eV")
-        self.OD = self.CalcODMap(selection[0], selection[1])
-        self.ODmin = np.min(self.OD)
-        self.ODmax = np.max(self.OD)
-        self.ODHighSpinBox.valueChanged.disconnect()
-        self.ODLowSpinBox.valueChanged.disconnect()
-        self.ODHighSpinBox.setMaximum(self.ODmax)
-        self.ODHighSpinBox.setMinimum(self.ODmin)
-        self.ODLowSpinBox.setMaximum(self.ODmax)
-        self.ODLowSpinBox.setMinimum(self.ODmin)
-        self.ODLowSpinBox.setValue(self.ODmin)
-        self.ODHighSpinBox.setValue(self.ODmax)
-        self.setODlimits(self.ODmin, self.ODmax)
-        self.ODHighSpinBox.valueChanged.connect(lambda: self.setODlimits(self.ODLowSpinBox.value(),self.ODHighSpinBox.value()))
-        self.ODLowSpinBox.valueChanged.connect(lambda: self.setODlimits(self.ODLowSpinBox.value(),self.ODHighSpinBox.value()))
-        #self.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value())
-        #self.m_item.setImage(self.OD)
+        try:
+            selection = [self.MapSelectWidget.row(selection[1]),self.MapSelectWidget.row(selection[0])]
+            selection.sort()
+            self.p2.setTitle("Map from energies " + str(round(self.stk.ev[selection[0]], 2)) + " and " + str(
+                round(self.stk.ev[selection[1]], 2)) + " eV")
+            self.OD = self.CalcODMap(selection[0], selection[1])
+            self.ODmin = np.min(self.OD)
+            self.ODmax = np.max(self.OD)
+            self.ODHighSpinBox.valueChanged.disconnect()
+            self.ODLowSpinBox.valueChanged.disconnect()
+            self.ODHighSpinBox.setMaximum(self.ODmax)
+            self.ODHighSpinBox.setMinimum(self.ODmin)
+            self.ODLowSpinBox.setMaximum(self.ODmax)
+            self.ODLowSpinBox.setMinimum(self.ODmin)
+            self.ODLowSpinBox.setValue(self.ODmin)
+            self.ODHighSpinBox.setValue(self.ODmax)
+            self.setODlimits(self.ODmin, self.ODmax)
+            self.ODHighSpinBox.valueChanged.connect(
+                lambda: self.setODlimits(self.ODLowSpinBox.value(), self.ODHighSpinBox.value()))
+            self.ODLowSpinBox.valueChanged.connect(
+                lambda: self.setODlimits(self.ODLowSpinBox.value(), self.ODHighSpinBox.value()))
+        except IndexError:
+            self.p2.clear()
+            print("Select a second image!")
 
 #----------------------------------------------------------------------
 class StackListFrame(QtWidgets.QDialog):
@@ -15118,8 +15134,12 @@ class MainFrame(QtWidgets.QMainWindow):
             if extension == '.hdf5':
                 file_dataexch_hdf5.write_h5(filepath, self.data_struct)
 
+            #elif extension == '.ncb' and self.page1.cb_normthick.isChecked():
+            #    file_ncb.write_ncb(filepath, self.stk, norm=True)
+
+            #elif extension == '.ncb' and not self.page1.cb_normthick.isChecked():
             elif extension == '.ncb':
-                file_ncb.write_ncb(filepath, self.stk)
+                file_ncb.write_ncb(filepath, self.stk, norm=False)
 
             elif extension == '.tif':
                 file_tif.write_tif(filepath, self.stk.absdata, energies=self.stk.ev)

@@ -255,7 +255,10 @@ def read(filename, self, selection=None, JSONstatus=None):
             try:
                 imagestack[:,:,i] = numpy.loadtxt(HDR.data_names[selection[0]][selection[1]][i], numpy.int32).T
             except ValueError:
-                print("Aborted Stack detected.")
+                print("Aborted stack or XIMs with inconsistent dimensions.")
+                imagestack[:,:,i] = numpy.nan
+            except IOError:
+                print("Image file not found.")
                 imagestack[:,:,i] = numpy.nan
         self.absdata = numpy.empty((self.n_cols,self.n_rows, self.n_ev))
 
