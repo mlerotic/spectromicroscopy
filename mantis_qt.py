@@ -11126,21 +11126,21 @@ class CliptoSubregion(QtWidgets.QDialog):
 
         #change the stack size to [x1,x2], [y1,y2]
         self.stack.absdata = self.stack.absdata[ self.new_x1:self.new_x2+1, self.stack.n_rows-self.new_y2-1:self.stack.n_rows-self.new_y1, :]
+        if self.com.i0_loaded == 1:
+            self.stack.od3d = self.stack.od3d[ self.new_x1:self.new_x2+1, self.stack.n_rows-self.new_y2-1:self.stack.n_rows-self.new_y1, :]
+            self.stack.od = self.stack.od3d.copy()
 
         self.stack.n_cols = self.stack.absdata.shape[0]
         self.stack.n_rows = self.stack.absdata.shape[1]
 
         if self.com.i0_loaded == 1:
-            self.stack.od3d = self.stack.od3d[ self.new_x1:self.new_x2+1, self.stack.n_rows-self.new_y2-1:self.stack.n_rows-self.new_y1, :]
-            self.stack.od = self.stack.od3d.copy()
-            self.stack.od = np.reshape(self.stack.od, (self.stack.n_rows*self.stack.n_cols, self.stack.n_ev), order='F')
+            self.stack.od = np.reshape(self.stack.od, (self.stack.n_rows * self.stack.n_cols, self.stack.n_ev), order='F')
 
         #Fix the slider on Page 1!
         self.parent.page1.ix = int(self.stack.n_cols/2)
         self.parent.page1.iy = int(self.stack.n_rows/2)
 
         self.stack.fill_h5_struct_from_stk()
-
         self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
         self.parent.page1.loadImage()
         self.parent.page0.ShowImage()
