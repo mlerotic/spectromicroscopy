@@ -55,6 +55,12 @@
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
+        <property name="autoFillBackground">
+         <bool>false</bool>
+        </property>
+        <property name="styleSheet">
+         <string notr="true"/>
+        </property>
         <property name="frameShape">
          <enum>QFrame::StyledPanel</enum>
         </property>
@@ -63,7 +69,17 @@
         </property>
         <layout class="QHBoxLayout" name="horizontalLayout_3">
          <item>
-          <widget class="GraphicsView" name="canvas"/>
+          <widget class="GraphicsView" name="canvas">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">background: white</string>
+           </property>
+          </widget>
          </item>
          <item>
           <widget class="QScrollBar" name="slider_eng">
@@ -137,7 +153,7 @@
             </attribute>
             <layout class="QVBoxLayout" name="verticalLayout_4">
              <item>
-              <widget class="QGroupBox" name="ImageSelection">
+              <widget class="QGroupBox" name="ImageSelection_1">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
                  <horstretch>0</horstretch>
@@ -151,7 +167,7 @@
                 </size>
                </property>
                <property name="title">
-                <string>Images</string>
+                <string>Selection 1</string>
                </property>
                <layout class="QHBoxLayout" name="horizontalLayout_5">
                 <property name="spacing">
@@ -170,7 +186,7 @@
                  <number>2</number>
                 </property>
                 <item>
-                 <widget class="QListWidget" name="MapSelectWidget">
+                 <widget class="QListWidget" name="MapSelectWidget1">
                   <property name="sizePolicy">
                    <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
                     <horstretch>0</horstretch>
@@ -233,8 +249,81 @@
                </layout>
               </widget>
              </item>
-             <item alignment="Qt::AlignTop">
-              <widget class="QGroupBox" name="aln">
+             <item>
+              <widget class="QGroupBox" name="ImageSelection_2">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>100</width>
+                 <height>80</height>
+                </size>
+               </property>
+               <property name="title">
+                <string>Selection 2</string>
+               </property>
+               <layout class="QHBoxLayout" name="ImageSelection2">
+                <item>
+                 <widget class="QListWidget" name="MapSelectWidget2">
+                  <property name="enabled">
+                   <bool>false</bool>
+                  </property>
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
+                  <property name="focusPolicy">
+                   <enum>Qt::ClickFocus</enum>
+                  </property>
+                  <property name="frameShape">
+                   <enum>QFrame::NoFrame</enum>
+                  </property>
+                  <property name="frameShadow">
+                   <enum>QFrame::Plain</enum>
+                  </property>
+                  <property name="lineWidth">
+                   <number>0</number>
+                  </property>
+                  <property name="horizontalScrollBarPolicy">
+                   <enum>Qt::ScrollBarAlwaysOff</enum>
+                  </property>
+                  <property name="editTriggers">
+                   <set>QAbstractItemView::NoEditTriggers</set>
+                  </property>
+                  <property name="showDropIndicator" stdset="0">
+                   <bool>false</bool>
+                  </property>
+                  <property name="defaultDropAction">
+                   <enum>Qt::IgnoreAction</enum>
+                  </property>
+                  <property name="alternatingRowColors">
+                   <bool>true</bool>
+                  </property>
+                  <property name="selectionMode">
+                   <enum>QAbstractItemView::MultiSelection</enum>
+                  </property>
+                  <property name="selectionRectVisible">
+                   <bool>true</bool>
+                  </property>
+                  <property name="sortingEnabled">
+                   <bool>true</bool>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item>
+              <widget class="QGroupBox" name="Alignment">
                <property name="enabled">
                 <bool>true</bool>
                </property>
@@ -878,7 +967,7 @@ Align</string>
               </widget>
              </item>
              <item>
-              <widget class="QGroupBox" name="groupBox">
+              <widget class="QGroupBox" name="ODoff">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
                  <horstretch>0</horstretch>
@@ -1209,51 +1298,45 @@ OD limits</string>
                </layout>
               </widget>
              </item>
+             <item>
+              <widget class="QGroupBox" name="Export">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="title">
+                <string>Export</string>
+               </property>
+               <layout class="QGridLayout" name="gridLayout_5">
+                <item row="0" column="0">
+                 <widget class="QPushButton" name="pbExpData">
+                  <property name="enabled">
+                   <bool>false</bool>
+                  </property>
+                  <property name="text">
+                   <string>OD Data (*.tif, *.txt)</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="0">
+                 <widget class="QPushButton" name="pbExpImg">
+                  <property name="enabled">
+                   <bool>false</bool>
+                  </property>
+                  <property name="text">
+                   <string>OD Image (*.svg,*.tif,*.png*.jpg)</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+             </item>
             </layout>
            </widget>
           </widget>
          </item>
-		 <!--
-         <item>
-          <widget class="QTabWidget" name="tabWidget_2">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
-             <horstretch>8</horstretch>
-             <verstretch>6</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>100</height>
-            </size>
-           </property>
-           <property name="focusPolicy">
-            <enum>Qt::ClickFocus</enum>
-           </property>
-           <property name="currentIndex">
-            <number>0</number>
-           </property>
-           <property name="elideMode">
-            <enum>Qt::ElideLeft</enum>
-           </property>
-           <property name="documentMode">
-            <bool>false</bool>
-           </property>
-           <property name="tabsClosable">
-            <bool>false</bool>
-           </property>
-           <property name="movable">
-            <bool>false</bool>
-           </property>
-           <widget class="QWidget" name="tab">
-            <attribute name="title">
-             <string>File Options</string>
-            </attribute>
-           </widget>
-          </widget>
-         </item>
-		 -->
         </layout>
        </widget>
       </item>

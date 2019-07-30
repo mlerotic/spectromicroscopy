@@ -44,6 +44,7 @@ matplotlib.interactive( True )
 matplotlib.rcParams['svg.fonttype'] = 'none'
 from matplotlib import cm
 import pyqtgraph as pg
+import pyqtgraph.exporters
 import data_struct
 import data_stack
 import analyze
@@ -9548,8 +9549,8 @@ class PageStack(QtWidgets.QWidget):
         Browse for tiff
         """
 
-        try:
-        #if True:
+        #try:
+        if True:
             wildcard = "TIFF files (.tif)"
 
             filepath, _filter = QtWidgets.QFileDialog.getSaveFileName(self, 'Save OD', '', wildcard)
@@ -9570,11 +9571,11 @@ class PageStack(QtWidgets.QWidget):
 
             QtWidgets.QApplication.restoreOverrideCursor()
 
-        except:
+        #except:
 
-            QtWidgets.QApplication.restoreOverrideCursor()
+        #    QtWidgets.QApplication.restoreOverrideCursor()
 
-            QtWidgets.QMessageBox.warning(self, 'Error', 'Could not save OD stack file.')
+        #    QtWidgets.QMessageBox.warning(self, 'Error', 'Could not save OD stack file.')
 
 
 
@@ -13855,6 +13856,9 @@ class PageMap(QtWidgets.QWidget):
         self.pbLLUU.clicked.connect(lambda: self.Offset(-1,1))
         self.pbRRDD.clicked.connect(lambda: self.Offset(1,-1))
 
+        self.pbExpData.clicked.connect(self.OnSaveData)
+        self.pbExpImg.clicked.connect(self.OnSaveImage)
+
         self.MetricCheckBox.toggled.connect(lambda: self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
         self.ZeroOriginCheckBox.toggled.connect(lambda: self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
         self.SquarePxCheckBox.toggled.connect(lambda: self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
@@ -13862,7 +13866,7 @@ class PageMap(QtWidgets.QWidget):
         self.ShiftLabel.setText("x = %0.1f \ny = %0.1f" % (0, 0))
         self.ODHighSpinBox.valueChanged.connect(lambda: self.setODlimits(self.ODLowSpinBox.value(),self.ODHighSpinBox.value()))
         self.ODLowSpinBox.valueChanged.connect(lambda: self.setODlimits(self.ODLowSpinBox.value(),self.ODHighSpinBox.value()))
-        self.RSTODpb.clicked.connect(lambda: self.ShowMap(self.MapSelectWidget.selectedItems()))
+        self.RSTODpb.clicked.connect(lambda: self.ShowMap(self.MapSelectWidget1.selectedItems()))
 
         self.CMCatBox.addItems([self.cmaps[0][0],self.cmaps[1][0],self.cmaps[2][0],self.cmaps[3][0],self.cmaps[4][0],self.cmaps[5][0]])
         self.CMMapBox.addItems(self.cmaps[2][1])
@@ -13872,22 +13876,21 @@ class PageMap(QtWidgets.QWidget):
         self.CMMapBox.currentIndexChanged.connect(lambda: self.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value()))
         self.StepSpin.valueChanged.connect(lambda: self.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value()))
 
-        self.MapSelectWidget.itemSelectionChanged.connect(self.OnSelect)
+        self.MapSelectWidget1.itemSelectionChanged.connect(self.OnSelect)
         self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
         self.data_struct = data_struct
         self.stk = stack
         self.com = common
         self.iev = 0
 
-        self.pglayout = pg.GraphicsLayout()
-        self.canvas.setBackground("w") # canvas is a pg.GraphicsView widget
+        self.pglayout = pg.GraphicsLayout(border=None)
+        self.canvas.setBackground("0000") # canvas is a pg.GraphicsView widget
         self.canvas.setCentralWidget(self.pglayout)
 
         self.p1 = self.pglayout.addPlot(row=1, col=1, rowspan=1, colspan=1)
         self.p1.setMouseEnabled(x=False, y=False)
         self.i_item = pg.ImageItem(border="k")
         self.p1.setAspectLocked(lock=True, ratio=1)
-        self.p1.enableAutoRange(enable=True)
         self.p1.showAxis("top", show=True)
         self.p1.showAxis("bottom", show=True)
         self.p1.showAxis("left", show=True)
@@ -13932,6 +13935,8 @@ class PageMap(QtWidgets.QWidget):
         bx2.setStyle(showValues=False,tickLength=0)
         self.p1.setTitle("No images loaded")
         self.p2.setTitle("No map available")
+        # self.p1.setSizePolicy(QtGui.QSizePolicy.Maximum, QtGui.QSizePolicy.Expanding)
+        # self.p2.setSizePolicy(QtGui.QSizePolicy.Maximum, QtGui.QSizePolicy.Expanding)
 
         self.cmimg = pg.ImageItem(border=None)
         self.cm = self.pglayout.addPlot(row=2, col=2, rowspan=1, colspan=1)
@@ -13963,6 +13968,81 @@ class PageMap(QtWidgets.QWidget):
         self.pglayout.layout.setColumnMinimumWidth(2, 80)
         self.pglayout.layout.setColumnMaximumWidth(2, 80)
 
+    # ----------------------------------------------------------------------
+    def OnSaveData(self,event):
+        #Save Data
+        wildcard = "Float32 TIFF File (*.tif);;TextImage (*.txt);;"
+
+        fileName, _filter = QtWidgets.QFileDialog.getSaveFileName(self, 'Save OD Map', '', wildcard)
+
+        fileName = str(fileName)
+        if fileName == '':
+            return
+
+        path, ext = os.path.splitext(fileName)
+        ext = ext[1:].lower()
+
+        if ext != 'tif' and ext != 'txt':
+            error_message = (
+                  'Only the TIF and TXT data formats are supported.\n'
+                 'A file extension of `tif\' or `txt\' must be used.')
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Error - Could not save file.')
+            return
+
+        if ext == 'tif':
+            from PIL import Image
+            img1 = Image.fromarray(np.rot90(self.OD))
+            img1.save(fileName)
+        if ext == 'txt':
+            np.savetxt(fileName, np.rot90(self.OD), delimiter='\t', newline='\n',fmt='%.5f')
+
+    def OnSaveImage(self, event):
+        # Save Image
+        wildcard = "TIFF (*.tif);;PNG (*.png);;JPG (*.jpg);;SVG (*.svg);;"
+
+        fileName, _filter = QtWidgets.QFileDialog.getSaveFileName(self, 'Save OD Map', '', wildcard)
+
+        fileName = str(fileName)
+        if fileName == '':
+            return
+
+        path, ext = os.path.splitext(fileName)
+        ext = ext[1:].lower()
+
+        if ext != 'svg' and ext != 'tif' and ext != 'png' and ext != 'jpg':
+            error_message = (
+                    'Unsupported data format\n'
+                    'Use a proper file extension.')
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Error - Could not save file.')
+            return
+
+        if ext == 'tif' or ext == 'png' or ext == 'jpg':
+            # The subsequent code was tested with pyqtgraph 0.11.0dev0 ; pyqtgraph < 0.11.0 shows a TypeError: 'float'...
+            # To combine self.p2 and self.cm (OD bar) in a single image, the two QImage objects are redrawn using a QPainter object.
+            # If self.cm is not needed, the following is sufficient:
+            #   p2exp = pg.exporters.ImageExporter(self.p2)
+            #   p2exp.export(FileName)
+            padding = 10 # clearance between OD color bar and p2 in px units
+            p2exp = pg.exporters.ImageExporter(self.p2)
+            cmexp = pg.exporters.ImageExporter(self.cm)
+            p2exp = p2exp.export(toBytes=True)
+            cmexp = cmexp.export(toBytes=True)
+            qimg = QtGui.QImage(p2exp.size().width()+ padding + cmexp.size().width(), p2exp.size().height(), QtGui.QImage.Format_ARGB32)
+            if ext == 'jpg':
+                qimg.fill(QtGui.QColor(255, 255, 255, 255)); # BG white if export as jpg
+            else:
+                qimg.fill(QtGui.QColor(0, 0, 0, 0));
+            painter = QtGui.QPainter()
+            painter.begin(qimg)
+            painter.drawImage(0, 0, p2exp)
+            painter.drawImage(p2exp.size().width() + padding, 0, cmexp)
+            painter.end()
+            qimg.save(fileName,quality=100)
+        elif ext == 'svg':
+            # ToDo: concatenate cm and p2 in SVG
+            exporter = pg.exporters.SVGExporter(self.p2)
+            exporter.export(FileName)
+
     def OnCatChanged(self):
         self.CMMapBox.currentIndexChanged.disconnect()
         self.CMMapBox.clear()
@@ -13983,8 +14063,8 @@ class PageMap(QtWidgets.QWidget):
             self.p2.removeItem(self.vLine)
             self.canvas.removeItem(self.ODlabel)
 
-        self.vLine = pg.InfiniteLine(angle=90, movable=False, pen="w")
-        self.hLine = pg.InfiniteLine(angle=0, movable=False,pen="w")
+        self.vLine = pg.InfiniteLine(angle=90, movable=False, pen="0000")
+        self.hLine = pg.InfiniteLine(angle=0, movable=False,pen="0000")
         self.ODlabel = pg.LabelItem(justify="left")
         self.canvas.addItem(self.ODlabel)
         self.p2.addItem(self.vLine, ignoreBounds=True)
@@ -14034,8 +14114,8 @@ class PageMap(QtWidgets.QWidget):
                 self.ODlabel.setText("")
                 self.vLine.setZValue(-1000)
                 self.hLine.setZValue(-1000)
-                self.vLine.setPen("w")
-                self.hLine.setPen("w")
+                self.vLine.setPen("0000")
+                self.hLine.setPen("0000")
 
     def setODbar(self,min=None,max=None):
         self.cm.setRange(xRange=[0,1], yRange=[min,max], update=False, disableAutoRange=True,padding=0)
@@ -14096,26 +14176,26 @@ class PageMap(QtWidgets.QWidget):
                 self.pbRST.click()
 
     def OnSelect(self):
-        selectionlst = self.MapSelectWidget.selectedItems()
+        selectionlst = self.MapSelectWidget1.selectedItems()
         if len(selectionlst) == 1:
-            self.OnScrollEng(self.MapSelectWidget.row(selectionlst[0]))
+            self.OnScrollEng(self.MapSelectWidget1.row(selectionlst[0]))
         elif len(selectionlst) > 1:
             if len(selectionlst) > 2:
-                self.OnScrollEng(self.MapSelectWidget.currentRow())
+                self.OnScrollEng(self.MapSelectWidget1.currentRow())
                 selectionlst[0].setSelected(False)
             elif len(selectionlst) == 2:
                 self.InfWarning = False
                 self.xoffset = 0
                 self.yoffset = 0
                 self.ShowMap(selectionlst)
-                self.OnScrollEng(self.MapSelectWidget.currentRow())
+                self.OnScrollEng(self.MapSelectWidget1.currentRow())
                 self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),
                                        self.SquarePxCheckBox.isChecked())
 
     def Clear(self):
         self.p1.clear()
         self.p2.clear()
-        self.MapSelectWidget.clear()
+        self.MapSelectWidget1.clear()
 
     def ShowImage(self):
         self.p1.addItem(self.i_item)
@@ -14124,7 +14204,7 @@ class PageMap(QtWidgets.QWidget):
                            False)
         for e in self.stk.ev:
             item = QtGui.QListWidgetItem("Image at "+str(round(e,2))+" eV")
-            self.MapSelectWidget.addItem(item)
+            self.MapSelectWidget1.addItem(item)
 
     def OnScrollEng(self, value):
         self.iev = value
@@ -14182,7 +14262,7 @@ class PageMap(QtWidgets.QWidget):
             else:
                 self.xoffset = self.xoffset + shift_x
                 self.yoffset = self.yoffset + shift_y
-            self.ShowMap(self.MapSelectWidget.selectedItems())
+            self.ShowMap(self.MapSelectWidget1.selectedItems())
 
     def Shift(self,img):
         if self.xoffset == 0 and self.yoffset == 0:
@@ -14255,7 +14335,7 @@ class PageMap(QtWidgets.QWidget):
         self.p2.addItem(self.m_item)
         self.setCrosshair()
         try:
-            selection = [self.MapSelectWidget.row(selection[1]),self.MapSelectWidget.row(selection[0])]
+            selection = [self.MapSelectWidget1.row(selection[1]),self.MapSelectWidget1.row(selection[0])]
             selection.sort()
             self.p2.setTitle("Map from energies " + str(round(self.stk.ev[selection[0]], 2)) + " and " + str(
                 round(self.stk.ev[selection[1]], 2)) + " eV")
@@ -14275,6 +14355,8 @@ class PageMap(QtWidgets.QWidget):
                 lambda: self.setODlimits(self.ODLowSpinBox.value(), self.ODHighSpinBox.value()))
             self.ODLowSpinBox.valueChanged.connect(
                 lambda: self.setODlimits(self.ODLowSpinBox.value(), self.ODHighSpinBox.value()))
+            self.pbExpData.setEnabled(True)
+            self.pbExpImg.setEnabled(True)
         except IndexError:
             self.p2.clear()
             print("Select a second image!")
@@ -15351,6 +15433,7 @@ class MainFrame(QtWidgets.QMainWindow):
 
 
         self.page1.ResetDisplaySettings()
+        print("break")
 
 
 
