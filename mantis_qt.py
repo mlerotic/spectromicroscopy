@@ -45,6 +45,7 @@ matplotlib.rcParams['svg.fonttype'] = 'none'
 from matplotlib import cm
 import pyqtgraph as pg
 import pyqtgraph.exporters
+from lxml import etree
 import data_struct
 import data_stack
 import analyze
@@ -14009,25 +14010,24 @@ class PageMap(QtWidgets.QWidget):
         path, ext = os.path.splitext(fileName)
         ext = ext[1:].lower()
 
-        if ext != 'svg' and ext != 'tif' and ext != 'png' and ext != 'jpg':
-            error_message = (
-                    'Unsupported data format\n'
-                    'Use a proper file extension.')
-            QtWidgets.QMessageBox.warning(self, 'Error', 'Error - Could not save file.')
-            return
-
+        padding = 10  # clearance between OD color bar and p2 in px units
+        width = self.p2.size().width() + self.cm.size().width()
+        height = self.p2.size().height()
+        if ext == 'svg':
+            p2exp = pg.exporters.SVGExporter(self.p2)
+            cmexp = pg.exporters.SVGExporter(self.cm)
+        else:
+            p2exp = pg.exporters.ImageExporter(self.p2)
+            cmexp = pg.exporters.ImageExporter(self.cm)
+        p2exp = p2exp.export(toBytes=True)
+        cmexp = cmexp.export(toBytes=True)
         if ext == 'tif' or ext == 'png' or ext == 'jpg':
             # The subsequent code was tested with pyqtgraph 0.11.0dev0 ; pyqtgraph < 0.11.0 shows a TypeError: 'float'...
             # To combine self.p2 and self.cm (OD bar) in a single image, the two QImage objects are redrawn using a QPainter object.
             # If self.cm is not needed, the following is sufficient:
             #   p2exp = pg.exporters.ImageExporter(self.p2)
             #   p2exp.export(FileName)
-            padding = 10 # clearance between OD color bar and p2 in px units
-            p2exp = pg.exporters.ImageExporter(self.p2)
-            cmexp = pg.exporters.ImageExporter(self.cm)
-            p2exp = p2exp.export(toBytes=True)
-            cmexp = cmexp.export(toBytes=True)
-            qimg = QtGui.QImage(p2exp.size().width()+ padding + cmexp.size().width(), p2exp.size().height(), QtGui.QImage.Format_ARGB32)
+            qimg = QtGui.QImage(width + padding, height, QtGui.QImage.Format_ARGB32)
             if ext == 'jpg':
                 qimg.fill(QtGui.QColor(255, 255, 255, 255)); # BG white if export as jpg
             else:
@@ -14039,9 +14039,43 @@ class PageMap(QtWidgets.QWidget):
             painter.end()
             qimg.save(fileName,quality=100)
         elif ext == 'svg':
-            # ToDo: concatenate cm and p2 in SVG
-            exporter = pg.exporters.SVGExporter(self.p2)
-            exporter.export(FileName)
+            fig1 = self.SVGClipPathRemover(etree.fromstring(p2exp))
+            fig2 = self.SVGClipPathRemover(etree.fromstring(cmexp))
+            mergedfig = self.SVGMerger(fig1,fig2,self.p2.size().width(), self.cm.size().width(),height,padding)
+            out = etree.tostring(mergedfig, xml_declaration=True,
+                                 standalone=True,
+                                 pretty_print=True)
+            with open(fileName, 'wb') as svg:
+                svg.write(out)
+
+    def SVGMerger(self, svg1, svg2, width1,width2, height, padding=0): #merges two lxml.etree elements horizontally with padding
+        ns = {'': svg1.tag.split('}')[0].strip('{')}
+        svg = etree.Element(svg1.tag, nsmap={None: 'http://www.w3.org/2000/svg', 'xlink': 'http://www.w3.org/1999/xlink'})
+        svg.set("version", "1.2")
+        svg.set('width', str(width1 + width2 + padding)+"px") #target width
+        svg.set('height', str(height)+"px") #target height
+        svg.set("viewBox", "0 0 %s %s" % (str(width1 + width2 +padding)+"px", str(height)+"px"))
+        g1 = etree.SubElement(svg, 'g')
+        g1.append(svg1.find('./g', ns))
+        g = etree.SubElement(g1, 'g')
+        g.set('transform','translate('+str(width1 + padding)+', 0) scale(1)')
+        g.append(svg2.find('./g', ns))
+        return svg
+
+    def SVGClipPathRemover(self, elem): #takes etree elements and removes clip-path tags and keys inside g tags if present.
+        ns = {'': elem.tag.split('}')[0].strip('{')}
+        try:
+            for clippath in elem.findall(".//clipPath", ns):
+                clippath.getparent().remove(clippath)
+        except:
+            pass
+        try:
+            for g in elem.findall(".//g", ns):
+                if g.keys()[0] == "clip-path":
+                    del g.attrib['clip-path']
+        except:
+            pass
+        return elem
 
     def OnCatChanged(self):
         self.CMMapBox.currentIndexChanged.disconnect()
@@ -15433,7 +15467,6 @@ class MainFrame(QtWidgets.QMainWindow):
 
 
         self.page1.ResetDisplaySettings()
-        print("break")
 
 
 
