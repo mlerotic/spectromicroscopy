@@ -43,6 +43,7 @@ class data:
         self.i0_dwell = None 
         self.n_ev = 0
         self.n_theta = 0
+        self.shifts=[]
         self.stack4D = None
         
 
@@ -77,6 +78,7 @@ class data:
         
         self.xshifts = 0
         self.yshifts = 0
+        self.shifts = []
         
         self.stack4D = None
         self.n_theta = 0

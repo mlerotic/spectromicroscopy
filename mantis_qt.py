@@ -28,7 +28,7 @@ import time
 import getopt
 
 from PyQt5 import QtCore, QtGui, QtWidgets, uic
-from PyQt5.QtCore import Qt, QCoreApplication
+from PyQt5.QtCore import Qt, QCoreApplication, pyqtSignal
 
 from PIL import Image
 from scipy import ndimage
@@ -13789,28 +13789,29 @@ class PageLoadData(QtWidgets.QWidget):
 
 """ ------------------------------------------------------------------------------------------------"""
 class PageMap(QtWidgets.QWidget):
+    qlistchanged = pyqtSignal([tuple])
     def __init__(self, common, data_struct, stack):
         super(PageMap, self).__init__()
         uic.loadUi('pagemap.ui', self)
         self.show()
-        self.setStyleSheet(""" QListWidget:item:selected:active {
-                                             color:rgb(255, 255, 255);
-                                             background: rgb(0, 170, 255);
-                                        }
-                                        QListWidget:item:selected:!active {
-                                             color:rgb(255, 255, 255);
-                                             background: rgb(0, 170, 255);
-                                        }
-                                        QListWidget:item:selected:disabled {
-                                             color:rgb(255, 255, 255);
-                                             background: rgb(0, 170, 255);
-                                        }
-                                        QListWidget:item:selected:!disabled {
-                                             color:rgb(255, 255, 255);
-                                             background: rgb(0, 170, 255);
-                                        }
-                                        """
-                           )
+        # self.setStyleSheet(""" QListWidget:item:selected:active {
+        #                                      color:rgb(255, 255, 255);
+        #                                      background: rgb(0, 170, 255);
+        #                                 }
+        #                                 QListWidget:item:selected:!active {
+        #                                      color:rgb(255, 255, 255);
+        #                                      background: rgb(0, 170, 255);
+        #                                 }
+        #                                 QListWidget:item:selected:disabled {
+        #                                      color:rgb(255, 255, 255);
+        #                                      background: rgb(0, 170, 255);
+        #                                 }
+        #                                 QListWidget:item:selected:!disabled {
+        #                                      color:rgb(255, 255, 255);
+        #                                      background: rgb(0, 170, 255);
+        #                                 }
+        #                                 """
+        #                   )
         self.cmaps = [('Perceptually Uniform Sequential', [
             'viridis', 'plasma', 'inferno', 'magma']),
                       ('Sequential', [
@@ -13839,23 +13840,23 @@ class PageMap(QtWidgets.QWidget):
         self.xoffset = 0
         self.yoffset = 0
         self.scale = 0.000001
-        self.pbRST.clicked.connect(lambda: self.Offset(0, 0))
-        self.pbL.clicked.connect(lambda: self.Offset(-0.2,0))
-        self.pbR.clicked.connect(lambda: self.Offset(0.2,0))
-        self.pbU.clicked.connect(lambda: self.Offset(0,0.2))
-        self.pbD.clicked.connect(lambda: self.Offset(0,-0.2))
-        self.pbRD.clicked.connect(lambda: self.Offset(0.2,-0.2))
-        self.pbRU.clicked.connect(lambda: self.Offset(0.2,0.2))
-        self.pbLD.clicked.connect(lambda: self.Offset(-0.2,-0.2))
-        self.pbLU.clicked.connect(lambda: self.Offset(-0.2,0.2))
-        self.pbLL.clicked.connect(lambda: self.Offset(-1,0))
-        self.pbRR.clicked.connect(lambda: self.Offset(1,0))
-        self.pbUU.clicked.connect(lambda: self.Offset(0,1))
-        self.pbDD.clicked.connect(lambda: self.Offset(0,-1))
-        self.pbLLDD.clicked.connect(lambda: self.Offset(-1,-1))
-        self.pbRRUU.clicked.connect(lambda: self.Offset(1,1))
-        self.pbLLUU.clicked.connect(lambda: self.Offset(-1,1))
-        self.pbRRDD.clicked.connect(lambda: self.Offset(1,-1))
+        self.pbRST.clicked.connect(lambda: self.setShifts(0, 0))
+        self.pbL.clicked.connect(lambda: self.setShifts(-0.2,0))
+        self.pbR.clicked.connect(lambda: self.setShifts(0.2,0))
+        self.pbU.clicked.connect(lambda: self.setShifts(0,0.2))
+        self.pbD.clicked.connect(lambda: self.setShifts(0,-0.2))
+        self.pbRD.clicked.connect(lambda: self.setShifts(0.2,-0.2))
+        self.pbRU.clicked.connect(lambda: self.setShifts(0.2,0.2))
+        self.pbLD.clicked.connect(lambda: self.setShifts(-0.2,-0.2))
+        self.pbLU.clicked.connect(lambda: self.setShifts(-0.2,0.2))
+        self.pbLL.clicked.connect(lambda: self.setShifts(-1,0))
+        self.pbRR.clicked.connect(lambda: self.setShifts(1,0))
+        self.pbUU.clicked.connect(lambda: self.setShifts(0,1))
+        self.pbDD.clicked.connect(lambda: self.setShifts(0,-1))
+        self.pbLLDD.clicked.connect(lambda: self.setShifts(-1,-1))
+        self.pbRRUU.clicked.connect(lambda: self.setShifts(1,1))
+        self.pbLLUU.clicked.connect(lambda: self.setShifts(-1,1))
+        self.pbRRDD.clicked.connect(lambda: self.setShifts(1,-1))
 
         self.pbExpData.clicked.connect(self.OnSaveData)
         self.pbExpImg.clicked.connect(self.OnSaveImage)
@@ -13864,11 +13865,13 @@ class PageMap(QtWidgets.QWidget):
         self.ZeroOriginCheckBox.toggled.connect(lambda: self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
         self.SquarePxCheckBox.toggled.connect(lambda: self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
         self.SquarePxCheckBox.setVisible(False)
+        self.CropCheckBox.toggled.connect(lambda: self.OnCropCB(self.CropCheckBox.isChecked()))
+        self.cropflag = True
         self.ShiftLabel.setText("x = %0.1f \ny = %0.1f" % (0, 0))
         self.ODHighSpinBox.valueChanged.connect(lambda: self.setODlimits(self.ODLowSpinBox.value(),self.ODHighSpinBox.value()))
         self.ODLowSpinBox.valueChanged.connect(lambda: self.setODlimits(self.ODLowSpinBox.value(),self.ODHighSpinBox.value()))
-        self.RSTODpb.clicked.connect(lambda: self.ShowMap(self.MapSelectWidget1.selectedItems()))
-
+        self.RSTODpb.clicked.connect(lambda: self.ShowMap(self.prelst, self.postlst))
+        self.ClrShiftspb.clicked.connect(self.OnClrShifts)
         self.CMCatBox.addItems([self.cmaps[0][0],self.cmaps[1][0],self.cmaps[2][0],self.cmaps[3][0],self.cmaps[4][0],self.cmaps[5][0]])
         self.CMMapBox.addItems(self.cmaps[2][1])
         self.CMCatBox.setCurrentIndex(2)
@@ -13877,12 +13880,16 @@ class PageMap(QtWidgets.QWidget):
         self.CMMapBox.currentIndexChanged.connect(lambda: self.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value()))
         self.StepSpin.valueChanged.connect(lambda: self.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value()))
 
-        self.MapSelectWidget1.itemSelectionChanged.connect(self.OnSelect)
+        self.MapSelectWidget1.itemSelectionChanged.connect(self.OnFocusChanged)
+        self.MapSelectWidget1.mousePressEvent = self.mouseEventOnQList
+        self.MapSelectWidget1.mouseMoveEvent = self.mouseEventOnQList
         self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
+        self.qlistchanged.connect(self.qListChangeHandler)
         self.data_struct = data_struct
         self.stk = stack
         self.com = common
         self.iev = 0
+        self.latest_row = -1
 
         self.pglayout = pg.GraphicsLayout(border=None)
         self.canvas.setBackground("0000") # canvas is a pg.GraphicsView widget
@@ -13969,6 +13976,61 @@ class PageMap(QtWidgets.QWidget):
         self.pglayout.layout.setColumnMinimumWidth(2, 80)
         self.pglayout.layout.setColumnMaximumWidth(2, 80)
 
+    def mouseEventOnQList(self, e):
+        if e.type() == QtCore.QEvent.MouseMove or e.type() == QtCore.QEvent.MouseButtonPress:
+            qlist = self.MapSelectWidget1
+            pos = qlist.mapFromGlobal(QtGui.QCursor.pos())
+            row = qlist.indexAt(pos).row()
+            #print(row,self.latest_row)
+            params = [self.stk.shifts[row][0],self.stk.shifts[row][1],self.stk.shifts[row][2]]
+            if row >= 0:
+                    if e.type() != QtCore.QEvent.MouseMove or row != self.latest_row:
+                        if e.buttons() == QtCore.Qt.RightButton:
+                            qlist.setCurrentRow(row)
+                            params[1] = 1
+                        elif e.buttons() == QtCore.Qt.LeftButton:
+                            qlist.setCurrentRow(row)
+                            params[1] = -1
+                        self.qlistchanged.emit((row,params))
+                        self.latest_row = row
+        return
+    def qListChangeHandler(self,paramtup):
+        qlist = self.MapSelectWidget1
+        row, params = paramtup
+        if self.stk.shifts[row][1] == params[1]:
+            #print("deselect it!")
+            qlist.item(row).setBackground(QtGui.QColor(0, 0, 0, 0))
+            self.stk.shifts[row][1] = 0
+        elif self.stk.shifts[row][1] != params[1] and params[1] == 1: # select right
+            #print("select right!")
+            qlist.item(row).setBackground(QtGui.QColor('#7fc97f'))
+            self.stk.shifts[row][1] = 1
+        elif self.stk.shifts[row][1] != params[1] and params[1] == -1: # select left
+            #print("select left!")
+            qlist.item(row).setBackground(QtGui.QColor('#beaed4'))
+            self.stk.shifts[row][1] = -1
+        self.OnSelectionChanged()
+        #print(row, params)
+    def OnFocusChanged(self):
+        self.OnScrollEng(self.MapSelectWidget1.currentRow())
+        #print("FocusChanged!")
+    def OnSelectionChanged(self):
+        #print("SelectionChanged!",self.stk.shifts)
+        self.prelst = [index for index, value in enumerate([x[1] for x in  self.stk.shifts]) if value == -1]
+        self.postlst = [index for index, value in enumerate([x[1] for x in  self.stk.shifts]) if value == 1]
+        #print(prelst,postlst)
+        self.OnScrollEng(self.MapSelectWidget1.currentRow())
+        if len(self.prelst) == 0 or len(self.postlst) == 0:
+            self.p2.clear()
+            print("Select a second image!")
+            self.p2.setTitle("Please select a second image!")
+        else:
+            self.InfWarning = False
+            self.ShowMap(self.prelst,self.postlst)
+        # self.OnScrollEng(self.MapSelectWidget1.currentRow())
+        self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),
+                                self.SquarePxCheckBox.isChecked())
+        return
     # ----------------------------------------------------------------------
     def OnSaveData(self,event):
         #Save Data
@@ -13996,7 +14058,6 @@ class PageMap(QtWidgets.QWidget):
             img1.save(fileName)
         if ext == 'txt':
             np.savetxt(fileName, np.rot90(self.OD), delimiter='\t', newline='\n',fmt='%.5f')
-
     def OnSaveImage(self, event):
         # Save Image
         wildcard = "TIFF (*.tif);;PNG (*.png);;JPG (*.jpg);;SVG (*.svg);;"
@@ -14024,7 +14085,7 @@ class PageMap(QtWidgets.QWidget):
         if ext == 'tif' or ext == 'png' or ext == 'jpg':
             # The subsequent code was tested with pyqtgraph 0.11.0dev0 ; pyqtgraph < 0.11.0 shows a TypeError: 'float'...
             # To combine self.p2 and self.cm (OD bar) in a single image, the two QImage objects are redrawn using a QPainter object.
-            # If self.cm is not needed, the following is sufficient:
+            # If self.cm is not needed, the following two lines are sufficient:
             #   p2exp = pg.exporters.ImageExporter(self.p2)
             #   p2exp.export(FileName)
             qimg = QtGui.QImage(width + padding, height, QtGui.QImage.Format_ARGB32)
@@ -14047,7 +14108,6 @@ class PageMap(QtWidgets.QWidget):
                                  pretty_print=True)
             with open(fileName, 'wb') as svg:
                 svg.write(out)
-
     def SVGMerger(self, svg1, svg2, width1,width2, height, padding=0): #merges two lxml.etree elements horizontally with padding
         ns = {'': svg1.tag.split('}')[0].strip('{')}
         svg = etree.Element(svg1.tag, nsmap={None: 'http://www.w3.org/2000/svg', 'xlink': 'http://www.w3.org/1999/xlink'})
@@ -14061,7 +14121,6 @@ class PageMap(QtWidgets.QWidget):
         g.set('transform','translate('+str(width1 + padding)+', 0) scale(1)')
         g.append(svg2.find('./g', ns))
         return svg
-
     def SVGClipPathRemover(self, elem): #takes etree elements and removes clip-path tags and keys inside g tags if present.
         ns = {'': elem.tag.split('}')[0].strip('{')}
         try:
@@ -14076,7 +14135,6 @@ class PageMap(QtWidgets.QWidget):
         except:
             pass
         return elem
-
     def OnCatChanged(self):
         self.CMMapBox.currentIndexChanged.disconnect()
         self.CMMapBox.clear()
@@ -14209,44 +14267,43 @@ class PageMap(QtWidgets.QWidget):
         elif e.key() == QtCore.Qt.Key_Clear:
                 self.pbRST.click()
 
-    def OnSelect(self):
-        selectionlst = self.MapSelectWidget1.selectedItems()
-        if len(selectionlst) == 1:
-            self.OnScrollEng(self.MapSelectWidget1.row(selectionlst[0]))
-        elif len(selectionlst) > 1:
-            if len(selectionlst) > 2:
-                self.OnScrollEng(self.MapSelectWidget1.currentRow())
-                selectionlst[0].setSelected(False)
-            elif len(selectionlst) == 2:
-                self.InfWarning = False
-                self.xoffset = 0
-                self.yoffset = 0
-                self.ShowMap(selectionlst)
-                self.OnScrollEng(self.MapSelectWidget1.currentRow())
-                self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),
-                                       self.SquarePxCheckBox.isChecked())
-
     def Clear(self):
         self.p1.clear()
         self.p2.clear()
         self.MapSelectWidget1.clear()
 
-    def ShowImage(self):
+    def LoadEntries(self): # Called when fresh data are loaded.
+        self.stk.absdata_shifted = self.stk.absdata.copy()
         self.p1.addItem(self.i_item)
-        self.OnScrollEng(0)
-        self.OnMetricScale(self.MetricCheckBox.isChecked(), True,
-                           False)
-        for e in self.stk.ev:
-            item = QtGui.QListWidgetItem("Image at "+str(round(e,2))+" eV")
+        for i,e in enumerate(self.stk.ev): # Fill QList with energies
+            self.stk.shifts.append([1,0,(0.0,0.0)]) #checked [0,1]; pre, post, undefined state for map [-1,1,0],(xshift [float],yshift [float])
+            item = QtGui.QListWidgetItem(str(int(i)).zfill(3)+"     at     " + format(e, '.2f') + " eV     "+"+0.0"+"    +0.0")
             self.MapSelectWidget1.addItem(item)
-
+        self.OnScrollEng(0) # Plot first image & set Scrollbar
+        self.OnMetricScale(self.MetricCheckBox.isChecked(), True, False)
+    def UpdateEntry(self,row):
+        self.MapSelectWidget1.item(row).setText(str(int(row)).zfill(3)+"     at     " + format(self.stk.ev[row], '.2f') + " eV     "+format(self.stk.shifts[row][2][0], '+.1f')+"    "+format(self.stk.shifts[row][2][1], '+.1f'))
+        #self.MapSelectWidget1.addItem(self.MapSelectWidget1.item(row))
+        self.i_item.setImage(self.Shift(row))
     def OnScrollEng(self, value):
+        self.slider_eng.setValue(value)
+        self.MapSelectWidget1.setCurrentRow(value)
         self.iev = value
         if self.com.stack_loaded == 1:
-            im = self.stk.absdata[:, :, int(self.iev)].copy()
-            self.data = im
+            # if hasattr(self, "data")
+            # im = self.stk.absdata_shifted[:, :, int(self.iev)]#.copy()
+            # self.data = im
             self.p1.setTitle("Image at energy {0:5.2f} eV".format(float(self.stk.ev[self.iev])))
-            self.i_item.setImage(self.data)
+            self.i_item.setImage(self.Shift(int(self.iev)))
+
+    def OnCropCB(self, value=True):
+        if self.com.stack_loaded == 1:
+            if value == True:
+                self.cropflag = True
+            else:
+                self.cropflag = False
+            self.ShowMap(self.prelst, self.postlst)
+
 
     def OnMetricScale(self, setmetric= True, zeroorigin= True, square= False):
         if self.com.stack_loaded == 1:
@@ -14287,55 +14344,82 @@ class PageMap(QtWidgets.QWidget):
                     self.ax2.setLabel(text="x", units="px")
                     self.p2.setAspectLocked(lock=True, ratio=aspect)
                     self.m_item.setRect(QtCore.QRectF(0, 0, np.shape(self.OD)[0], np.shape(self.OD)[1]))
+    def OnClrShifts(self):
+        for row in [index for index, value in enumerate([x[2] for x in  self.stk.shifts]) if value != (0.0,0.0)]:
+            self.stk.shifts[row].pop(2)  # remove tuple
+            self.stk.shifts[row].insert(2, (0.0, 0.0))
+            self.stk.absdata_shifted[:, :, row] = self.stk.absdata[:, :, row]
+            self.MapSelectWidget1.item(row).setText(
+                str(int(row)).zfill(3) + "     at     " + format(self.stk.ev[row], '.2f') + " eV     " + format(
+                    self.stk.shifts[row][2][0], '+.1f') + "    " + format(self.stk.shifts[row][2][1], '+.1f'))
+        if hasattr(self, 'prelst') and hasattr(self, 'postlst'):
+            if len(self.prelst) != 0 and len(self.postlst) != 0:
+                self.ShowMap(self.prelst,self.postlst)
 
-    def Offset(self,shift_x, shift_y):
-        if hasattr(self, "OD"):
-            if shift_x == 0 and shift_y == 0:
-                self.xoffset = 0
-                self.yoffset = 0
+    def setShifts(self,shift_x, shift_y):
+        #print("setshifts called")
+        # if hasattr(self, "OD"):
+        row = self.MapSelectWidget1.currentRow()
+        xoffset, yoffset = self.stk.shifts[row][2] # current offset stored as tuple in table stk.shifts
+        #print(self.stk.shifts[self.MapSelectWidget1.currentRow()])
+        #yoffset = self.stk.shifts[self.MapSelectWidget1.currentRow()][2][1]
+        if shift_x == 0 and shift_y == 0: # if reset button pressed
+            if xoffset != 0 or yoffset != 0:
+                self.stk.shifts[row].pop(2) # remove tuple
+                self.stk.shifts[row].insert(2,(0.0,0.0))
             else:
-                self.xoffset = self.xoffset + shift_x
-                self.yoffset = self.yoffset + shift_y
-            self.ShowMap(self.MapSelectWidget1.selectedItems())
-
-    def Shift(self,img):
-        if self.xoffset == 0 and self.yoffset == 0:
-            self.crop=[0,0]
-            self.ShiftLabel.setText("x = %0.1f \ny = %0.1f" % (self.xoffset, self.yoffset))
-            return img
+                print("Reset has no effect")
+                return
         else:
-            shifted = ndimage.fourier_shift(np.fft.fft2(img), [float(self.xoffset), float(self.yoffset)])
+            self.stk.shifts[row].pop(2)
+            xoffset = round(xoffset + shift_x,1)
+            yoffset = round(yoffset + shift_y,1)
+            self.stk.shifts[row].insert(2,(xoffset, yoffset))
+        #current_img = self.stk.absdata[:, :, self.MapSelectWidget1.currentRow()]
+        #print(type(self.stk.absdata), self.stk.shifts[self.MapSelectWidget1.currentRow()])
+        #self.Shift(row)
+        self.UpdateEntry(row)
+        if hasattr(self, 'prelst') and hasattr(self, 'postlst'):
+            if len(self.prelst) != 0 and len(self.postlst) != 0:
+                self.ShowMap(self.prelst,self.postlst)
+    def Shift(self,row):
+        #current_img = self.stk.absdata_shifted[:, :, row]
+        original_img = self.stk.absdata[:, :, row]
+        xoffset, yoffset = self.stk.shifts[row][2] # x and y offsets of current image
+        if xoffset == 0 and yoffset == 0:
+            self.stk.absdata_shifted[:, :, row] = original_img # replace with original if no shift is applied
+            #self.ShiftLabel.setText("x = %0.1f \ny = %0.1f" % (self.xoffset, self.yoffset))
+            #return original_img
+        else:
+            shifted = ndimage.fourier_shift(np.fft.fft2(original_img), [float(xoffset), float(yoffset)])
             shifted = np.fft.ifft2(shifted)
-            if self.xoffset < 0:
-                self.crop[0]=int(np.floor(self.xoffset))
-            else:
-                self.crop[0]=int(np.ceil(self.xoffset))
-            if self.yoffset < 0:
-                self.crop[1]=int(np.floor(self.yoffset))
-            else:
-                self.crop[1]=int(np.ceil(self.yoffset))
-            self.ShiftLabel.setText("x = %0.1f \ny = %0.1f" % (self.xoffset, self.yoffset))
-            return shifted.real
+            shifted_real = shifted.real
+            self.stk.absdata_shifted[:, :, row] = shifted_real
+        return self.stk.absdata_shifted[:,:, row]
+
+            #self.ShiftLabel.setText("x = %0.1f \ny = %0.1f" % (xoffset, yoffset))
     def CalcODMap(self,im_idx1,im_idx2):
-
-        im1 = self.stk.absdata[:, :, int(im_idx1)].copy()
-        im2 = self.stk.absdata[:, :, int(im_idx2)].copy()
-        im2 = self.Shift(im2)
-        crop = self.crop
-
-        if crop[0] > 0:
-            im1 = im1[crop[0]:,:]
-            im2 = im2[crop[0]:,:]
-        elif crop[0] < 0:
-            im1 = im1[:crop[0],:]
-            im2 = im2[:crop[0],:]
-        if crop[1] > 0:
-            im1 = im1[:,crop[1]:]
-            im2 = im2[:,crop[1]:]
-        elif crop[1] < 0:
-            im1 = im1[:,:crop[1]]
-            im2 = im2[:,:crop[1]]
+        if len(im_idx1) == 1 and len(im_idx2) == 1:
+            im1 = self.stk.absdata_shifted[:, :, int(im_idx1[0])]
+            im2 = self.stk.absdata_shifted[:, :, int(im_idx2[0])]
+        else:
+            im1 = np.mean([self.stk.absdata_shifted[:, :, i] for i in im_idx1], axis=0)
+            im2 = np.mean([self.stk.absdata_shifted[:, :, i] for i in im_idx2], axis=0)
         OD = np.log(im1/im2)
+        if self.cropflag:
+            shiftlst = [self.stk.shifts[i][2] for i in im_idx1 + im_idx2]
+            #print(shiftlst)
+            # print(max(shiftlst, key=itemgetter(0))[0]) # possible alternative to lambda function
+            #Calculate crops
+            l = int(np.floor(min(shiftlst, key=lambda item: item[0])[0]))
+            cl = l if l < 0 else None
+            r = int(np.ceil(max(shiftlst, key=lambda item: item[0])[0]))
+            t = int(np.ceil(max(shiftlst, key=lambda item: item[1])[1]))
+            b = int(np.floor(min(shiftlst, key=lambda item: item[1])[1]))
+            cb = b if b < 0 else None
+            # Crop map
+            OD = OD[r:cl,t:cb]
+            #print(r,cl,t,cb)
         inf_idx = np.where(np.isinf(OD))
         nan_idx = np.where(np.isnan(OD))
         if np.any(inf_idx) or np.any(nan_idx):
@@ -14364,16 +14448,24 @@ class PageMap(QtWidgets.QWidget):
             if hasattr(self, "OD"):
                 self.setODbar(self.ODmin, self.ODmax)
 
-    def ShowMap(self,selection):
+    def ShowMap(self, preidx, postidx):
         self.p2.clear()
         self.p2.addItem(self.m_item)
         self.setCrosshair()
         try:
-            selection = [self.MapSelectWidget1.row(selection[1]),self.MapSelectWidget1.row(selection[0])]
-            selection.sort()
-            self.p2.setTitle("Map from energies " + str(round(self.stk.ev[selection[0]], 2)) + " and " + str(
-                round(self.stk.ev[selection[1]], 2)) + " eV")
-            self.OD = self.CalcODMap(selection[0], selection[1])
+            ## Optional sorting switched off for convenience. Allows maps to range to negative OD
+            #selection = preidx + postidx
+            # selection.sort()
+            if len(preidx + postidx) == 2:
+                self.p2.setTitle("Binary map from energies " + str(round(self.stk.ev[preidx[0]], 2)) + " and " + str(
+                round(self.stk.ev[postidx[0]], 2)) + " eV")
+            elif len(preidx + postidx) <= 6:
+                self.p2.setTitle("Map from energies " + str([round(self.stk.ev[e], 2) for e in preidx]).strip('[]') + " and " +
+                                 str([round(self.stk.ev[e], 2) for e in postidx]).strip('[]') + " eV")
+            else:
+                self.p2.setTitle("Map from "+ str(len(preidx + postidx)) +" energies: " + str(round(self.stk.ev[preidx[0]], 2)) + ' ... ' + str(round(self.stk.ev[preidx[-1]], 2)) + " and "
+                                 + str(round(self.stk.ev[postidx[0]], 2)) + ' ... ' + str(round(self.stk.ev[postidx[-1]], 2)) + " eV")
+            self.OD = self.CalcODMap(preidx, postidx)
             self.ODmin = np.min(self.OD)
             self.ODmax = np.max(self.OD)
             self.ODHighSpinBox.valueChanged.disconnect()
@@ -14393,7 +14485,8 @@ class PageMap(QtWidgets.QWidget):
             self.pbExpImg.setEnabled(True)
         except IndexError:
             self.p2.clear()
-            print("Select a second image!")
+            #self.p2.setTitle("Please select a second image!")
+            #print("Select a second image!")
 
 #----------------------------------------------------------------------
 class StackListFrame(QtWidgets.QDialog):
@@ -15066,7 +15159,7 @@ class MainFrame(QtWidgets.QMainWindow):
 
             if showmaptab:
                 self.page9.Clear()
-                self.page9.ShowImage()
+                self.page9.LoadEntries()
         self.refresh_widgets()
 
 
