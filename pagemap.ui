@@ -155,7 +155,7 @@
              <item>
               <widget class="QGroupBox" name="ImageSelection_1">
                <property name="sizePolicy">
-                <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
                  <horstretch>0</horstretch>
                  <verstretch>0</verstretch>
                 </sizepolicy>
@@ -191,7 +191,7 @@
                 <item>
                  <widget class="QListWidget" name="MapSelectWidget1">
                   <property name="sizePolicy">
-                   <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+                   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                     <horstretch>0</horstretch>
                     <verstretch>0</verstretch>
                    </sizepolicy>
@@ -331,7 +331,7 @@
                    <number>3</number>
                   </property>
                   <item>
-                   <widget class="QPushButton" name="SelfromSpecpb">
+                   <widget class="QPushButton" name="pbSelfromSpec">
                     <property name="enabled">
                      <bool>false</bool>
                     </property>
@@ -347,7 +347,7 @@
                    </widget>
                   </item>
                   <item>
-                   <widget class="QPushButton" name="ClrSelpb">
+                   <widget class="QPushButton" name="pbClrSel">
                     <property name="enabled">
                      <bool>false</bool>
                     </property>
@@ -373,7 +373,7 @@
                 <bool>true</bool>
                </property>
                <property name="sizePolicy">
-                <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                  <horstretch>1</horstretch>
                  <verstretch>1</verstretch>
                 </sizepolicy>
@@ -394,7 +394,7 @@
                 <string>Alignment</string>
                </property>
                <property name="alignment">
-                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
                </property>
                <property name="flat">
                 <bool>false</bool>
@@ -424,7 +424,7 @@
                      </widget>
                     </item>
                     <item>
-                     <widget class="QPushButton" name="ClrShiftspb">
+                     <widget class="QPushButton" name="pbClrShifts">
                       <property name="sizePolicy">
                        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                         <horstretch>0</horstretch>
@@ -480,6 +480,9 @@ Align</string>
                     </item>
                     <item>
                      <widget class="QLabel" name="label_5">
+                      <property name="enabled">
+                       <bool>false</bool>
+                      </property>
                       <property name="maximumSize">
                        <size>
                         <width>16777215</width>
@@ -493,6 +496,9 @@ Align</string>
                     </item>
                     <item>
                      <widget class="QLabel" name="ShiftLabel">
+                      <property name="enabled">
+                       <bool>false</bool>
+                      </property>
                       <property name="maximumSize">
                        <size>
                         <width>16777215</width>
@@ -503,19 +509,6 @@ Align</string>
                        <string>Label</string>
                       </property>
                      </widget>
-                    </item>
-                    <item>
-                     <spacer name="verticalSpacer">
-                      <property name="orientation">
-                       <enum>Qt::Vertical</enum>
-                      </property>
-                      <property name="sizeHint" stdset="0">
-                       <size>
-                        <width>20</width>
-                        <height>40</height>
-                       </size>
-                      </property>
-                     </spacer>
                     </item>
                    </layout>
                   </item>
@@ -528,6 +521,12 @@ Align</string>
                      </sizepolicy>
                     </property>
                     <property name="minimumSize">
+                     <size>
+                      <width>150</width>
+                      <height>150</height>
+                     </size>
+                    </property>
+                    <property name="maximumSize">
                      <size>
                       <width>150</width>
                       <height>150</height>
@@ -1066,7 +1065,7 @@ Align</string>
              <item>
               <widget class="QGroupBox" name="ODoff">
                <property name="sizePolicy">
-                <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                  <horstretch>0</horstretch>
                  <verstretch>0</verstretch>
                 </sizepolicy>
@@ -1130,7 +1129,7 @@ Align</string>
              <item>
               <widget class="QGroupBox" name="DisplayOptions">
                <property name="sizePolicy">
-                <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                  <horstretch>0</horstretch>
                  <verstretch>0</verstretch>
                 </sizepolicy>
@@ -1321,6 +1320,9 @@ Align</string>
                   </item>
                   <item row="1" column="0">
                    <widget class="QDoubleSpinBox" name="ODLowSpinBox">
+                    <property name="enabled">
+                     <bool>false</bool>
+                    </property>
                     <property name="maximumSize">
                      <size>
                       <width>60</width>
@@ -1343,6 +1345,9 @@ Align</string>
                   </item>
                   <item row="0" column="0">
                    <widget class="QDoubleSpinBox" name="ODHighSpinBox">
+                    <property name="enabled">
+                     <bool>false</bool>
+                    </property>
                     <property name="maximumSize">
                      <size>
                       <width>60</width>
@@ -1371,7 +1376,10 @@ Align</string>
                    </widget>
                   </item>
                   <item row="0" column="2">
-                   <widget class="QPushButton" name="RSTODpb">
+                   <widget class="QPushButton" name="pbRSTOD">
+                    <property name="enabled">
+                     <bool>false</bool>
+                    </property>
                     <property name="minimumSize">
                      <size>
                       <width>40</width>
@@ -1398,7 +1406,7 @@ OD limits</string>
              <item>
               <widget class="QGroupBox" name="Export">
                <property name="sizePolicy">
-                <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
                  <horstretch>0</horstretch>
                  <verstretch>0</verstretch>
                 </sizepolicy>

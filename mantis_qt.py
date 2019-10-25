@@ -11147,6 +11147,10 @@ class CliptoSubregion(QtWidgets.QDialog):
         self.parent.page1.loadImage()
         self.parent.page0.ShowImage()
 
+        if showmaptab:
+            self.parent.page9.Clear()
+            self.parent.page9.LoadEntries()
+
         self.close()
 
 
@@ -13840,6 +13844,8 @@ class PageMap(QtWidgets.QWidget):
         self.xoffset = 0
         self.yoffset = 0
         self.scale = 0.000001
+        self.prelst = []
+        self.postlst =[]
         self.pbRST.clicked.connect(lambda: self.setShifts(0, 0))
         self.pbL.clicked.connect(lambda: self.setShifts(-0.2,0))
         self.pbR.clicked.connect(lambda: self.setShifts(0.2,0))
@@ -13870,8 +13876,10 @@ class PageMap(QtWidgets.QWidget):
         self.ShiftLabel.setText("x = %0.1f \ny = %0.1f" % (0, 0))
         self.ODHighSpinBox.valueChanged.connect(lambda: self.setODlimits(self.ODLowSpinBox.value(),self.ODHighSpinBox.value()))
         self.ODLowSpinBox.valueChanged.connect(lambda: self.setODlimits(self.ODLowSpinBox.value(),self.ODHighSpinBox.value()))
-        self.RSTODpb.clicked.connect(lambda: self.ShowMap(self.prelst, self.postlst))
-        self.ClrShiftspb.clicked.connect(self.OnClrShifts)
+        self.pbRSTOD.clicked.connect(lambda: self.ShowMap(self.prelst, self.postlst))
+        self.pbClrShifts.clicked.connect(self.OnClrShifts)
+        self.pbClrSel.clicked.connect(self.OnClrSelection)
+
         self.CMCatBox.addItems([self.cmaps[0][0],self.cmaps[1][0],self.cmaps[2][0],self.cmaps[3][0],self.cmaps[4][0],self.cmaps[5][0]])
         self.CMMapBox.addItems(self.cmaps[2][1])
         self.CMCatBox.setCurrentIndex(2)
@@ -13982,17 +13990,18 @@ class PageMap(QtWidgets.QWidget):
             pos = qlist.mapFromGlobal(QtGui.QCursor.pos())
             row = qlist.indexAt(pos).row()
             #print(row,self.latest_row)
-            params = [self.stk.shifts[row][0],self.stk.shifts[row][1],self.stk.shifts[row][2]]
-            if row >= 0:
-                    if e.type() != QtCore.QEvent.MouseMove or row != self.latest_row:
-                        if e.buttons() == QtCore.Qt.RightButton:
-                            qlist.setCurrentRow(row)
-                            params[1] = 1
-                        elif e.buttons() == QtCore.Qt.LeftButton:
-                            qlist.setCurrentRow(row)
-                            params[1] = -1
-                        self.qlistchanged.emit((row,params))
-                        self.latest_row = row
+            if self.stk.shifts:
+                params = [self.stk.shifts[row][0],self.stk.shifts[row][1],self.stk.shifts[row][2]]
+                if row >= 0:
+                        if e.type() != QtCore.QEvent.MouseMove or row != self.latest_row:
+                            if e.buttons() == QtCore.Qt.RightButton:
+                                qlist.setCurrentRow(row)
+                                params[1] = 1
+                            elif e.buttons() == QtCore.Qt.LeftButton:
+                                qlist.setCurrentRow(row)
+                                params[1] = -1
+                            self.qlistchanged.emit((row,params))
+                            self.latest_row = row
         return
     def qListChangeHandler(self,paramtup):
         qlist = self.MapSelectWidget1
@@ -14021,15 +14030,26 @@ class PageMap(QtWidgets.QWidget):
         #print(prelst,postlst)
         self.OnScrollEng(self.MapSelectWidget1.currentRow())
         if len(self.prelst) == 0 or len(self.postlst) == 0:
+            if len(self.prelst + self.postlst) == 0:
+                self.pbClrSel.setEnabled(False)
+            else:
+                self.pbClrSel.setEnabled(True)
             self.p2.clear()
-            print("Select a second image!")
-            self.p2.setTitle("Please select a second image!")
+            #print("Select at least one pre- and post-edge image!")
+            self.p2.setTitle("Select at least one pre- and post-edge image!")
+            self.ODHighSpinBox.setEnabled(False)
+            self.ODLowSpinBox.setEnabled(False)
+            self.pbRSTOD.setEnabled(False)
+            self.pbExpData.setEnabled(False)
+            self.pbExpImg.setEnabled(False)
+
         else:
+            self.pbClrSel.setEnabled(True)
             self.InfWarning = False
             self.ShowMap(self.prelst,self.postlst)
-        # self.OnScrollEng(self.MapSelectWidget1.currentRow())
-        self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),
-                                self.SquarePxCheckBox.isChecked())
+            # self.OnScrollEng(self.MapSelectWidget1.currentRow())
+            self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),
+                                    self.SquarePxCheckBox.isChecked())
         return
     # ----------------------------------------------------------------------
     def OnSaveData(self,event):
@@ -14268,11 +14288,19 @@ class PageMap(QtWidgets.QWidget):
                 self.pbRST.click()
 
     def Clear(self):
+        self.MapSelectWidget1.itemSelectionChanged.disconnect()
         self.p1.clear()
         self.p2.clear()
         self.MapSelectWidget1.clear()
 
     def LoadEntries(self): # Called when fresh data are loaded.
+        self.ODHighSpinBox.setEnabled(False)
+        self.ODLowSpinBox.setEnabled(False)
+        self.pbRSTOD.setEnabled(False)
+        self.pbExpData.setEnabled(False)
+        self.pbExpImg.setEnabled(False)
+        self.pbClrSel.setEnabled(False)
+        self.stk.shifts = []
         self.stk.absdata_shifted = self.stk.absdata.copy()
         self.p1.addItem(self.i_item)
         for i,e in enumerate(self.stk.ev): # Fill QList with energies
@@ -14280,6 +14308,7 @@ class PageMap(QtWidgets.QWidget):
             item = QtGui.QListWidgetItem(str(int(i)).zfill(3)+"     at     " + format(e, '.2f') + " eV     "+"+0.0"+"    +0.0")
             self.MapSelectWidget1.addItem(item)
         self.OnScrollEng(0) # Plot first image & set Scrollbar
+        self.MapSelectWidget1.itemSelectionChanged.connect(self.OnFocusChanged)
         self.OnMetricScale(self.MetricCheckBox.isChecked(), True, False)
     def UpdateEntry(self,row):
         self.MapSelectWidget1.item(row).setText(str(int(row)).zfill(3)+"     at     " + format(self.stk.ev[row], '.2f') + " eV     "+format(self.stk.shifts[row][2][0], '+.1f')+"    "+format(self.stk.shifts[row][2][1], '+.1f'))
@@ -14344,6 +14373,12 @@ class PageMap(QtWidgets.QWidget):
                     self.ax2.setLabel(text="x", units="px")
                     self.p2.setAspectLocked(lock=True, ratio=aspect)
                     self.m_item.setRect(QtCore.QRectF(0, 0, np.shape(self.OD)[0], np.shape(self.OD)[1]))
+    def OnClrSelection(self):
+        for row in self.prelst + self.postlst:
+            self.MapSelectWidget1.item(row).setBackground(QtGui.QColor(0, 0, 0, 0))
+            self.stk.shifts[row][1] = 0
+            self.OnSelectionChanged()
+
     def OnClrShifts(self):
         for row in [index for index, value in enumerate([x[2] for x in  self.stk.shifts]) if value != (0.0,0.0)]:
             self.stk.shifts[row].pop(2)  # remove tuple
@@ -14355,33 +14390,36 @@ class PageMap(QtWidgets.QWidget):
         if hasattr(self, 'prelst') and hasattr(self, 'postlst'):
             if len(self.prelst) != 0 and len(self.postlst) != 0:
                 self.ShowMap(self.prelst,self.postlst)
+        if self.stk.shifts:
+            self.UpdateEntry(self.MapSelectWidget1.currentRow())
 
     def setShifts(self,shift_x, shift_y):
         #print("setshifts called")
         # if hasattr(self, "OD"):
-        row = self.MapSelectWidget1.currentRow()
-        xoffset, yoffset = self.stk.shifts[row][2] # current offset stored as tuple in table stk.shifts
-        #print(self.stk.shifts[self.MapSelectWidget1.currentRow()])
-        #yoffset = self.stk.shifts[self.MapSelectWidget1.currentRow()][2][1]
-        if shift_x == 0 and shift_y == 0: # if reset button pressed
-            if xoffset != 0 or yoffset != 0:
-                self.stk.shifts[row].pop(2) # remove tuple
-                self.stk.shifts[row].insert(2,(0.0,0.0))
+        if self.stk.shifts:
+            row = self.MapSelectWidget1.currentRow()
+            xoffset, yoffset = self.stk.shifts[row][2] # current offset stored as tuple in table stk.shifts
+            #print(self.stk.shifts[self.MapSelectWidget1.currentRow()])
+            #yoffset = self.stk.shifts[self.MapSelectWidget1.currentRow()][2][1]
+            if shift_x == 0 and shift_y == 0: # if reset button pressed
+                if xoffset != 0 or yoffset != 0:
+                    self.stk.shifts[row].pop(2) # remove tuple
+                    self.stk.shifts[row].insert(2,(0.0,0.0))
+                else:
+                    print("Reset has no effect")
+                    return
             else:
-                print("Reset has no effect")
-                return
-        else:
-            self.stk.shifts[row].pop(2)
-            xoffset = round(xoffset + shift_x,1)
-            yoffset = round(yoffset + shift_y,1)
-            self.stk.shifts[row].insert(2,(xoffset, yoffset))
-        #current_img = self.stk.absdata[:, :, self.MapSelectWidget1.currentRow()]
-        #print(type(self.stk.absdata), self.stk.shifts[self.MapSelectWidget1.currentRow()])
-        #self.Shift(row)
-        self.UpdateEntry(row)
-        if hasattr(self, 'prelst') and hasattr(self, 'postlst'):
-            if len(self.prelst) != 0 and len(self.postlst) != 0:
-                self.ShowMap(self.prelst,self.postlst)
+                self.stk.shifts[row].pop(2)
+                xoffset = round(xoffset + shift_x,1)
+                yoffset = round(yoffset + shift_y,1)
+                self.stk.shifts[row].insert(2,(xoffset, yoffset))
+            #current_img = self.stk.absdata[:, :, self.MapSelectWidget1.currentRow()]
+            #print(type(self.stk.absdata), self.stk.shifts[self.MapSelectWidget1.currentRow()])
+            #self.Shift(row)
+            self.UpdateEntry(row)
+            if hasattr(self, 'prelst') and hasattr(self, 'postlst'):
+                if len(self.prelst) != 0 and len(self.postlst) != 0:
+                    self.ShowMap(self.prelst,self.postlst)
     def Shift(self,row):
         #current_img = self.stk.absdata_shifted[:, :, row]
         original_img = self.stk.absdata[:, :, row]
@@ -14468,6 +14506,8 @@ class PageMap(QtWidgets.QWidget):
             self.OD = self.CalcODMap(preidx, postidx)
             self.ODmin = np.min(self.OD)
             self.ODmax = np.max(self.OD)
+            self.ODHighSpinBox.setEnabled(True)
+            self.ODLowSpinBox.setEnabled(True)
             self.ODHighSpinBox.valueChanged.disconnect()
             self.ODLowSpinBox.valueChanged.disconnect()
             self.ODHighSpinBox.setMaximum(self.ODmax)
@@ -14481,6 +14521,7 @@ class PageMap(QtWidgets.QWidget):
                 lambda: self.setODlimits(self.ODLowSpinBox.value(), self.ODHighSpinBox.value()))
             self.ODLowSpinBox.valueChanged.connect(
                 lambda: self.setODlimits(self.ODLowSpinBox.value(), self.ODHighSpinBox.value()))
+            self.pbRSTOD.setEnabled(True)
             self.pbExpData.setEnabled(True)
             self.pbExpImg.setEnabled(True)
         except IndexError:
