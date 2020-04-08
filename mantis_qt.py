@@ -9891,7 +9891,7 @@ class PageStack(QtWidgets.QWidget):
 
 
         if self.defaultdisplay == 1.0:
-            im = axes.imshow(np.rot90( image), cmap=matplotlib.cm.get_cmap(self.colortable))
+            im = axes.imshow(np.rot90(image), cmap=matplotlib.cm.get_cmap(self.colortable))
         else:
             imgmax = np.amax(image)
             imgmin = np.amin(image)
