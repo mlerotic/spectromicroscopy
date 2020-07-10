@@ -10808,19 +10808,17 @@ class ShowArtefacts(QtWidgets.QDialog):
         if self.cb_h.isChecked():
             wf = (self.weight_slider.value()) / 100
             if self.rb_median_i0.isChecked():
-                if not final:
-                    mask = self.stack.i0_mask[:, :, 0]
-                else:
-                    mask = self.stack.i0_mask
+                mask = self.stack.i0_mask[:, :, 0]
+                if final:
+                    mask = mask[:, :, None]
             diff_h = self.CorrectionArray(a, 0, float(wf), mask)[None, :]
             #a += diff[None, :]
         if self.cb_v.isChecked():
             wf = (self.weight_slider.value()) / 100
             if self.rb_median_i0.isChecked():
-                if not final:
-                    mask = self.stack.i0_mask[:, :, 0]
-                else:
-                    mask = self.stack.i0_mask
+                mask = self.stack.i0_mask[:, :, 0]
+                if final:
+                    mask = mask[:, :, None]
             diff_v = self.CorrectionArray(a, 1, float(wf), mask)[: ,None]
         a = a + diff_v + diff_h
         return(a,int(wf*100))
