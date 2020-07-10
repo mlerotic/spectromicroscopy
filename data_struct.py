@@ -26,241 +26,225 @@ class Descr(object):
         # Check if the value has been set
         if (not hasattr(self, "_value")):
             return None
-        #print "Getting value: %s" % self._value
+        # print "Getting value: %s" % self._value
         return self._value
 
     def __set__(self, instance, value):
-        #print "Setting to %s" % value
+        # print "Setting to %s" % value
         self._value = value
 
     def __delete__(self, instance):
-        del(self._value)
+        del (self._value)
 
 
 ### Information HDF5 Group
-#----------------------------------------------------------------------
+# ----------------------------------------------------------------------
 class ids(object):
-
-    proposal = Descr()   
+    proposal = Descr()
     activity = Descr()
-    esaf = Descr() 
+    esaf = Descr()
 
 
-#----------------------------------------------------------------------
+# ----------------------------------------------------------------------
 class experimenter(object):
-
-    name = Descr()   
+    name = Descr()
     role = Descr()
-    affiliation = Descr() 
-    address = Descr()  
+    affiliation = Descr()
+    address = Descr()
     phone = Descr()
     email = Descr()
-    facility_user_id = Descr() 
-    
+    facility_user_id = Descr()
 
-#----------------------------------------------------------------------
+
+# ----------------------------------------------------------------------
 class sample(object):
-    
     name = Descr()
     description = Descr()
-#   preparation_date [string - ISO 8601 format]        
+    #   preparation_date [string - ISO 8601 format]
     preparation_datetime = Descr()
-#   chemical_formula [string - abbreviated CIF format]
-    chemical_formula = Descr()    
+    #   chemical_formula [string - abbreviated CIF format]
+    chemical_formula = Descr()
     environment = Descr()
     temperature = Descr()
     temperature_units = Descr()
     pressure = Descr()
     pressure_units = Descr()
-        
-        
-#----------------------------------------------------------------------
+
+
+# ----------------------------------------------------------------------
 class objective(object):
-
-    manufacturer = Descr()   
+    manufacturer = Descr()
     model = Descr()
-    comment = Descr() 
+    comment = Descr()
     magnification = Descr()
-    
 
-#----------------------------------------------------------------------
+
+# ----------------------------------------------------------------------
 class scintillator(object):
-
-    name = Descr()   
+    name = Descr()
     type = Descr()
-    comment = Descr() 
-    scintillating_thickness = Descr()   
+    comment = Descr()
+    scintillating_thickness = Descr()
     scintillating_thickness_units = Descr()
     substrate_thickness = Descr()
     substrate_thickness_units = Descr()
-    
-    
-#----------------------------------------------------------------------
-class facility(object):
 
-    name = Descr()   
+
+# ----------------------------------------------------------------------
+class facility(object):
+    name = Descr()
     beamline = Descr()
-    
-    
-#----------------------------------------------------------------------
+
+
+# ----------------------------------------------------------------------
 class accelerator(object):
-        
-    ring_current = Descr() 
+    ring_current = Descr()
     ring_current_units = Descr()
-    primary_beam_energy = Descr()   
+    primary_beam_energy = Descr()
     primary_beam_energy_units = Descr()
     monostripe = Descr()
-    
-    
-#----------------------------------------------------------------------
+
+
+# ----------------------------------------------------------------------
 class pixel_size(object):
-           
-    horizontal = Descr()     
-    horizontal_units = Descr()      
-    vertical = Descr()    
-    vertical_units = Descr()      
-           
-#----------------------------------------------------------------------
+    horizontal = Descr()
+    horizontal_units = Descr()
+    vertical = Descr()
+    vertical_units = Descr()
+
+
+# ----------------------------------------------------------------------
 class dimensions(object):
-           
     horizontal = Descr()
     vertical = Descr()
-           
-#----------------------------------------------------------------------
+
+
+# ----------------------------------------------------------------------
 class binning(object):
-           
     horizontal = Descr()
     vertical = Descr()
-           
-#----------------------------------------------------------------------
+
+
+# ----------------------------------------------------------------------
 class axis_directions(object):
-           
-    horizontal = Descr()     
-    vertical = Descr()    
-     
-#----------------------------------------------------------------------
+    horizontal = Descr()
+    vertical = Descr()
+
+
+# ----------------------------------------------------------------------
 class roi(object):
-           
     x1 = Descr()
     y1 = Descr()
     x2 = Descr()
-    y2 = Descr() 
-    
-    
-#----------------------------------------------------------------------
-class detector(object):  
-    
-    manufacturer = Descr()     
-    model = Descr()    
-    serial_number = Descr()      
-    bit_depth  = Descr()    
-    operating_temperature  = Descr()      
-    operating_temperature_units = Descr()     
-    exposure_time  = Descr()     
-    exposure_time_units = Descr()    
+    y2 = Descr()
+
+
+# ----------------------------------------------------------------------
+class detector(object):
+    manufacturer = Descr()
+    model = Descr()
+    serial_number = Descr()
+    bit_depth = Descr()
+    operating_temperature = Descr()
+    operating_temperature_units = Descr()
+    exposure_time = Descr()
+    exposure_time_units = Descr()
     frame_rate = Descr()
-    
+
     pixel_size = pixel_size()
     dimensions = dimensions()
     binning = binning()
     axis_directions = axis_directions()
     roi = roi()
 
-        
-#----------------------------------------------------------------------        
-class information(object):
 
+# ----------------------------------------------------------------------
+class information(object):
     title = Descr()
     comment = Descr()
     file_creation_datetime = Descr()
-    
+
     ids = ids()
-    experimenter = experimenter() 
+    experimenter = experimenter()
     sample = sample()
     objective = objective()
     scintillator = scintillator()
     facility = facility()
     accelerator = accelerator()
     detector = detector()
-    
-         
 
-#Exchange HDF5 group  
- #----------------------------------------------------------------------
+
+# Exchange HDF5 group
+# ----------------------------------------------------------------------
 class exchange(object):
-
     title = Descr()
     comment = Descr()
     data_collection_datetime = Descr()
-    
-    #n-dimensional dataset 
+
+    # n-dimensional dataset
     data = Descr()
-    
+
     data_signal = Descr()
     data_description = Descr()
     data_units = Descr()
     data_axes = Descr()
     data_detector = Descr()
-    
-    #These are described in data attribute axes 'x:y:z' but can be arbitrary 
+
+    # These are described in data attribute axes 'x:y:z' but can be arbitrary
     x = Descr()
     x_units = Descr()
     y = Descr()
     y_units = Descr()
     z = Descr()
     z_units = Descr()
-    
-    energy = Descr()  
+
+    energy = Descr()
     energy_units = Descr()
-    
-    theta = Descr()  
+
+    theta = Descr()
     theta_units = Descr()
-    
+
     white_data = Descr()
     white_data_units = Descr()
     dark_data = Descr()
     dark_data_units = Descr()
     rotation = Descr()
-        
 
-# Spectromicroscopy HDF5 Group        
-#----------------------------------------------------------------------
+
+# Spectromicroscopy HDF5 Group
+# ----------------------------------------------------------------------
 class normalization(object):
-
     white_spectrum = Descr()
     white_spectrum_units = Descr()
     white_spectrum_energy = Descr()
     white_spectrum_energy_units = Descr()
-               
-               
-#----------------------------------------------------------------------
-class spectromicroscopy(object):
 
+
+# ----------------------------------------------------------------------
+class spectromicroscopy(object):
     positions = Descr()
     positions_units = Descr()
     positions_names = Descr()
-        
+
     normalization = normalization()
-        
+
     optical_density = Descr()
-    
+
     data_dwell = Descr()
     i0_dwell = Descr()
-    
+
     xshifts = Descr()
     yshifts = Descr()
-        
+
 
 # HDF5 Root Group
-#----------------------------------------------------------------------
+# ----------------------------------------------------------------------
 class h5(object):
-    
-    #implements [string] comma separated string that tells the user which entries file contains
+    # implements [string] comma separated string that tells the user which entries file contains
     implements = Descr()
-    version = Descr() 
+    version = Descr()
 
     information = information()
     exchange = exchange()
     spectromicroscopy = spectromicroscopy()
-    
-        
+

@@ -237,7 +237,7 @@ def read(filename, self, selection=None, JSONstatus=None):
         with open(splitext(filename)[0] + '.json', 'w') as outfile:
             json.dump(HDR.hdr, outfile, indent=4, sort_keys=True, ensure_ascii=True)
             print("JSON-file written at "+ splitext(filename)[0] + '.json')
-    if HDR.hdr['ScanDefinition']['Flags'] == 'Image Stack':
+    if HDR.hdr['ScanDefinition']['Flags'] == 'Image Stack' or HDR.hdr['ScanDefinition']['Flags'] == 'Image':
 
         self.x_dist = numpy.array([float(i) for i in HDR.hdr['ScanDefinition']['Regions'][selection[0]+1]['PAxis']['Points'][1:] ])
         self.y_dist = numpy.array([float(i) for i in HDR.hdr['ScanDefinition']['Regions'][selection[0]+1]['QAxis']['Points'][1:] ])

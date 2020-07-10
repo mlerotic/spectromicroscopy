@@ -141,7 +141,7 @@ class JS_FileLoader:
 #----------------------------------------------------------------------
 def read(filename, self, selection=None, *args, **kwargs):
     JS = JS_FileLoader(filename)
-    if JS.js['ScanDefinition']['Flags'] == 'Image Stack':
+    if JS.js['ScanDefinition']['Flags'] == 'Image Stack' or JS.js['ScanDefinition']['Flags'] == 'Image':
 
         self.x_dist = numpy.array([float(i) for i in JS.js['ScanDefinition']['Regions'][selection[0]+1]['PAxis']['Points'][1:] ])
         self.y_dist = numpy.array([float(i) for i in JS.js['ScanDefinition']['Regions'][selection[0]+1]['QAxis']['Points'][1:] ])
@@ -171,7 +171,7 @@ def read(filename, self, selection=None, *args, **kwargs):
         self.fill_h5_struct_from_stk()
 
     else:
-        print("Only Image Stack files are supported.")
+        print("Unknown Format")
 
     return
 
