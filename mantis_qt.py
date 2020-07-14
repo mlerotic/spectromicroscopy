@@ -10779,9 +10779,11 @@ class ShowArtefacts(QtWidgets.QDialog):
             self.i_item.setImage(a)
 
     def CorrectionArray(self,array,axis,wf,mask = None,):
+        # calculate median along given axis, ignoring nans if present
         array_i = np.nanmedian(array, axis=axis, keepdims=False)
         if mask is not None and wf != 0.0:
             array = np.where(mask, array, np.nan) # replace masked pixels by nans
+            # calculate median along given axis, ignoring nans if present
             array = np.nanmedian(array, axis=axis, keepdims=False)
             bg_median = np.nanmedian(array, axis=0, keepdims=False)
         if mask is None or wf == 0.0:
@@ -10791,15 +10793,7 @@ class ShowArtefacts(QtWidgets.QDialog):
             return ((bg_median - array)*(wf))
         else:
             return ((bg_median - array)*(wf) + (bg_median - array_i)*(1-wf))
-            # replace masked pixels by nans
 
-        # calculate median along given axis, ignoring nans if present
-        #if np.isnan(diff_i0).any() and not self.i0_h_warnflag:
-        #    QtWidgets.QMessageBox.warning(self, 'Warning', 'The I0 selection does not cover all rows.')
-        #    self.i0_h_warnflag = True
-        # calculate difference
-        #array = np.nanmedian(array,axis=[0, 1], keepdims=False) - np.nanmedian(array, axis=axis, keepdims=False)
-        #return array
     def LevelCalc(self,a,final=False):
         wf = 0.0
         mask = None
@@ -13790,15 +13784,18 @@ class PageLoadData(QtWidgets.QWidget):
         bx3 = self.cm.getAxis("top")
         bx3.setZValue(1000)
         ax3 = self.cm.getAxis("bottom")
+        ax3.setHeight(h=46.2) #workaround for overly long colorbar in linux
+        by3.setWidth(w=60)
         ax3.setZValue(1000)
         ax3.setTicks([])
         ax3.setLabel(text="", units="")
-        ax3.setStyle(tickLength=8)
         by3 = self.cm.getAxis("right")
         by3.setLabel(text="counts", units="")
         by3.setStyle(tickLength=8)
         ay3.setStyle(showValues=False,tickLength=0)
         bx3.setStyle(showValues=False,tickLength=0)
+
+
         self.pglayout.layout.setColumnMinimumWidth(1, 80)
         self.pglayout.layout.setColumnMaximumWidth(1, 80)
 
@@ -13812,10 +13809,7 @@ class PageLoadData(QtWidgets.QWidget):
         # self.tc_imagetheta.setText("4D Data Angle: ")
 
     def Clear(self):
-        #self.MapSelectWidget1.itemSelectionChanged.disconnect()
         self.p1.clear()
-        #self.p2.clear()
-        #self.MapSelectWidget1.clear()
     def LoadEntries(self): # Called when fresh data are loaded.
         self.p1.addItem(self.i_item)
         self.OnScrollEng(0) # Plot first image & set Scrollbar
@@ -14026,10 +14020,8 @@ class PageMap(QtWidgets.QWidget):
         self.CMMapBox.currentIndexChanged.connect(lambda: self.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value()))
         self.StepSpin.valueChanged.connect(lambda: self.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value()))
 
-        self.MapSelectWidget1.itemSelectionChanged.connect(self.OnFocusChanged)
         self.MapSelectWidget1.mousePressEvent = self.mouseEventOnQList
         self.MapSelectWidget1.mouseMoveEvent = self.mouseEventOnQList
-        self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
         self.qlistchanged.connect(self.qListChangeHandler)
         self.data_struct = data_struct
         self.stk = stack
@@ -14120,9 +14112,11 @@ class PageMap(QtWidgets.QWidget):
         by3 = self.cm.getAxis("right")
         by3.setLabel(text="OD", units="")
         by3.setStyle(tickLength=8)
+        #by3.textWidth()
         ay3.setStyle(showValues=False,tickLength=0)
         bx3.setStyle(showValues=False,tickLength=0)
-
+        ax3.setHeight(h=46.2)  # workaround for overly long colorbar
+        by3.setWidth(w=60)
         self.pglayout.layout.setColumnMinimumWidth(2, 80)
         self.pglayout.layout.setColumnMaximumWidth(2, 80)
         #self.pglayout.layout.setColumnMinimumWidth(1, int((self.p1.width() + self.p2.width()) / 2))
@@ -14166,11 +14160,7 @@ class PageMap(QtWidgets.QWidget):
             self.stk.shifts[row][1] = -1
         self.OnSelectionChanged()
         #print(row, params)
-    def OnFocusChanged(self):
-        self.OnScrollEng(self.MapSelectWidget1.currentRow())
-        #print("FocusChanged!")
     def OnSelectionChanged(self):
-        #print("SelectionChanged!",self.stk.shifts)
         self.prelst = [index for index, value in enumerate([x[1] for x in  self.stk.shifts]) if value == -1]
         self.postlst = [index for index, value in enumerate([x[1] for x in  self.stk.shifts]) if value == 1]
         #print(prelst,postlst)
@@ -14182,11 +14172,8 @@ class PageMap(QtWidgets.QWidget):
                 self.pbClrSel.setEnabled(True)
             self.p2.clear()
             self.cm.clear()
-            #print("Select at least one pre- and post-edge image!")
-            #self.p2.setTitle("")
             self.p2.titleLabel.setText("<center>Select at least one pre- and post-edge image!</center>",size='10pt')
 
-            #self.p2.titleLabel.setText("bla")
             self.ODHighSpinBox.setEnabled(False)
             self.ODLowSpinBox.setEnabled(False)
             self.pbRSTOD.setEnabled(False)
@@ -14440,7 +14427,6 @@ class PageMap(QtWidgets.QWidget):
                 self.pbRST.click()
 
     def Clear(self):
-        self.MapSelectWidget1.itemSelectionChanged.disconnect()
         self.stk.shifts = []
         self.stk.absdata_shifted= []
         self.p1.clear()
@@ -14449,6 +14435,7 @@ class PageMap(QtWidgets.QWidget):
         self.MapSelectWidget1.clear()
 
     def LoadEntries(self): # Called when fresh data are loaded.
+        self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
         self.ODHighSpinBox.setEnabled(False)
         self.ODLowSpinBox.setEnabled(False)
         self.pbRSTOD.setEnabled(False)
@@ -14463,29 +14450,24 @@ class PageMap(QtWidgets.QWidget):
             item = QtGui.QListWidgetItem(str(int(i)).zfill(3)+"     at     " + format(e, '.2f') + " eV     "+"+0.0"+"    +0.0")
             self.MapSelectWidget1.addItem(item)
         self.OnScrollEng(0) # Plot first image & set Scrollbar
-        self.MapSelectWidget1.itemSelectionChanged.connect(self.OnFocusChanged)
         self.OnMetricScale(self.MetricCheckBox.isChecked(), True, False)
     def UpdateEntry(self,row):
         self.MapSelectWidget1.item(row).setText(str(int(row)).zfill(3)+"     at     " + format(self.stk.ev[row], '.2f') + " eV     "+format(self.stk.shifts[row][2][0], '+.1f')+"    "+format(self.stk.shifts[row][2][1], '+.1f'))
         #self.MapSelectWidget1.addItem(self.MapSelectWidget1.item(row))
         self.i_item.setImage(self.Shift(row))
+    def ResetAllItems(self,widget):
+        for i in range(widget.count()):
+            widget.item(i).setForeground(QtGui.QColor(0, 0, 0, 128))
     def OnScrollEng(self, value):
         self.slider_eng.setValue(value)
         self.MapSelectWidget1.setCurrentRow(value)
+        self.ResetAllItems(self.MapSelectWidget1)
+        self.MapSelectWidget1.item(value).setForeground(QtGui.QColor(0, 0, 0, 255))
         self.iev = value
-        #self.p1.getAxis('left').linkToView(self.p2)
-        #self.pglayout.layout.setColumnMinimumWidth(1, int(((self.canvas.size().width()-100)/ 2)))
-        #self.pglayout.layout.setColumnMinimumWidth(0, int(((self.canvas.size().width()-100)/ 2)))
-        #self.p1.getViewBox().setYLink(self.p2.getViewBox())
-        #self.p2.getViewBox().setGeometry(self.p1.getViewBox().sceneBoundingRect())
         self.p1.titleLabel.item.setTextWidth(self.p1.width() * 0.7)
         self.p2.titleLabel.item.setTextWidth(self.p2.width() * 0.7)
         #self.canvas.resizeEvent(None)
         if self.com.stack_loaded == 1:
-            # if hasattr(self, "data")
-            # im = self.stk.absdata_shifted[:, :, int(self.iev)]#.copy()
-            # self.data = im
-            #self.p1.setTitle("Image at energy {0:5.2f} eV".format(float(self.stk.ev[self.iev])))
             self.p1.titleLabel.setText("<center>Image at energy {0:5.2f} eV</center>".format(float(self.stk.ev[self.iev])),size='10pt')
             self.i_item.setImage(self.Shift(int(self.iev)))
 

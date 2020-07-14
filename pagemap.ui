@@ -37,15 +37,39 @@
        <height>500</height>
       </size>
      </property>
+     <property name="font">
+      <font>
+       <family>Ubuntu</family>
+       <pointsize>8</pointsize>
+      </font>
+     </property>
      <property name="frameShape">
-      <enum>QFrame::StyledPanel</enum>
+      <enum>QFrame::NoFrame</enum>
      </property>
      <property name="frameShadow">
       <enum>QFrame::Raised</enum>
      </property>
+     <property name="lineWidth">
+      <number>0</number>
+     </property>
      <layout class="QHBoxLayout" name="horizontalLayout">
+      <property name="spacing">
+       <number>9</number>
+      </property>
       <property name="sizeConstraint">
        <enum>QLayout::SetDefaultConstraint</enum>
+      </property>
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
       </property>
       <item>
        <widget class="QFrame" name="frame">
@@ -54,6 +78,12 @@
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
+        </property>
+        <property name="font">
+         <font>
+          <family>Ubuntu</family>
+          <pointsize>8</pointsize>
+         </font>
         </property>
         <property name="autoFillBackground">
          <bool>false</bool>
@@ -67,7 +97,19 @@
         <property name="frameShadow">
          <enum>QFrame::Raised</enum>
         </property>
+        <property name="lineWidth">
+         <number>1</number>
+        </property>
+        <property name="midLineWidth">
+         <number>0</number>
+        </property>
         <layout class="QHBoxLayout" name="horizontalLayout_3">
+         <property name="spacing">
+          <number>6</number>
+         </property>
+         <property name="bottomMargin">
+          <number>9</number>
+         </property>
          <item>
           <widget class="GraphicsView" name="canvas">
            <property name="sizePolicy">
@@ -76,6 +118,12 @@
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
+           <property name="font">
+            <font>
+             <family>Ubuntu</family>
+             <pointsize>8</pointsize>
+            </font>
+           </property>
            <property name="styleSheet">
             <string notr="true">background: white</string>
            </property>
@@ -83,6 +131,12 @@
          </item>
          <item>
           <widget class="QScrollBar" name="slider_eng">
+           <property name="font">
+            <font>
+             <family>Ubuntu</family>
+             <pointsize>8</pointsize>
+            </font>
+           </property>
            <property name="orientation">
             <enum>Qt::Vertical</enum>
            </property>
@@ -111,11 +165,20 @@
           <height>16777215</height>
          </size>
         </property>
+        <property name="font">
+         <font>
+          <family>Ubuntu</family>
+          <pointsize>8</pointsize>
+         </font>
+        </property>
         <property name="frameShape">
-         <enum>QFrame::StyledPanel</enum>
+         <enum>QFrame::NoFrame</enum>
         </property>
         <property name="frameShadow">
-         <enum>QFrame::Raised</enum>
+         <enum>QFrame::Plain</enum>
+        </property>
+        <property name="lineWidth">
+         <number>0</number>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_9">
          <property name="spacing">
@@ -125,16 +188,22 @@
           <number>0</number>
          </property>
          <property name="topMargin">
-          <number>2</number>
+          <number>0</number>
          </property>
          <property name="rightMargin">
           <number>0</number>
          </property>
          <property name="bottomMargin">
-          <number>2</number>
+          <number>0</number>
          </property>
          <item>
           <widget class="QTabWidget" name="MapCreator">
+           <property name="font">
+            <font>
+             <family>Ubuntu</family>
+             <pointsize>8</pointsize>
+            </font>
+           </property>
            <property name="focusPolicy">
             <enum>Qt::ClickFocus</enum>
            </property>
@@ -148,6 +217,12 @@
             <number>0</number>
            </property>
            <widget class="QWidget" name="TabContent">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
             <attribute name="title">
              <string>Map Creator</string>
             </attribute>
@@ -165,6 +240,12 @@
                  <width>100</width>
                  <height>80</height>
                 </size>
+               </property>
+               <property name="font">
+                <font>
+                 <family>Ubuntu</family>
+                 <pointsize>8</pointsize>
+                </font>
                </property>
                <property name="toolTip">
                 <string notr="true">Select by Left &amp; Right Click</string>
@@ -199,7 +280,7 @@
                   <property name="maximumSize">
                    <size>
                     <width>16777215</width>
-                    <height>16777215</height>
+                    <height>16777207</height>
                    </size>
                   </property>
                   <property name="palette">
@@ -266,8 +347,17 @@
                     </disabled>
                    </palette>
                   </property>
+                  <property name="font">
+                   <font>
+                    <family>Ubuntu</family>
+                    <pointsize>8</pointsize>
+                   </font>
+                  </property>
                   <property name="focusPolicy">
                    <enum>Qt::NoFocus</enum>
+                  </property>
+                  <property name="styleSheet">
+                   <string notr="true"/>
                   </property>
                   <property name="frameShape">
                    <enum>QFrame::NoFrame</enum>
@@ -294,22 +384,28 @@
                    <enum>QAbstractItemView::NoDragDrop</enum>
                   </property>
                   <property name="defaultDropAction">
-                   <enum>Qt::IgnoreAction</enum>
+                   <enum>Qt::CopyAction</enum>
                   </property>
                   <property name="alternatingRowColors">
-                   <bool>true</bool>
+                   <bool>false</bool>
                   </property>
                   <property name="selectionMode">
-                   <enum>QAbstractItemView::SingleSelection</enum>
+                   <enum>QAbstractItemView::NoSelection</enum>
                   </property>
                   <property name="selectionBehavior">
                    <enum>QAbstractItemView::SelectItems</enum>
+                  </property>
+                  <property name="movement">
+                   <enum>QListView::Static</enum>
+                  </property>
+                  <property name="isWrapping" stdset="0">
+                   <bool>false</bool>
                   </property>
                   <property name="viewMode">
                    <enum>QListView::ListMode</enum>
                   </property>
                   <property name="selectionRectVisible">
-                   <bool>true</bool>
+                   <bool>false</bool>
                   </property>
                   <property name="sortingEnabled">
                    <bool>true</bool>
@@ -341,6 +437,12 @@
                       <verstretch>0</verstretch>
                      </sizepolicy>
                     </property>
+                    <property name="font">
+                     <font>
+                      <family>Ubuntu</family>
+                      <pointsize>8</pointsize>
+                     </font>
+                    </property>
                     <property name="text">
                      <string>Select from Spectrum</string>
                     </property>
@@ -356,6 +458,12 @@
                       <horstretch>0</horstretch>
                       <verstretch>0</verstretch>
                      </sizepolicy>
+                    </property>
+                    <property name="font">
+                     <font>
+                      <family>Ubuntu</family>
+                      <pointsize>8</pointsize>
+                     </font>
                     </property>
                     <property name="text">
                      <string>Clear selection</string>
@@ -390,6 +498,12 @@
                  <height>0</height>
                 </size>
                </property>
+               <property name="font">
+                <font>
+                 <family>Ubuntu</family>
+                 <pointsize>8</pointsize>
+                </font>
+               </property>
                <property name="title">
                 <string>Alignment</string>
                </property>
@@ -415,6 +529,12 @@
                     </property>
                     <item>
                      <widget class="QCheckBox" name="CropCheckBox">
+                      <property name="font">
+                       <font>
+                        <family>Ubuntu</family>
+                        <pointsize>8</pointsize>
+                       </font>
+                      </property>
                       <property name="text">
                        <string>Crop</string>
                       </property>
@@ -442,6 +562,12 @@
                         <width>50</width>
                         <height>35</height>
                        </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <family>Ubuntu</family>
+                        <pointsize>8</pointsize>
+                       </font>
                       </property>
                       <property name="text">
                        <string>Clear all
@@ -472,6 +598,12 @@ shifts</string>
                         <height>16777215</height>
                        </size>
                       </property>
+                      <property name="font">
+                       <font>
+                        <family>Ubuntu</family>
+                        <pointsize>8</pointsize>
+                       </font>
+                      </property>
                       <property name="text">
                        <string>Auto
 Align</string>
@@ -489,6 +621,12 @@ Align</string>
                         <height>15</height>
                        </size>
                       </property>
+                      <property name="font">
+                       <font>
+                        <family>Ubuntu</family>
+                        <pointsize>8</pointsize>
+                       </font>
+                      </property>
                       <property name="text">
                        <string>Shift (px):</string>
                       </property>
@@ -504,6 +642,12 @@ Align</string>
                         <width>16777215</width>
                         <height>50</height>
                        </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <family>Ubuntu</family>
+                        <pointsize>8</pointsize>
+                       </font>
                       </property>
                       <property name="text">
                        <string>Label</string>
@@ -531,6 +675,12 @@ Align</string>
                       <width>150</width>
                       <height>150</height>
                      </size>
+                    </property>
+                    <property name="font">
+                     <font>
+                      <family>Ubuntu</family>
+                      <pointsize>8</pointsize>
+                     </font>
                     </property>
                     <property name="frameShape">
                      <enum>QFrame::Box</enum>
@@ -590,7 +740,8 @@ Align</string>
                          </property>
                          <property name="font">
                           <font>
-                           <pointsize>13</pointsize>
+                           <family>Ubuntu</family>
+                           <pointsize>8</pointsize>
                           </font>
                          </property>
                          <property name="focusPolicy">
@@ -617,7 +768,8 @@ Align</string>
                          </property>
                          <property name="font">
                           <font>
-                           <pointsize>22</pointsize>
+                           <family>Ubuntu</family>
+                           <pointsize>8</pointsize>
                           </font>
                          </property>
                          <property name="focusPolicy">
@@ -644,7 +796,8 @@ Align</string>
                          </property>
                          <property name="font">
                           <font>
-                           <pointsize>18</pointsize>
+                           <family>Ubuntu</family>
+                           <pointsize>8</pointsize>
                           </font>
                          </property>
                          <property name="focusPolicy">
@@ -671,7 +824,8 @@ Align</string>
                          </property>
                          <property name="font">
                           <font>
-                           <pointsize>22</pointsize>
+                           <family>Ubuntu</family>
+                           <pointsize>8</pointsize>
                           </font>
                          </property>
                          <property name="focusPolicy">
@@ -701,7 +855,8 @@ Align</string>
                          </property>
                          <property name="font">
                           <font>
-                           <pointsize>22</pointsize>
+                           <family>Ubuntu</family>
+                           <pointsize>8</pointsize>
                           </font>
                          </property>
                          <property name="focusPolicy">
@@ -728,7 +883,8 @@ Align</string>
                          </property>
                          <property name="font">
                           <font>
-                           <pointsize>22</pointsize>
+                           <family>Ubuntu</family>
+                           <pointsize>8</pointsize>
                           </font>
                          </property>
                          <property name="focusPolicy">
@@ -761,7 +917,8 @@ Align</string>
                          </property>
                          <property name="font">
                           <font>
-                           <pointsize>18</pointsize>
+                           <family>Ubuntu</family>
+                           <pointsize>8</pointsize>
                           </font>
                          </property>
                          <property name="focusPolicy">
@@ -788,7 +945,8 @@ Align</string>
                          </property>
                          <property name="font">
                           <font>
-                           <pointsize>22</pointsize>
+                           <family>Ubuntu</family>
+                           <pointsize>8</pointsize>
                           </font>
                          </property>
                          <property name="focusPolicy">
@@ -815,7 +973,8 @@ Align</string>
                          </property>
                          <property name="font">
                           <font>
-                           <pointsize>13</pointsize>
+                           <family>Ubuntu</family>
+                           <pointsize>8</pointsize>
                           </font>
                          </property>
                          <property name="focusPolicy">
@@ -842,7 +1001,8 @@ Align</string>
                          </property>
                          <property name="font">
                           <font>
-                           <pointsize>18</pointsize>
+                           <family>Ubuntu</family>
+                           <pointsize>8</pointsize>
                           </font>
                          </property>
                          <property name="focusPolicy">
@@ -869,7 +1029,8 @@ Align</string>
                          </property>
                          <property name="font">
                           <font>
-                           <pointsize>22</pointsize>
+                           <family>Ubuntu</family>
+                           <pointsize>8</pointsize>
                           </font>
                          </property>
                          <property name="focusPolicy">
@@ -896,7 +1057,8 @@ Align</string>
                          </property>
                          <property name="font">
                           <font>
-                           <pointsize>18</pointsize>
+                           <family>Ubuntu</family>
+                           <pointsize>8</pointsize>
                           </font>
                          </property>
                          <property name="focusPolicy">
@@ -923,7 +1085,8 @@ Align</string>
                          </property>
                          <property name="font">
                           <font>
-                           <pointsize>22</pointsize>
+                           <family>Ubuntu</family>
+                           <pointsize>8</pointsize>
                           </font>
                          </property>
                          <property name="focusPolicy">
@@ -950,7 +1113,8 @@ Align</string>
                          </property>
                          <property name="font">
                           <font>
-                           <pointsize>13</pointsize>
+                           <family>Ubuntu</family>
+                           <pointsize>8</pointsize>
                           </font>
                          </property>
                          <property name="focusPolicy">
@@ -977,7 +1141,8 @@ Align</string>
                          </property>
                          <property name="font">
                           <font>
-                           <pointsize>13</pointsize>
+                           <family>Ubuntu</family>
+                           <pointsize>8</pointsize>
                           </font>
                          </property>
                          <property name="focusPolicy">
@@ -1013,7 +1178,8 @@ Align</string>
                          </property>
                          <property name="font">
                           <font>
-                           <pointsize>22</pointsize>
+                           <family>Ubuntu</family>
+                           <pointsize>8</pointsize>
                           </font>
                          </property>
                          <property name="focusPolicy">
@@ -1040,8 +1206,8 @@ Align</string>
                          </property>
                          <property name="font">
                           <font>
-                           <family>MS Sans Serif</family>
-                           <pointsize>22</pointsize>
+                           <family>Ubuntu</family>
+                           <pointsize>8</pointsize>
                           </font>
                          </property>
                          <property name="focusPolicy">
@@ -1070,6 +1236,12 @@ Align</string>
                  <verstretch>0</verstretch>
                 </sizepolicy>
                </property>
+               <property name="font">
+                <font>
+                 <family>Ubuntu</family>
+                 <pointsize>8</pointsize>
+                </font>
+               </property>
                <property name="title">
                 <string>OD Offset</string>
                </property>
@@ -1086,6 +1258,12 @@ Align</string>
                       <width>50</width>
                       <height>16777215</height>
                      </size>
+                    </property>
+                    <property name="font">
+                     <font>
+                      <family>Ubuntu</family>
+                      <pointsize>8</pointsize>
+                     </font>
                     </property>
                     <property name="locale">
                      <locale language="C" country="AnyCountry"/>
@@ -1106,6 +1284,12 @@ Align</string>
                     <property name="enabled">
                      <bool>false</bool>
                     </property>
+                    <property name="font">
+                     <font>
+                      <family>Ubuntu</family>
+                      <pointsize>8</pointsize>
+                     </font>
+                    </property>
                     <property name="text">
                      <string>Select I0</string>
                     </property>
@@ -1115,6 +1299,12 @@ Align</string>
                    <widget class="QPushButton" name="pushButton">
                     <property name="enabled">
                      <bool>false</bool>
+                    </property>
+                    <property name="font">
+                     <font>
+                      <family>Ubuntu</family>
+                      <pointsize>8</pointsize>
+                     </font>
                     </property>
                     <property name="text">
                      <string>Reset I0</string>
@@ -1140,6 +1330,12 @@ Align</string>
                  <height>150</height>
                 </size>
                </property>
+               <property name="font">
+                <font>
+                 <family>Ubuntu</family>
+                 <pointsize>8</pointsize>
+                </font>
+               </property>
                <property name="title">
                 <string>Display Options</string>
                </property>
@@ -1151,6 +1347,12 @@ Align</string>
                     <width>16777215</width>
                     <height>15</height>
                    </size>
+                  </property>
+                  <property name="font">
+                   <font>
+                    <family>Ubuntu</family>
+                    <pointsize>8</pointsize>
+                   </font>
                   </property>
                   <property name="text">
                    <string>Colormap Category      Colormap   Steps</string>
@@ -1179,10 +1381,23 @@ Align</string>
                       <height>16777215</height>
                      </size>
                     </property>
+                    <property name="font">
+                     <font>
+                      <family>Ubuntu</family>
+                      <pointsize>8</pointsize>
+                     </font>
+                    </property>
                    </widget>
                   </item>
                   <item>
-                   <widget class="QComboBox" name="CMMapBox"/>
+                   <widget class="QComboBox" name="CMMapBox">
+                    <property name="font">
+                     <font>
+                      <family>Ubuntu</family>
+                      <pointsize>8</pointsize>
+                     </font>
+                    </property>
+                   </widget>
                   </item>
                   <item>
                    <widget class="QSpinBox" name="StepSpin">
@@ -1191,6 +1406,12 @@ Align</string>
                       <width>40</width>
                       <height>16777215</height>
                      </size>
+                    </property>
+                    <property name="font">
+                     <font>
+                      <family>Ubuntu</family>
+                      <pointsize>8</pointsize>
+                     </font>
                     </property>
                     <property name="minimum">
                      <number>2</number>
@@ -1227,6 +1448,12 @@ Align</string>
                       <height>16777215</height>
                      </size>
                     </property>
+                    <property name="font">
+                     <font>
+                      <family>Ubuntu</family>
+                      <pointsize>8</pointsize>
+                     </font>
+                    </property>
                     <property name="text">
                      <string>Metric scale</string>
                     </property>
@@ -1249,6 +1476,12 @@ Align</string>
                       <height>16777215</height>
                      </size>
                     </property>
+                    <property name="font">
+                     <font>
+                      <family>Ubuntu</family>
+                      <pointsize>8</pointsize>
+                     </font>
+                    </property>
                     <property name="text">
                      <string>Origin to zero</string>
                     </property>
@@ -1270,6 +1503,12 @@ Align</string>
                       <width>100</width>
                       <height>16777215</height>
                      </size>
+                    </property>
+                    <property name="font">
+                     <font>
+                      <family>Ubuntu</family>
+                      <pointsize>8</pointsize>
+                     </font>
                     </property>
                     <property name="autoFillBackground">
                      <bool>false</bool>
@@ -1296,6 +1535,12 @@ Align</string>
                   </item>
                   <item>
                    <spacer name="horizontalSpacer">
+                    <property name="font">
+                     <font>
+                      <family>Ubuntu</family>
+                      <pointsize>8</pointsize>
+                     </font>
+                    </property>
                     <property name="orientation">
                      <enum>Qt::Horizontal</enum>
                     </property>
@@ -1313,6 +1558,12 @@ Align</string>
                  <layout class="QGridLayout" name="gridLayout_2">
                   <item row="1" column="1">
                    <widget class="QLabel" name="label_3">
+                    <property name="font">
+                     <font>
+                      <family>Ubuntu</family>
+                      <pointsize>8</pointsize>
+                     </font>
+                    </property>
                     <property name="text">
                      <string>Lower OD limit</string>
                     </property>
@@ -1328,6 +1579,12 @@ Align</string>
                       <width>60</width>
                       <height>16777215</height>
                      </size>
+                    </property>
+                    <property name="font">
+                     <font>
+                      <family>Ubuntu</family>
+                      <pointsize>8</pointsize>
+                     </font>
                     </property>
                     <property name="locale">
                      <locale language="C" country="AnyCountry"/>
@@ -1354,6 +1611,12 @@ Align</string>
                       <height>16777215</height>
                      </size>
                     </property>
+                    <property name="font">
+                     <font>
+                      <family>Ubuntu</family>
+                      <pointsize>8</pointsize>
+                     </font>
+                    </property>
                     <property name="locale">
                      <locale language="C" country="AnyCountry"/>
                     </property>
@@ -1370,6 +1633,12 @@ Align</string>
                   </item>
                   <item row="0" column="1">
                    <widget class="QLabel" name="label_2">
+                    <property name="font">
+                     <font>
+                      <family>Ubuntu</family>
+                      <pointsize>8</pointsize>
+                     </font>
+                    </property>
                     <property name="text">
                      <string>Upper OD limit</string>
                     </property>
@@ -1392,6 +1661,12 @@ Align</string>
                       <height>60</height>
                      </size>
                     </property>
+                    <property name="font">
+                     <font>
+                      <family>Ubuntu</family>
+                      <pointsize>8</pointsize>
+                     </font>
+                    </property>
                     <property name="text">
                      <string>Reset
 OD limits</string>
@@ -1411,6 +1686,12 @@ OD limits</string>
                  <verstretch>0</verstretch>
                 </sizepolicy>
                </property>
+               <property name="font">
+                <font>
+                 <family>Ubuntu</family>
+                 <pointsize>8</pointsize>
+                </font>
+               </property>
                <property name="title">
                 <string>Export</string>
                </property>
@@ -1419,6 +1700,12 @@ OD limits</string>
                  <widget class="QPushButton" name="pbExpData">
                   <property name="enabled">
                    <bool>false</bool>
+                  </property>
+                  <property name="font">
+                   <font>
+                    <family>Ubuntu</family>
+                    <pointsize>8</pointsize>
+                   </font>
                   </property>
                   <property name="text">
                    <string>OD Data (*.tif, *.txt)</string>
@@ -1429,6 +1716,12 @@ OD limits</string>
                  <widget class="QPushButton" name="pbExpImg">
                   <property name="enabled">
                    <bool>false</bool>
+                  </property>
+                  <property name="font">
+                   <font>
+                    <family>Ubuntu</family>
+                    <pointsize>8</pointsize>
+                   </font>
                   </property>
                   <property name="text">
                    <string>OD Image (*.svg,*.tif,*.png*.jpg)</string>
@@ -1454,7 +1747,7 @@ OD limits</string>
   <customwidget>
    <class>GraphicsView</class>
    <extends>QGraphicsView</extends>
-   <header>pyqtgraph</header>
+   <header location="global">pyqtgraph</header>
   </customwidget>
  </customwidgets>
  <resources/>
