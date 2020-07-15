@@ -517,10 +517,16 @@
                 <bool>false</bool>
                </property>
                <layout class="QVBoxLayout" name="verticalLayout_6">
+                <property name="topMargin">
+                 <number>3</number>
+                </property>
+                <property name="rightMargin">
+                 <number>0</number>
+                </property>
                 <item>
                  <layout class="QHBoxLayout" name="horizontalLayout_7">
                   <property name="rightMargin">
-                   <number>8</number>
+                   <number>0</number>
                   </property>
                   <item>
                    <layout class="QVBoxLayout" name="verticalLayout">
@@ -683,10 +689,16 @@ Align</string>
                      </font>
                     </property>
                     <property name="frameShape">
-                     <enum>QFrame::Box</enum>
+                     <enum>QFrame::StyledPanel</enum>
                     </property>
                     <property name="frameShadow">
                      <enum>QFrame::Sunken</enum>
+                    </property>
+                    <property name="lineWidth">
+                     <number>1</number>
+                    </property>
+                    <property name="midLineWidth">
+                     <number>0</number>
                     </property>
                     <layout class="QHBoxLayout" name="horizontalLayout_8">
                      <property name="spacing">
@@ -713,16 +725,19 @@ Align</string>
                         <number>3</number>
                        </property>
                        <property name="topMargin">
-                        <number>3</number>
+                        <number>1</number>
                        </property>
                        <property name="rightMargin">
-                        <number>5</number>
+                        <number>3</number>
                        </property>
                        <property name="bottomMargin">
-                        <number>5</number>
+                        <number>0</number>
                        </property>
-                       <property name="spacing">
-                        <number>2</number>
+                       <property name="horizontalSpacing">
+                        <number>4</number>
+                       </property>
+                       <property name="verticalSpacing">
+                        <number>1</number>
                        </property>
                        <item row="1" column="3">
                         <widget class="QPushButton" name="pbRU">
@@ -741,7 +756,7 @@ Align</string>
                          <property name="font">
                           <font>
                            <family>Ubuntu</family>
-                           <pointsize>8</pointsize>
+                           <pointsize>10</pointsize>
                           </font>
                          </property>
                          <property name="focusPolicy">
@@ -769,7 +784,7 @@ Align</string>
                          <property name="font">
                           <font>
                            <family>Ubuntu</family>
-                           <pointsize>8</pointsize>
+                           <pointsize>10</pointsize>
                           </font>
                          </property>
                          <property name="focusPolicy">
@@ -797,7 +812,7 @@ Align</string>
                          <property name="font">
                           <font>
                            <family>Ubuntu</family>
-                           <pointsize>8</pointsize>
+                           <pointsize>10</pointsize>
                           </font>
                          </property>
                          <property name="focusPolicy">
@@ -825,7 +840,7 @@ Align</string>
                          <property name="font">
                           <font>
                            <family>Ubuntu</family>
-                           <pointsize>8</pointsize>
+                           <pointsize>10</pointsize>
                           </font>
                          </property>
                          <property name="focusPolicy">
@@ -856,7 +871,7 @@ Align</string>
                          <property name="font">
                           <font>
                            <family>Ubuntu</family>
-                           <pointsize>8</pointsize>
+                           <pointsize>10</pointsize>
                           </font>
                          </property>
                          <property name="focusPolicy">
@@ -884,7 +899,7 @@ Align</string>
                          <property name="font">
                           <font>
                            <family>Ubuntu</family>
-                           <pointsize>8</pointsize>
+                           <pointsize>10</pointsize>
                           </font>
                          </property>
                          <property name="focusPolicy">
@@ -918,7 +933,7 @@ Align</string>
                          <property name="font">
                           <font>
                            <family>Ubuntu</family>
-                           <pointsize>8</pointsize>
+                           <pointsize>10</pointsize>
                           </font>
                          </property>
                          <property name="focusPolicy">
@@ -946,7 +961,7 @@ Align</string>
                          <property name="font">
                           <font>
                            <family>Ubuntu</family>
-                           <pointsize>8</pointsize>
+                           <pointsize>10</pointsize>
                           </font>
                          </property>
                          <property name="focusPolicy">
@@ -974,7 +989,7 @@ Align</string>
                          <property name="font">
                           <font>
                            <family>Ubuntu</family>
-                           <pointsize>8</pointsize>
+                           <pointsize>10</pointsize>
                           </font>
                          </property>
                          <property name="focusPolicy">
@@ -1002,7 +1017,7 @@ Align</string>
                          <property name="font">
                           <font>
                            <family>Ubuntu</family>
-                           <pointsize>8</pointsize>
+                           <pointsize>10</pointsize>
                           </font>
                          </property>
                          <property name="focusPolicy">
@@ -1030,7 +1045,7 @@ Align</string>
                          <property name="font">
                           <font>
                            <family>Ubuntu</family>
-                           <pointsize>8</pointsize>
+                           <pointsize>10</pointsize>
                           </font>
                          </property>
                          <property name="focusPolicy">
@@ -1058,7 +1073,7 @@ Align</string>
                          <property name="font">
                           <font>
                            <family>Ubuntu</family>
-                           <pointsize>8</pointsize>
+                           <pointsize>10</pointsize>
                           </font>
                          </property>
                          <property name="focusPolicy">
@@ -1086,7 +1101,7 @@ Align</string>
                          <property name="font">
                           <font>
                            <family>Ubuntu</family>
-                           <pointsize>8</pointsize>
+                           <pointsize>10</pointsize>
                           </font>
                          </property>
                          <property name="focusPolicy">
@@ -1114,7 +1129,7 @@ Align</string>
                          <property name="font">
                           <font>
                            <family>Ubuntu</family>
-                           <pointsize>8</pointsize>
+                           <pointsize>10</pointsize>
                           </font>
                          </property>
                          <property name="focusPolicy">
@@ -1142,7 +1157,7 @@ Align</string>
                          <property name="font">
                           <font>
                            <family>Ubuntu</family>
-                           <pointsize>8</pointsize>
+                           <pointsize>10</pointsize>
                           </font>
                          </property>
                          <property name="focusPolicy">
@@ -1179,7 +1194,7 @@ Align</string>
                          <property name="font">
                           <font>
                            <family>Ubuntu</family>
-                           <pointsize>8</pointsize>
+                           <pointsize>10</pointsize>
                           </font>
                          </property>
                          <property name="focusPolicy">
@@ -1207,7 +1222,7 @@ Align</string>
                          <property name="font">
                           <font>
                            <family>Ubuntu</family>
-                           <pointsize>8</pointsize>
+                           <pointsize>11</pointsize>
                           </font>
                          </property>
                          <property name="focusPolicy">
