@@ -10756,6 +10756,7 @@ class ShowArtefacts(QtWidgets.QDialog):
         self.vb.setAspectLocked()
         self.i_item = pg.ImageItem(border="k",parent= self)
 
+
         self.button_ok.clicked.connect(self.OnAccept)
         self.button_cancel.clicked.connect(self.close)
         self.cb_h.stateChanged.connect(self.ShowImage)
@@ -12900,74 +12901,47 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
 
         self.vb.setMouseEnabled(x=False, y=False)
         self.vb.addItem(self.i_item, ignoreBounds=False)
+#        self.box.clearPoints()
 
         self.DriftsWidget.setBackground("w")
 
-        self.px = self.DriftsWidget.addPlot(row=0, col=0, rowspan=1, colspan=1)
-        self.px.setMouseEnabled(x=False, y=False)
-        #self.i_item = pg.ImageItem(border="k")
-        self.px.setAspectLocked(lock=True, ratio=1)
-        self.px.showAxis("top", show=True)
-        self.px.showAxis("bottom", show=True)
-        self.px.showAxis("left", show=True)
-        self.px.showAxis("right", show=True)
-        ay1 = self.px.getAxis("left")
-        by1 = self.px.getAxis("right")
-        ax1 = self.px.getAxis("bottom")
-        bx1 = self.px.getAxis("top")
-        ay1.setLabel(text="x-drift",units="px")
-        ay1.enableAutoSIPrefix(enable=True)
-        #ax1.setLabel(text="x",units="eV")
-        #ax1.enableAutoSIPrefix(enable=True)
-        ay1.setStyle(tickLength=8)
-        ax1.setStyle(showValues=False,tickLength=0)
-        ax1.setHeight(h=46.2)
-        #ax1.setStyle(tickLength=8)
-        by1.setStyle(showValues=False,tickLength=0)
-        bx1.setStyle(showValues=False,tickLength=0)
-        #lastClicked=[]
-        def clicked(plot, points):
-            #lastClicked
-            #for p in lastClicked:
-            #    p.resetPen()
-            print("clicked points", points)
-            for p in points:
-                p.setPen('b', width=2)
-            #lastClicked = points
-
-        s3 = pg.ScatterPlotItem(pxMode=False)  ## Set pxMode=False to allow spots to transform with the view
-        spots3 = []
-        for i in range(10):
-            for j in range(10):
-                spots3.append({'pos': (1 * i, 1 * j), 'size': 10, #'pen': {'color': 'w', 'width': 2},
-                               'brush': pg.intColor(i * 10 + j, 100)})
-        print(spots3)
-        s3.addPoints(spots=spots3,pxMode=True)
-        self.px.addItem(s3)
-        s3.sigClicked.connect(clicked)
-
-
-        #s4 = pg.ScatterPlotItem(size=10, pen=pg.mkPen(None), brush=pg.mkBrush(255, 0, 0, 50))
-        #pos = np.random.normal(size=(2, 10), scale=1)
-        #s4.addPoints(x=pos[0], y=pos[1])
-        #self.px.addItem(s4)
-        #s4.sigClicked.connect(clicked)
-
-
-
-        self.py = self.DriftsWidget.addPlot(row=1, col=0, rowspan=1, colspan=1)
+        self.py = self.DriftsWidget.addPlot(row=0, col=0, rowspan=1, colspan=1)
         self.py.setMouseEnabled(x=False, y=False)
         #self.i_item = pg.ImageItem(border="k")
-        self.py.setAspectLocked(lock=True, ratio=1)
+        #self.py.setAspectLocked(lock=True, ratio=1)
         self.py.showAxis("top", show=True)
         self.py.showAxis("bottom", show=True)
         self.py.showAxis("left", show=True)
         self.py.showAxis("right", show=True)
-        ay2 = self.py.getAxis("left")
-        by2 = self.py.getAxis("right")
-        ax2 = self.py.getAxis("bottom")
-        bx2 = self.py.getAxis("top")
-        ay2.setLabel(text="y-drift",units="px")
+        ay1 = self.py.getAxis("left")
+        by1 = self.py.getAxis("right")
+        ax1 = self.py.getAxis("bottom")
+        bx1 = self.py.getAxis("top")
+        ay1.setLabel(text="y-drift", units="px")
+        ay1.enableAutoSIPrefix(enable=True)
+        # ax1.setLabel(text="x",units="eV")
+        # ax1.enableAutoSIPrefix(enable=True)
+        ay1.setStyle(tickLength=8)
+        ax1.setStyle(showValues=False, tickLength=0)
+        ax1.setHeight(h=46.2)
+        # ax1.setStyle(tickLength=8)
+        by1.setStyle(showValues=False, tickLength=0)
+        bx1.setStyle(showValues=False, tickLength=0)
+
+        self.px = self.DriftsWidget.addPlot(row=1, col=0, rowspan=1, colspan=1)
+        self.px.setXLink(self.py)
+        self.px.setMouseEnabled(x=False, y=False)
+        #self.i_item = pg.ImageItem(border="k")
+        #self.px.setAspectLocked(lock=True, ratio=1)
+        self.px.showAxis("top", show=True)
+        self.px.showAxis("bottom", show=True)
+        self.px.showAxis("left", show=True)
+        self.px.showAxis("right", show=True)
+        ay2 = self.px.getAxis("left")
+        by2 = self.px.getAxis("right")
+        ax2 = self.px.getAxis("bottom")
+        bx2 = self.px.getAxis("top")
+        ay2.setLabel(text="x-drift",units="px")
         ay2.enableAutoSIPrefix(enable=True)
         ax2.setLabel(text="Photon Energy",units="eV")
         ax2.enableAutoSIPrefix(enable=True)
@@ -12976,16 +12950,20 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         by2.setStyle(showValues=False,tickLength=0)
         bx2.setStyle(showValues=False,tickLength=0)
 
-        self.button_ok.clicked.connect(self.OnAccept)
-        self.button_cancel.clicked.connect(self.close)
-#        self.stack.calc_histogram()
 
-        self.xregion = pg.LinearRegionItem(brush=[255,0,0,45])
-        self.xregion.setZValue(10)
-        self.yregion = pg.LinearRegionItem(brush=[255,0,0,45])
-        self.yregion.setZValue(10)
-        self.px.addItem(self.xregion, ignoreBounds=True)
-        self.py.addItem(self.yregion, ignoreBounds=True)
+
+        def clicked(plot, points):
+            #lastClicked
+            #for p in lastClicked:
+            #    p.resetPen()
+            print("clicked points", points)
+            for p in points:
+                p.setPen('b', width=2)
+            #lastClicked = points
+        # lastClicked=[]
+
+        # self.button_ok.clicked.connect(self.OnAccept)
+        self.button_cancel.clicked.connect(self.close)
 
         if self.com.stack_loaded == 1:
             self.slider_eng.sliderPressed.connect(self.ShowImage)
@@ -12993,69 +12971,61 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
             self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
             self.slider_eng.setRange(0, self.stack.n_ev - 1)
             self.OnScrollEng(0)
+            self.SetupROI()
             self.button_align.clicked.connect(self.OnAlign)
-        # def update(region):
-        #     self.region.setZValue(10)
-        #     minX, maxX = region
-        #     #self.draw_image(minX, maxX)
-        #     self.SetupROI()
-        #     #self.MaskImage.setZValue(10)
-        #self.xregion.setRegion((0,1))
-        #self.region.sigRegionChanged.connect(lambda: update(self.region.getRegion()))
-        ## Make all plots clickable
 
-        lastClicked = []
+            self.xregion = pg.LinearRegionItem(brush=[255, 0, 0, 45], bounds=None)
+            self.yregion = pg.LinearRegionItem(brush=[255, 0, 0, 45], bounds=None)
+            self.xregion.setRegion([np.min(self.stack.ev), np.max(self.stack.ev)])
+            self.yregion.setRegion([np.min(self.stack.ev), np.max(self.stack.ev)])
+            self.yregion.setZValue(100)
+            self.xregion.setZValue(100)
+            self.px.addItem(self.xregion, ignoreBounds=True)
+            self.py.addItem(self.yregion, ignoreBounds=True)
 
-        # self.AbsImage = pg.ImageItem(border="k", parent=self)
-        # self.lassopoints = []
-        # self.vb.setMouseEnabled(x=False, y=False)
-        # self.vb.addItem(self.AbsImage, ignoreBounds=False)
-        # self.MaskImage = pg.ImageItem(border="k")
-        # self.vb.addItem(self.MaskImage)
-#        self.redpix = np.zeros([self.stack.n_cols, self.stack.n_rows, 4], dtype=np.uint8)
-#        px = int(self.stack.n_cols * self.stack.n_rows * 0.98)  # 98% of total pixels
-#        fluxmax_limit = np.mean(np.partition(np.ravel(self.stack.averageflux), px)[
-#                                :px])  # average brightness of the 2% of pixels with highest flux
-#        self.histmin = fluxmax_limit
-#        self.histmax = np.max(self.stack.averageflux) + 1
-#        self.draw_histogram()
-#        self.draw_image(self.histmin, self.histmax)
+            self.xscatter = pg.ScatterPlotItem(pxMode=False)  ## Set pxMode=False to allow spots to transform with the view
+            self.xscatter.setZValue(100)
+            self.yscatter = pg.ScatterPlotItem(pxMode=False)  ## Set pxMode=False to allow spots to transform with the view
+            self.xpts = []
+            self.ypts = []
+            for i in self.stack.ev:
+                self.xpts.append({'pos': (1 * i, 0), 'size': 10,  # 'pen': {'color': 'w', 'width': 2},
+                             'brush': QtGui.QColor('blue')})
+                self.ypts.append({'pos': (1 * i, 0), 'size': 10,  # 'pen': {'color': 'w', 'width': 2},
+                             'brush': QtGui.QColor('blue')})
+            self.xscatter.addPoints(spots=self.xpts, pxMode=True)
+            self.yscatter.addPoints(spots=self.ypts, pxMode=True)
+            self.px.addItem(self.xscatter)
+            self.py.addItem(self.yscatter)
+            self.xscatter.sigClicked.connect(clicked)
+            self.yscatter.sigClicked.connect(clicked)
 
-        # self.I0box = pg.PolyLineROI([[1, 1], [0, 1], [0, 0], [1, 0]], pen=(5, 8), closed=True)
-        # self.vb.addItem(self.I0box, ignoreBounds=False)
-        # self.I0box.clearPoints()
-        #
-        # self.clickdetector = QtCore.QTimer()
-#        self.clickdetector.timeout.connect(self.OnRelease)
-#        self.radioLassoROI.toggled.connect(self.SetupROI)
-#        self.SetupROI()
+            self.shifts = self.stack.shifts.copy()
+
     # ----------------------------------------------------------------------
     def OnAlign(self):
-        pairs = self.GetIndexPairs()
-        shifts = [skimage.feature.register_translation(self.stack.absdata[:, :, pair[0]],self.stack.absdata[:, :, pair[1]], 20) for pair in pairs]
-        print(shifts)
-            #[idx1, idx2, *skimage.feature.register_translation(img1, img2, 50)]
-            #        if idx1 < idx2:
-            #            shift = tuple(-1*round(x,2) for x in shift)
-            # Calculate the upsampled DFT
-            # image_product = np.fft.fft2(img1) * np.fft.fft2(img2).conj()
-            # xc_image = _upsampled_dft(image_product, 300, 25, (shift*25)+150).conj()
-  #          if error > 0.99:
-  #              shift = (-9, -9)
- #               # xc_image = 0
- #               print
-#                'RMS > 0.99, Bad correlation, no shift applied'
- #           return [idx1, idx2, shift, round(error, 3)]  # , xc_image.real
+        # xspots = self.xscatter.points()
+        # yspots = self.yscatter.points()
+        # pairs = self.GetIndexPairs()
+
+        print(self.shifts)
+        #for e, drift in enumerate(drifts):
+        # for e, pair in enumerate(pairs):
+        #     drift = skimage.feature.register_translation(self.stack.absdata[:, :, pair[0]], self.stack.absdata[:, :, pair[1]],
+        #                                          50)
+        #     #self.shifts[e].pop(2)
+        #     #self.shifts[e].insert(2, (drift[0][0], drift[0][1]))
+        #     self.xpts[e]['pos']= (self.stack.ev[e], drift[0][0])
+        #     self.ypts[e]['pos']= (self.stack.ev[e], drift[0][1])
+        #     print(self.xpts)
+        #
+        #     self.xscatter.setData(self.xpts)
+        #     self.yscatter.setData(self.ypts)
 
     # ----------------------------------------------------------------------
     def GetIndexPairs(self):
         idxtuplelst = [(i+1,i) for i in range(self.stack.n_ev-1)]
         return idxtuplelst
-    # ----------------------------------------------------------------------
-    # def GetShifts(self,pairs):
-    #     for pair in pairs:
-    #     shift, error, diffphase = skimage.feature.register_translation(img1, img2, 50)
-    #    return [idx1, idx2, *skimage.feature.register_translation(img1, img2, 50)]
     # ----------------------------------------------------------------------
     def OnScrollEng(self, value):
         self.slider_eng.setValue(value)
@@ -13065,168 +13035,50 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
     def ShowImage(self):
         self.i_item.setImage(self.stack.absdata[:, :, int(self.iev)])
         self.groupBox.setTitle(str('Stack Browser | Image at {0:5.2f} eV').format(float(self.stack.ev[self.iev])))
-    # def SetupROI(self):
-    #     self.I0instructions.setText("Select I0 by dragging the histogram lines or by drawing a ROI.")
-    #     self.lassopoints = []
-    #     self.I0box.setZValue(-10)
-    #     self.MaskImage.setZValue(-10)
-    #     if self.radioLassoROI.isChecked():
-    #         self.proxy = pg.SignalProxy(self.vb.scene().sigMouseMoved, rateLimit=15,
-    #                                     slot=self.OnMouseHover)  # rate limit to avoid too many handles
-    #         self.I0box.handlePen = QtGui.QPen(QtGui.QColor(255, 0, 128, 0))
-    #     elif self.radioPolyROI.isChecked():
-    #         self.proxy = pg.SignalProxy(self.vb.scene().sigMouseMoved, rateLimit=30, slot=self.OnMouseHover)
-    #         self.I0box.handlePen = QtGui.QPen(QtGui.QColor(255, 0, 128, 255))
-    #     try:
-    #         self.I0box.sigRegionChangeFinished.disconnect(self.DrawROI)
-    #         self.I0box.clearPoints()
-    #         self.proxy.block = False
-    #     except:
-    #         pass
 
+    ## Setup a ROI for an alignment rectangle. By default the whole image area is used.
+    def SetupROI(self):
+        self.box = pg.RectROI(self.i_item.boundingRect().topLeft(), self.i_item.boundingRect().bottomRight(),
+                              pen=(5, 8), handlePen=QtGui.QPen(QtGui.QColor(255, 0, 128, 255)), centered=False,
+                              sideScalers=False, removable=False, scaleSnap=True, translateSnap=True,
+                              maxBounds=self.i_item.boundingRect())
+        self.vb.addItem(self.box, ignoreBounds=False)
+        self.box.sigRegionChangeFinished.connect(self.OnRegionChanged)
+        self.box.sigRegionChangeStarted.connect(self.OnRegionChange)
+    ## The ROI is limited to the visible image area. OnMouseMoveOutside handles the behavior when
+    def OnRegionChange(self):
+        self.boxsize = self.box.size()
+        self.proxy = pg.SignalProxy(self.vb.scene().sigMouseMoved, rateLimit=30, slot=self.OnMouseMoveOutside)
+    def OnRegionChanged(self):
+        self.proxy.disconnect()
+        #ToDo: return the ROI
+    def OnMouseMoveOutside(self, ev):
+            mousepos = self.vb.mapSceneToView(ev[0])
+            if not self.vb.itemBoundingRect(self.i_item).contains(mousepos):
+                maxrect = self.i_item.boundingRect().bottomRight()
+                # if bounds exceeded
+                out_x = max((mousepos-maxrect).x(),0)
+                out_y = max((mousepos-maxrect).y(), 0)
+                if self.box.size() != self.boxsize: # prevents taking action when the box is just dragged and not resized
+                    if out_x and out_y:
+                        self.box.setSize(self.i_item.boundingRect().bottomRight()-self.box.pos(), update=True, finish=False)
+                    elif out_x:
+                        self.box.setSize([self.i_item.boundingRect().right()-self.box.pos().x(),mousepos.y()-self.box.pos().y()], update=True, finish=False)
+                    elif out_y:
+                        self.box.setSize([mousepos.x()-self.box.pos().x(),self.i_item.boundingRect().bottom()-self.box.pos().y()], update=True, finish=False)
     # ----------------------------------------------------------------------
-    # def draw_histogram(self):
-    #     histogram_data = np.reshape(self.stack.histogram, (self.stack.n_cols * self.stack.n_rows), order='F')
-    #
-    #     y, x = np.histogram(histogram_data, bins=100)
-    #
-    #     self.region = pg.LinearRegionItem(brush=[255, 0, 0, 45], bounds=[np.min(x), np.max(x)])
-    #
-    #     self.region.setZValue(10)
-    #
-    #     plot = self.DriftsWidget
-    #     plot.addItem(self.region, ignoreBounds=False)
-    #     plot.setMouseEnabled(x=False, y=False)
-    #     plot.setLogMode(x=False, y=True)
-    #     plot.showGrid(y=True)
-    #
-    #     plot.showAxis("top", show=True)
-    #     plot.showAxis("right", show=True)
-    #     by = plot.getAxis("right")
-    #     bx = plot.getAxis("top")
-    #     by.setStyle(showValues=False, tickLength=0)
-    #     bx.setStyle(showValues=False, tickLength=0)
-    #     ay = plot.getAxis("left")
-    #     ax = plot.getAxis("bottom")
-    #     ay.setLabel(text="Number of pixels")
-    #     ax.setLabel(text="Average Flux")
-    #
-    #     plot.plot(x, y, stepMode=True, fillLevel=0, brush=(0, 0, 255, 150))
-    #
-    #     def update(region):
-    #         self.region.setZValue(10)
-    #         minX, maxX = region
-    #         self.draw_image(minX, maxX)
-    #         self.SetupROI()
-    #         self.MaskImage.setZValue(10)
-    #
-    #     self.region.setRegion((self.histmin, self.histmax))
-    #     self.region.sigRegionChanged.connect(lambda: update(self.region.getRegion()))
-
-    # ----------------------------------------------------------------------
-    # def OnRelease(self):
-    #     if not self.vb.scene().clickEvents:
-    #         self.proxy.block = True
-    #         self.DrawROI()
-    #         self.I0instructions.setText(
-    #             "Drag the polygon or the handles. Add handles by clicking on a line segment.")
-    #         if self.radioLassoROI.isChecked():
-    #             self.lassopoints = []
-    #             self.I0instructions.setText("")
-    #             while len(self.I0box.getHandles()) > 0:
-    #                 self.I0box.removeHandle(self.I0box.getHandles()[0], updateSegments=True)
-    #         self.I0box.sigRegionChangeFinished.connect(self.DrawROI)
-    #         self.clickdetector.stop()
-    #
-    # def DrawROI(self):
-    #     left = int(round(self.vb.itemBoundingRect(self.I0box).left(), 0))
-    #     right = int(round(self.vb.itemBoundingRect(self.I0box).right(), 0))
-    #     top = int(round(self.vb.itemBoundingRect(self.I0box).bottom(), 0))
-    #     bottom = int(round(self.vb.itemBoundingRect(self.I0box).top(), 0))
-    #     # fill the selection polygon with ones and map to image coords
-    #     io = self.I0box.getArrayRegion(np.ones((self.stack.n_cols, self.stack.n_rows)), self.AbsImage)
-    #     # fill left and right margins with zeros
-    #     lzeros = np.zeros((max(0, left), np.shape(io)[1]), dtype=io.dtype)
-    #     rzeros = np.zeros((max(0, self.stack.n_cols - right), np.shape(io)[1]), dtype=io.dtype)
-    #     io = np.vstack((lzeros, io, rzeros))
-    #     # fill bottom and top margins with zeros
-    #     bzeros = np.zeros((np.shape(io)[0], (max(0, bottom))), dtype=io.dtype)
-    #     tzeros = np.zeros((np.shape(io)[0], (max(0, self.stack.n_rows - top))), dtype=io.dtype)
-    #     io = np.hstack((bzeros, io, tzeros))
-    #     # dilate mask to include border pixels:
-    #     if left <= 0:
-    #         io = ndimage.binary_dilation(io, structure=([[0, 1, 0], [0, 1, 0], [0, 0, 0]]))
-    #     if right >= self.stack.n_cols:
-    #         io = ndimage.binary_dilation(io, structure=([[0, 0, 0], [0, 1, 0], [0, 1, 0]]))
-    #     if bottom <= 0:
-    #         io = ndimage.binary_dilation(io, structure=([[0, 0, 0], [1, 1, 0], [0, 0, 0]]))
-    #     if top >= self.stack.n_rows:
-    #         io = ndimage.binary_dilation(io, structure=([[0, 0, 0], [0, 1, 1], [0, 0, 0]]))
-    #     # crop mask to common region:
-    #     io = io[abs(min(left, 0)):self.stack.n_cols + abs(min(left, 0)),
-    #          abs(min(bottom, 0)):self.stack.n_rows + abs(min(bottom, 0))]
-    #     self.i0_indices = np.where(io == 1)
-    #     self.redpix[:, :] = [0, 0, 0, 0]
-    #     self.redpix[self.i0_indices] = (255, 0, 0, 255)
-    #     self.MaskImage.setImage(self.redpix, opacity=0.3)
-    #     self.MaskImage.setZValue(10)
-    #
-    # def OnMouseHover(self, ev):
-    #     pos = self.vb.mapSceneToView(ev[0])
-    #     roipos = pos - self.vb.mapFromViewToItem(self.I0box, pos)
-    #     if self.vb.itemBoundingRect(self.AbsImage).contains(pos):
-    #         if self.vb.scene().clickEvents:
-    #             self.MaskImage.setZValue(-10)
-    #             self.I0box.setZValue(10)
-    #             self.clickdetector.start(10)
-    #             if self.radioPolyROI.isChecked():
-    #                 origin = self.vb.mapSceneToView(self.vb.scene().clickEvents[0].scenePos())
-    #                 if origin.x() < 0:
-    #                     x0 = 0 - roipos.x()
-    #                 elif origin.x() > self.stack.n_cols:
-    #                     x0 = self.stack.n_cols - roipos.x()
-    #                 else:
-    #                     x0 = np.round(origin.x() - roipos.x(), 0)
-    #                 if origin.y() < 0:
-    #                     y0 = 0 - roipos.y()
-    #                 elif origin.y() > self.stack.n_rows:
-    #                     y0 = self.stack.n_rows - roipos.y()
-    #                 else:
-    #                     y0 = np.round(origin.y() - roipos.y(), 0)
-    #                 self.I0box.setPoints([(np.round(pos.x() - roipos.x(), 0), np.round(pos.y() - roipos.y(), 0)),
-    #                                       (x0, np.round(pos.y() - roipos.y(), 0)), (x0, y0),
-    #                                       (np.round(pos.x() - roipos.x(), 0), y0)], closed=True)
-    #
-    #             elif self.radioLassoROI.isChecked():
-    #                 handle = self.I0box.addFreeHandle(
-    #                     (np.round(pos.x() - roipos.x(), 0), np.round(pos.y() - roipos.y(), 0)))
-    #                 self.lassopoints.append(handle)
-    #                 if len(self.lassopoints) > 1:
-    #                     self.I0box.addSegment(self.lassopoints[0], self.lassopoints[1])
-    #                     self.lassopoints.pop(0)
-    #
-    # def draw_image(self, fluxmin, fluxmax):
-    #     self.I0instructions.setText(
-    #         "Select I0 by dragging the histogram lines or by drawing a ROI.")
-    #     self.i0_indices = np.where((fluxmin <= self.stack.histogram) & (self.stack.histogram <= fluxmax))
-    #     self.redpix[:, :] = [0, 0, 0, 0]
-    #     self.redpix[self.i0_indices] = (255, 0, 0, 255)
-    #     self.AbsImage.setImage(self.stack.histogram)
-    #     self.MaskImage.setImage(self.redpix, opacity=0.3)
-
-    # ----------------------------------------------------------------------
-    def OnAccept(self, evt):
-        if self.MaskImage.zValue() > 0 and np.any(self.i0_indices[0]):
-            self.stack.i0_from_histogram(self.i0_indices)
-            self.stack.i0_mask = self.redpix
-            self.stack.i0_mask[:, :] = False
-            self.stack.i0_mask[self.i0_indices] = True
-            self.parent.I0histogramCalculated()
-            self.close()
-        else:
-            self.i0_indices = []
-            QtWidgets.QMessageBox.warning(self, 'Error', 'I0 region is empty!')
-#----------------------------------------------------------------------
+    # def OnAccept(self, evt):
+#         if self.MaskImage.zValue() > 0 and np.any(self.i0_indices[0]):
+#             self.stack.i0_from_histogram(self.i0_indices)
+#             self.stack.i0_mask = self.redpix
+#             self.stack.i0_mask[:, :] = False
+#             self.stack.i0_mask[self.i0_indices] = True
+#             self.parent.I0histogramCalculated()
+#             self.close()
+#         else:
+#             self.i0_indices = []
+#             QtWidgets.QMessageBox.warning(self, 'Error', 'I0 region is empty!')
+# #----------------------------------------------------------------------
 class SpectralROI(QtWidgets.QDialog):
 
     def __init__(self, parent,  common, stack):
