@@ -23,19 +23,16 @@ from __future__ import absolute_import
 import sys
 import os
 import numpy as np
-from numpy import NAN
-import time
 import getopt
 
 from PyQt5 import QtCore, QtGui, QtWidgets, uic
-from PyQt5.QtCore import Qt, QCoreApplication, pyqtSignal, QMutex
+from PyQt5.QtCore import Qt, QCoreApplication, pyqtSignal, pyqtSlot, QMutex
 
 from PIL import Image
 from scipy import ndimage
-import asyncio
-import random
 import skimage.feature.register_translation
-from queue import Queue
+from queue import SimpleQueue
+import threading
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import (
@@ -12888,66 +12885,49 @@ class ImageRegistration(QtWidgets.QDialog):
 # ----------------------------------------------------------------------
 class DataProcessor(QtCore.QObject):
     newData = pyqtSignal()
+
     def __init__(self, queue, parent):
-        QtCore.QObject.__init__(self)
+        super(DataProcessor, self).__init__()
         self.parent = parent
         self.q = queue
         self.mutex = QMutex()
-        self.run = True
-    #     loop = asyncio.get_event_loop()
-    #     queue = asyncio.Queue(loop=loop)
-    #     producer_coro = self.produce(queue)
-    #     consumer_coro = self.consume(queue)
-    #     loop.run_until_complete(asyncio.gather(producer_coro, consumer_coro))
-    #
-    # async def produce(self,queue):
-    #     await asyncio.sleep(2)
-    #     #for x in range(1, n + 1):
-    #     for e, pair in enumerate(self.pairs):
-    #         drift = skimage.feature.register_translation(self.parent.stack.absdata[:, :, pair[0]],
-    #                                                      self.parent.stack.absdata[:, :, pair[1]], 50)
-    #         # produce an item
-    #         print('producing {}/{}'.format(e, len(self.pairs)))
-    #         # simulate i/o operation using sleep
-    #         await asyncio.sleep(random.random())
-    #         #item = str(x)
-    #         # put the item in the queue
-    #         await queue.put((e, drift))
-    #
-    #     # indicate the producer is done
-    #     await queue.put((None,None))
-    #
-    # async def consume(self,queue):
-    #     while True:
-    #         self.mutex.lock()# wait for an item from the producer
-    #         e, item = await queue.get()
-    #         if item is None:
-    #             # the producer emits None to indicate that it is done
-    #             break
-    #
-    #         # process the item
-    #         #print('consuming item {}...'.format(item))
-    #         print('consuming item...')
-    #         # simulate i/o operation using sleep
-    #         self.mutex.unlock()
-    #         self.newData.emit((e, item))
-    #         #await asyncio.sleep(1)
-    #         QtCore.QThread.msleep(self.delay)
 
-    def processData(self):
-        while self.run:
+    def Shift(self, row,x,y):
+        # current_img = self.stk.absdata_shifted[:, :, row]
+        original_img = self.parent.stack.absdata[:, :, row]
+        if x == 0 and y == 0:
+            #self.parent.stack.absdata_shifted[:, :, row] = original_img  # replace with original if no shift is applied
+            # self.ShiftLabel.setText("x = %0.1f \ny = %0.1f" % (self.xoffset, self.yoffset))
+            return original_img
+            #self.stk.shifts[row][2]
+        else:
+            shifted = ndimage.fourier_shift(np.fft.fft2(original_img), [float(-x), float(-y)])
+            shifted = np.fft.ifft2(shifted)
+            #shifted_real = shifted.real
+            return shifted.real
+    def gauss(self, im):
+        gaussed = ndimage.gaussian_filter(im, 2)
+        return gaussed
+    @pyqtSlot()
+    def run(self):
+        drift_x = 0
+        drift_y = 0
+        while not self.q.empty():
             self.mutex.lock()
             data = self.q.get()
-            drift = skimage.feature.register_translation(self.parent.stack.absdata[:, :, data[0]], self.parent.stack.absdata[:, :, data[1]], 50)
-            self.parent.xpts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift[0][0])
-            self.parent.ypts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift[0][1])
-            self.q.task_done()
+            #ToDo: Connect Gauss and error threshold to GUI
+            drift, error, phase = skimage.feature.register_translation(self.gauss(self.parent.stack.absdata[:, :, data[0]]),
+                                                         self.gauss(self.parent.stack.absdata[:, :, data[1]]), 50)
+            #print(error)
+            if round(error,3) < 0.012:
+                drift_x = drift_x + round(drift[0],2) # Calculate the cumulative sum of drifts
+                drift_y = drift_y + round(drift[1],2)
+            self.parent.xpts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_x )
+            self.parent.ypts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_y)
+
+            self.parent.stack.absdata_shifted[:, :, data[0]] = self.Shift(data[0],drift_x,drift_y)
             self.mutex.unlock()
             self.newData.emit()
-            #QtCore.QThread.msleep(5)
-            if self.q.empty():
-                self.q.join()
-                break
         self.newData.emit()
         self.parent.thread.exit()
 
@@ -13036,18 +13016,22 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
             self.slider_eng.sliderReleased.connect(self.ShowImage)
             self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
             self.slider_eng.setRange(0, self.stack.n_ev - 1)
+            self.refmarkerx = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen(color="b", width=2, style=QtCore.Qt.DashLine))
+            self.refmarkery = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen(color="b", width=2, style=QtCore.Qt.DashLine))
+            self.px.addItem(self.refmarkerx, ignoreBounds=True)
+            self.py.addItem(self.refmarkery, ignoreBounds=True)
+
             self.OnScrollEng(0)
             self.SetupROI()
             self.button_align.clicked.connect(self.OnAlign)
-
-            self.xregion = pg.LinearRegionItem(brush=[255, 0, 0, 45], bounds=None)
-            self.yregion = pg.LinearRegionItem(brush=[255, 0, 0, 45], bounds=None)
-            self.xregion.setRegion([np.min(self.stack.ev), np.max(self.stack.ev)])
-            self.yregion.setRegion([np.min(self.stack.ev), np.max(self.stack.ev)])
+            self.xregion = pg.LinearRegionItem(brush=[255, 0, 0, 45], bounds=[np.min(self.stack.ev), np.max(self.stack.ev)])
+            self.yregion = pg.LinearRegionItem(brush=[255, 0, 0, 45], bounds=[np.min(self.stack.ev), np.max(self.stack.ev)])
             self.yregion.setZValue(100)
             self.xregion.setZValue(100)
-            self.px.addItem(self.xregion, ignoreBounds=True)
-            self.py.addItem(self.yregion, ignoreBounds=True)
+            self.px.addItem(self.xregion, ignoreBounds=False)
+            self.py.addItem(self.yregion, ignoreBounds=False)
+            self.xregion.sigRegionChangeFinished.connect(lambda region: self.OnLinRegionChanged(region, id="x"))
+            self.yregion.sigRegionChangeFinished.connect(lambda region: self.OnLinRegionChanged(region, id="y"))
 
             self.xscatter = pg.ScatterPlotItem(pxMode=False)  ## Set pxMode=False to allow spots to transform with the view
             self.xscatter.setZValue(100)
@@ -13056,100 +13040,39 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
             self.ypts = []
             for i in self.stack.ev:
                 self.xpts.append({'pos': (1 * i, 0), 'size': 10,  # 'pen': {'color': 'w', 'width': 2},
-                             'brush': QtGui.QColor('blue')})
+                             'brush': QtGui.QColor('red')})
                 self.ypts.append({'pos': (1 * i, 0), 'size': 10,  # 'pen': {'color': 'w', 'width': 2},
-                             'brush': QtGui.QColor('blue')})
+                             'brush': QtGui.QColor('red')})
             self.xscatter.addPoints(spots=self.xpts, pxMode=True)
             self.yscatter.addPoints(spots=self.ypts, pxMode=True)
             self.px.addItem(self.xscatter)
             self.py.addItem(self.yscatter)
+            self.OnLinRegionChanged(self.xregion, id="x")
+            self.OnLinRegionChanged(self.yregion, id="y")
             self.xscatter.sigClicked.connect(clicked)
             self.yscatter.sigClicked.connect(clicked)
-
             self.shifts = self.stack.shifts.copy()
 
     def OnUpdatePlot(self):
         if self.worker.mutex.tryLock():
-            #self.worker.mutex.lock()
             self.xscatter.setData(self.xpts)
             self.yscatter.setData(self.ypts)
+            self.OnLinRegionChanged(self.xregion, id="x")
+            self.OnLinRegionChanged(self.yregion, id="y")
             self.worker.mutex.unlock()
-
 
     # ----------------------------------------------------------------------
     def OnAlign(self):
-        self.q = Queue()
+        self.q = SimpleQueue()
         for i in range(self.stack.n_ev - 1):
             self.q.put((i + 1, i))
         self.thread = QtCore.QThread()
         self.worker = DataProcessor(self.q, self)
         self.worker.moveToThread(self.thread)
         self.worker.newData.connect(self.OnUpdatePlot)
-        self.thread.started.connect(self.worker.processData)
+        self.thread.started.connect(self.worker.run)
         self.thread.start()
 
-        # print(self.shifts)
-        # import asyncio
-        # import random
-        #
-        # async def produce(queue):
-        #     await asyncio.sleep(2)
-        #     #for x in range(1, n + 1):
-        #     for e, pair in enumerate(pairs):
-        #         drift = skimage.feature.register_translation(self.stack.absdata[:, :, pair[0]],
-        #                                                      self.stack.absdata[:, :, pair[1]], 50)
-        #         # produce an item
-        #         print('producing {}/{}'.format(e, len(pairs)))
-        #         # simulate i/o operation using sleep
-        #         await asyncio.sleep(random.random())
-        #         #item = str(x)
-        #         # put the item in the queue
-        #         await queue.put((e, drift))
-        #
-        #     # indicate the producer is done
-        #     await queue.put((None,None))
-        #
-        # async def consume(queue):
-        #     while True:
-        #         # wait for an item from the producer
-        #         e, item = await queue.get()
-        #         if item is None:
-        #             # the producer emits None to indicate that it is done
-        #             break
-        #
-        #         # process the item
-        #         #print('consuming item {}...'.format(item))
-        #         print('consuming item...')
-        #         # simulate i/o operation using sleep
-        #         self.fftsig.emit((e, item))
-        #         await asyncio.sleep(1)
-        #
-        # loop = asyncio.get_event_loop()
-        # queue = asyncio.Queue(loop=loop)
-        # producer_coro = produce(queue)
-        # consumer_coro = consume(queue)
-        # loop.run_until_complete(asyncio.gather(producer_coro, consumer_coro))
-        #loop.run_forever(asyncio.gather(producer_coro, consumer_coro))
-        #loop.close()
-        #for e, drift in enumerate(drifts):
-        # for e, pair in enumerate(pairs):
-        #     drift = skimage.feature.register_translation(self.stack.absdata[:, :, pair[0]], self.stack.absdata[:, :, pair[1]],
-        #                                          50)
-        #     #self.shifts[e].pop(2)
-        #     #self.shifts[e].insert(2, (drift[0][0], drift[0][1]))
-        #     self.xpts[e]['pos']= (self.stack.ev[e], drift[0][0])
-        #     self.ypts[e]['pos']= (self.stack.ev[e], drift[0][1])
-        #     print(self.xpts)
-        #
-        #     self.xscatter.setData(self.xpts)
-        #     self.yscatter.setData(self.ypts)
-
-
-        #e, item = tuple
-        #self.xpts[e]['pos'] = (self.stack.ev[e], item[0][0])
-        #self.ypts[e]['pos'] = (self.stack.ev[e], item[0][1])
-        #self.xscatter.setData(self.xpts)
-        #self.yscatter.setData(self.ypts)
     # ----------------------------------------------------------------------
     def GetIndexPairs(self):
         idxtuplelst = [(i+1,i) for i in range(self.stack.n_ev-1)]
@@ -13159,9 +13082,10 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.slider_eng.setValue(value)
         self.iev = value
         self.ShowImage()
-
+        self.refmarkerx.setValue(self.stack.ev[self.iev])
+        self.refmarkery.setValue(self.stack.ev[self.iev])
     def ShowImage(self):
-        self.i_item.setImage(self.stack.absdata[:, :, int(self.iev)])
+        self.i_item.setImage(self.stack.absdata_shifted[:, :, int(self.iev)])
         self.groupBox.setTitle(str('Stack Browser | Image at {0:5.2f} eV').format(float(self.stack.ev[self.iev])))
 
     ## Setup a ROI for an alignment rectangle. By default the whole image area is used.
@@ -13180,6 +13104,30 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
     def OnRegionChanged(self):
         self.proxy.disconnect()
         #ToDo: return the ROI
+    def OnLinRegionChanged(self, region,id): # Rescale scatter plot on linear region changed
+        try:
+            min, max = region.getRegion()
+            min_idx = np.argmin(np.abs(np.array(self.stack.ev)- min))
+            max_idx = np.argmin(np.abs(np.array(self.stack.ev)- max))
+            region.setRegion([self.stack.ev[min_idx], self.stack.ev[max_idx]]) # snap region to data points
+            if id == "x":
+                self.px.setRange(yRange=[np.min(self.xscatter.data["y"][min_idx:max_idx]),np.max(self.xscatter.data["y"][min_idx:max_idx])],disableAutoRange=True,padding=0.05)
+                for i in range(len(self.xpts)):
+                    self.xpts[i]['brush'] = QtGui.QColor('red')
+                for i in range(min_idx, max_idx+1):
+                    self.xpts[i]['brush'] = QtGui.QColor('blue')
+                self.xscatter.setData(self.xpts)
+
+            elif id == "y":
+                self.py.setRange(yRange=[np.min(self.yscatter.data["y"][min_idx:max_idx]),np.max(self.yscatter.data["y"][min_idx:max_idx])],disableAutoRange=True,padding=0.05)
+                for i in range(len(self.ypts)):
+                    self.ypts[i]['brush'] = QtGui.QColor('red')
+                for i in range(min_idx, max_idx+1):
+                    self.ypts[i]['brush'] = QtGui.QColor('blue')
+                self.yscatter.setData(self.ypts)
+        except ValueError:
+            region.setRegion([self.stack.ev[0], self.stack.ev[-1]])  # snap region to data points
+
     def OnMouseMoveOutside(self, ev):
             mousepos = self.vb.mapSceneToView(ev[0])
             if not self.vb.itemBoundingRect(self.i_item).contains(mousepos):
@@ -13189,11 +13137,11 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
                 out_y = max((mousepos-maxrect).y(), 0)
                 if self.box.size() != self.boxsize: # prevents taking action when the box is just dragged and not resized
                     if out_x and out_y:
-                        self.box.setSize(self.i_item.boundingRect().bottomRight()-self.box.pos(), update=True, finish=False)
+                        self.box.setSize(self.i_item.boundingRect().bottomRight()-self.box.pos(), update=True, snap=True, finish=False)
                     elif out_x:
-                        self.box.setSize([self.i_item.boundingRect().right()-self.box.pos().x(),mousepos.y()-self.box.pos().y()], update=True, finish=False)
+                        self.box.setSize([self.i_item.boundingRect().right()-self.box.pos().x(),mousepos.y()-self.box.pos().y()], update=True, snap=True, finish=False)
                     elif out_y:
-                        self.box.setSize([mousepos.x()-self.box.pos().x(),self.i_item.boundingRect().bottom()-self.box.pos().y()], update=True, finish=False)
+                        self.box.setSize([mousepos.x()-self.box.pos().x(),self.i_item.boundingRect().bottom()-self.box.pos().y()], update=True, snap=True, finish=False)
     # ----------------------------------------------------------------------
     # def OnAccept(self, evt):
 #         if self.MaskImage.zValue() > 0 and np.any(self.i0_indices[0]):
@@ -16226,6 +16174,7 @@ class MainFrame(QtWidgets.QMainWindow):
 def main():
 
     app = QtWidgets.QApplication(sys.argv)
+    print('main', threading.get_ident())
     frame = MainFrame()
     sys.exit(app.exec_())
 
