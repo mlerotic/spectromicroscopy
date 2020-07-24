@@ -30,7 +30,8 @@ from PyQt5.QtCore import Qt, QCoreApplication, pyqtSignal, pyqtSlot, QMutex
 
 from PIL import Image
 from scipy import ndimage
-import skimage.feature.register_translation
+from scipy.stats import linregress
+from skimage.feature import register_translation
 from queue import SimpleQueue
 import threading
 
@@ -10761,7 +10762,7 @@ class ShowArtefacts(QtWidgets.QDialog):
         self.button_cancel.clicked.connect(self.close)
         self.cb_h.stateChanged.connect(self.ShowImage)
         self.cb_v.stateChanged.connect(self.ShowImage)
-        #ToDo: I initially wanted to use Qt.QueuedConnection to create a non-blocking Slider, but I ended up having troubles.
+        #ToDo: I initially wanted to use Qt.QueuedConnection to create a non-blocking Slider.
         self.weight_slider.valueChanged.connect(self.ShowCalcImage)
         self.slider_eng.sliderPressed.connect(self.ShowImage)
         self.slider_eng.sliderReleased.connect(self.ShowImage)
@@ -12885,7 +12886,7 @@ class ImageRegistration(QtWidgets.QDialog):
 # ----------------------------------------------------------------------
 class DataProcessor(QtCore.QObject):
     newData = pyqtSignal()
-
+    aligned = pyqtSignal()
     def __init__(self, queue, parent):
         super(DataProcessor, self).__init__()
         self.parent = parent
@@ -12896,14 +12897,10 @@ class DataProcessor(QtCore.QObject):
         # current_img = self.stk.absdata_shifted[:, :, row]
         original_img = self.parent.stack.absdata[:, :, row]
         if x == 0 and y == 0:
-            #self.parent.stack.absdata_shifted[:, :, row] = original_img  # replace with original if no shift is applied
-            # self.ShiftLabel.setText("x = %0.1f \ny = %0.1f" % (self.xoffset, self.yoffset))
             return original_img
-            #self.stk.shifts[row][2]
         else:
             shifted = ndimage.fourier_shift(np.fft.fft2(original_img), [float(-x), float(-y)])
             shifted = np.fft.ifft2(shifted)
-            #shifted_real = shifted.real
             return shifted.real
     def gauss(self, im):
         gaussed = ndimage.gaussian_filter(im, 2)
@@ -12916,7 +12913,7 @@ class DataProcessor(QtCore.QObject):
             self.mutex.lock()
             data = self.q.get()
             #ToDo: Connect Gauss and error threshold to GUI
-            drift, error, phase = skimage.feature.register_translation(self.gauss(self.parent.stack.absdata[:, :, data[0]]),
+            drift, error, phase = register_translation(self.gauss(self.parent.stack.absdata[:, :, data[0]]),
                                                          self.gauss(self.parent.stack.absdata[:, :, data[1]]), 50)
             #print(error)
             if round(error,3) < 0.012:
@@ -12925,10 +12922,11 @@ class DataProcessor(QtCore.QObject):
             self.parent.xpts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_x )
             self.parent.ypts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_y)
 
-            self.parent.stack.absdata_shifted[:, :, data[0]] = self.Shift(data[0],drift_x,drift_y)
+            #self.parent.stack.absdata_shifted[:, :, data[0]] = self.Shift(data[0],drift_x,drift_y)
             self.mutex.unlock()
             self.newData.emit()
         self.newData.emit()
+        self.aligned.emit()
         self.parent.thread.exit()
 
 class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
@@ -12938,6 +12936,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.parent = parent
         self.stack = stack
         self.com = common
+        self.iev = 0
 
         self.setWindowTitle('Align Stack v2')
         self.pglayout = pg.GraphicsLayout(border=None)
@@ -12949,7 +12948,6 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
 
         self.vb.setMouseEnabled(x=False, y=False)
         self.vb.addItem(self.i_item, ignoreBounds=False)
-#        self.box.clearPoints()
 
         self.DriftsWidget.setBackground("w")
 
@@ -13002,9 +13000,10 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
             #lastClicked
             #for p in lastClicked:
             #    p.resetPen()
-            print("clicked points", points)
-            for p in points:
-                p.setPen('b', width=2)
+            #print("clicked points", points[0].index())
+            self.OnScrollEng(points[0].index())
+            # for p in points:
+            #     p.setPen('b', width=2)
             #lastClicked = points
         # lastClicked=[]
 
@@ -13021,11 +13020,20 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
             self.px.addItem(self.refmarkerx, ignoreBounds=True)
             self.py.addItem(self.refmarkery, ignoreBounds=True)
 
+            self.fit_x = pg.PlotCurveItem(pen=pg.mkPen(color="c", width=2))
+            self.fit_y = pg.PlotCurveItem(pen=pg.mkPen(color="c", width=2))
+            self.fit_x.setZValue(200)
+            self.fit_y.setZValue(200)
+            self.px.addItem(self.fit_x, ignoreBounds=True)
+            self.py.addItem(self.fit_y, ignoreBounds=True)
+
             self.OnScrollEng(0)
             self.SetupROI()
             self.button_align.clicked.connect(self.OnAlign)
-            self.xregion = pg.LinearRegionItem(brush=[255, 0, 0, 45], bounds=[np.min(self.stack.ev), np.max(self.stack.ev)])
-            self.yregion = pg.LinearRegionItem(brush=[255, 0, 0, 45], bounds=[np.min(self.stack.ev), np.max(self.stack.ev)])
+            self.xregion = pg.LinearRegionItem(brush=[255, 0, 0, 45], bounds=[self.stack.ev[0], self.stack.ev[-1]])
+            self.yregion = pg.LinearRegionItem(brush=[255, 0, 0, 45], bounds=[self.stack.ev[0], self.stack.ev[-1]])
+            self.xregion.setRegion([self.stack.ev[0], self.stack.ev[-1]])
+            self.yregion.setRegion([self.stack.ev[0], self.stack.ev[-1]])
             self.yregion.setZValue(100)
             self.xregion.setZValue(100)
             self.px.addItem(self.xregion, ignoreBounds=False)
@@ -13034,21 +13042,18 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
             self.yregion.sigRegionChangeFinished.connect(lambda region: self.OnLinRegionChanged(region, id="y"))
 
             self.xscatter = pg.ScatterPlotItem(pxMode=False)  ## Set pxMode=False to allow spots to transform with the view
-            self.xscatter.setZValue(100)
             self.yscatter = pg.ScatterPlotItem(pxMode=False)  ## Set pxMode=False to allow spots to transform with the view
             self.xpts = []
             self.ypts = []
             for i in self.stack.ev:
                 self.xpts.append({'pos': (1 * i, 0), 'size': 10,  # 'pen': {'color': 'w', 'width': 2},
-                             'brush': QtGui.QColor('red')})
+                             'brush': QtGui.QColor('blue')})
                 self.ypts.append({'pos': (1 * i, 0), 'size': 10,  # 'pen': {'color': 'w', 'width': 2},
-                             'brush': QtGui.QColor('red')})
+                             'brush': QtGui.QColor('blue')})
             self.xscatter.addPoints(spots=self.xpts, pxMode=True)
             self.yscatter.addPoints(spots=self.ypts, pxMode=True)
             self.px.addItem(self.xscatter)
             self.py.addItem(self.yscatter)
-            self.OnLinRegionChanged(self.xregion, id="x")
-            self.OnLinRegionChanged(self.yregion, id="y")
             self.xscatter.sigClicked.connect(clicked)
             self.yscatter.sigClicked.connect(clicked)
             self.shifts = self.stack.shifts.copy()
@@ -13057,19 +13062,48 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         if self.worker.mutex.tryLock():
             self.xscatter.setData(self.xpts)
             self.yscatter.setData(self.ypts)
-            self.OnLinRegionChanged(self.xregion, id="x")
-            self.OnLinRegionChanged(self.yregion, id="y")
             self.worker.mutex.unlock()
-
+    # ----------------------------------------------------------------------
+    def OnRegression(self,id=None, range=None):
+        #print(id)
+        # ToDo: Enable or disable individual outliers by clicking on them. Need to pass a list to OnRegression instead of range.
+        if not id:
+            self.xregion.sigRegionChangeFinished.emit(self.xregion)
+            self.yregion.sigRegionChangeFinished.emit(self.yregion)
+        elif hasattr(self, "worker"): # prevent fit from being created if no alignment occurred
+            if self.worker.mutex.tryLock():
+                min, max = range
+                min_ev = self.stack.ev[min]
+                max_ev = self.stack.ev[max]
+                if id =="x":
+                    reg = linregress([self.xscatter.data["x"][min:max+1],self.xscatter.data["y"][min:max+1]])
+                    self.fit_x.setData(x=[min_ev,max_ev],y=[reg.slope * min_ev + reg.intercept, reg.slope * max_ev + reg.intercept])
+                elif id =="y":
+                    reg = linregress([self.yscatter.data["x"][min:max+1],self.yscatter.data["y"][min:max+1]])
+                    self.fit_y.setData(x=[min_ev,max_ev],y=[reg.slope * min_ev + reg.intercept, reg.slope * max_ev + reg.intercept])
+                self.worker.mutex.unlock()
     # ----------------------------------------------------------------------
     def OnAlign(self):
-        self.q = SimpleQueue()
-        for i in range(self.stack.n_ev - 1):
-            self.q.put((i + 1, i))
+        q = SimpleQueue()
+        #ref_idx = self.iev
+        for idx in range(self.stack.n_ev - 1):
+        #ToDo: Make switch: Calculate all shifts in reference to selected reference image or neighboring images
+
+        # for idx in range(self.stack.n_ev - 1):
+        #     if idx % 2 == 0:
+        #         if ref_idx + idx > self.stack.n_ev:
+        #             break
+        #         print("right",idx)
+        #         print(ref_idx + idx + 1,ref_idx + idx)
+        #     else:
+        #         print("left",idx)
+        #         print(ref_idx - idx - 1,ref_idx - idx)
+            q.put((idx + 1, idx))
         self.thread = QtCore.QThread()
-        self.worker = DataProcessor(self.q, self)
+        self.worker = DataProcessor(q, self)
         self.worker.moveToThread(self.thread)
         self.worker.newData.connect(self.OnUpdatePlot)
+        self.worker.aligned.connect(self.OnRegression)
         self.thread.started.connect(self.worker.run)
         self.thread.start()
 
@@ -13103,30 +13137,35 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.proxy = pg.SignalProxy(self.vb.scene().sigMouseMoved, rateLimit=30, slot=self.OnMouseMoveOutside)
     def OnRegionChanged(self):
         self.proxy.disconnect()
-        #ToDo: return the ROI
+        #ToDo: return the ROI and do something with it
     def OnLinRegionChanged(self, region,id): # Rescale scatter plot on linear region changed
-        try:
-            min, max = region.getRegion()
-            min_idx = np.argmin(np.abs(np.array(self.stack.ev)- min))
-            max_idx = np.argmin(np.abs(np.array(self.stack.ev)- max))
-            region.setRegion([self.stack.ev[min_idx], self.stack.ev[max_idx]]) # snap region to data points
-            if id == "x":
-                self.px.setRange(yRange=[np.min(self.xscatter.data["y"][min_idx:max_idx]),np.max(self.xscatter.data["y"][min_idx:max_idx])],disableAutoRange=True,padding=0.05)
-                for i in range(len(self.xpts)):
-                    self.xpts[i]['brush'] = QtGui.QColor('red')
-                for i in range(min_idx, max_idx+1):
-                    self.xpts[i]['brush'] = QtGui.QColor('blue')
-                self.xscatter.setData(self.xpts)
-
-            elif id == "y":
-                self.py.setRange(yRange=[np.min(self.yscatter.data["y"][min_idx:max_idx]),np.max(self.yscatter.data["y"][min_idx:max_idx])],disableAutoRange=True,padding=0.05)
-                for i in range(len(self.ypts)):
-                    self.ypts[i]['brush'] = QtGui.QColor('red')
-                for i in range(min_idx, max_idx+1):
-                    self.ypts[i]['brush'] = QtGui.QColor('blue')
-                self.yscatter.setData(self.ypts)
-        except ValueError:
-            region.setRegion([self.stack.ev[0], self.stack.ev[-1]])  # snap region to data points
+        min, max = region.getRegion()
+        #print("changed_lin_region", min,max)
+        min_idx = np.argmin(np.abs(np.array(self.stack.ev) - min))
+        max_idx = np.argmin(np.abs(np.array(self.stack.ev) - max))
+        if min_idx == max_idx:
+            min_idx = 0
+            max_idx = self.stack.n_ev -1
+        region.sigRegionChangeFinished.disconnect()
+        region.setRegion([self.stack.ev[min_idx], self.stack.ev[max_idx]])  # snap region to data points
+        region.sigRegionChangeFinished.connect(lambda region: self.OnLinRegionChanged(region, id=id))
+        if id == "x":
+            y_vals= self.xscatter.data["y"][min_idx:max_idx + 1]
+            self.px.setRange(yRange=[np.min(y_vals), np.max(y_vals)], disableAutoRange=True, padding=0.05)
+            for i in range(len(self.xpts)):
+                self.xpts[i]['brush'] = QtGui.QColor('red')
+            for i in range(min_idx, max_idx+1):
+                self.xpts[i]['brush'] = QtGui.QColor('blue')
+            self.xscatter.setData(self.xpts)
+        elif id == "y":
+            y_vals= self.yscatter.data["y"][min_idx:max_idx + 1]
+            self.py.setRange(yRange=[np.min(y_vals), np.max(y_vals)], disableAutoRange=True, padding=0.05)
+            for i in range(len(self.ypts)):
+                self.ypts[i]['brush'] = QtGui.QColor('red')
+            for i in range(min_idx, max_idx+1):
+                self.ypts[i]['brush'] = QtGui.QColor('blue')
+            self.yscatter.setData(self.ypts)
+        self.OnRegression(id,(min_idx,max_idx))
 
     def OnMouseMoveOutside(self, ev):
             mousepos = self.vb.mapSceneToView(ev[0])

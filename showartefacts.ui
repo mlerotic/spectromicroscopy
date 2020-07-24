@@ -84,6 +84,9 @@
             <pointsize>8</pointsize>
            </font>
           </property>
+          <property name="toolTip">
+           <string>Keep left mouse button pressed to toggle view</string>
+          </property>
           <property name="orientation">
            <enum>Qt::Vertical</enum>
           </property>
