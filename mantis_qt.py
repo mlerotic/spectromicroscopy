@@ -12886,11 +12886,12 @@ class ImageRegistration(QtWidgets.QDialog):
 # ----------------------------------------------------------------------
 class DataProcessor(QtCore.QObject):
     newData = pyqtSignal()
-    aligned = pyqtSignal()
+    aligned = pyqtSignal([tuple])
     def __init__(self, queue, parent):
         super(DataProcessor, self).__init__()
         self.parent = parent
         self.q = queue
+        self.gaussval= self.parent.spinBoxGauss.value()
         self.mutex = QMutex()
 
     def Shift(self, row,x,y):
@@ -12903,32 +12904,64 @@ class DataProcessor(QtCore.QObject):
             shifted = np.fft.ifft2(shifted)
             return shifted.real
     def gauss(self, im):
-        gaussed = ndimage.gaussian_filter(im, 2)
+        gaussed = ndimage.gaussian_filter(im, self.gaussval)
         return gaussed
     @pyqtSlot()
-    def run(self):
-        drift_x = 0
-        drift_y = 0
+    def runConsecutive(self):
+        drift_x = [0,0] # list for cumsum in negative and positive direction starting from reference image
+        drift_y = [0,0]
+        errorlst =[0] * int(self.parent.stack.n_ev)
         while not self.q.empty():
             self.mutex.lock()
             data = self.q.get()
-            #ToDo: Connect Gauss and error threshold to GUI
-            drift, error, phase = register_translation(self.gauss(self.parent.stack.absdata[:, :, data[0]]),
+            drift, error, _ = register_translation(self.gauss(self.parent.stack.absdata[:, :, data[0]]),
                                                          self.gauss(self.parent.stack.absdata[:, :, data[1]]), 50)
-            #print(error)
-            if round(error,3) < 0.012:
-                drift_x = drift_x + round(drift[0],2) # Calculate the cumulative sum of drifts
-                drift_y = drift_y + round(drift[1],2)
-            self.parent.xpts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_x )
-            self.parent.ypts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_y)
-
+            errorlst[data[0]] = round(error,4)
+            if data[0] - data[1] == 1:
+                drift_x[1] = round(drift_x[1] + drift[0],2) # Calculate the cumulative sum of drifts
+                drift_y[1] = round(drift_y[1] + drift[1],2)
+                self.parent.xpts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_x[1] )
+                self.parent.ypts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_y[1] )
+            else:
+                drift_x[0] = round(drift_x[0] + drift[0],2) # Calculate the cumulative sum of drifts
+                drift_y[0] = round(drift_y[0] + drift[1],2)
+                self.parent.xpts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_x[0] )
+                self.parent.ypts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_y[0] )
+            #ToDo: Images are not shifted and cropped yet
             #self.parent.stack.absdata_shifted[:, :, data[0]] = self.Shift(data[0],drift_x,drift_y)
             self.mutex.unlock()
             self.newData.emit()
         self.newData.emit()
-        self.aligned.emit()
+        self.aligned.emit((errorlst, round(np.mean(errorlst),4)))
         self.parent.thread.exit()
-
+    @pyqtSlot()
+    def runReferenced(self):
+        drift_x = [0,0] # list for cumsum in negative and positive direction starting from reference image
+        drift_y = [0,0]
+        errorlst =[0] * int(self.parent.stack.n_ev)
+        while not self.q.empty():
+            self.mutex.lock()
+            data = self.q.get()
+            drift, error, _ = register_translation(self.gauss(self.parent.stack.absdata[:, :, data[0]]),
+                                                         self.gauss(self.parent.stack.absdata[:, :, data[1]]), 20) ## 20 means 0.05 px precision
+            errorlst[data[0]] = round(error,4)
+            if data[0] - data[1] > 0:
+                drift_x[1] = round(drift[0],2) # Calculate the cumulative sum of drifts
+                drift_y[1] = round(drift[1],2)
+                self.parent.xpts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_x[1] )
+                self.parent.ypts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_y[1] )
+            else:
+                drift_x[0] = round(drift[0],2) # Calculate the cumulative sum of drifts
+                drift_y[0] = round(drift[1],2)
+                self.parent.xpts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_x[0] )
+                self.parent.ypts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_y[0] )
+            #self.parent.stack.absdata_shifted[:, :, data[0]] = self.Shift(data[0],drift_x,drift_y)
+            self.mutex.unlock()
+            self.newData.emit()
+        self.newData.emit()
+        self.aligned.emit((errorlst, round(np.mean(errorlst),4)))
+        self.parent.thread.exit()
+# ----------------------------------------------------------------------
 class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
     def __init__(self, parent, common, stack):
         QtWidgets.QWidget.__init__(self, parent)
@@ -12996,21 +13029,12 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         by2.setStyle(showValues=False,tickLength=0)
         bx2.setStyle(showValues=False,tickLength=0)
 
-        def clicked(plot, points):
-            #lastClicked
-            #for p in lastClicked:
-            #    p.resetPen()
-            #print("clicked points", points[0].index())
-            self.OnScrollEng(points[0].index())
-            # for p in points:
-            #     p.setPen('b', width=2)
-            #lastClicked = points
-        # lastClicked=[]
-
         # self.button_ok.clicked.connect(self.OnAccept)
         self.button_cancel.clicked.connect(self.close)
 
         if self.com.stack_loaded == 1:
+            self.maskedvals = [True] * int(self.stack.n_ev)
+            self.spinBoxError.setEnabled(False)
             self.slider_eng.sliderPressed.connect(self.ShowImage)
             self.slider_eng.sliderReleased.connect(self.ShowImage)
             self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
@@ -13054,59 +13078,121 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
             self.yscatter.addPoints(spots=self.ypts, pxMode=True)
             self.px.addItem(self.xscatter)
             self.py.addItem(self.yscatter)
-            self.xscatter.sigClicked.connect(clicked)
-            self.yscatter.sigClicked.connect(clicked)
             self.shifts = self.stack.shifts.copy()
+            self.xscatter.sigClicked.connect(self.OnPointClicked)
+            self.yscatter.sigClicked.connect(self.OnPointClicked)
 
+    def OnPointClicked(self, obj, points): # Manually add/remove points to/from fit if in selected region
+        self.OnScrollEng(points[0].index())
+        self.maskedvals[points[0].index()] = not self.maskedvals[points[0].index()]
+        if hasattr(self, "worker"):
+            self.OnLinRegionChanged(self.xregion, id="x")
+            self.OnLinRegionChanged(self.yregion, id="y")
     def OnUpdatePlot(self):
         if self.worker.mutex.tryLock():
             self.xscatter.setData(self.xpts)
             self.yscatter.setData(self.ypts)
             self.worker.mutex.unlock()
     # ----------------------------------------------------------------------
-    def OnRegression(self,id=None, range=None):
-        #print(id)
-        # ToDo: Enable or disable individual outliers by clicking on them. Need to pass a list to OnRegression instead of range.
+    def OnAutoError(self):
+        if self.cb_autoerror.isChecked():
+            self.spinBoxError.setEnabled(True)
+            self.spinBoxError.setValue(self.drifterrormean)
+        else:
+            self.spinBoxError.setEnabled(False)
+            self.spinBoxError.setValue(1)
+    def OnRegression(self, errorvals=None, id=None, idrange=None):
         if not id:
+            if errorvals == None: # When spinBoxError is changed
+                self.maskedvals = (self.drifterrorlst <= np.float64(self.spinBoxError.value()))
+            else: # If signal comes from alignment thread
+                self.drifterrorlst, self.drifterrormean = errorvals
+                if self.cb_autoerror.isChecked():
+                    self.spinBoxError.setEnabled(True)
+                    self.maskedvals = (self.drifterrorlst <= self.drifterrormean) # create boolean mask of badly correlated images
+                    try: # avoid OnRegression getting called too many times
+                        self.spinBoxError.valueChanged.disconnect()
+                    except:
+                        pass
+                    self.spinBoxError.setValue(self.drifterrormean)
+                    self.spinBoxError.setMinimum(np.partition(self.drifterrorlst, 1)[1]) # makes sure that at least two elements are selected
+                    self.spinBoxError.valueChanged.connect(lambda: self.OnRegression(None))
+                self.cb_autoerror.stateChanged.connect(self.OnAutoError)
             self.xregion.sigRegionChangeFinished.emit(self.xregion)
             self.yregion.sigRegionChangeFinished.emit(self.yregion)
-        elif hasattr(self, "worker"): # prevent fit from being created if no alignment occurred
+        elif hasattr(self, "worker"): # prevent linear regression fitting if no alignment has been done
             if self.worker.mutex.tryLock():
-                min, max = range
+                min, max = idrange
                 min_ev = self.stack.ev[min]
                 max_ev = self.stack.ev[max]
                 if id =="x":
-                    reg = linregress([self.xscatter.data["x"][min:max+1],self.xscatter.data["y"][min:max+1]])
-                    self.fit_x.setData(x=[min_ev,max_ev],y=[reg.slope * min_ev + reg.intercept, reg.slope * max_ev + reg.intercept])
+                    selection_x = [self.xscatter.data["x"][i] for i in range(min, max + 1)
+                                 if self.maskedvals[i]]
+                    selection_y = [self.xscatter.data["y"][i] for i in range(min, max + 1)
+                                 if self.maskedvals[i]]
+                    if len(selection_x) > 1:
+                        reg = linregress([selection_x, selection_y])
+                        self.fit_x.setData(x=[min_ev,max_ev],y=[reg.slope * min_ev + reg.intercept, reg.slope * max_ev + reg.intercept])
+
                 elif id =="y":
-                    reg = linregress([self.yscatter.data["x"][min:max+1],self.yscatter.data["y"][min:max+1]])
-                    self.fit_y.setData(x=[min_ev,max_ev],y=[reg.slope * min_ev + reg.intercept, reg.slope * max_ev + reg.intercept])
+                    selection_x = [self.yscatter.data["x"][i] for i in range(min, max + 1)
+                                 if self.maskedvals[i]]
+                    selection_y = [self.yscatter.data["y"][i] for i in range(min, max + 1)
+                                 if self.maskedvals[i]]
+                    if len(selection_x) > 1:
+                        reg = linregress([selection_x, selection_y])
+                        self.fit_y.setData(x=[min_ev,max_ev],y=[reg.slope * min_ev + reg.intercept, reg.slope * max_ev + reg.intercept])
+                    else:
+                        QtWidgets.QMessageBox.warning(self, 'Error', 'Select at least two images!')
                 self.worker.mutex.unlock()
     # ----------------------------------------------------------------------
     def OnAlign(self):
         q = SimpleQueue()
-        #ref_idx = self.iev
-        for idx in range(self.stack.n_ev - 1):
-        #ToDo: Make switch: Calculate all shifts in reference to selected reference image or neighboring images
-
-        # for idx in range(self.stack.n_ev - 1):
-        #     if idx % 2 == 0:
-        #         if ref_idx + idx > self.stack.n_ev:
-        #             break
-        #         print("right",idx)
-        #         print(ref_idx + idx + 1,ref_idx + idx)
-        #     else:
-        #         print("left",idx)
-        #         print(ref_idx - idx - 1,ref_idx - idx)
-            q.put((idx + 1, idx))
+        ref_idx = self.iev
+        idx = self.stack.n_ev.copy()
         self.thread = QtCore.QThread()
         self.worker = DataProcessor(q, self)
         self.worker.moveToThread(self.thread)
         self.worker.newData.connect(self.OnUpdatePlot)
         self.worker.aligned.connect(self.OnRegression)
-        self.thread.started.connect(self.worker.run)
-        self.thread.start()
+        # Reset reference img:
+        self.xpts[ref_idx]['pos'] = (self.stack.ev[ref_idx], 0)
+        self.ypts[ref_idx]['pos'] = (self.stack.ev[ref_idx], 0)
 
+        if self.rB_consecutive.isChecked(): # Make queue with consecutive images
+            while idx: # Generate pairs of indices starting at reference image index.
+                running = 2
+                if (ref_idx + (self.stack.n_ev-idx)) < self.stack.n_ev-1:
+                    q.put((ref_idx + (self.stack.n_ev-idx) + 1, ref_idx + (self.stack.n_ev-idx)))
+                else:
+                    running -= 1
+                if ref_idx - (self.stack.n_ev-idx) > 0:
+                    q.put(((ref_idx - (self.stack.n_ev-idx) - 1),(ref_idx - (self.stack.n_ev-idx))))
+                else:
+                    running -= 1
+                if running:
+                    idx -= 1
+                else:
+                    break
+            self.thread.started.connect(self.worker.runConsecutive)
+            self.thread.start()
+        elif self.rB_referenced.isChecked(): # Make queue with pairs relative to reference image
+            while idx: # Generate pairs of indices starting at reference image index.
+                running = 2
+                if (ref_idx + (self.stack.n_ev-idx)) < self.stack.n_ev-1:
+                    q.put((ref_idx + (self.stack.n_ev-idx) + 1, ref_idx))
+                else:
+                    running -= 1
+                if ref_idx - (self.stack.n_ev-idx) > 0:
+                    q.put(((ref_idx - (self.stack.n_ev-idx) - 1),ref_idx))
+                else:
+                    running -= 1
+                if running:
+                    idx -= 1
+                else:
+                    break
+            self.thread.started.connect(self.worker.runReferenced)
+            self.thread.start()
     # ----------------------------------------------------------------------
     def GetIndexPairs(self):
         idxtuplelst = [(i+1,i) for i in range(self.stack.n_ev-1)]
@@ -13151,21 +13237,23 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         region.sigRegionChangeFinished.connect(lambda region: self.OnLinRegionChanged(region, id=id))
         if id == "x":
             y_vals= self.xscatter.data["y"][min_idx:max_idx + 1]
-            self.px.setRange(yRange=[np.min(y_vals), np.max(y_vals)], disableAutoRange=True, padding=0.05)
+            self.px.setRange(yRange=[np.min(y_vals), np.max(y_vals)], disableAutoRange=True, padding=0.1)
             for i in range(len(self.xpts)):
                 self.xpts[i]['brush'] = QtGui.QColor('red')
             for i in range(min_idx, max_idx+1):
-                self.xpts[i]['brush'] = QtGui.QColor('blue')
+                if self.maskedvals[i]: # highlight badly correlated or masked data
+                    self.xpts[i]['brush'] = QtGui.QColor('blue')
             self.xscatter.setData(self.xpts)
         elif id == "y":
             y_vals= self.yscatter.data["y"][min_idx:max_idx + 1]
-            self.py.setRange(yRange=[np.min(y_vals), np.max(y_vals)], disableAutoRange=True, padding=0.05)
+            self.py.setRange(yRange=[np.min(y_vals), np.max(y_vals)], disableAutoRange=True, padding=0.1)
             for i in range(len(self.ypts)):
                 self.ypts[i]['brush'] = QtGui.QColor('red')
             for i in range(min_idx, max_idx+1):
-                self.ypts[i]['brush'] = QtGui.QColor('blue')
+                if self.maskedvals[i]: # highlight badly correlated or masked data
+                    self.ypts[i]['brush'] = QtGui.QColor('blue')
             self.yscatter.setData(self.ypts)
-        self.OnRegression(id,(min_idx,max_idx))
+        self.OnRegression(id=id,idrange=(min_idx,max_idx))
 
     def OnMouseMoveOutside(self, ev):
             mousepos = self.vb.mapSceneToView(ev[0])
@@ -16213,7 +16301,7 @@ class MainFrame(QtWidgets.QMainWindow):
 def main():
 
     app = QtWidgets.QApplication(sys.argv)
-    print('main', threading.get_ident())
+    #print('main', threading.get_ident())
     frame = MainFrame()
     sys.exit(app.exec_())
 
