@@ -22,6 +22,8 @@ from __future__ import absolute_import
 
 import sys
 import os
+import time
+
 import numpy as np
 import getopt
 
@@ -31,6 +33,7 @@ from PyQt5.QtCore import Qt, QCoreApplication, pyqtSignal, pyqtSlot, QMutex
 from PIL import Image
 from scipy import ndimage
 from scipy.stats import linregress
+from scipy.interpolate import interp1d
 from skimage.feature import register_translation
 from queue import SimpleQueue
 import threading
@@ -12895,7 +12898,6 @@ class DataProcessor(QtCore.QObject):
         self.mutex = QMutex()
 
     def Shift(self, row,x,y):
-        # current_img = self.stk.absdata_shifted[:, :, row]
         original_img = self.parent.stack.absdata[:, :, row]
         if x == 0 and y == 0:
             return original_img
@@ -12936,7 +12938,7 @@ class DataProcessor(QtCore.QObject):
         self.parent.thread.exit()
     @pyqtSlot()
     def runReferenced(self):
-        drift_x = [0,0] # list for cumsum in negative and positive direction starting from reference image
+        drift_x = [0,0]
         drift_y = [0,0]
         errorlst =[0] * int(self.parent.stack.n_ev)
         while not self.q.empty():
@@ -12946,12 +12948,12 @@ class DataProcessor(QtCore.QObject):
                                                          self.gauss(self.parent.stack.absdata[:, :, data[1]]), 20) ## 20 means 0.05 px precision
             errorlst[data[0]] = round(error,4)
             if data[0] - data[1] > 0:
-                drift_x[1] = round(drift[0],2) # Calculate the cumulative sum of drifts
+                drift_x[1] = round(drift[0],2)
                 drift_y[1] = round(drift[1],2)
                 self.parent.xpts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_x[1] )
                 self.parent.ypts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_y[1] )
             else:
-                drift_x[0] = round(drift[0],2) # Calculate the cumulative sum of drifts
+                drift_x[0] = round(drift[0],2)
                 drift_y[0] = round(drift[1],2)
                 self.parent.xpts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_x[0] )
                 self.parent.ypts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_y[0] )
@@ -12962,6 +12964,27 @@ class DataProcessor(QtCore.QObject):
         self.aligned.emit((errorlst, round(np.mean(errorlst),4)))
         self.parent.thread.exit()
 # ----------------------------------------------------------------------
+#ToDo: Parallelization of drift calculation and image registration
+# class ImageProcessor(QtCore.QRunnable):
+#     def __init__(self, parent):
+#         super(ImageProcessor, self).__init__()
+#         self.parent = parent
+#     def run(self):
+#         time.sleep(1)
+#         print(QtCore.QThread.currentThread())
+#
+# class QueuePoolProcessor(QtCore.QObject):
+#     def __init__(self):
+#         super(QueuePoolProcessor, self).__init__()
+#         self.pool = QtCore.QThreadPool.globalInstance()
+#         self.pool.setMaxThreadCount(5)
+#
+#     def start(self):
+#         for task in range(30):
+#             worker = ImageProcessor(self)
+#             self.pool.start(worker)
+#         self.pool.waitForDone()
+
 class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
     def __init__(self, parent, common, stack):
         QtWidgets.QWidget.__init__(self, parent)
@@ -12970,6 +12993,12 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.stack = stack
         self.com = common
         self.iev = 0
+
+        # self.poolthread = QtCore.QThread()
+        # self.enqueuetasks = QueuePoolProcessor()
+        # self.enqueuetasks.moveToThread(self.poolthread)
+        # self.poolthread.started.connect(self.enqueuetasks.start)
+        # self.poolthread.start()
 
         self.setWindowTitle('Align Stack v2')
         self.pglayout = pg.GraphicsLayout(border=None)
@@ -12985,7 +13014,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.DriftsWidget.setBackground("w")
 
         self.py = self.DriftsWidget.addPlot(row=0, col=0, rowspan=1, colspan=1)
-        self.py.setMouseEnabled(x=False, y=False)
+        self.py.setMouseEnabled(x=False, y=True)
         #self.i_item = pg.ImageItem(border="k")
         #self.py.setAspectLocked(lock=True, ratio=1)
         self.py.showAxis("top", show=True)
@@ -13009,7 +13038,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
 
         self.px = self.DriftsWidget.addPlot(row=1, col=0, rowspan=1, colspan=1)
         self.px.setXLink(self.py)
-        self.px.setMouseEnabled(x=False, y=False)
+        self.px.setMouseEnabled(x=False, y=True)
         #self.i_item = pg.ImageItem(border="k")
         #self.px.setAspectLocked(lock=True, ratio=1)
         self.px.showAxis("top", show=True)
@@ -13101,7 +13130,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         else:
             self.spinBoxError.setEnabled(False)
             self.spinBoxError.setValue(1)
-    def OnRegression(self, errorvals=None, id=None, idrange=None):
+    def OnApproximation(self, errorvals=None, id=None):
         if not id:
             if errorvals == None: # When spinBoxError is changed
                 self.maskedvals = (self.drifterrorlst <= np.float64(self.spinBoxError.value()))
@@ -13110,51 +13139,80 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
                 if self.cb_autoerror.isChecked():
                     self.spinBoxError.setEnabled(True)
                     self.maskedvals = (self.drifterrorlst <= self.drifterrormean) # create boolean mask of badly correlated images
-                    try: # avoid OnRegression getting called too many times
+                    try: # avoid OnApproximation getting called too many times. Also important for performance!
                         self.spinBoxError.valueChanged.disconnect()
+                        self.spinBoxFiltersize.valueChanged.disconnect()
+                        self.cb_extrapolate.stateChanged.disconnect()
+                        self.cb_autoerror.stateChanged.disconnect()
                     except:
                         pass
                     self.spinBoxError.setValue(self.drifterrormean)
                     self.spinBoxError.setMinimum(np.partition(self.drifterrorlst, 1)[1]) # makes sure that at least two elements are selected
-                    self.spinBoxError.valueChanged.connect(lambda: self.OnRegression(None))
+                    self.spinBoxError.valueChanged.connect(lambda: self.OnApproximation(None))
                 self.cb_autoerror.stateChanged.connect(self.OnAutoError)
+                self.cb_extrapolate.stateChanged.connect(lambda: self.OnApproximation(None))
+                self.spinBoxFiltersize.valueChanged.connect(lambda: self.OnApproximation(None))
+                self.comboBox_approx.currentIndexChanged.connect(lambda: self.OnApproximation(None))
             self.xregion.sigRegionChangeFinished.emit(self.xregion)
             self.yregion.sigRegionChangeFinished.emit(self.yregion)
-        elif hasattr(self, "worker"): # prevent linear regression fitting if no alignment has been done
+        elif hasattr(self, "worker"): # avoid fitting if no alignment has been done
             if self.worker.mutex.tryLock():
-                min, max = idrange
-                min_ev = self.stack.ev[min]
-                max_ev = self.stack.ev[max]
-                if id =="x":
-                    selection_x = [self.xscatter.data["x"][i] for i in range(min, max + 1)
-                                 if self.maskedvals[i]]
-                    selection_y = [self.xscatter.data["y"][i] for i in range(min, max + 1)
-                                 if self.maskedvals[i]]
-                    if len(selection_x) > 1:
-                        reg = linregress([selection_x, selection_y])
-                        self.fit_x.setData(x=[min_ev,max_ev],y=[reg.slope * min_ev + reg.intercept, reg.slope * max_ev + reg.intercept])
-
-                elif id =="y":
-                    selection_x = [self.yscatter.data["x"][i] for i in range(min, max + 1)
-                                 if self.maskedvals[i]]
-                    selection_y = [self.yscatter.data["y"][i] for i in range(min, max + 1)
-                                 if self.maskedvals[i]]
-                    if len(selection_x) > 1:
-                        reg = linregress([selection_x, selection_y])
-                        self.fit_y.setData(x=[min_ev,max_ev],y=[reg.slope * min_ev + reg.intercept, reg.slope * max_ev + reg.intercept])
-                    else:
-                        QtWidgets.QMessageBox.warning(self, 'Error', 'Select at least two images!')
+                self.MakeFit(id)
                 self.worker.mutex.unlock()
+    # ----------------------------------------------------------------------
+    def MakeFit(self,id):
+        selectregion= {"x": self.xregion, "y": self.yregion}
+        selectscatter = {"x": self.xscatter.data , "y": self.yscatter.data}
+        selectfit= {"x": self.fit_x, "y": self.fit_y}
+        scatter = selectscatter[id]
+        fit = selectfit[id]
+        region = selectregion[id]
+        min_ev, max_ev = region.getRegion()
+        min_idx = np.argmin(np.abs(np.array(self.stack.ev) - min_ev))
+        max_idx = np.argmin(np.abs(np.array(self.stack.ev) - max_ev))
+
+        selection = [[scatter[direction][i] for i in range(min_idx, max_idx + 1)
+                       if self.maskedvals[i]] for direction in ["x","y"]]
+        if len(selection[0]) < 2:
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Select at least two images in {}-direction!'.format(id))
+            return
+        # reg = linregress(selection)
+        if self.comboBox_approx.currentIndex() == 0:
+            self.spinBoxFiltersize.setEnabled(True)
+            approximated= ndimage.filters.uniform_filter1d(selection[1],self.spinBoxFiltersize.value(),mode = "nearest")
+        elif self.comboBox_approx.currentIndex() == 1:
+            self.spinBoxFiltersize.setEnabled(False)
+            reg = linregress(selection)
+            approximated = [reg.slope * i + reg.intercept for i in selection[0]]
+        elif self.comboBox_approx.currentIndex() == 2:
+            self.spinBoxFiltersize.setEnabled(False)
+            fit.setData(x=[], y=[])
+            return
+
+        if self.cb_extrapolate.isChecked():
+            fillval= "extrapolate"
+        else:
+            fillval=(approximated[0],approximated[-1])
+
+        interpolate_func = interp1d(selection[0], approximated,kind="linear",fill_value=fillval,bounds_error=False)
+        fitdata = [self.stack.ev,interpolate_func(self.stack.ev)]
+        fit.setData(x=fitdata[0], y=fitdata[1])
+
     # ----------------------------------------------------------------------
     def OnAlign(self):
         q = SimpleQueue()
         ref_idx = self.iev
         idx = self.stack.n_ev.copy()
+        try:
+            self.thread.quit()
+            self.thread.wait()
+        except:
+            pass
         self.thread = QtCore.QThread()
         self.worker = DataProcessor(q, self)
         self.worker.moveToThread(self.thread)
         self.worker.newData.connect(self.OnUpdatePlot)
-        self.worker.aligned.connect(self.OnRegression)
+        self.worker.aligned.connect(self.OnApproximation)
         # Reset reference img:
         self.xpts[ref_idx]['pos'] = (self.stack.ev[ref_idx], 0)
         self.ypts[ref_idx]['pos'] = (self.stack.ev[ref_idx], 0)
@@ -13253,7 +13311,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
                 if self.maskedvals[i]: # highlight badly correlated or masked data
                     self.ypts[i]['brush'] = QtGui.QColor('blue')
             self.yscatter.setData(self.ypts)
-        self.OnRegression(id=id,idrange=(min_idx,max_idx))
+        self.OnApproximation(id=id)
 
     def OnMouseMoveOutside(self, ev):
             mousepos = self.vb.mapSceneToView(ev[0])
