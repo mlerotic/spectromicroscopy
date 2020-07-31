@@ -36,7 +36,7 @@ from scipy.stats import linregress
 from scipy.interpolate import interp1d
 from skimage.feature import register_translation
 from queue import SimpleQueue
-import threading
+from threading import Event
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import (
@@ -12888,8 +12888,8 @@ class ImageRegistration(QtWidgets.QDialog):
 
 # ----------------------------------------------------------------------
 class DataProcessor(QtCore.QObject):
-    newData = pyqtSignal()
-    aligned = pyqtSignal([tuple])
+    newdriftvalue = pyqtSignal()
+    driftcalcfinished = pyqtSignal([tuple])
     def __init__(self, queue, parent):
         super(DataProcessor, self).__init__()
         self.parent = parent
@@ -12897,14 +12897,6 @@ class DataProcessor(QtCore.QObject):
         self.gaussval= self.parent.spinBoxGauss.value()
         self.mutex = QMutex()
 
-    def Shift(self, row,x,y):
-        original_img = self.parent.stack.absdata[:, :, row]
-        if x == 0 and y == 0:
-            return original_img
-        else:
-            shifted = ndimage.fourier_shift(np.fft.fft2(original_img), [float(-x), float(-y)])
-            shifted = np.fft.ifft2(shifted)
-            return shifted.real
     def gauss(self, im):
         gaussed = ndimage.gaussian_filter(im, self.gaussval)
         return gaussed
@@ -12917,7 +12909,7 @@ class DataProcessor(QtCore.QObject):
             self.mutex.lock()
             data = self.q.get()
             drift, error, _ = register_translation(self.gauss(self.parent.stack.absdata[:, :, data[0]]),
-                                                         self.gauss(self.parent.stack.absdata[:, :, data[1]]), 50)
+                                                         self.gauss(self.parent.stack.absdata[:, :, data[1]]), 20)
             errorlst[data[0]] = round(error,4)
             if data[0] - data[1] == 1:
                 drift_x[1] = round(drift_x[1] + drift[0],2) # Calculate the cumulative sum of drifts
@@ -12929,12 +12921,10 @@ class DataProcessor(QtCore.QObject):
                 drift_y[0] = round(drift_y[0] + drift[1],2)
                 self.parent.xpts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_x[0] )
                 self.parent.ypts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_y[0] )
-            #ToDo: Images are not shifted and cropped yet
-            #self.parent.stack.absdata_shifted[:, :, data[0]] = self.Shift(data[0],drift_x,drift_y)
             self.mutex.unlock()
-            self.newData.emit()
-        self.newData.emit()
-        self.aligned.emit((errorlst, round(np.mean(errorlst),4)))
+            self.newdriftvalue.emit()
+        self.newdriftvalue.emit()
+        self.driftcalcfinished.emit((errorlst, round(np.mean(errorlst),4)))
         self.parent.thread.exit()
     @pyqtSlot()
     def runReferenced(self):
@@ -12957,33 +12947,111 @@ class DataProcessor(QtCore.QObject):
                 drift_y[0] = round(drift[1],2)
                 self.parent.xpts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_x[0] )
                 self.parent.ypts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_y[0] )
-            #self.parent.stack.absdata_shifted[:, :, data[0]] = self.Shift(data[0],drift_x,drift_y)
             self.mutex.unlock()
-            self.newData.emit()
-        self.newData.emit()
-        self.aligned.emit((errorlst, round(np.mean(errorlst),4)))
+            self.newdriftvalue.emit()
+        self.newdriftvalue.emit()
+        self.driftcalcfinished.emit((errorlst, round(np.mean(errorlst),4)))
         self.parent.thread.exit()
 # ----------------------------------------------------------------------
 #ToDo: Parallelization of drift calculation and image registration
-# class ImageProcessor(QtCore.QRunnable):
-#     def __init__(self, parent):
-#         super(ImageProcessor, self).__init__()
-#         self.parent = parent
-#     def run(self):
-#         time.sleep(1)
-#         print(QtCore.QThread.currentThread())
-#
-# class QueuePoolProcessor(QtCore.QObject):
-#     def __init__(self):
-#         super(QueuePoolProcessor, self).__init__()
-#         self.pool = QtCore.QThreadPool.globalInstance()
-#         self.pool.setMaxThreadCount(5)
-#
-#     def start(self):
-#         for task in range(30):
-#             worker = ImageProcessor(self)
-#             self.pool.start(worker)
-#         self.pool.waitForDone()
+
+class GeneralPurposeSignals(QtCore.QObject):
+    # Holds signals from GeneralPurposeProcessor
+    newdriftvalue = pyqtSignal()
+    driftcalcfinished = pyqtSignal([tuple])
+    
+class GeneralPurposeProcessor(QtCore.QRunnable):
+    def __init__(self, parent, queue, idle):
+        super(GeneralPurposeProcessor, self).__init__()
+        self.signals = GeneralPurposeSignals()
+        self.funcdict = {"ShiftImg": self.ShiftImg, "AlignReferenced": self.AlignReferenced}
+        self.parent = parent
+        self.queue = queue
+        self.idle = idle
+    def run(self):
+        while True:
+            #print(QtCore.QThread.currentThread())
+            print(self.parent.pool.pool.activeThreadCount())
+            #print(QtCore.QThreadPool.activeThreadCount())
+            if not self.queue.empty():
+                workerfunc, *rest = self.queue.get(False)
+                args = rest[0]
+                kwargs = rest[1]
+                self.funcdict[workerfunc](*args)
+                self.idle.clear()
+                #print("busy with task {}".format(workerfunc))
+            else:
+                #self.idle.set()
+                time.sleep(1)
+                continue
+    @pyqtSlot()
+    def AlignReferenced(self, data):
+        drift_x = [0,0]
+        drift_y = [0,0]
+        errorlst =[0] * int(self.parent.stack.n_ev)
+        drift, error, _ = register_translation(self.Gauss(self.parent.stack.absdata[:, :, data[0]]),
+                                                     self.Gauss(self.parent.stack.absdata[:, :, data[1]]), 20) ## 20 means 0.05 px precision
+        errorlst[data[0]] = round(error,4)
+        if data[0] - data[1] > 0:
+            drift_x[1] = round(drift[0],2)
+            drift_y[1] = round(drift[1],2)
+            self.parent.xpts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_x[1] )
+            self.parent.ypts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_y[1] )
+        else:
+            drift_x[0] = round(drift[0],2)
+            drift_y[0] = round(drift[1],2)
+            self.parent.xpts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_x[0] )
+            self.parent.ypts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_y[0] )
+        #self.mutex.unlock()
+        #self.signals.newdriftvalue.emit()
+        #self.newdriftvalue.emit()
+
+        if self.queue.empty():
+            print("done")
+            #self.signals.newdriftvalue.emit()
+            self.parent.pool.pool.tryTake(self)
+            #self.signals.driftcalcfinished.emit((errorlst, round(np.mean(errorlst),4)))
+
+    def ShiftImg(self, row,x,y):
+        #print(row,x,y)
+        shifted = ndimage.fourier_shift(np.fft.fft2(self.parent.stack.absdata[:, :, row]), [float(-x), float(-y)])
+        shifted = np.fft.ifft2(shifted)
+        self.parent.stack.absdata_shifted[:, :, row] = shifted.real
+        return
+
+    def Gauss(self, im):
+        gaussed = ndimage.gaussian_filter(im, self.parent.spinBoxGauss.value())
+        return gaussed
+
+class TaskDispatcher(QtCore.QObject):
+    def __init__(self,parent):
+        super(TaskDispatcher, self).__init__()
+        self.pool = QtCore.QThreadPool.globalInstance()
+        self.pool.setMaxThreadCount(8)
+        self.queue = SimpleQueue()
+        self.parent = parent
+
+    def run(self):
+        self.idles = []
+        for n in range(self.pool.maxThreadCount()):
+            idle = Event()
+            self.idles.append(idle)
+            worker = GeneralPurposeProcessor(self.parent,self.queue,idle)
+            #worker.signals.newdriftvalue.connect(self.parent.OnFinished)
+            #worker.signals.driftcalcfinished.connect(self.parent.OnApproximation)
+            self.pool.start(worker)
+        # worker.signals.newdriftvalue.connect(self.parent.OnUpdatePlot)
+        # worker.signals.driftcalcfinished.connect(self.parent.OnApproximation)
+        #worker.signals.driftcalcfinished.connect(self.parent.OnApproximation)
+        self.pool.waitForDone()
+
+    #add a task to the queue
+    def enqueuetask(self, func, *args, **kargs):
+        self.queue.put((func, args, kargs))
+
+    # #Returns True if all threads are waiting for work
+    # def idle(self):
+    #     return False not in [i.is_set() for i in self.idles]
 
 class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
     def __init__(self, parent, common, stack):
@@ -12994,11 +13062,11 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.com = common
         self.iev = 0
 
-        # self.poolthread = QtCore.QThread()
-        # self.enqueuetasks = QueuePoolProcessor()
-        # self.enqueuetasks.moveToThread(self.poolthread)
-        # self.poolthread.started.connect(self.enqueuetasks.start)
-        # self.poolthread.start()
+        self.poolthread = QtCore.QThread()
+        self.pool = TaskDispatcher(self)
+        self.pool.moveToThread(self.poolthread)
+        self.poolthread.started.connect(self.pool.run)
+        self.poolthread.start()
 
         self.setWindowTitle('Align Stack v2')
         self.pglayout = pg.GraphicsLayout(border=None)
@@ -13118,10 +13186,11 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
             self.OnLinRegionChanged(self.xregion, id="x")
             self.OnLinRegionChanged(self.yregion, id="y")
     def OnUpdatePlot(self):
-        if self.worker.mutex.tryLock():
-            self.xscatter.setData(self.xpts)
-            self.yscatter.setData(self.ypts)
-            self.worker.mutex.unlock()
+#        if self.worker.mutex.tryLock():
+        print("update")
+        self.xscatter.setData(self.xpts)
+        self.yscatter.setData(self.ypts)
+ #           self.worker.mutex.unlock()
     # ----------------------------------------------------------------------
     def OnAutoError(self):
         if self.cb_autoerror.isChecked():
@@ -13176,7 +13245,6 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         if len(selection[0]) < 2:
             QtWidgets.QMessageBox.warning(self, 'Error', 'Select at least two images in {}-direction!'.format(id))
             return
-        # reg = linregress(selection)
         if self.comboBox_approx.currentIndex() == 0:
             self.spinBoxFiltersize.setEnabled(True)
             approximated= ndimage.filters.uniform_filter1d(selection[1],self.spinBoxFiltersize.value(),mode = "nearest")
@@ -13195,62 +13263,87 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
             fillval=(approximated[0],approximated[-1])
 
         interpolate_func = interp1d(selection[0], approximated,kind="linear",fill_value=fillval,bounds_error=False)
-        fitdata = [self.stack.ev,interpolate_func(self.stack.ev)]
+        fitdata = [self.stack.ev,np.around(interpolate_func(self.stack.ev),1)] # round fit to a tenth of a px
         fit.setData(x=fitdata[0], y=fitdata[1])
 
-    # ----------------------------------------------------------------------
+        if id=="x":
+            self.x_shiftstemp = fitdata[1]
+        elif id == "y":
+            self.y_shiftstemp = fitdata[1]
+        if hasattr(self, "y_shiftstemp"):
+            self.OnFitDone(self.x_shiftstemp, self.y_shiftstemp)
+
+    def OnFitDone(self,xshifts, yshifts):
+        for i in range(self.stack.n_ev):
+            if self.stack.shifts[i][2] != (xshifts[i],yshifts[i]):
+                self.stack.shifts[i].pop(2)  # remove tuple
+                self.stack.shifts[i].insert(2, (xshifts[i], yshifts[i]))
+                self.pool.enqueuetask("ShiftImg", i, xshifts[i], yshifts[i])
+
     def OnAlign(self):
-        q = SimpleQueue()
+        #q = SimpleQueue()
+        self.finishedthreads = 0
         ref_idx = self.iev
         idx = self.stack.n_ev.copy()
-        try:
-            self.thread.quit()
-            self.thread.wait()
-        except:
-            pass
-        self.thread = QtCore.QThread()
-        self.worker = DataProcessor(q, self)
-        self.worker.moveToThread(self.thread)
-        self.worker.newData.connect(self.OnUpdatePlot)
-        self.worker.aligned.connect(self.OnApproximation)
+        # try:
+        #     self.thread.quit()
+        #     self.thread.wait()
+        # except:
+        #     pass
+        # self.thread = QtCore.QThread()
+        # self.worker = DataProcessor(q, self)
+        # self.worker.moveToThread(self.thread)
         # Reset reference img:
         self.xpts[ref_idx]['pos'] = (self.stack.ev[ref_idx], 0)
         self.ypts[ref_idx]['pos'] = (self.stack.ev[ref_idx], 0)
 
-        if self.rB_consecutive.isChecked(): # Make queue with consecutive images
+        # if self.rB_consecutive.isChecked(): # Make queue with consecutive images
+        #     while idx: # Generate pairs of indices starting at reference image index.
+        #         running = 2
+        #         if (ref_idx + (self.stack.n_ev-idx)) < self.stack.n_ev-1:
+        #             q.put((ref_idx + (self.stack.n_ev-idx) + 1, ref_idx + (self.stack.n_ev-idx)))
+        #         else:
+        #             running -= 1
+        #         if ref_idx - (self.stack.n_ev-idx) > 0:
+        #             q.put(((ref_idx - (self.stack.n_ev-idx) - 1),(ref_idx - (self.stack.n_ev-idx))))
+        #         else:
+        #             running -= 1
+        #         if running:
+        #             idx -= 1
+        #         else:
+        #             break
+        #     self.thread.started.connect(self.worker.runConsecutive)
+        #     self.thread.start()
+        if self.rB_referenced.isChecked(): # Make queue with pairs relative to reference image
             while idx: # Generate pairs of indices starting at reference image index.
                 running = 2
                 if (ref_idx + (self.stack.n_ev-idx)) < self.stack.n_ev-1:
-                    q.put((ref_idx + (self.stack.n_ev-idx) + 1, ref_idx + (self.stack.n_ev-idx)))
+                    self.pool.enqueuetask("AlignReferenced", (ref_idx + (self.stack.n_ev-idx) + 1, ref_idx))
+                    #q.put((ref_idx + (self.stack.n_ev-idx) + 1, ref_idx))
                 else:
                     running -= 1
                 if ref_idx - (self.stack.n_ev-idx) > 0:
-                    q.put(((ref_idx - (self.stack.n_ev-idx) - 1),(ref_idx - (self.stack.n_ev-idx))))
+                    self.pool.enqueuetask("AlignReferenced", (ref_idx - (self.stack.n_ev-idx) - 1, ref_idx))
+                    #q.put(((ref_idx - (self.stack.n_ev-idx) - 1),ref_idx))
                 else:
                     running -= 1
                 if running:
                     idx -= 1
                 else:
                     break
-            self.thread.started.connect(self.worker.runConsecutive)
-            self.thread.start()
-        elif self.rB_referenced.isChecked(): # Make queue with pairs relative to reference image
-            while idx: # Generate pairs of indices starting at reference image index.
-                running = 2
-                if (ref_idx + (self.stack.n_ev-idx)) < self.stack.n_ev-1:
-                    q.put((ref_idx + (self.stack.n_ev-idx) + 1, ref_idx))
-                else:
-                    running -= 1
-                if ref_idx - (self.stack.n_ev-idx) > 0:
-                    q.put(((ref_idx - (self.stack.n_ev-idx) - 1),ref_idx))
-                else:
-                    running -= 1
-                if running:
-                    idx -= 1
-                else:
-                    break
-            self.thread.started.connect(self.worker.runReferenced)
-            self.thread.start()
+            time.sleep(0.05)
+            while True:
+                 time.sleep(0.5)
+                 print(self.finishedthreads)
+            # self.OnUpdatePlot()
+            # while self.pool.idle():
+            #      time.sleep(0.05)
+            #      print([i.is_set() for i in self.pool.idles])
+            # print("end")
+            # self.OnUpdatePlot()
+
+            #self.thread.started.connect(self.worker.runReferenced)
+            #self.thread.start()
     # ----------------------------------------------------------------------
     def GetIndexPairs(self):
         idxtuplelst = [(i+1,i) for i in range(self.stack.n_ev-1)]
