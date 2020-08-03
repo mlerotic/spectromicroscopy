@@ -9611,7 +9611,7 @@ class PageStack(QtWidgets.QWidget):
 # ----------------------------------------------------------------------
     def OnAlignImgs2(self, event):
 
-        imgreg2 = ImageRegistration2(self, self.com, self.stk)
+        imgreg2 = ImageRegistration2(self.window(), self.com, self.stk)
         imgreg2.show()
 
 #----------------------------------------------------------------------
@@ -12884,114 +12884,62 @@ class ImageRegistration(QtWidgets.QDialog):
             elif self.man_align == 2:
                 self.button_applyman.setEnabled(True)
 
-
-
 # ----------------------------------------------------------------------
-class DataProcessor(QtCore.QObject):
-    newdriftvalue = pyqtSignal()
-    driftcalcfinished = pyqtSignal([tuple])
-    def __init__(self, queue, parent):
-        super(DataProcessor, self).__init__()
-        self.parent = parent
-        self.q = queue
-        self.gaussval= self.parent.spinBoxGauss.value()
-        self.mutex = QMutex()
-
-    def gauss(self, im):
-        gaussed = ndimage.gaussian_filter(im, self.gaussval)
-        return gaussed
-    @pyqtSlot()
-    def runConsecutive(self):
-        drift_x = [0,0] # list for cumsum in negative and positive direction starting from reference image
-        drift_y = [0,0]
-        errorlst =[0] * int(self.parent.stack.n_ev)
-        while not self.q.empty():
-            self.mutex.lock()
-            data = self.q.get()
-            drift, error, _ = register_translation(self.gauss(self.parent.stack.absdata[:, :, data[0]]),
-                                                         self.gauss(self.parent.stack.absdata[:, :, data[1]]), 20)
-            errorlst[data[0]] = round(error,4)
-            if data[0] - data[1] == 1:
-                drift_x[1] = round(drift_x[1] + drift[0],2) # Calculate the cumulative sum of drifts
-                drift_y[1] = round(drift_y[1] + drift[1],2)
-                self.parent.xpts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_x[1] )
-                self.parent.ypts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_y[1] )
-            else:
-                drift_x[0] = round(drift_x[0] + drift[0],2) # Calculate the cumulative sum of drifts
-                drift_y[0] = round(drift_y[0] + drift[1],2)
-                self.parent.xpts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_x[0] )
-                self.parent.ypts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_y[0] )
-            self.mutex.unlock()
-            self.newdriftvalue.emit()
-        self.newdriftvalue.emit()
-        self.driftcalcfinished.emit((errorlst, round(np.mean(errorlst),4)))
-        self.parent.thread.exit()
-    @pyqtSlot()
-    def runReferenced(self):
-        drift_x = [0,0]
-        drift_y = [0,0]
-        errorlst =[0] * int(self.parent.stack.n_ev)
-        while not self.q.empty():
-            self.mutex.lock()
-            data = self.q.get()
-            drift, error, _ = register_translation(self.gauss(self.parent.stack.absdata[:, :, data[0]]),
-                                                         self.gauss(self.parent.stack.absdata[:, :, data[1]]), 20) ## 20 means 0.05 px precision
-            errorlst[data[0]] = round(error,4)
-            if data[0] - data[1] > 0:
-                drift_x[1] = round(drift[0],2)
-                drift_y[1] = round(drift[1],2)
-                self.parent.xpts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_x[1] )
-                self.parent.ypts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_y[1] )
-            else:
-                drift_x[0] = round(drift[0],2)
-                drift_y[0] = round(drift[1],2)
-                self.parent.xpts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_x[0] )
-                self.parent.ypts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_y[0] )
-            self.mutex.unlock()
-            self.newdriftvalue.emit()
-        self.newdriftvalue.emit()
-        self.driftcalcfinished.emit((errorlst, round(np.mean(errorlst),4)))
-        self.parent.thread.exit()
-# ----------------------------------------------------------------------
-#ToDo: Parallelization of drift calculation and image registration
-
-class GeneralPurposeSignals(QtCore.QObject):
-    # Holds signals from GeneralPurposeProcessor
-    newdriftvalue = pyqtSignal()
-    driftcalcfinished = pyqtSignal([tuple])
-    
 class GeneralPurposeProcessor(QtCore.QRunnable):
-    def __init__(self, parent, queue, idle):
+    def __init__(self, parent, queue):
         super(GeneralPurposeProcessor, self).__init__()
-        self.signals = GeneralPurposeSignals()
+        #self.signals = GeneralPurposeSignals()
         self.funcdict = {"ShiftImg": self.ShiftImg, "AlignReferenced": self.AlignReferenced}
         self.parent = parent
         self.queue = queue
-        self.idle = idle
+        self.running = True
     def run(self):
-        while True:
+        while self.running:
             #print(QtCore.QThread.currentThread())
-            print(self.parent.pool.pool.activeThreadCount())
+            #print(self.parent.pool.pool.activeThreadCount())
             #print(QtCore.QThreadPool.activeThreadCount())
             if not self.queue.empty():
                 workerfunc, *rest = self.queue.get(False)
                 args = rest[0]
                 kwargs = rest[1]
                 self.funcdict[workerfunc](*args)
-                self.idle.clear()
                 #print("busy with task {}".format(workerfunc))
             else:
-                #self.idle.set()
-                time.sleep(1)
-                continue
+                self.running = False
+                break
+    # @pyqtSlot()
+    # def runConsecutive(self):
+    #     drift_x = [0,0] # list for cumsum in negative and positive direction starting from reference image
+    #     drift_y = [0,0]
+    #     errorlst =[0] * int(self.parent.stack.n_ev)
+    #     while not self.q.empty():
+    #         self.mutex.lock()
+    #         data = self.q.get()
+    #         drift, error, _ = register_translation(self.gauss(self.parent.stack.absdata[:, :, data[0]]),
+    #                                                      self.gauss(self.parent.stack.absdata[:, :, data[1]]), 20)
+    #         errorlst[data[0]] = round(error,4)
+    #         if data[0] - data[1] == 1:
+    #             drift_x[1] = round(drift_x[1] + drift[0],2) # Calculate the cumulative sum of drifts
+    #             drift_y[1] = round(drift_y[1] + drift[1],2)
+    #             self.parent.xpts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_x[1] )
+    #             self.parent.ypts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_y[1] )
+    #         else:
+    #             drift_x[0] = round(drift_x[0] + drift[0],2) # Calculate the cumulative sum of drifts
+    #             drift_y[0] = round(drift_y[0] + drift[1],2)
+    #             self.parent.xpts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_x[0] )
+    #             self.parent.ypts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_y[0] )
+    #         self.mutex.unlock()
+    #         self.newdriftvalue.emit()
+    #     self.newdriftvalue.emit()
+    #     self.driftcalcfinished.emit((errorlst, round(np.mean(errorlst),4)))
+    #     self.parent.thread.exit()
     @pyqtSlot()
     def AlignReferenced(self, data):
         drift_x = [0,0]
         drift_y = [0,0]
-        errorlst =[0] * int(self.parent.stack.n_ev)
         drift, error, _ = register_translation(self.Gauss(self.parent.stack.absdata[:, :, data[0]]),
                                                      self.Gauss(self.parent.stack.absdata[:, :, data[1]]), 20) ## 20 means 0.05 px precision
-        errorlst[data[0]] = round(error,4)
+        self.parent.errorlst[data[0]] = round(error,4)
         if data[0] - data[1] > 0:
             drift_x[1] = round(drift[0],2)
             drift_y[1] = round(drift[1],2)
@@ -13006,10 +12954,9 @@ class GeneralPurposeProcessor(QtCore.QRunnable):
         #self.signals.newdriftvalue.emit()
         #self.newdriftvalue.emit()
 
-        if self.queue.empty():
-            print("done")
+        # if self.queue.empty():
+        #     print("done")
             #self.signals.newdriftvalue.emit()
-            self.parent.pool.pool.tryTake(self)
             #self.signals.driftcalcfinished.emit((errorlst, round(np.mean(errorlst),4)))
 
     def ShiftImg(self, row,x,y):
@@ -13024,34 +12971,29 @@ class GeneralPurposeProcessor(QtCore.QRunnable):
         return gaussed
 
 class TaskDispatcher(QtCore.QObject):
+    finished = pyqtSignal()
     def __init__(self,parent):
+        #print("dispatcher called")
         super(TaskDispatcher, self).__init__()
         self.pool = QtCore.QThreadPool.globalInstance()
-        self.pool.setMaxThreadCount(8)
+        cpus = len(os.sched_getaffinity(0)) # number of cpu threads
+        self.pool.setMaxThreadCount(cpus)
         self.queue = SimpleQueue()
         self.parent = parent
 
+    @pyqtSlot()
     def run(self):
-        self.idles = []
-        for n in range(self.pool.maxThreadCount()):
-            idle = Event()
-            self.idles.append(idle)
-            worker = GeneralPurposeProcessor(self.parent,self.queue,idle)
-            #worker.signals.newdriftvalue.connect(self.parent.OnFinished)
-            #worker.signals.driftcalcfinished.connect(self.parent.OnApproximation)
+        #print("(re)starting threads")
+        #print(self.queue.qsize())
+        for n in range(min(self.pool.maxThreadCount(),self.queue.qsize())): #start as many threads as needed.
+            worker = GeneralPurposeProcessor(self.parent,self.queue)
             self.pool.start(worker)
-        # worker.signals.newdriftvalue.connect(self.parent.OnUpdatePlot)
-        # worker.signals.driftcalcfinished.connect(self.parent.OnApproximation)
-        #worker.signals.driftcalcfinished.connect(self.parent.OnApproximation)
         self.pool.waitForDone()
-
+        self.finished.emit()
+        #print("all threads dead")
     #add a task to the queue
     def enqueuetask(self, func, *args, **kargs):
         self.queue.put((func, args, kargs))
-
-    # #Returns True if all threads are waiting for work
-    # def idle(self):
-    #     return False not in [i.is_set() for i in self.idles]
 
 class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
     def __init__(self, parent, common, stack):
@@ -13063,10 +13005,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.iev = 0
 
         self.poolthread = QtCore.QThread()
-        self.pool = TaskDispatcher(self)
-        self.pool.moveToThread(self.poolthread)
-        self.poolthread.started.connect(self.pool.run)
-        self.poolthread.start()
+        self.aligned = False
 
         self.setWindowTitle('Align Stack v2')
         self.pglayout = pg.GraphicsLayout(border=None)
@@ -13095,12 +13034,13 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         bx1 = self.py.getAxis("top")
         ay1.setLabel(text="y-drift", units="px")
         ay1.enableAutoSIPrefix(enable=True)
-        # ax1.setLabel(text="x",units="eV")
-        # ax1.enableAutoSIPrefix(enable=True)
+        ay1.setWidth(w=60)
+        ax1.setLabel(text="Photon Energy",units="eV")
+        ax1.enableAutoSIPrefix(enable=True)
         ay1.setStyle(tickLength=8)
-        ax1.setStyle(showValues=False, tickLength=0)
-        ax1.setHeight(h=46.2)
-        # ax1.setStyle(tickLength=8)
+        ax1.setStyle(tickLength=0)
+        #ax1.setHeight(h=46.2)
+        ax1.setStyle(tickLength=8)
         by1.setStyle(showValues=False, tickLength=0)
         bx1.setStyle(showValues=False, tickLength=0)
 
@@ -13119,6 +13059,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         bx2 = self.px.getAxis("top")
         ay2.setLabel(text="x-drift",units="px")
         ay2.enableAutoSIPrefix(enable=True)
+        ay2.setWidth(w=60)
         ax2.setLabel(text="Photon Energy",units="eV")
         ax2.enableAutoSIPrefix(enable=True)
         ay2.setStyle(tickLength=8)
@@ -13126,8 +13067,8 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         by2.setStyle(showValues=False,tickLength=0)
         bx2.setStyle(showValues=False,tickLength=0)
 
-        # self.button_ok.clicked.connect(self.OnAccept)
-        self.button_cancel.clicked.connect(self.close)
+        self.button_ok.clicked.connect(self.OnAccept)
+        self.button_cancel.clicked.connect(self.OnCancel)
 
         if self.com.stack_loaded == 1:
             self.maskedvals = [True] * int(self.stack.n_ev)
@@ -13159,8 +13100,8 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
             self.xregion.setZValue(100)
             self.px.addItem(self.xregion, ignoreBounds=False)
             self.py.addItem(self.yregion, ignoreBounds=False)
-            self.xregion.sigRegionChangeFinished.connect(lambda region: self.OnLinRegionChanged(region, id="x"))
-            self.yregion.sigRegionChangeFinished.connect(lambda region: self.OnLinRegionChanged(region, id="y"))
+            self.xregion.sigRegionChangeFinished.connect(lambda region: self.OnLinRegion(region, id="x"))
+            self.yregion.sigRegionChangeFinished.connect(lambda region: self.OnLinRegion(region, id="y"))
 
             self.xscatter = pg.ScatterPlotItem(pxMode=False)  ## Set pxMode=False to allow spots to transform with the view
             self.yscatter = pg.ScatterPlotItem(pxMode=False)  ## Set pxMode=False to allow spots to transform with the view
@@ -13182,14 +13123,16 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
     def OnPointClicked(self, obj, points): # Manually add/remove points to/from fit if in selected region
         self.OnScrollEng(points[0].index())
         self.maskedvals[points[0].index()] = not self.maskedvals[points[0].index()]
-        if hasattr(self, "worker"):
-            self.OnLinRegionChanged(self.xregion, id="x")
-            self.OnLinRegionChanged(self.yregion, id="y")
-    def OnUpdatePlot(self):
+        if self.aligned:
+            self.UpdateScatterPlots(self.xregion, id="x")
+            self.UpdateScatterPlots(self.yregion, id="y")
+    def OnAligned(self):
 #        if self.worker.mutex.tryLock():
-        print("update")
+        self.aligned = True
         self.xscatter.setData(self.xpts)
         self.yscatter.setData(self.ypts)
+        self.pool.finished.disconnect()
+        self.OnMaskScatterSpots(errorvals=(self.errorlst, round(np.mean(self.errorlst),4)))
  #           self.worker.mutex.unlock()
     # ----------------------------------------------------------------------
     def OnAutoError(self):
@@ -13199,37 +13142,33 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         else:
             self.spinBoxError.setEnabled(False)
             self.spinBoxError.setValue(1)
-    def OnApproximation(self, errorvals=None, id=None):
-        if not id:
-            if errorvals == None: # When spinBoxError is changed
-                self.maskedvals = (self.drifterrorlst <= np.float64(self.spinBoxError.value()))
-            else: # If signal comes from alignment thread
-                self.drifterrorlst, self.drifterrormean = errorvals
-                if self.cb_autoerror.isChecked():
-                    self.spinBoxError.setEnabled(True)
-                    self.maskedvals = (self.drifterrorlst <= self.drifterrormean) # create boolean mask of badly correlated images
-                    try: # avoid OnApproximation getting called too many times. Also important for performance!
-                        self.spinBoxError.valueChanged.disconnect()
-                        self.spinBoxFiltersize.valueChanged.disconnect()
-                        self.cb_extrapolate.stateChanged.disconnect()
-                        self.cb_autoerror.stateChanged.disconnect()
-                    except:
-                        pass
-                    self.spinBoxError.setValue(self.drifterrormean)
-                    self.spinBoxError.setMinimum(np.partition(self.drifterrorlst, 1)[1]) # makes sure that at least two elements are selected
-                    self.spinBoxError.valueChanged.connect(lambda: self.OnApproximation(None))
-                self.cb_autoerror.stateChanged.connect(self.OnAutoError)
-                self.cb_extrapolate.stateChanged.connect(lambda: self.OnApproximation(None))
-                self.spinBoxFiltersize.valueChanged.connect(lambda: self.OnApproximation(None))
-                self.comboBox_approx.currentIndexChanged.connect(lambda: self.OnApproximation(None))
-            self.xregion.sigRegionChangeFinished.emit(self.xregion)
-            self.yregion.sigRegionChangeFinished.emit(self.yregion)
-        elif hasattr(self, "worker"): # avoid fitting if no alignment has been done
-            if self.worker.mutex.tryLock():
-                self.MakeFit(id)
-                self.worker.mutex.unlock()
+    def OnMaskScatterSpots(self, errorvals=None):
+        if errorvals == None: # When spinBoxError is changed
+            self.maskedvals = (self.drifterrorlst <= np.float64(self.spinBoxError.value()))
+        else: # If signal comes from alignment thread
+            self.drifterrorlst, self.drifterrormean = errorvals
+            if self.cb_autoerror.isChecked():
+                self.spinBoxError.setEnabled(True)
+                self.maskedvals = (self.drifterrorlst <= self.drifterrormean) # create boolean mask of badly correlated images
+                try: # avoid OnMaskScatterSpots getting called too many times. Also important for performance!
+                    self.spinBoxError.valueChanged.disconnect()
+                    self.spinBoxFiltersize.valueChanged.disconnect()
+                    self.cb_extrapolate.stateChanged.disconnect()
+                    self.cb_autoerror.stateChanged.disconnect()
+                except:
+                    pass
+                self.spinBoxError.setValue(self.drifterrormean)
+                self.spinBoxError.setMinimum(np.partition(self.drifterrorlst, 1)[1]) # makes sure that at least two elements are selected
+                self.spinBoxError.valueChanged.connect(lambda: self.OnMaskScatterSpots(None))
+            self.cb_autoerror.stateChanged.connect(self.OnAutoError)
+            self.cb_extrapolate.stateChanged.connect(lambda: self.OnMaskScatterSpots(None))
+            self.spinBoxFiltersize.valueChanged.connect(lambda: self.OnMaskScatterSpots(None))
+            self.comboBox_approx.currentIndexChanged.connect(lambda: self.OnMaskScatterSpots(None))
+        self.OnPostFiltering()
+
     # ----------------------------------------------------------------------
     def MakeFit(self,id):
+        #print("makefit "+ id)
         selectregion= {"x": self.xregion, "y": self.yregion}
         selectscatter = {"x": self.xscatter.data , "y": self.yscatter.data}
         selectfit= {"x": self.fit_x, "y": self.fit_y}
@@ -13252,10 +13191,10 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
             self.spinBoxFiltersize.setEnabled(False)
             reg = linregress(selection)
             approximated = [reg.slope * i + reg.intercept for i in selection[0]]
-        elif self.comboBox_approx.currentIndex() == 2:
-            self.spinBoxFiltersize.setEnabled(False)
-            fit.setData(x=[], y=[])
-            return
+        # elif self.comboBox_approx.currentIndex() == 2: # deprecated because moving average with bin size = 1 is equivalent.
+        #     self.spinBoxFiltersize.setEnabled(False)
+        #     fit.setData(x=[], y=[])
+        #     return
 
         if self.cb_extrapolate.isChecked():
             fillval= "extrapolate"
@@ -13265,38 +13204,43 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         interpolate_func = interp1d(selection[0], approximated,kind="linear",fill_value=fillval,bounds_error=False)
         fitdata = [self.stack.ev,np.around(interpolate_func(self.stack.ev),1)] # round fit to a tenth of a px
         fit.setData(x=fitdata[0], y=fitdata[1])
-
         if id=="x":
             self.x_shiftstemp = fitdata[1]
         elif id == "y":
             self.y_shiftstemp = fitdata[1]
-        if hasattr(self, "y_shiftstemp"):
-            self.OnFitDone(self.x_shiftstemp, self.y_shiftstemp)
 
     def OnFitDone(self,xshifts, yshifts):
+        #print("OnFitDone")
+        self.resetPoolThread()
         for i in range(self.stack.n_ev):
             if self.stack.shifts[i][2] != (xshifts[i],yshifts[i]):
                 self.stack.shifts[i].pop(2)  # remove tuple
                 self.stack.shifts[i].insert(2, (xshifts[i], yshifts[i]))
                 self.pool.enqueuetask("ShiftImg", i, xshifts[i], yshifts[i])
+        self.pool.finished.connect(lambda: self.OnScrollEng(self.iev))
+        if not self.pool.queue.empty():
+            self.poolthread.start()
+
+    def resetPoolThread(self):
+        try:
+            self.poolthread.quit()
+            self.poolthread.wait()
+            self.poolthread.started.disconnect()
+        except:
+            pass
+        self.pool = TaskDispatcher(self)
+        self.pool.moveToThread(self.poolthread) # GUI is not blocking during calculation due to this
+        self.poolthread.started.connect(self.pool.run)
 
     def OnAlign(self):
-        #q = SimpleQueue()
-        self.finishedthreads = 0
         ref_idx = self.iev
         idx = self.stack.n_ev.copy()
-        # try:
-        #     self.thread.quit()
-        #     self.thread.wait()
-        # except:
-        #     pass
-        # self.thread = QtCore.QThread()
-        # self.worker = DataProcessor(q, self)
-        # self.worker.moveToThread(self.thread)
+        self.errorlst =[0] * int(self.stack.n_ev)
         # Reset reference img:
         self.xpts[ref_idx]['pos'] = (self.stack.ev[ref_idx], 0)
         self.ypts[ref_idx]['pos'] = (self.stack.ev[ref_idx], 0)
-
+        self.resetPoolThread()
+        self.pool.finished.connect(self.OnAligned)
         # if self.rB_consecutive.isChecked(): # Make queue with consecutive images
         #     while idx: # Generate pairs of indices starting at reference image index.
         #         running = 2
@@ -13314,6 +13258,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         #             break
         #     self.thread.started.connect(self.worker.runConsecutive)
         #     self.thread.start()
+
         if self.rB_referenced.isChecked(): # Make queue with pairs relative to reference image
             while idx: # Generate pairs of indices starting at reference image index.
                 running = 2
@@ -13331,19 +13276,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
                     idx -= 1
                 else:
                     break
-            time.sleep(0.05)
-            while True:
-                 time.sleep(0.5)
-                 print(self.finishedthreads)
-            # self.OnUpdatePlot()
-            # while self.pool.idle():
-            #      time.sleep(0.05)
-            #      print([i.is_set() for i in self.pool.idles])
-            # print("end")
-            # self.OnUpdatePlot()
-
-            #self.thread.started.connect(self.worker.runReferenced)
-            #self.thread.start()
+        self.poolthread.start()
     # ----------------------------------------------------------------------
     def GetIndexPairs(self):
         idxtuplelst = [(i+1,i) for i in range(self.stack.n_ev-1)]
@@ -13375,7 +13308,16 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
     def OnRegionChanged(self):
         self.proxy.disconnect()
         #ToDo: return the ROI and do something with it
-    def OnLinRegionChanged(self, region,id): # Rescale scatter plot on linear region changed
+    def OnPostFiltering(self):
+        self.UpdateScatterPlots(self.xregion, id="x")
+        self.UpdateScatterPlots(self.yregion, id="y")
+        self.OnFitDone(self.x_shiftstemp, self.y_shiftstemp)
+    def OnLinRegion(self, region,id):
+        #print("onlinregion "+ id)
+        self.UpdateScatterPlots(region, id)
+        if self.aligned:
+            self.OnFitDone(self.x_shiftstemp, self.y_shiftstemp)
+    def UpdateScatterPlots(self, region,id): # Rescale scatter plot on linear region changed
         min, max = region.getRegion()
         #print("changed_lin_region", min,max)
         min_idx = np.argmin(np.abs(np.array(self.stack.ev) - min))
@@ -13385,7 +13327,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
             max_idx = self.stack.n_ev -1
         region.sigRegionChangeFinished.disconnect()
         region.setRegion([self.stack.ev[min_idx], self.stack.ev[max_idx]])  # snap region to data points
-        region.sigRegionChangeFinished.connect(lambda region: self.OnLinRegionChanged(region, id=id))
+        region.sigRegionChangeFinished.connect(lambda region: self.OnLinRegion(region, id=id))
         if id == "x":
             y_vals= self.xscatter.data["y"][min_idx:max_idx + 1]
             self.px.setRange(yRange=[np.min(y_vals), np.max(y_vals)], disableAutoRange=True, padding=0.1)
@@ -13404,7 +13346,8 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
                 if self.maskedvals[i]: # highlight badly correlated or masked data
                     self.ypts[i]['brush'] = QtGui.QColor('blue')
             self.yscatter.setData(self.ypts)
-        self.OnApproximation(id=id)
+        if self.aligned:
+            self.MakeFit(id)
 
     def OnMouseMoveOutside(self, ev):
             mousepos = self.vb.mapSceneToView(ev[0])
@@ -13421,18 +13364,38 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
                     elif out_y:
                         self.box.setSize([mousepos.x()-self.box.pos().x(),self.i_item.boundingRect().bottom()-self.box.pos().y()], update=True, snap=True, finish=False)
     # ----------------------------------------------------------------------
-    # def OnAccept(self, evt):
-#         if self.MaskImage.zValue() > 0 and np.any(self.i0_indices[0]):
-#             self.stack.i0_from_histogram(self.i0_indices)
-#             self.stack.i0_mask = self.redpix
-#             self.stack.i0_mask[:, :] = False
-#             self.stack.i0_mask[self.i0_indices] = True
-#             self.parent.I0histogramCalculated()
-#             self.close()
-#         else:
-#             self.i0_indices = []
-#             QtWidgets.QMessageBox.warning(self, 'Error', 'I0 region is empty!')
-# #----------------------------------------------------------------------
+    def OnCancel(self, evt):
+        self.stack.absdata_shifted = self.stack.absdata
+        self.close()
+    # ----------------------------------------------------------------------
+    def OnAccept(self, evt):
+        if self.com.stack_4d == 0:
+            self.stack.absdata = self.stack.absdata_shifted
+            self.stack.data_struct.exchange.data = self.stack.absdata
+        else:
+            QtWidgets.QMessageBox.warning(self, 'Error', '4D stack not yet supported.')
+
+        self.stack.data_struct.exchange.energy = self.stack.ev
+        self.stack.data_struct.spectromicroscopy.xshifts = self.x_shiftstemp
+        self.stack.data_struct.spectromicroscopy.yshifts = self.y_shiftstemp
+
+        self.parent.page1.slider_eng.setRange(0,self.stack.n_ev-1)
+        self.parent.page1.iev = int(self.stack.n_ev/2)
+        self.parent.page1.slider_eng.setValue(self.parent.page1.iev)
+
+        self.parent.page1.ix = int(self.stack.n_cols/2)
+        self.parent.page1.iy = int(self.stack.n_rows/2)
+
+        self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
+        self.parent.page1.loadImage()
+
+        if showmaptab:
+            self.parent.page9.Clear()
+            self.parent.page9.LoadEntries()
+
+        self.close()
+
+#----------------------------------------------------------------------
 class SpectralROI(QtWidgets.QDialog):
 
     def __init__(self, parent,  common, stack):
@@ -14412,11 +14375,6 @@ class PageLoadData(QtWidgets.QWidget):
                 self.ay1.setLabel(text="y", units="px")
                 self.ax1.setLabel(text="x", units="px")
                 self.i_item.setRect(QtCore.QRectF(0, 0, self.stk.n_cols, self.stk.n_rows))
-                #if hasattr(self, "OD"):
-                #    self.ay2.setLabel(text="y", units="px")
-                #    self.ax2.setLabel(text="x", units="px")
-                #    self.p2.setAspectLocked(lock=True, ratio=aspect)
-                #    self.m_item.setRect(QtCore.QRectF(0, 0, np.shape(self.OD)[0], np.shape(self.OD)[1]))
 # ----------------------------------------------------------------------
     def OnCatChanged(self):
         self.CMMapBox.currentIndexChanged.disconnect()
@@ -14436,7 +14394,7 @@ class PageLoadData(QtWidgets.QWidget):
             cm_array = np.array([np.asarray(cm_lst)]) #vertical colorbar
             cm_lst.extend((cm_lst[-1],cm_lst[-1],cm_lst[-1]))
             lut = np.asarray(cm_lst)
-            lut = (lut * 255).view(np.ndarray) #lut for OD map
+            lut = (lut * 255).view(np.ndarray)
             self.cmimg.setImage(cm_array)
             self.i_item.setLookupTable(lut)
             self.setODbar(self.ODmin, self.ODmax)

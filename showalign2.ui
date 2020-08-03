@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>900</width>
+    <width>924</width>
     <height>500</height>
    </rect>
   </property>
@@ -304,11 +304,6 @@
                 <string>Linear regression</string>
                </property>
               </item>
-              <item>
-               <property name="text">
-                <string>None (spot values)</string>
-               </property>
-              </item>
              </widget>
             </item>
             <item row="0" column="1">
@@ -539,7 +534,7 @@
                <double>0.500000000000000</double>
               </property>
               <property name="value">
-               <double>2.000000000000000</double>
+               <double>1.000000000000000</double>
               </property>
              </widget>
             </item>
@@ -564,6 +559,9 @@
             </item>
             <item row="1" column="2">
              <widget class="QRadioButton" name="rB_consecutive">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
               <property name="text">
                <string>consecutive</string>
               </property>
@@ -587,7 +585,7 @@
                </size>
               </property>
               <property name="text">
-               <string>(Gaussian sigma, default: 2,0)</string>
+               <string>(Gaussian sigma, default: 1,0)</string>
               </property>
              </widget>
             </item>
@@ -611,19 +609,6 @@
            </property>
            <property name="text">
             <string>Align</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="pushButton">
-           <property name="font">
-            <font>
-             <family>Ubuntu</family>
-             <pointsize>8</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>Update</string>
            </property>
           </widget>
          </item>
