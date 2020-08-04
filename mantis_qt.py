@@ -34,7 +34,8 @@ from PIL import Image
 from scipy import ndimage
 from scipy.stats import linregress
 from scipy.interpolate import interp1d
-from skimage.feature import register_translation
+# from skimage.feature import register_translation ## deprecated
+from skimage.registration import phase_cross_correlation
 from queue import SimpleQueue
 from threading import Event
 
@@ -12937,8 +12938,8 @@ class GeneralPurposeProcessor(QtCore.QRunnable):
     def AlignReferenced(self, data):
         drift_x = [0,0]
         drift_y = [0,0]
-        drift, error, _ = register_translation(self.Gauss(self.parent.stack.absdata[:, :, data[0]]),
-                                                     self.Gauss(self.parent.stack.absdata[:, :, data[1]]), 20) ## 20 means 0.05 px precision
+        drift, error, _ = phase_cross_correlation(self.Gauss(self.parent.stack.absdata[:, :, data[0]]),
+                                                     self.Gauss(self.parent.stack.absdata[:, :, data[1]]),upsample_factor=20) ## 20 means 0.05 px precision
         self.parent.errorlst[data[0]] = round(error,4)
         if data[0] - data[1] > 0:
             drift_x[1] = round(drift[0],2)
@@ -12976,7 +12977,10 @@ class TaskDispatcher(QtCore.QObject):
         #print("dispatcher called")
         super(TaskDispatcher, self).__init__()
         self.pool = QtCore.QThreadPool.globalInstance()
-        cpus = len(os.sched_getaffinity(0)) # number of cpu threads
+        try:
+            cpus = len(os.sched_getaffinity(0)) # number of cpu threads. not supported on some platforms.
+        except:
+            cpus = os.cpu_count()
         self.pool.setMaxThreadCount(cpus)
         self.queue = SimpleQueue()
         self.parent = parent
