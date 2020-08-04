@@ -10596,11 +10596,12 @@ class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
         if self.radioLassoROI.isChecked():
             self.proxy = pg.SignalProxy(self.vb.scene().sigMouseMoved, rateLimit=15, slot=self.OnMouseHover) # rate limit to avoid too many handles
             self.I0box.handlePen = QtGui.QPen(QtGui.QColor(255, 0, 128, 0))
-        elif self.radioPolyROI.isChecked():
-            self.proxy = pg.SignalProxy(self.vb.scene().sigMouseMoved, rateLimit=30, slot=self.OnMouseHover)
-            self.I0box.handlePen = QtGui.QPen(QtGui.QColor(255, 0, 128, 255))
+        ##Polygon is currently broken
+        # elif self.radioPolyROI.isChecked():
+        #     self.proxy = pg.SignalProxy(self.vb.scene().sigMouseMoved, rateLimit=30, slot=self.OnMouseHover)
+        #     self.I0box.handlePen = QtGui.QPen(QtGui.QColor(255, 0, 128, 255))
         try:
-            self.I0box.sigRegionChangeFinished.disconnect(self.DrawROI)
+            self.I0box.sigRegionChangeFinished.disconnect()
             self.I0box.clearPoints()
             self.proxy.block = False
         except:
@@ -10619,7 +10620,6 @@ class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
         plot = self.HistoWidget
         plot.addItem(self.region, ignoreBounds=False)
         plot.setMouseEnabled(x=False, y=False)
-        plot.setLogMode(x=False, y=True)
         plot.showGrid(y=True)
 
         plot.showAxis("top", show=True)
@@ -10630,9 +10630,15 @@ class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
         bx.setStyle(showValues=False,tickLength=0)
         ay = plot.getAxis("left")
         ax = plot.getAxis("bottom")
-        ay.setLabel(text="Number of pixels")
-        ax.setLabel(text="Average Flux")
 
+        ax.setLabel(text="Average Flux")
+        ## Little hack to display vertical axis as log.
+        plot.getViewBox().setLimits(yMin=0,yMax=np.max(y))
+        ay.setLabel(text="log<sub>10</sub> (Number of pixels)")
+        y[y < 1] = 1
+        y = np.log10(y)
+        plot.setLogMode(x=False, y=False) ## Log mode is not working correctly at the moment.
+        ##
         plot.plot(x, y, stepMode=True, fillLevel=0, brush=(0, 0, 255, 150))
         def update(region):
             self.region.setZValue(10)
@@ -10648,7 +10654,7 @@ class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
         if not self.vb.scene().clickEvents:
             self.proxy.block = True
             self.DrawROI()
-            self.I0instructions.setText("Drag the polygon or the handles. Add handles by clicking on a line segment.")
+            #self.I0instructions.setText("Drag the polygon or the handles. Add handles by clicking on a line segment.")
             if self.radioLassoROI.isChecked():
                 self.lassopoints= []
                 self.I0instructions.setText("")
@@ -10698,28 +10704,28 @@ class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
                 self.MaskImage.setZValue(-10)
                 self.I0box.setZValue(10)
                 self.clickdetector.start(10)
-                if self.radioPolyROI.isChecked():
-                    origin = self.vb.mapSceneToView(self.vb.scene().clickEvents[0].scenePos())
-                    if origin.x() < 0:
-                        x0 = 0-roipos.x()
-                    elif origin.x() > self.stack.n_cols:
-                        x0 = self.stack.n_cols - roipos.x()
-                    else:
-                        x0 = np.round(origin.x()-roipos.x(),0)
-                    if origin.y() < 0:
-                        y0 = 0-roipos.y()
-                    elif origin.y() > self.stack.n_rows:
-                        y0 = self.stack.n_rows - roipos.y()
-                    else:
-                        y0 = np.round(origin.y()-roipos.y(),0)
-                    self.I0box.setPoints([(np.round(pos.x()-roipos.x(),0),np.round(pos.y()-roipos.y(),0)), (x0,np.round(pos.y()-roipos.y(),0)),(x0,y0),(np.round(pos.x()-roipos.x(),0),y0)], closed=True)
-
-                elif self.radioLassoROI.isChecked():
+                if self.radioLassoROI.isChecked():
                     handle = self.I0box.addFreeHandle((np.round(pos.x()-roipos.x(),0),np.round(pos.y()-roipos.y(),0)))
                     self.lassopoints.append(handle)
                     if len(self.lassopoints) > 1:
                         self.I0box.addSegment(self.lassopoints[0], self.lassopoints[1])
                         self.lassopoints.pop(0)
+                ## Polygon ROI is currently broken in recent pyqtgraph version
+                # elif self.radioPolyROI.isChecked():
+                #     origin = self.vb.mapSceneToView(self.vb.scene().clickEvents[0].scenePos())
+                #     if origin.x() < 0:
+                #         x0 = 0-roipos.x()
+                #     elif origin.x() > self.stack.n_cols:
+                #         x0 = self.stack.n_cols - roipos.x()
+                #     else:
+                #         x0 = np.round(origin.x()-roipos.x(),0)
+                #     if origin.y() < 0:
+                #         y0 = 0-roipos.y()
+                #     elif origin.y() > self.stack.n_rows:
+                #         y0 = self.stack.n_rows - roipos.y()
+                #     else:
+                #         y0 = np.round(origin.y()-roipos.y(),0)
+                #     self.I0box.setPoints([(np.round(pos.x()-roipos.x(),0),np.round(pos.y()-roipos.y(),0)), (x0,np.round(pos.y()-roipos.y(),0)),(x0,y0),(np.round(pos.x()-roipos.x(),0),y0)], closed=True)
 
     def draw_image(self,fluxmin, fluxmax):
         self.I0instructions.setText(
