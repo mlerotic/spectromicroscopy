@@ -411,8 +411,7 @@ class data:
         # little hack to deal with rounding errors
         self.evi0[self.evi0.size - 1] += 0.001
         self.evi0[0] -= 0.001
-
-        if len(self.evi0) > 2:
+        if len(self.evi0) > 3: # >3 is needed to avoid boundary error!
             fi0int = scipy.interpolate.interp1d(self.evi0.astype(np.double), self.i0data.astype(np.double),
                                                 kind='cubic', bounds_error=False, fill_value=0.0)
         else:

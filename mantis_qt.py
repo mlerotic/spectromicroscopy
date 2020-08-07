@@ -1674,7 +1674,6 @@ class File_GUI():
                 self.last_filter[action][data_type] = i
             return (str(dlg.selectedFiles()[0]),chosen_plugin)
         else:
-            print("cancelled")
             return (None,None)
 
 
@@ -7561,7 +7560,7 @@ class PageCluster(QtWidgets.QWidget):
                         x_comp = od_reduced[:,ip]
                         y_comp = od_reduced[:,jp]
                         if nplots > 1 :
-                            axes = fig.add_subplot(nplotsrows,2, pplot)
+                            axes = fig.add_subplot(int(nplotsrows),int(2), int(pplot))
                         else:
                             axes = fig.add_subplot(1,1,1)
 
@@ -10549,7 +10548,7 @@ class SaveWinP1(QtWidgets.QDialog):
 class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
     def __init__(self, parent, stack):
         QtWidgets.QWidget.__init__(self, parent)
-        uic.loadUi('showhistogram.ui', self)
+        uic.loadUi(os.path.dirname(__file__)+'/showhistogram.ui', self)
 
         self.HistoWidget.setBackground("w")
         self.I0Widget.setBackground("w")
@@ -10753,7 +10752,7 @@ class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
 class ShowArtefacts(QtWidgets.QDialog):
     def __init__(self, parent, common, stack):
         QtWidgets.QWidget.__init__(self, parent)
-        uic.loadUi('showartefacts.ui', self)
+        uic.loadUi(os.path.dirname(__file__)+'/showartefacts.ui', self)
         self.parent = parent
         self.com = common
         self.stack = stack
@@ -11076,6 +11075,10 @@ class LimitEv(QtWidgets.QDialog):
 
         self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
         self.parent.page1.loadImage()
+
+        if showmaptab:
+            self.page9.Clear()
+            self.page9.LoadEntries()
 
         self.close()
 
@@ -13008,7 +13011,7 @@ class TaskDispatcher(QtCore.QObject):
 class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
     def __init__(self, parent, common, stack):
         QtWidgets.QWidget.__init__(self, parent)
-        uic.loadUi('showalign2.ui', self)
+        uic.loadUi(os.path.dirname(__file__)+'/showalign2.ui', self)
         self.parent = parent
         self.stack = stack
         self.com = common
@@ -13193,7 +13196,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
                        if self.maskedvals[i]] for direction in ["x","y"]]
         if len(selection[0]) < 2:
             QtWidgets.QMessageBox.warning(self, 'Error', 'Select at least two images in {}-direction!'.format(id))
-            return
+            return False
         if self.comboBox_approx.currentIndex() == 0:
             self.spinBoxFiltersize.setEnabled(True)
             approximated= ndimage.filters.uniform_filter1d(selection[1],self.spinBoxFiltersize.value(),mode = "nearest")
@@ -13218,7 +13221,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
             self.x_shiftstemp = fitdata[1]
         elif id == "y":
             self.y_shiftstemp = fitdata[1]
-
+        return True
     def OnFitDone(self,xshifts, yshifts):
         #print("OnFitDone")
         self.resetPoolThread()
@@ -13320,8 +13323,8 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         #ToDo: return the ROI and do something with it
     def OnPostFiltering(self):
         self.UpdateScatterPlots(self.xregion, id="x")
-        self.UpdateScatterPlots(self.yregion, id="y")
-        self.OnFitDone(self.x_shiftstemp, self.y_shiftstemp)
+        if self.UpdateScatterPlots(self.yregion, id="y"):
+            self.OnFitDone(self.x_shiftstemp, self.y_shiftstemp)
     def OnLinRegion(self, region,id):
         #print("onlinregion "+ id)
         self.UpdateScatterPlots(region, id)
@@ -13357,7 +13360,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
                     self.ypts[i]['brush'] = QtGui.QColor('blue')
             self.yscatter.setData(self.ypts)
         if self.aligned:
-            self.MakeFit(id)
+            return self.MakeFit(id)
 
     def OnMouseMoveOutside(self, ev):
             mousepos = self.vb.mapSceneToView(ev[0])
@@ -14216,7 +14219,7 @@ class ColorTableFrame(QtWidgets.QDialog):
 class PageLoadData(QtWidgets.QWidget):
     def __init__(self, common, data_struct, stack):
         super(PageLoadData, self).__init__()
-        uic.loadUi('pageloaddata.ui', self)
+        uic.loadUi(os.path.dirname(__file__)+'/pageloaddata.ui', self)
         self.show()
         self.cmaps = [('Perceptually Uniform Sequential', [
             'viridis', 'plasma', 'inferno', 'magma']),
@@ -14477,7 +14480,7 @@ class PageMap(QtWidgets.QWidget):
     qlistchanged = pyqtSignal([tuple])
     def __init__(self, common, data_struct, stack):
         super(PageMap, self).__init__()
-        uic.loadUi('pagemap.ui', self)
+        uic.loadUi(os.path.dirname(__file__)+'/pagemap.ui', self)
         self.show()
         self.cmaps = [('Perceptually Uniform Sequential', [
             'viridis', 'plasma', 'inferno', 'magma']),
@@ -14536,7 +14539,7 @@ class PageMap(QtWidgets.QWidget):
         self.SquarePxCheckBox.setVisible(False)
         self.CropCheckBox.toggled.connect(lambda: self.OnCropCB(self.CropCheckBox.isChecked()))
         self.cropflag = True
-        self.ShiftLabel.setText("x = %0.1f \ny = %0.1f" % (0, 0))
+        #self.ShiftLabel.setText("x = %0.1f \ny = %0.1f" % (0, 0))
         self.ODHighSpinBox.valueChanged.connect(lambda: self.setODlimits(self.ODLowSpinBox.value(),self.ODHighSpinBox.value()))
         self.ODLowSpinBox.valueChanged.connect(lambda: self.setODlimits(self.ODLowSpinBox.value(),self.ODHighSpinBox.value()))
         self.pbRSTOD.clicked.connect(lambda: self.ShowMap(self.prelst, self.postlst))
@@ -15711,7 +15714,7 @@ class MainFrame(QtWidgets.QMainWindow):
         if sys.platform == 'win32':
             tabs.setMinimumHeight(750)
         else:
-            tabs.setMinimumHeight(850)
+            tabs.setMinimumHeight(400)
 
         tabs.tabBar().setTabTextColor(0, QtGui.QColor('green'))
         tabs.tabBar().setTabTextColor(1, QtGui.QColor('green'))
@@ -15858,8 +15861,9 @@ class MainFrame(QtWidgets.QMainWindow):
             self.page1.slider_eng.setRange(0,self.stk.n_ev-1)
             self.page1.iev = self.iev
             self.page1.slider_eng.setValue(self.iev)
-
-            self.page9.slider_eng.setRange(0,self.stk.n_ev-1)
+            if showmaptab:
+                self.page9.Clear()
+                self.page9.slider_eng.setRange(0,self.stk.n_ev-1)
             self.stk.scale_bar()
             self.common.stack_loaded = 1
             self.common.path = directory
@@ -15885,7 +15889,6 @@ class MainFrame(QtWidgets.QMainWindow):
             QtWidgets.QApplication.restoreOverrideCursor()
 
             if showmaptab:
-                self.page9.Clear()
                 self.page9.LoadEntries()
         self.refresh_widgets()
 
