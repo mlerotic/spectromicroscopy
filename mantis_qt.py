@@ -10738,11 +10738,15 @@ class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
 #----------------------------------------------------------------------
     def OnAccept(self, evt):
         if self.MaskImage.zValue() > 0 and np.any(self.i0_indices[0]):
-            self.stack.i0_from_histogram(self.i0_indices)
+            try:
+                self.stack.i0_from_histogram(self.i0_indices)
+                self.parent.I0histogramCalculated()
+            except ValueError:
+                QtWidgets.QMessageBox.warning(self, 'Error', 'Stack must have at least two images for I0 calculation'.format(id))
+                pass
             self.stack.i0_mask = self.redpix
             self.stack.i0_mask[:, :] = False
             self.stack.i0_mask[self.i0_indices] = True
-            self.parent.I0histogramCalculated()
             self.close()
         else:
             self.i0_indices = []
@@ -10784,7 +10788,7 @@ class ShowArtefacts(QtWidgets.QDialog):
         self.vb.addItem(self.i_item, ignoreBounds=False)
 
         self.stack.absdata_level = self.stack.absdata.copy()
-        if self.com.i0_loaded:
+        if self.stack.i0data != 0:
             self.rb_median_i0.setCheckable(True)
             self.rb_median_i0.setChecked(True)
             self.label_4.setText('I0 mask contribution:')
