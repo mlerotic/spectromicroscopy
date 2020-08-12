@@ -41,6 +41,7 @@ class data:
     def __init__(self, data_struct):
         self.data_struct = data_struct
         self.i0_dwell = None
+        self.i0data = np.zeros(1)
         self.n_ev = 0
         self.n_theta = 0
         self.shifts = []
@@ -68,7 +69,7 @@ class data:
         self.ev = 0
         self.absdata = 0
 
-        self.i0data = 0
+        self.i0data = np.zeros(1)
         self.evi0 = 0
 
         self.od = 0

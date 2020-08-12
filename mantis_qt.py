@@ -10788,7 +10788,7 @@ class ShowArtefacts(QtWidgets.QDialog):
         self.vb.addItem(self.i_item, ignoreBounds=False)
 
         self.stack.absdata_level = self.stack.absdata.copy()
-        if self.stack.i0data != 0:
+        if self.stack.i0data.any():
             self.rb_median_i0.setCheckable(True)
             self.rb_median_i0.setChecked(True)
             self.label_4.setText('I0 mask contribution:')
@@ -13383,6 +13383,12 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
     # ----------------------------------------------------------------------
     def OnCancel(self, evt):
         self.stack.absdata_shifted = self.stack.absdata
+        self.parent.page1.loadImage()
+
+        if showmaptab:
+            self.parent.page9.Clear()
+            self.parent.page9.LoadEntries()
+
         self.close()
     # ----------------------------------------------------------------------
     def OnAccept(self, evt):
@@ -14514,8 +14520,6 @@ class PageMap(QtWidgets.QWidget):
         self.xoffset = 0
         self.yoffset = 0
         self.scale = 0.000001
-        self.prelst = []
-        self.postlst =[]
         self.pbRST.clicked.connect(lambda: self.setShifts(0, 0))
         self.pbL.clicked.connect(lambda: self.setShifts(-0.2,0))
         self.pbR.clicked.connect(lambda: self.setShifts(0.2,0))
@@ -14560,7 +14564,6 @@ class PageMap(QtWidgets.QWidget):
 
         self.MapSelectWidget1.mousePressEvent = self.mouseEventOnQList
         self.MapSelectWidget1.mouseMoveEvent = self.mouseEventOnQList
-        self.qlistchanged.connect(self.qListChangeHandler)
         self.data_struct = data_struct
         self.stk = stack
         self.com = common
@@ -14965,6 +14968,13 @@ class PageMap(QtWidgets.QWidget):
                 self.pbRST.click()
 
     def Clear(self):
+        try:
+            self.slider_eng.valueChanged.disconnect()
+            self.qlistchanged.disconnect()
+        except:
+            pass
+        self.prelst = []
+        self.postlst =[]
         self.stk.shifts = []
         self.stk.absdata_shifted= []
         self.p1.clear()
@@ -14973,20 +14983,20 @@ class PageMap(QtWidgets.QWidget):
         self.MapSelectWidget1.clear()
 
     def LoadEntries(self): # Called when fresh data are loaded.
-        self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
         self.ODHighSpinBox.setEnabled(False)
         self.ODLowSpinBox.setEnabled(False)
         self.pbRSTOD.setEnabled(False)
         self.pbExpData.setEnabled(False)
         self.pbExpImg.setEnabled(False)
         self.pbClrSel.setEnabled(False)
-        self.stk.shifts = []
         self.stk.absdata_shifted = self.stk.absdata.copy()
         self.p1.addItem(self.i_item)
         for i,e in enumerate(self.stk.ev): # Fill QList with energies
             self.stk.shifts.append([1,0,(0.0,0.0)]) #checked [0,1]; pre, post, undefined state for map [-1,1,0],(xshift [float],yshift [float])
             item = QtGui.QListWidgetItem(str(int(i)).zfill(3)+"     at     " + format(e, '.2f') + " eV     "+"+0.0"+"    +0.0")
             self.MapSelectWidget1.addItem(item)
+        self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
+        self.qlistchanged.connect(self.qListChangeHandler)
         self.OnScrollEng(0) # Plot first image & set Scrollbar
         self.OnMetricScale(self.MetricCheckBox.isChecked(), True, False)
     def UpdateEntry(self,row):
@@ -14997,10 +15007,11 @@ class PageMap(QtWidgets.QWidget):
         for i in range(widget.count()):
             widget.item(i).setForeground(QtGui.QColor(0, 0, 0, 128))
     def OnScrollEng(self, value):
+        self.slider_eng.blockSignals(True)
         self.slider_eng.setValue(value)
+        self.slider_eng.blockSignals(False)
         self.MapSelectWidget1.setCurrentRow(value)
         self.ResetAllItems(self.MapSelectWidget1)
-        self.MapSelectWidget1.item(value).setForeground(QtGui.QColor(0, 0, 0, 255))
         self.iev = value
         self.p1.titleLabel.item.setTextWidth(self.p1.width() * 0.7)
         self.p2.titleLabel.item.setTextWidth(self.p2.width() * 0.7)
@@ -15008,6 +15019,7 @@ class PageMap(QtWidgets.QWidget):
         if self.com.stack_loaded == 1:
             self.p1.titleLabel.setText("<center>Image at energy {0:5.2f} eV</center>".format(float(self.stk.ev[self.iev])),size='10pt')
             self.i_item.setImage(self.Shift(int(self.iev)))
+            self.MapSelectWidget1.item(value).setForeground(QtGui.QColor(0, 0, 0, 255))
 
     def OnCropCB(self, value=True):
         if self.com.stack_loaded == 1:
@@ -15893,6 +15905,7 @@ class MainFrame(QtWidgets.QMainWindow):
             QtWidgets.QApplication.restoreOverrideCursor()
 
             if showmaptab:
+                self.page9.Clear()
                 self.page9.LoadEntries()
         self.refresh_widgets()
 
