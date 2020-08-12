@@ -13144,13 +13144,16 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
             self.UpdateScatterPlots(self.xregion, id="x")
             self.UpdateScatterPlots(self.yregion, id="y")
     def OnAligned(self):
-#        if self.worker.mutex.tryLock():
         self.aligned = True
+        self.cb_autoerror.stateChanged.connect(self.OnAutoError)
+        self.cb_extrapolate.stateChanged.connect(lambda: self.OnMaskScatterSpots(None))
+        self.spinBoxFiltersize.valueChanged.connect(lambda: self.OnMaskScatterSpots(None))
+        self.spinBoxError.valueChanged.connect(lambda: self.OnMaskScatterSpots(None))
+        self.comboBox_approx.currentIndexChanged.connect(lambda: self.OnMaskScatterSpots(None))
         self.xscatter.setData(self.xpts)
         self.yscatter.setData(self.ypts)
         self.pool.finished.disconnect()
         self.OnMaskScatterSpots(errorvals=(self.errorlst, round(np.mean(self.errorlst),4)))
- #           self.worker.mutex.unlock()
     # ----------------------------------------------------------------------
     def OnAutoError(self):
         if self.cb_autoerror.isChecked():
@@ -13167,20 +13170,18 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
             if self.cb_autoerror.isChecked():
                 self.spinBoxError.setEnabled(True)
                 self.maskedvals = (self.drifterrorlst <= self.drifterrormean) # create boolean mask of badly correlated images
-                try: # avoid OnMaskScatterSpots getting called too many times. Also important for performance!
-                    self.spinBoxError.valueChanged.disconnect()
-                    self.spinBoxFiltersize.valueChanged.disconnect()
-                    self.cb_extrapolate.stateChanged.disconnect()
-                    self.cb_autoerror.stateChanged.disconnect()
-                except:
-                    pass
+                # avoid OnMaskScatterSpots getting called too many times.
+                self.spinBoxError.blockSignals(True)
+                self.spinBoxFiltersize.blockSignals(True)
+                self.cb_extrapolate.blockSignals(True)
+                self.cb_autoerror.blockSignals(True)
+
                 self.spinBoxError.setValue(self.drifterrormean)
                 self.spinBoxError.setMinimum(np.partition(self.drifterrorlst, 1)[1]) # makes sure that at least two elements are selected
-                self.spinBoxError.valueChanged.connect(lambda: self.OnMaskScatterSpots(None))
-            self.cb_autoerror.stateChanged.connect(self.OnAutoError)
-            self.cb_extrapolate.stateChanged.connect(lambda: self.OnMaskScatterSpots(None))
-            self.spinBoxFiltersize.valueChanged.connect(lambda: self.OnMaskScatterSpots(None))
-            self.comboBox_approx.currentIndexChanged.connect(lambda: self.OnMaskScatterSpots(None))
+                self.spinBoxError.blockSignals(False)
+            self.cb_extrapolate.blockSignals(False)
+            self.cb_autoerror.blockSignals(False)
+            self.spinBoxFiltersize.blockSignals(False)
         self.OnPostFiltering()
 
     # ----------------------------------------------------------------------
@@ -13342,9 +13343,9 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         if min_idx == max_idx:
             min_idx = 0
             max_idx = self.stack.n_ev -1
-        region.sigRegionChangeFinished.disconnect()
+        region.blockSignals(True)
         region.setRegion([self.stack.ev[min_idx], self.stack.ev[max_idx]])  # snap region to data points
-        region.sigRegionChangeFinished.connect(lambda region: self.OnLinRegion(region, id=id))
+        region.blockSignals(False)
         if id == "x":
             y_vals= self.xscatter.data["y"][min_idx:max_idx + 1]
             self.px.setRange(yRange=[np.min(y_vals), np.max(y_vals)], disableAutoRange=True, padding=0.1)
@@ -14400,9 +14401,9 @@ class PageLoadData(QtWidgets.QWidget):
                 self.i_item.setRect(QtCore.QRectF(0, 0, self.stk.n_cols, self.stk.n_rows))
 # ----------------------------------------------------------------------
     def OnCatChanged(self):
-        self.CMMapBox.currentIndexChanged.disconnect()
+        self.CMMapBox.blockSignals(True)
         self.CMMapBox.clear()
-        self.CMMapBox.currentIndexChanged.connect(lambda: self.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value()))
+        self.CMMapBox.blockSignals(False)
         self.CMMapBox.addItems(self.cmaps[self.CMCatBox.currentIndex()][1])
 
     def calcBinSize(self,i,N):
@@ -14835,11 +14836,13 @@ class PageMap(QtWidgets.QWidget):
         except:
             pass
         return elem
+
     def OnCatChanged(self):
-        self.CMMapBox.currentIndexChanged.disconnect()
+        self.CMMapBox.blockSignals(True)
         self.CMMapBox.clear()
-        self.CMMapBox.currentIndexChanged.connect(lambda: self.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value()))
+        self.CMMapBox.blockSignals(False)
         self.CMMapBox.addItems(self.cmaps[self.CMCatBox.currentIndex()][1])
+
     def setODlimits(self,low, high):
         self.ODHighSpinBox.setMaximum(self.ODmax)
         self.ODHighSpinBox.setMinimum(low)
@@ -15209,8 +15212,8 @@ class PageMap(QtWidgets.QWidget):
             self.ODmax = np.max(self.OD)
             self.ODHighSpinBox.setEnabled(True)
             self.ODLowSpinBox.setEnabled(True)
-            self.ODHighSpinBox.valueChanged.disconnect()
-            self.ODLowSpinBox.valueChanged.disconnect()
+            self.ODHighSpinBox.blockSignals(True)
+            self.ODLowSpinBox.blockSignals(True)
             self.ODHighSpinBox.setMaximum(self.ODmax)
             self.ODHighSpinBox.setMinimum(self.ODmin)
             self.ODLowSpinBox.setMaximum(self.ODmax)
@@ -15218,10 +15221,8 @@ class PageMap(QtWidgets.QWidget):
             self.ODLowSpinBox.setValue(self.ODmin)
             self.ODHighSpinBox.setValue(self.ODmax)
             self.setODlimits(self.ODmin, self.ODmax)
-            self.ODHighSpinBox.valueChanged.connect(
-                lambda: self.setODlimits(self.ODLowSpinBox.value(), self.ODHighSpinBox.value()))
-            self.ODLowSpinBox.valueChanged.connect(
-                lambda: self.setODlimits(self.ODLowSpinBox.value(), self.ODHighSpinBox.value()))
+            self.ODHighSpinBox.blockSignals(False)
+            self.ODLowSpinBox.blockSignals(False)
             self.pbRSTOD.setEnabled(True)
             self.pbExpData.setEnabled(True)
             self.pbExpImg.setEnabled(True)
