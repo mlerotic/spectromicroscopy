@@ -7263,6 +7263,7 @@ class PageCluster(QtWidgets.QWidget):
             if img_tif:
                 fileName_caimg = self.SaveFileName+"_CAcimg.tif"
                 img1 = Image.fromarray(self.clusterimage)
+                #ToDo: Recently throws an error. Possible conflict in module PIL. "Cannot handle this data type: (1, 1), <i8"
                 img1.save(fileName_caimg)
 
 
@@ -11071,18 +11072,16 @@ class LimitEv(QtWidgets.QDialog):
         self.parent.page1.iev = int(self.stack.n_ev/2)
         self.parent.page1.slider_eng.setValue(self.parent.page1.iev)
 
-        #self.parent.page0.slider_eng.setRange(0,self.stack.n_ev-1)
-        #self.parent.page0.iev = int(self.stack.n_ev/2)
-        #self.parent.page0.slider_eng.setValue(self.parent.page1.iev)
-        self.parent.page0.Clear()
-        self.parent.page0.LoadEntries()
+        self.parent.page0.slider_eng.setRange(0,self.stack.n_ev-1)
+        self.parent.page0.iev = int(self.stack.n_ev/2)
+        self.parent.page0.slider_eng.setValue(self.parent.page1.iev)
 
         self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
         self.parent.page1.loadImage()
 
         if showmaptab:
-            self.page9.Clear()
-            self.page9.LoadEntries()
+            self.parent.page9.Clear()
+            self.parent.page9.LoadEntries()
 
         self.close()
 
@@ -13252,7 +13251,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
 
     def OnAlign(self):
         ref_idx = self.iev
-        idx = self.stack.n_ev.copy()
+        idx = self.stack.n_ev
         self.errorlst =[0] * int(self.stack.n_ev)
         # Reset reference img:
         self.xpts[ref_idx]['pos'] = (self.stack.ev[ref_idx], 0)
@@ -15520,9 +15519,9 @@ class StackListFrame(QtWidgets.QDialog):
         self.parent.page1.filename = filelist[0]
         self.parent.page1.textctrl.setText(filelist[0])
 
-        #self.parent.page0.slider_eng.setRange(0,self.stk.n_ev-1)
-        #self.parent.page0.iev = self.stk.n_ev/2
-        #self.parent.page0.slider_eng.setValue(self.parent.page1.iev)
+        self.parent.page0.slider_eng.setRange(0,self.stk.n_ev-1)
+        self.parent.page0.iev = int(self.stk.n_ev/2)
+        self.parent.page0.slider_eng.setValue(self.parent.page1.iev)
 
         self.parent.page1.slider_eng.setRange(0,self.stk.n_ev-1)
         self.parent.page1.iev = self.stk.n_ev/2
@@ -15872,8 +15871,8 @@ class MainFrame(QtWidgets.QMainWindow):
 
             self.iev = int(self.stk.n_ev/2)
             self.page0.slider_eng.setRange(0,self.stk.n_ev-1)
-            #self.page0.iev = self.iev
-            #self.page0.slider_eng.setValue(self.iev)
+            self.page0.iev = self.iev
+            self.page0.slider_eng.setValue(self.iev)
 
             self.page1.slider_eng.setRange(0,self.stk.n_ev-1)
             self.page1.iev = self.iev
