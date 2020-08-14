@@ -324,7 +324,7 @@
                <string/>
               </property>
               <property name="checked">
-               <bool>true</bool>
+               <bool>false</bool>
               </property>
              </widget>
             </item>
@@ -349,7 +349,7 @@
                  <number>1</number>
                 </property>
                 <property name="value">
-                 <number>5</number>
+                 <number>2</number>
                 </property>
                </widget>
               </item>

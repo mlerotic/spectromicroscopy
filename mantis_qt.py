@@ -8881,7 +8881,7 @@ class PageStack(QtWidgets.QWidget):
 
         self.button_align2 = QtWidgets.QPushButton('Align stack v2...')
         self.button_align2.clicked.connect( self.OnAlignImgs2)
-        self.button_align2.setEnabled(True)
+        self.button_align2.setEnabled(False)
         vbox1.addWidget(self.button_align2)
 
         self.button_limitev = QtWidgets.QPushButton('Limit energy range...')
@@ -13251,7 +13251,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
 
     def OnAlign(self):
         ref_idx = self.iev
-        idx = self.stack.n_ev
+        idx = self.stack.n_ev.copy()
         self.errorlst =[0] * int(self.stack.n_ev)
         # Reset reference img:
         self.xpts[ref_idx]['pos'] = (self.stack.ev[ref_idx], 0)
