@@ -10549,7 +10549,7 @@ class SaveWinP1(QtWidgets.QDialog):
 class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
     def __init__(self, parent, stack):
         QtWidgets.QWidget.__init__(self, parent)
-        uic.loadUi(os.path.dirname(__file__)+'/showhistogram.ui', self)
+        uic.loadUi(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'showhistogram.ui'), self)
 
         self.HistoWidget.setBackground("w")
         self.I0Widget.setBackground("w")
@@ -10757,7 +10757,7 @@ class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
 class ShowArtefacts(QtWidgets.QDialog):
     def __init__(self, parent, common, stack):
         QtWidgets.QWidget.__init__(self, parent)
-        uic.loadUi(os.path.dirname(__file__)+'/showartefacts.ui', self)
+        uic.loadUi(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'showartefacts.ui'), self)
         self.parent = parent
         self.com = common
         self.stack = stack
@@ -13014,7 +13014,7 @@ class TaskDispatcher(QtCore.QObject):
 class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
     def __init__(self, parent, common, stack):
         QtWidgets.QWidget.__init__(self, parent)
-        uic.loadUi(os.path.dirname(__file__)+'/showalign2.ui', self)
+        uic.loadUi(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'showalign2.ui'), self)
         self.parent = parent
         self.stack = stack
         self.com = common
@@ -14229,7 +14229,8 @@ class ColorTableFrame(QtWidgets.QDialog):
 class PageLoadData(QtWidgets.QWidget):
     def __init__(self, common, data_struct, stack):
         super(PageLoadData, self).__init__()
-        uic.loadUi(os.path.dirname(__file__)+'/pageloaddata.ui', self)
+
+        uic.loadUi(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pageloaddata.ui'), self)
         self.show()
         self.cmaps = [('Perceptually Uniform Sequential', [
             'viridis', 'plasma', 'inferno', 'magma']),
@@ -14490,7 +14491,7 @@ class PageMap(QtWidgets.QWidget):
     qlistchanged = pyqtSignal([tuple])
     def __init__(self, common, data_struct, stack):
         super(PageMap, self).__init__()
-        uic.loadUi(os.path.dirname(__file__)+'/pagemap.ui', self)
+        uic.loadUi(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pagemap.ui'), self)
         self.show()
         self.cmaps = [('Perceptually Uniform Sequential', [
             'viridis', 'plasma', 'inferno', 'magma']),
