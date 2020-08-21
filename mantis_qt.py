@@ -12950,8 +12950,8 @@ class GeneralPurposeProcessor(QtCore.QRunnable):
     def AlignReferenced(self, data):
         drift_x = [0,0]
         drift_y = [0,0]
-        drift, error, _ = phase_cross_correlation(self.Gauss(self.parent.stack.absdata[:, :, data[0]]),
-                                                     self.Gauss(self.parent.stack.absdata[:, :, data[1]]),upsample_factor=20) ## 20 means 0.05 px precision
+        drift, error, _ = phase_cross_correlation(self.Gauss(self.parent.stack.absdata_cropped[:, :, data[0]]),
+                                                     self.Gauss(self.parent.stack.absdata_cropped[:, :, data[1]]),upsample_factor=20) ## 20 means 0.05 px precision
         self.parent.errorlst[data[0]] = round(error,4)
         if data[0] - data[1] > 0:
             drift_x[1] = round(drift[0],2)
@@ -13144,6 +13144,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
             self.UpdateScatterPlots(self.yregion, id="y")
     def OnAligned(self):
         self.aligned = True
+        self.button_align.setEnabled(True)
         self.cb_autoerror.stateChanged.connect(self.OnAutoError)
         self.cb_extrapolate.stateChanged.connect(lambda: self.OnMaskScatterSpots(None))
         self.spinBoxFiltersize.valueChanged.connect(lambda: self.OnMaskScatterSpots(None))
@@ -13250,6 +13251,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.poolthread.started.connect(self.pool.run)
 
     def OnAlign(self):
+        self.button_align.setEnabled(False)
         ref_idx = self.iev
         idx = self.stack.n_ev.copy()
         self.errorlst =[0] * int(self.stack.n_ev)
@@ -13311,6 +13313,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
 
     ## Setup a ROI for an alignment rectangle. By default the whole image area is used.
     def SetupROI(self):
+        self.stack.absdata_cropped = self.stack.absdata.copy()
         self.box = pg.RectROI(self.i_item.boundingRect().topLeft(), self.i_item.boundingRect().bottomRight(),
                               pen=(5, 8), handlePen=QtGui.QPen(QtGui.QColor(255, 0, 128, 255)), centered=False,
                               sideScalers=False, removable=False, scaleSnap=True, translateSnap=True,
@@ -13318,13 +13321,24 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.vb.addItem(self.box, ignoreBounds=False)
         self.box.sigRegionChangeFinished.connect(self.OnRegionChanged)
         self.box.sigRegionChangeStarted.connect(self.OnRegionChange)
+        self.button_rstroi.clicked.connect(self.OnResetROI)
     ## The ROI is limited to the visible image area. OnMouseMoveOutside handles the behavior when
+    def OnResetROI(self):
+        self.box.setPos(0,0, update=False, finish=False)
+        self.box.setSize(self.i_item.boundingRect().bottomRight()-self.box.pos(), update=True, snap=True, finish=True)
     def OnRegionChange(self):
         self.boxsize = self.box.size()
         self.proxy = pg.SignalProxy(self.vb.scene().sigMouseMoved, rateLimit=30, slot=self.OnMouseMoveOutside)
     def OnRegionChanged(self):
-        self.proxy.disconnect()
-        #ToDo: return the ROI and do something with it
+        try:
+            self.proxy.disconnect()
+        except AttributeError:
+            pass
+        left = int(self.box.pos().x())
+        right = left + int(self.box.size().x())
+        bottom = int(self.box.pos().y())
+        top = bottom + int(self.box.size().y())
+        self.stack.absdata_cropped = self.stack.absdata[left:right, bottom:top, :].copy()
     def OnPostFiltering(self):
         self.UpdateScatterPlots(self.xregion, id="x")
         if self.UpdateScatterPlots(self.yregion, id="y"):
