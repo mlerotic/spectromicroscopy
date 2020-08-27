@@ -11333,9 +11333,11 @@ class ImageRegistrationDialog(QtWidgets.QDialog):
         uic.loadUi(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dialogalign.ui'), self)
         self.parent = parent
         self.com = common
+        # Currently disabled for Tomo data
         if self.com.stack_4d == 1:
-            self.parent.page1.OnAlignImgs
-            self.done
+            self.bt_align2.setEnabled(False)
+        else:
+            self.bt_align2.setEnabled(True)
         self.bt_align.clicked.connect(self.parent.page1.OnAlignImgs)
         self.bt_align2.clicked.connect(self.parent.page1.OnAlignImgs2)
         self.bt_align.clicked.connect(self.done)
