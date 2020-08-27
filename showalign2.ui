@@ -1,17 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
+ <author>Jan-David Förster</author>
  <class>Alignment</class>
  <widget class="QWidget" name="Alignment">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>924</width>
+    <width>900</width>
     <height>500</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
+  </property>
+  <property name="toolTip">
+   <string/>
+  </property>
+  <property name="whatsThis">
+   <string/>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
@@ -137,11 +144,20 @@
        </property>
        <item row="2" column="0">
         <layout class="QHBoxLayout" name="horizontalLayout">
+         <property name="spacing">
+          <number>6</number>
+         </property>
          <property name="bottomMargin">
           <number>0</number>
          </property>
          <item>
           <widget class="QPushButton" name="button_ok">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="font">
             <font>
              <family>Ubuntu</family>
@@ -177,7 +193,7 @@
           </font>
          </property>
          <property name="title">
-          <string>Post-filtering</string>
+          <string>Drift approximation &amp;&amp; stack shifting adjustment</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_3">
           <property name="spacing">
@@ -203,7 +219,49 @@
             <property name="verticalSpacing">
              <number>0</number>
             </property>
-            <item row="0" column="2">
+            <item row="1" column="1">
+             <widget class="QLabel" name="label_7">
+              <property name="text">
+               <string>Size:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QLabel" name="label_6">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Method:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="2">
+             <widget class="QSpinBox" name="spinBoxFiltersize">
+              <property name="maximumSize">
+               <size>
+                <width>50</width>
+                <height>16777215</height>
+               </size>
+              </property>
+              <property name="minimum">
+               <number>1</number>
+              </property>
+              <property name="value">
+               <number>2</number>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="4">
              <layout class="QHBoxLayout" name="horizontalLayout_5">
               <property name="spacing">
                <number>0</number>
@@ -211,6 +269,28 @@
               <property name="sizeConstraint">
                <enum>QLayout::SetNoConstraint</enum>
               </property>
+              <item>
+               <widget class="QCheckBox" name="cb_autoerror">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>16777215</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Auto quality filter</string>
+                </property>
+                <property name="checked">
+                 <bool>false</bool>
+                </property>
+               </widget>
+              </item>
               <item>
                <widget class="QLabel" name="label_5">
                 <property name="minimumSize">
@@ -226,7 +306,7 @@
                  </size>
                 </property>
                 <property name="text">
-                 <string>RMS error threshold:</string>
+                 <string>|  Threshold: </string>
                 </property>
                </widget>
               </item>
@@ -252,47 +332,9 @@
                 </property>
                </widget>
               </item>
-              <item>
-               <spacer name="horizontalSpacer">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>40</width>
-                  <height>20</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
              </layout>
             </item>
-            <item row="0" column="0">
-             <widget class="QLabel" name="label_4">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>25</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>25</height>
-               </size>
-              </property>
-              <property name="baseSize">
-               <size>
-                <width>0</width>
-                <height>0</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Automatic quality filtering</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="1">
+            <item row="0" column="2">
              <widget class="QComboBox" name="comboBox_approx">
               <item>
                <property name="text">
@@ -306,110 +348,47 @@
               </item>
              </widget>
             </item>
-            <item row="0" column="1">
-             <widget class="QCheckBox" name="cb_autoerror">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>0</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>25</height>
-               </size>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-              <property name="checked">
-               <bool>false</bool>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="2">
+            <item row="1" column="4">
              <layout class="QHBoxLayout" name="horizontalLayout_6">
               <item>
-               <widget class="QLabel" name="label_7">
+               <widget class="QCheckBox" name="cb_autocrop">
                 <property name="text">
-                 <string>Size:</string>
+                 <string>Auto-crop stack</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
                 </property>
                </widget>
-              </item>
-              <item>
-               <widget class="QSpinBox" name="spinBoxFiltersize">
-                <property name="maximumSize">
-                 <size>
-                  <width>50</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="minimum">
-                 <number>1</number>
-                </property>
-                <property name="value">
-                 <number>2</number>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <spacer name="horizontalSpacer_3">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-                <property name="sizeType">
-                 <enum>QSizePolicy::Fixed</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>10</width>
-                  <height>20</height>
-                 </size>
-                </property>
-               </spacer>
               </item>
               <item>
                <widget class="QCheckBox" name="cb_extrapolate">
                 <property name="text">
-                 <string>Extrapolate</string>
+                 <string>Fit extrapolation</string>
                 </property>
                 <property name="checked">
                  <bool>false</bool>
                 </property>
                </widget>
               </item>
-              <item>
-               <spacer name="horizontalSpacer_2">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>40</width>
-                  <height>20</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
              </layout>
             </item>
-            <item row="1" column="0">
-             <widget class="QLabel" name="label_6">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>25</height>
-               </size>
+            <item row="0" column="3">
+             <widget class="Line" name="line">
+              <property name="frameShadow">
+               <enum>QFrame::Plain</enum>
               </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>25</height>
-               </size>
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
               </property>
-              <property name="text">
-               <string>Approximation method:</string>
+             </widget>
+            </item>
+            <item row="1" column="3">
+             <widget class="Line" name="line_2">
+              <property name="frameShadow">
+               <enum>QFrame::Plain</enum>
+              </property>
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
               </property>
              </widget>
             </item>
@@ -452,7 +431,7 @@
           </font>
          </property>
          <property name="title">
-          <string>Pre-filtering</string>
+          <string>Pre-alignment filter</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_2">
           <property name="spacing">
@@ -493,7 +472,7 @@
                </size>
               </property>
               <property name="text">
-               <string>Drift calculation:</string>
+               <string>Correlation anchor:</string>
               </property>
              </widget>
             </item>
@@ -506,7 +485,7 @@
                </size>
               </property>
               <property name="text">
-               <string>relative to reference image</string>
+               <string>reference image</string>
               </property>
               <property name="checked">
                <bool>true</bool>
@@ -538,56 +517,63 @@
                <bool>false</bool>
               </property>
               <property name="text">
-               <string>consecutive</string>
+               <string>neighbor</string>
               </property>
               <property name="checked">
                <bool>false</bool>
               </property>
              </widget>
             </item>
-            <item row="0" column="2">
-             <widget class="QLabel" name="label_3">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>25</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>25</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>(Gaussian sigma, default: 1,0)</string>
-              </property>
-             </widget>
-            </item>
             <item row="0" column="1">
-             <widget class="QDoubleSpinBox" name="spinBoxGauss">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>25</height>
-               </size>
+             <layout class="QHBoxLayout" name="horizontalLayout_7">
+              <property name="rightMargin">
+               <number>6</number>
               </property>
-              <property name="maximumSize">
-               <size>
-                <width>60</width>
-                <height>25</height>
-               </size>
-              </property>
-              <property name="decimals">
-               <number>1</number>
-              </property>
-              <property name="singleStep">
-               <double>0.500000000000000</double>
-              </property>
-              <property name="value">
-               <double>1.000000000000000</double>
-              </property>
-             </widget>
+              <item>
+               <widget class="QDoubleSpinBox" name="spinBoxGauss">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="decimals">
+                 <number>1</number>
+                </property>
+                <property name="singleStep">
+                 <double>0.500000000000000</double>
+                </property>
+                <property name="value">
+                 <double>1.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_3">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>16777215</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>(Gaussian sigma)</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </item>
            </layout>
           </item>
@@ -608,7 +594,7 @@
             </font>
            </property>
            <property name="text">
-            <string>Reset ROI</string>
+            <string>Reset alignment &amp;&amp; ROI</string>
            </property>
           </widget>
          </item>

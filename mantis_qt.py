@@ -8875,14 +8875,14 @@ class PageStack(QtWidgets.QWidget):
         vbox1.setSpacing(0)
 
         self.button_align = QtWidgets.QPushButton('Align stack...')
-        self.button_align.clicked.connect(self.OnAlignImgs)
+        self.button_align.clicked.connect(self.OnAlignImgsDialog)
         self.button_align.setEnabled(False)
         vbox1.addWidget(self.button_align)
 
-        self.button_align2 = QtWidgets.QPushButton('Align stack v2...')
-        self.button_align2.clicked.connect( self.OnAlignImgs2)
-        self.button_align2.setEnabled(False)
-        vbox1.addWidget(self.button_align2)
+        # self.button_align2 = QtWidgets.QPushButton('Align stack v2...')
+        # self.button_align2.clicked.connect( self.OnAlignImgs2)
+        # self.button_align2.setEnabled(False)
+        # vbox1.addWidget(self.button_align2)
 
         self.button_limitev = QtWidgets.QPushButton('Limit energy range...')
         self.button_limitev.clicked.connect( self.OnLimitEv)
@@ -9602,6 +9602,12 @@ class PageStack(QtWidgets.QWidget):
 
         return
 
+# ----------------------------------------------------------------------
+    def OnAlignImgsDialog(self, event):
+
+        # self.window().Hide()
+        imgregwin = ImageRegistrationDialog(self.window(),self.com)
+        imgregwin.show()
 #----------------------------------------------------------------------
     def OnAlignImgs(self, event):
 
@@ -11320,7 +11326,20 @@ class CliptoSubregion(QtWidgets.QDialog):
 
         self.close()
 
+class ImageRegistrationDialog(QtWidgets.QDialog):
 
+    def __init__(self, parent, common):
+        QtWidgets.QWidget.__init__(self, parent)
+        uic.loadUi(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dialogalign.ui'), self)
+        self.parent = parent
+        self.com = common
+        if self.com.stack_4d == 1:
+            self.parent.page1.OnAlignImgs
+            self.done
+        self.bt_align.clicked.connect(self.parent.page1.OnAlignImgs)
+        self.bt_align2.clicked.connect(self.parent.page1.OnAlignImgs2)
+        self.bt_align.clicked.connect(self.done)
+        self.bt_align2.clicked.connect(self.done)
 #----------------------------------------------------------------------
 class ImageRegistration(QtWidgets.QDialog):
 
@@ -13019,9 +13038,11 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.stack = stack
         self.com = common
         self.iev = 0
+        self.stack.absdata_shifted_cropped = self.stack.absdata_shifted.copy()
 
         self.poolthread = QtCore.QThread()
         self.aligned = False
+        self.button_ok.setEnabled(False)
 
         self.setWindowTitle('Align Stack v2')
         self.pglayout = pg.GraphicsLayout(border=None)
@@ -13135,13 +13156,15 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
             self.shifts = self.stack.shifts.copy()
             self.xscatter.sigClicked.connect(self.OnPointClicked)
             self.yscatter.sigClicked.connect(self.OnPointClicked)
+            self.cb_autocrop.toggled.connect(self.OnAutoCrop)
 
     def OnPointClicked(self, obj, points): # Manually add/remove points to/from fit if in selected region
-        self.OnScrollEng(points[0].index())
         self.maskedvals[points[0].index()] = not self.maskedvals[points[0].index()]
         if self.aligned:
             self.UpdateScatterPlots(self.xregion, id="x")
             self.UpdateScatterPlots(self.yregion, id="y")
+        self.CropStack()
+        self.OnScrollEng(points[0].index())
     def OnAligned(self):
         self.aligned = True
         self.button_align.setEnabled(True)
@@ -13170,7 +13193,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
             if self.cb_autoerror.isChecked():
                 self.spinBoxError.setEnabled(True)
                 self.maskedvals = (self.drifterrorlst <= self.drifterrormean) # create boolean mask of badly correlated images
-                # avoid OnMaskScatterSpots getting called too many times.
+                # avoid calling OnMaskScatterSpots too many times.
                 self.spinBoxError.blockSignals(True)
                 self.spinBoxFiltersize.blockSignals(True)
                 self.cb_extrapolate.blockSignals(True)
@@ -13222,20 +13245,21 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         interpolate_func = interp1d(selection[0], approximated,kind="linear",fill_value=fillval,bounds_error=False)
         fitdata = [self.stack.ev,np.around(interpolate_func(self.stack.ev),1)] # round fit to a tenth of a px
         fit.setData(x=fitdata[0], y=fitdata[1])
+        fit.show()
         if id=="x":
             self.x_shiftstemp = fitdata[1]
         elif id == "y":
             self.y_shiftstemp = fitdata[1]
         return True
     def OnFitDone(self,xshifts, yshifts):
-        #print("OnFitDone")
+        # ToDo: Find leak that accumulates function calls. Maybe thread is not properly destroyed?
         self.resetPoolThread()
         for i in range(self.stack.n_ev):
             if self.stack.shifts[i][2] != (xshifts[i],yshifts[i]):
                 self.stack.shifts[i].pop(2)  # remove tuple
                 self.stack.shifts[i].insert(2, (xshifts[i], yshifts[i]))
                 self.pool.enqueuetask("ShiftImg", i, xshifts[i], yshifts[i])
-        self.pool.finished.connect(lambda: self.OnScrollEng(self.iev))
+        self.pool.finished.connect(self.OnAutoCrop)
         if not self.pool.queue.empty():
             self.poolthread.start()
 
@@ -13301,6 +13325,39 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         idxtuplelst = [(i+1,i) for i in range(self.stack.n_ev-1)]
         return idxtuplelst
     # ----------------------------------------------------------------------
+    def OnAutoCrop(self):
+        if self.aligned:
+            self.button_ok.setEnabled(True)
+            self.cb_autocrop.blockSignals(True)
+            self.CropStack()
+            self.cb_autocrop.blockSignals(False)
+            self.OnScrollEng(self.iev)
+
+    def CropStack(self):
+        self.stack.absdata_shifted_cropped = self.stack.absdata_shifted.copy()
+        if self.cb_autocrop.isChecked():
+            self.box.hide()
+            l = -int(np.floor(min(self.x_shiftstemp)))
+            r = -int(np.ceil(max(self.x_shiftstemp)))
+            cr = r if r < 0 else None
+            if l < 0:
+                l = 0
+                cr = cr - l
+            t = -int(np.ceil(max(self.y_shiftstemp)))
+            ct = t if t < 0 else None
+            b = -int(np.floor(min(self.y_shiftstemp)))
+            if b < 0:
+                b = 0
+                ct = ct - b
+            print(self.stack.absdata[:,:,0].shape, r,l,t,b)
+            if self.stack.absdata[:,:,0].shape < (abs(l-r), abs(b-t)):
+                QtWidgets.QMessageBox.warning(self, 'Error', 'The alignment failed. Cropping would result in a zero-dimensional image. Please check your settings. Auto-crop has been disabled. You can re-enable it manually.')
+                self.cb_autocrop.setChecked(False)
+            else:
+                self.stack.absdata_shifted_cropped = self.stack.absdata_shifted_cropped[l:cr,b:ct,:]
+        else:
+            self.box.show()
+
     def OnScrollEng(self, value):
         self.slider_eng.setValue(value)
         self.iev = value
@@ -13308,7 +13365,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.refmarkerx.setValue(self.stack.ev[self.iev])
         self.refmarkery.setValue(self.stack.ev[self.iev])
     def ShowImage(self):
-        self.i_item.setImage(self.stack.absdata_shifted[:, :, int(self.iev)])
+        self.i_item.setImage(self.stack.absdata_shifted_cropped[:, :, int(self.iev)])
         self.groupBox.setTitle(str('Stack Browser | Image at {0:5.2f} eV').format(float(self.stack.ev[self.iev])))
 
     ## Setup a ROI for an alignment rectangle. By default the whole image area is used.
@@ -13324,8 +13381,26 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.button_rstroi.clicked.connect(self.OnResetROI)
     ## The ROI is limited to the visible image area. OnMouseMoveOutside handles the behavior when
     def OnResetROI(self):
-        self.box.setPos(0,0, update=False, finish=False)
-        self.box.setSize(self.i_item.boundingRect().bottomRight()-self.box.pos(), update=True, snap=True, finish=True)
+        self.aligned = False
+        self.xpts = []
+        self.ypts = []
+        self.stack.shifts =[]
+        self.fit_x.hide()
+        self.fit_y.hide()
+        for i in self.stack.ev:
+            self.stack.shifts.append([1,0,(0.0,0.0)])
+            self.xpts.append({'pos': (1 * i, 0), 'size': 10,  # 'pen': {'color': 'w', 'width': 2},
+                              'brush': QtGui.QColor('blue')})
+            self.ypts.append({'pos': (1 * i, 0), 'size': 10,  # 'pen': {'color': 'w', 'width': 2},
+                              'brush': QtGui.QColor('blue')})
+        self.xscatter.setData(self.xpts)
+        self.yscatter.setData(self.ypts)
+        self.stack.absdata_shifted_cropped = self.stack.absdata.copy()
+        self.OnScrollEng(self.iev)
+
+        self.box.setPos(0, 0, update=False, finish=False)
+        self.box.setSize(self.i_item.boundingRect().bottomRight() - self.box.pos(), update=True, snap=True, finish=True)
+        self.box.show()
     def OnRegionChange(self):
         self.boxsize = self.box.size()
         self.proxy = pg.SignalProxy(self.vb.scene().sigMouseMoved, rateLimit=30, slot=self.OnMouseMoveOutside)
@@ -13396,7 +13471,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
                         self.box.setSize([mousepos.x()-self.box.pos().x(),self.i_item.boundingRect().bottom()-self.box.pos().y()], update=True, snap=True, finish=False)
     # ----------------------------------------------------------------------
     def OnCancel(self, evt):
-        self.stack.absdata_shifted = self.stack.absdata
+        self.stack.absdata_shifted_cropped = self.stack.absdata
         self.parent.page1.loadImage()
 
         if showmaptab:
@@ -13407,10 +13482,18 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
     # ----------------------------------------------------------------------
     def OnAccept(self, evt):
         if self.com.stack_4d == 0:
-            self.stack.absdata = self.stack.absdata_shifted
+            self.stack.absdata = self.stack.absdata_shifted_cropped
             self.stack.data_struct.exchange.data = self.stack.absdata
         else:
             QtWidgets.QMessageBox.warning(self, 'Error', '4D stack not yet supported.')
+
+        datadim = np.int32(self.stack.absdata.shape)
+
+        self.stack.n_cols = datadim[0].copy()
+        self.stack.n_rows =  datadim[1].copy()
+
+        self.stack.xshifts = self.x_shiftstemp
+        self.stack.yshifts = self.y_shiftstemp
 
         self.stack.data_struct.exchange.energy = self.stack.ev
         self.stack.data_struct.spectromicroscopy.xshifts = self.x_shiftstemp
@@ -16186,7 +16269,6 @@ class MainFrame(QtWidgets.QMainWindow):
             self.page1.button_save.setEnabled(False)
             self.page1.button_savestack.setEnabled(False)
             self.page1.button_align.setEnabled(False)
-            self.page1.button_align2.setEnabled(False)
             self.page1.button_slideshow.setEnabled(False)
             self.page1.button_addROI.setEnabled(False)
             self.page1.button_spectralROI.setEnabled(False)
@@ -16212,7 +16294,6 @@ class MainFrame(QtWidgets.QMainWindow):
             self.page1.button_save.setEnabled(True)
             self.page1.button_savestack.setEnabled(True)
             self.page1.button_align.setEnabled(True)
-            self.page1.button_align2.setEnabled(True)
             self.page1.button_slideshow.setEnabled(True)
             self.page1.button_addROI.setEnabled(True)
             self.page1.button_spectralROI.setEnabled(True)
