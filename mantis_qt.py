@@ -10899,7 +10899,7 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.stack = stack
         self.com = common
         self.iev = 0
-        self.stack.absdata_shifted_cropped = self.stack.absdata_shifted.copy()
+        #self.stack.absdata_shifted_cropped = self.stack.absdata_shifted.copy()
 
         self.poolthread = QtCore.QThread()
         self.aligned = False
@@ -10915,8 +10915,6 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
 
         self.vb.setMouseEnabled(x=False, y=False)
         self.vb.addItem(self.i_item, ignoreBounds=False)
-
-        self.spectrum_plotwidget.setBackground("w")
 
         # self.py = self.spectrum_plotwidget.addPlot(row=0, col=0, rowspan=1, colspan=1)
         # self.py.setMouseEnabled(x=False, y=True)
@@ -10984,9 +10982,6 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
             self.slider_eng.sliderReleased.connect(self.ShowImage)
             self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
             self.slider_eng.setRange(0, self.stack.n_ev - 1)
-            self.refmarker = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen(color="b", width=2, style=QtCore.Qt.DashLine))
-            # self.refmarkery = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen(color="b", width=2, style=QtCore.Qt.DashLine))
-            #self.px.addItem(self.refmarker, ignoreBounds=True)
             # self.py.addItem(self.refmarkery, ignoreBounds=True)
             #
             # self.fit_x = pg.PlotCurveItem(pen=pg.mkPen(color="c", width=2))
@@ -10995,9 +10990,12 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
             # self.fit_y.setZValue(200)
             # self.px.addItem(self.fit_x, ignoreBounds=True)
             # self.py.addItem(self.fit_y, ignoreBounds=True)
-
+            self.SetupListEV()
+            self.SetupPlot()
             self.OnScrollEng(0)
             self.SetupROI()
+
+
             # self.button_align.clicked.connect(self.OnAlign)
             # self.xregion = pg.LinearRegionItem(brush=[255, 0, 0, 45], bounds=[self.stack.ev[0], self.stack.ev[-1]])
             # self.yregion = pg.LinearRegionItem(brush=[255, 0, 0, 45], bounds=[self.stack.ev[0], self.stack.ev[-1]])
@@ -11027,7 +11025,88 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
             # self.xscatter.sigClicked.connect(self.OnPointClicked)
             # self.yscatter.sigClicked.connect(self.OnPointClicked)
             # self.cb_autocrop.toggled.connect(self.OnAutoCrop)
+    def SetupPlot(self):
+        if self.com.i0_loaded == 1:
+            odtotal = self.stack.od3d.sum(axis=0)
+        else:
+            odtotal = self.stack.absdata.sum(axis=0)
 
+        odtotal = odtotal.sum(axis=0)/(self.stack.n_rows*self.stack.n_cols)
+        x = self.stack.ev
+        y = odtotal
+        self.spectrum_plotwidget.setBackground("w")
+
+        self.region = pg.LinearRegionItem(brush=[255,0,0,45],bounds=[np.min(x),np.max(x)])
+
+        self.region.setZValue(10)
+        plot = self.spectrum_plotwidget
+        plot.setBackground("w")
+        plot.addItem(self.region, ignoreBounds=False)
+        plot.setMouseEnabled(x=False, y=False)
+        plot.showGrid(y=True)
+
+        plot.showAxis("top", show=True)
+        plot.showAxis("right", show=True)
+        by = plot.getAxis("right")
+        bx = plot.getAxis("top")
+        by.setStyle(showValues=False,tickLength=0)
+        bx.setStyle(showValues=False,tickLength=0)
+        ay = plot.getAxis("left")
+        ax = plot.getAxis("bottom")
+
+        ax.setLabel(text="Photon energy [eV]")
+        ## Little hack to display vertical axis as log.
+        #plot.getViewBox().setLimits(yMin=0,yMax=np.max(y))
+        ay.setLabel(text="Flux")
+        #y[y < 1] = 1
+        #y = np.log10(y)
+        plot.setLogMode(x=False, y=False) ## Log mode is not working correctly at the moment.
+        ##
+        self.plotitem = plot.plot(x, y, pen=pg.mkPen(color=0.8, width=2))
+        self.plotitem_new = plot.plot(x, y, pen=pg.mkPen(color="b", width=1))
+        self.refmarker = pg.InfiniteLine(angle=90, movable=False,
+                                         pen=pg.mkPen(color="b", width=2, style=QtCore.Qt.DashLine))
+        # self.refmarkery = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen(color="b", width=2, style=QtCore.Qt.DashLine))
+        plot.addItem(self.refmarker, ignoreBounds=True)
+        #def update(region):
+            #self.region.setZValue(10)
+            #minX, maxX = region
+            #self.draw_image(minX, maxX)
+            #self.SetupROI()
+            #self.MaskImage.setZValue(10)
+
+        self.region.setRegion((min(x),max(x)))
+        self.region.sigRegionChangeFinished.connect(lambda region: self.UpdateRegion(region))
+        #self.region.sigRegionChanged.connect(lambda: update(self.region.getRegion()))
+    def UpdateRegion(self, region):
+        min, max = region.getRegion()
+        min_idx = np.argmin(np.abs(np.array(self.stack.ev) - min))
+        max_idx = np.argmin(np.abs(np.array(self.stack.ev) - max))
+        if min_idx == max_idx:
+            min_idx = 0
+            max_idx = self.stack.n_ev -1
+        region.blockSignals(True)
+        region.setRegion([self.stack.ev[min_idx], self.stack.ev[max_idx]])  # snap region to data points
+        region.blockSignals(False)
+        y_vals = self.plotitem.yData[min_idx:max_idx + 1]
+        x_vals = self.plotitem.xData[min_idx:max_idx + 1]
+        self.spectrum_plotwidget.setRange(yRange=[np.min(y_vals), np.max(y_vals)], xRange=[np.min(x_vals), np.max(x_vals)], disableAutoRange=True, padding=0.1)
+        #self.plotitem.setRange(yRange=[np.min(y_vals), np.max(y_vals)], disableAutoRange=True, padding=0.1)
+        # for i in range(len(self.xpts)):
+        #     self.xpts[i]['brush'] = QtGui.QColor('red')
+        # for i in range(min_idx, max_idx + 1):
+        #     if self.maskedvals[i]:  # highlight badly correlated or masked data
+        #         self.xpts[i]['brush'] = QtGui.QColor('blue')
+        # self.xscatter.setData(self.xpts)
+    def SetupListEV(self):
+        for i,e in enumerate(self.stack.ev): # Fill QList with energies
+            #self.stk.shifts.append([1,0,(0.0,0.0)]) #checked [0,1]; pre, post, undefined state for map [-1,1,0],(xshift [float],yshift [float])
+            item = QtGui.QListWidgetItem(str(int(i)).zfill(3)+"     at     " + format(e, '.2f') + " eV")
+            self.ev_widget.addItem(item)
+            self.ev_widget.item(i).setBackground(QtGui.QColor('#beaed4'))
+            self.ev_widget.item(i).setForeground(QtGui.QColor(0, 0, 0, 128))
+    def OnEVSlectionChanged(self):
+        self.OnScrollEng(self.ev_widget.currentRow())
     def OnAutoCrop(self):
         if self.aligned:
             self.button_ok.setEnabled(True)
@@ -11063,9 +11142,13 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
 
     def OnScrollEng(self, value):
         self.slider_eng.setValue(value)
+        self.ResetAllItems(self.ev_widget)
         self.iev = value
         self.ShowImage()
         self.refmarker.setValue(self.stack.ev[self.iev])
+        self.ev_widget.setCurrentRow(self.iev)
+        if self.com.stack_loaded == 1:
+            self.ev_widget.item(value).setForeground(QtGui.QColor(0, 0, 0, 255))
         # self.refmarkery.setValue(self.stack.ev[self.iev])
     def ShowImage(self):
         self.i_item.setImage(self.stack.absdata[:, :, int(self.iev)])
@@ -11100,6 +11183,9 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
         bottom = int(self.box.pos().y())
         top = bottom + int(self.box.size().y())
         # self.stack.absdata_cropped = self.stack.absdata[left:right, bottom:top, :].copy()
+    def ResetAllItems(self,widget):
+        for i in range(widget.count()):
+            widget.item(i).setForeground(QtGui.QColor(0, 0, 0, 128))
 
     def OnMouseMoveOutside(self, ev):
         mousepos = self.vb.mapSceneToView(ev[0])

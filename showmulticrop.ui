@@ -325,7 +325,7 @@
            </font>
           </property>
           <property name="title">
-           <string>Image #   Energy [eV]</string>
+           <string>Image #      Energy [eV]</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
@@ -467,7 +467,7 @@
               <enum>QAbstractItemView::NoSelection</enum>
              </property>
              <property name="selectionBehavior">
-              <enum>QAbstractItemView::SelectItems</enum>
+              <enum>QAbstractItemView::SelectRows</enum>
              </property>
              <property name="movement">
               <enum>QListView::Static</enum>
