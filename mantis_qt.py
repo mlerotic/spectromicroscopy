@@ -8884,15 +8884,21 @@ class PageStack(QtWidgets.QWidget):
         # self.button_align2.setEnabled(False)
         # vbox1.addWidget(self.button_align2)
 
-        self.button_limitev = QtWidgets.QPushButton('Limit energy range...')
-        self.button_limitev.clicked.connect( self.OnLimitEv)
-        self.button_limitev.setEnabled(False)
-        vbox1.addWidget(self.button_limitev)
+        self.button_multicrop = QtWidgets.QPushButton('Crop stack 3D/4D...')
+        self.button_multicrop.clicked.connect( self.OnMultiCrop)
+        self.button_multicrop.setEnabled(False)
+        vbox1.addWidget(self.button_multicrop)
 
-        self.button_subregion = QtWidgets.QPushButton('Clip to subregion...')
-        self.button_subregion.clicked.connect(self.OnCliptoSubregion)
-        self.button_subregion.setEnabled(False)
-        vbox1.addWidget(self.button_subregion)
+
+        # self.button_limitev = QtWidgets.QPushButton('Limit energy range...')
+        # self.button_limitev.clicked.connect( self.OnLimitEv)
+        # self.button_limitev.setEnabled(False)
+        # vbox1.addWidget(self.button_limitev)
+
+        # self.button_subregion = QtWidgets.QPushButton('Clip to subregion...')
+        # self.button_subregion.clicked.connect(self.OnCliptoSubregion)
+        # self.button_subregion.setEnabled(False)
+        # vbox1.addWidget(self.button_subregion)
 
         self.button_artefacts = QtWidgets.QPushButton('Artefacts && Leveling')
         self.button_artefacts.clicked.connect( self.OnArtefacts)
@@ -9435,6 +9441,10 @@ class PageStack(QtWidgets.QWidget):
         savewin = SaveWinP1(self.window())
         savewin.show()
 
+# ----------------------------------------------------------------------
+    def OnMultiCrop(self, evt):
+        multicropwin = MultiCrop(self.window(), self.com, self.stk)
+        multicropwin.show()
 #----------------------------------------------------------------------
     def OnLimitEv(self, evt):
 
@@ -10878,6 +10888,276 @@ class ShowArtefacts(QtWidgets.QDialog):
         if showmaptab:
             self.parent.page9.Clear()
             self.parent.page9.LoadEntries()
+
+        self.close()
+#----------------------------------------------------------------------
+class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
+    def __init__(self, parent, common, stack):
+        QtWidgets.QWidget.__init__(self, parent)
+        uic.loadUi(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'showmulticrop.ui'), self)
+        self.parent = parent
+        self.stack = stack
+        self.com = common
+        self.iev = 0
+        self.stack.absdata_shifted_cropped = self.stack.absdata_shifted.copy()
+
+        self.poolthread = QtCore.QThread()
+        self.aligned = False
+        self.button_ok.setEnabled(False)
+
+        self.setWindowTitle('Stack Cropping')
+        self.pglayout = pg.GraphicsLayout(border=None)
+        self.canvas.setBackground("w") # canvas is a pg.GraphicsView widget
+        self.canvas.setCentralWidget(self.pglayout)
+        self.vb = self.pglayout.addViewBox()
+        self.vb.setAspectLocked()
+        self.i_item = pg.ImageItem(border="k",parent= self)
+
+        self.vb.setMouseEnabled(x=False, y=False)
+        self.vb.addItem(self.i_item, ignoreBounds=False)
+
+        self.spectrum_plotwidget.setBackground("w")
+
+        # self.py = self.spectrum_plotwidget.addPlot(row=0, col=0, rowspan=1, colspan=1)
+        # self.py.setMouseEnabled(x=False, y=True)
+        # #self.i_item = pg.ImageItem(border="k")
+        # #self.py.setAspectLocked(lock=True, ratio=1)
+        # self.py.showAxis("top", show=True)
+        # self.py.showAxis("bottom", show=True)
+        # self.py.showAxis("left", show=True)
+        # self.py.showAxis("right", show=True)
+        # ay1 = self.py.getAxis("left")
+        # by1 = self.py.getAxis("right")
+        # ax1 = self.py.getAxis("bottom")
+        # bx1 = self.py.getAxis("top")
+        # ay1.setLabel(text="y-drift", units="px")
+        # ay1.enableAutoSIPrefix(enable=True)
+        # ay1.setWidth(w=60)
+        # ax1.setLabel(text="Photon Energy",units="eV")
+        # ax1.enableAutoSIPrefix(enable=True)
+        # ay1.setStyle(tickLength=8)
+        # ax1.setStyle(tickLength=0)
+        # #ax1.setHeight(h=46.2)
+        # ax1.setStyle(tickLength=8)
+        # by1.setStyle(showValues=False, tickLength=0)
+        # bx1.setStyle(showValues=False, tickLength=0)
+        #
+        # self.px = self.DriftsWidget.addPlot(row=1, col=0, rowspan=1, colspan=1)
+        # self.px.setXLink(self.py)
+        # self.px.setMouseEnabled(x=False, y=True)
+        # #self.i_item = pg.ImageItem(border="k")
+        # #self.px.setAspectLocked(lock=True, ratio=1)
+        # self.px.showAxis("top", show=True)
+        # self.px.showAxis("bottom", show=True)
+        # self.px.showAxis("left", show=True)
+        # self.px.showAxis("right", show=True)
+        # ay2 = self.px.getAxis("left")
+        # by2 = self.px.getAxis("right")
+        # ax2 = self.px.getAxis("bottom")
+        # bx2 = self.px.getAxis("top")
+        # ay2.setLabel(text="x-drift",units="px")
+        # ay2.enableAutoSIPrefix(enable=True)
+        # ay2.setWidth(w=60)
+        # ax2.setLabel(text="Photon Energy",units="eV")
+        # ax2.enableAutoSIPrefix(enable=True)
+        # ay2.setStyle(tickLength=8)
+        # ax2.setStyle(tickLength=8)
+        # by2.setStyle(showValues=False,tickLength=0)
+        # bx2.setStyle(showValues=False,tickLength=0)
+
+        self.button_ok.clicked.connect(self.OnAccept)
+        self.button_cancel.clicked.connect(self.OnCancel)
+
+        if self.com.stack_loaded == 1:
+            self.label_theta_range.setVisible(False)
+            self.slider_theta.setVisible(False)
+            self.cb_remove_theta.setVisible(False)
+            self.groupBox_theta.setVisible(False)
+            if self.com.stack_4d == 1:
+                self.label_theta_range.setVisible(True)
+                self.slider_theta.setVisible(True)
+                self.cb_remove_theta.setVisible(True)
+                self.groupBox_theta.setVisible(True)
+            # self.maskedvals = [True] * int(self.stack.n_ev)
+            # self.spinBoxError.setEnabled(False)
+            self.slider_eng.sliderPressed.connect(self.ShowImage)
+            self.slider_eng.sliderReleased.connect(self.ShowImage)
+            self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
+            self.slider_eng.setRange(0, self.stack.n_ev - 1)
+            self.refmarker = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen(color="b", width=2, style=QtCore.Qt.DashLine))
+            # self.refmarkery = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen(color="b", width=2, style=QtCore.Qt.DashLine))
+            #self.px.addItem(self.refmarker, ignoreBounds=True)
+            # self.py.addItem(self.refmarkery, ignoreBounds=True)
+            #
+            # self.fit_x = pg.PlotCurveItem(pen=pg.mkPen(color="c", width=2))
+            # self.fit_y = pg.PlotCurveItem(pen=pg.mkPen(color="c", width=2))
+            # self.fit_x.setZValue(200)
+            # self.fit_y.setZValue(200)
+            # self.px.addItem(self.fit_x, ignoreBounds=True)
+            # self.py.addItem(self.fit_y, ignoreBounds=True)
+
+            self.OnScrollEng(0)
+            self.SetupROI()
+            # self.button_align.clicked.connect(self.OnAlign)
+            # self.xregion = pg.LinearRegionItem(brush=[255, 0, 0, 45], bounds=[self.stack.ev[0], self.stack.ev[-1]])
+            # self.yregion = pg.LinearRegionItem(brush=[255, 0, 0, 45], bounds=[self.stack.ev[0], self.stack.ev[-1]])
+            # self.xregion.setRegion([self.stack.ev[0], self.stack.ev[-1]])
+            # self.yregion.setRegion([self.stack.ev[0], self.stack.ev[-1]])
+            # self.yregion.setZValue(100)
+            # self.xregion.setZValue(100)
+            # self.px.addItem(self.xregion, ignoreBounds=False)
+            # self.py.addItem(self.yregion, ignoreBounds=False)
+            # self.xregion.sigRegionChangeFinished.connect(lambda region: self.OnLinRegion(region, id="x"))
+            # self.yregion.sigRegionChangeFinished.connect(lambda region: self.OnLinRegion(region, id="y"))
+
+            # self.xscatter = pg.ScatterPlotItem(pxMode=False)  ## Set pxMode=False to allow spots to transform with the view
+            # self.yscatter = pg.ScatterPlotItem(pxMode=False)  ## Set pxMode=False to allow spots to transform with the view
+            # self.xpts = []
+            # self.ypts = []
+            # for i in self.stack.ev:
+            #     self.xpts.append({'pos': (1 * i, 0), 'size': 10,  # 'pen': {'color': 'w', 'width': 2},
+            #                  'brush': QtGui.QColor('blue')})
+            #     self.ypts.append({'pos': (1 * i, 0), 'size': 10,  # 'pen': {'color': 'w', 'width': 2},
+            #                  'brush': QtGui.QColor('blue')})
+            # self.xscatter.addPoints(spots=self.xpts, pxMode=True)
+            # self.yscatter.addPoints(spots=self.ypts, pxMode=True)
+            # self.px.addItem(self.xscatter)
+            # self.py.addItem(self.yscatter)
+            # self.shifts = self.stack.shifts.copy()
+            # self.xscatter.sigClicked.connect(self.OnPointClicked)
+            # self.yscatter.sigClicked.connect(self.OnPointClicked)
+            # self.cb_autocrop.toggled.connect(self.OnAutoCrop)
+
+    def OnAutoCrop(self):
+        if self.aligned:
+            self.button_ok.setEnabled(True)
+            self.cb_autocrop.blockSignals(True)
+            self.CropStack()
+            self.cb_autocrop.blockSignals(False)
+            self.OnScrollEng(self.iev)
+
+    def CropStack(self):
+        self.stack.absdata_shifted_cropped = self.stack.absdata_shifted.copy()
+        if self.cb_autocrop.isChecked():
+            self.box.hide()
+            l = -int(np.floor(min(self.x_shiftstemp)))
+            r = -int(np.ceil(max(self.x_shiftstemp)))
+            cr = r if r < 0 else None
+            if l < 0:
+                l = 0
+                cr = cr - l
+            t = -int(np.ceil(max(self.y_shiftstemp)))
+            ct = t if t < 0 else None
+            b = -int(np.floor(min(self.y_shiftstemp)))
+            if b < 0:
+                b = 0
+                ct = ct - b
+            print(self.stack.absdata[:,:,0].shape, r,l,t,b)
+            if self.stack.absdata[:,:,0].shape < (abs(l-r), abs(b-t)):
+                QtWidgets.QMessageBox.warning(self, 'Error', 'The alignment failed. Cropping would result in a zero-dimensional image. Please check your settings. Auto-crop has been disabled. You can re-enable it manually.')
+                self.cb_autocrop.setChecked(False)
+            else:
+                self.stack.absdata_shifted_cropped = self.stack.absdata_shifted_cropped[l:cr,b:ct,:]
+        else:
+            self.box.show()
+
+    def OnScrollEng(self, value):
+        self.slider_eng.setValue(value)
+        self.iev = value
+        self.ShowImage()
+        self.refmarker.setValue(self.stack.ev[self.iev])
+        # self.refmarkery.setValue(self.stack.ev[self.iev])
+    def ShowImage(self):
+        self.i_item.setImage(self.stack.absdata[:, :, int(self.iev)])
+        self.groupBox.setTitle(str('Stack Browser | Image at {0:5.2f} eV').format(float(self.stack.ev[self.iev])))
+
+    ## Setup a ROI for an alignment rectangle. By default the whole image area is used.
+    def SetupROI(self):
+        self.stack.absdata = self.stack.absdata.copy()
+        self.box = pg.RectROI(self.i_item.boundingRect().topLeft(), self.i_item.boundingRect().bottomRight(),
+                              pen=(5, 8), handlePen=QtGui.QPen(QtGui.QColor(255, 0, 128, 255)), centered=False,
+                              sideScalers=False, removable=False, scaleSnap=True, translateSnap=True,
+                              maxBounds=self.i_item.boundingRect())
+        self.vb.addItem(self.box, ignoreBounds=False)
+        self.box.sigRegionChangeFinished.connect(self.OnRegionChanged)
+        self.box.sigRegionChangeStarted.connect(self.OnRegionChange)
+        self.button_rstroi.clicked.connect(self.OnResetROI)
+    ## The ROI is limited to the visible image area. OnMouseMoveOutside handles the behavior when
+    def OnResetROI(self):
+        self.box.setPos(0, 0, update=False, finish=False)
+        self.box.setSize(self.i_item.boundingRect().bottomRight() - self.box.pos(), update=True, snap=True, finish=True)
+        self.box.show()
+    def OnRegionChange(self):
+        self.boxsize = self.box.size()
+        self.proxy = pg.SignalProxy(self.vb.scene().sigMouseMoved, rateLimit=30, slot=self.OnMouseMoveOutside)
+    def OnRegionChanged(self):
+        try:
+            self.proxy.disconnect()
+        except AttributeError:
+            pass
+        left = int(self.box.pos().x())
+        right = left + int(self.box.size().x())
+        bottom = int(self.box.pos().y())
+        top = bottom + int(self.box.size().y())
+        # self.stack.absdata_cropped = self.stack.absdata[left:right, bottom:top, :].copy()
+
+    def OnMouseMoveOutside(self, ev):
+        mousepos = self.vb.mapSceneToView(ev[0])
+        if not self.vb.itemBoundingRect(self.i_item).contains(mousepos):
+            maxrect = self.i_item.boundingRect().bottomRight()
+            # if bounds exceeded
+            out_x = max((mousepos-maxrect).x(),0)
+            out_y = max((mousepos-maxrect).y(), 0)
+            if self.box.size() != self.boxsize: # prevents taking action when the box is just dragged and not resized
+                if out_x and out_y:
+                    self.box.setSize(self.i_item.boundingRect().bottomRight()-self.box.pos(), update=True, snap=True, finish=False)
+                elif out_x:
+                    self.box.setSize([self.i_item.boundingRect().right()-self.box.pos().x(),mousepos.y()-self.box.pos().y()], update=True, snap=True, finish=False)
+                elif out_y:
+                    self.box.setSize([mousepos.x()-self.box.pos().x(),self.i_item.boundingRect().bottom()-self.box.pos().y()], update=True, snap=True, finish=False)
+    # ----------------------------------------------------------------------
+    def OnCancel(self, evt):
+        #self.stack.absdata_shifted_cropped = self.stack.absdata
+        #self.parent.page1.loadImage()
+
+        # if showmaptab:
+        #     self.parent.page9.Clear()
+        #     self.parent.page9.LoadEntries()
+
+        self.close()
+    # ----------------------------------------------------------------------
+    def OnAccept(self, evt):
+        if self.com.stack_4d == 0:
+            self.stack.absdata = self.stack.absdata_shifted_cropped
+            #self.stack.data_struct.exchange.data = self.stack.absdata
+        else:
+            QtWidgets.QMessageBox.warning(self, 'Error', '4D stack not yet supported.')
+
+        # datadim = np.int32(self.stack.absdata.shape)
+        #
+        # self.stack.n_cols = datadim[0].copy()
+        # self.stack.n_rows =  datadim[1].copy()
+        #
+        # self.stack.xshifts = self.x_shiftstemp
+        # self.stack.yshifts = self.y_shiftstemp
+        #
+        # self.stack.data_struct.exchange.energy = self.stack.ev
+        # self.stack.data_struct.spectromicroscopy.xshifts = self.x_shiftstemp
+        # self.stack.data_struct.spectromicroscopy.yshifts = self.y_shiftstemp
+        #
+        # self.parent.page1.slider_eng.setRange(0,self.stack.n_ev-1)
+        # self.parent.page1.iev = int(self.stack.n_ev/2)
+        # self.parent.page1.slider_eng.setValue(self.parent.page1.iev)
+        #
+        # self.parent.page1.ix = int(self.stack.n_cols/2)
+        # self.parent.page1.iy = int(self.stack.n_rows/2)
+        #
+        # self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
+        # self.parent.page1.loadImage()
+        #
+        # if showmaptab:
+        #     self.parent.page9.Clear()
+        #     self.parent.page9.LoadEntries()
 
         self.close()
 
@@ -13163,8 +13443,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
     def OnPointClicked(self, obj, points): # Manually add/remove points to/from fit if in selected region
         self.maskedvals[points[0].index()] = not self.maskedvals[points[0].index()]
         if self.aligned:
-            self.UpdateScatterPlots(self.xregion, id="x")
-            self.UpdateScatterPlots(self.yregion, id="y")
+            self.OnPostFiltering()
         self.CropStack()
         self.OnScrollEng(points[0].index())
     def OnAligned(self):
@@ -15992,6 +16271,7 @@ class MainFrame(QtWidgets.QMainWindow):
 
             self.page1.ResetDisplaySettings()
             self.page1.loadImage()
+            self.page1.button_multicrop.setText('Crop stack 3D...')
             #print (x,y), (self.ix,self.iy), self.stk.absdata.shape
             self.page1.loadSpectrum(self.ix, self.iy)
             self.page1.textctrl.setText(self.page1.filename)
@@ -16130,8 +16410,8 @@ class MainFrame(QtWidgets.QMainWindow):
             self.page1.slider_theta.setRange(0,self.stk.n_theta-1)
             self.page1.itheta = self.itheta
             self.page1.slider_theta.setValue(self.itheta)
+            self.page1.button_multicrop.setText('Crop stack 4D...')
             self.page1.tc_imagetheta.setText("4D Data Angle: "+str(self.stk.theta[self.itheta]))
-
 
             self.page2.button_calcpca4D.setVisible(True)
             self.page4.button_calc4d.setVisible(True)
@@ -16161,7 +16441,7 @@ class MainFrame(QtWidgets.QMainWindow):
             self.common.stack_loaded = 0
             self.common.i0_loaded = 0
             self.new_stack_refresh()
-
+            self.page1.button_multicrop.setText('Crop stack 3D/4D...')
             QtWidgets.QApplication.restoreOverrideCursor()
             QtGui.QMessageBox.warning(self, 'Error', 'Image stack not loaded.')
 
@@ -16265,8 +16545,9 @@ class MainFrame(QtWidgets.QMainWindow):
             self.page1.button_artefacts.setEnabled(False)
             self.page1.button_prenorm.setEnabled(False)
             self.page1.button_refimgs.setEnabled(False)
-            self.page1.button_limitev.setEnabled(False)
-            self.page1.button_subregion.setEnabled(False)
+            self.page1.button_multicrop.setEnabled(False)
+            #self.page1.button_limitev.setEnabled(False)
+            #self.page1.button_subregion.setEnabled(False)
             self.page1.button_darksig.setEnabled(False)
             self.page1.button_save.setEnabled(False)
             self.page1.button_savestack.setEnabled(False)
@@ -16284,14 +16565,15 @@ class MainFrame(QtWidgets.QMainWindow):
             self.page1.button_i0histogram.setEnabled(True)
             self.page1.button_artefacts.setEnabled(True)
             self.page1.button_prenorm.setEnabled(True)
-            self.page1.button_limitev.setEnabled(True)
+            self.page1.button_multicrop.setEnabled(True)
+            #self.page1.button_limitev.setEnabled(True)
             if self.common.stack_4d == 0:
                 self.page1.button_refimgs.setEnabled(True)
-                self.page1.button_subregion.setEnabled(True)
+                #self.page1.button_subregion.setEnabled(True)
                 self.page1.button_darksig.setEnabled(True)
             else:
                 self.page1.button_refimgs.setEnabled(False)
-                self.page1.button_subregion.setEnabled(False)
+                #self.page1.button_subregion.setEnabled(False)
                 self.page1.button_darksig.setEnabled(False)
             self.page1.button_save.setEnabled(True)
             self.page1.button_savestack.setEnabled(True)
