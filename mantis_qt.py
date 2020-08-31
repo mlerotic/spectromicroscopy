@@ -10892,6 +10892,7 @@ class ShowArtefacts(QtWidgets.QDialog):
         self.close()
 #----------------------------------------------------------------------
 class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
+    qlistchanged = pyqtSignal([object])
     def __init__(self, parent, common, stack):
         QtWidgets.QWidget.__init__(self, parent)
         uic.loadUi(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'showmulticrop.ui'), self)
@@ -10903,7 +10904,7 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
 
         self.poolthread = QtCore.QThread()
         self.aligned = False
-        self.button_ok.setEnabled(False)
+        self.button_ok.setEnabled(True)
 
         self.setWindowTitle('Stack Cropping')
         self.pglayout = pg.GraphicsLayout(border=None)
@@ -10915,53 +10916,6 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
 
         self.vb.setMouseEnabled(x=False, y=False)
         self.vb.addItem(self.i_item, ignoreBounds=False)
-
-        # self.py = self.spectrum_plotwidget.addPlot(row=0, col=0, rowspan=1, colspan=1)
-        # self.py.setMouseEnabled(x=False, y=True)
-        # #self.i_item = pg.ImageItem(border="k")
-        # #self.py.setAspectLocked(lock=True, ratio=1)
-        # self.py.showAxis("top", show=True)
-        # self.py.showAxis("bottom", show=True)
-        # self.py.showAxis("left", show=True)
-        # self.py.showAxis("right", show=True)
-        # ay1 = self.py.getAxis("left")
-        # by1 = self.py.getAxis("right")
-        # ax1 = self.py.getAxis("bottom")
-        # bx1 = self.py.getAxis("top")
-        # ay1.setLabel(text="y-drift", units="px")
-        # ay1.enableAutoSIPrefix(enable=True)
-        # ay1.setWidth(w=60)
-        # ax1.setLabel(text="Photon Energy",units="eV")
-        # ax1.enableAutoSIPrefix(enable=True)
-        # ay1.setStyle(tickLength=8)
-        # ax1.setStyle(tickLength=0)
-        # #ax1.setHeight(h=46.2)
-        # ax1.setStyle(tickLength=8)
-        # by1.setStyle(showValues=False, tickLength=0)
-        # bx1.setStyle(showValues=False, tickLength=0)
-        #
-        # self.px = self.DriftsWidget.addPlot(row=1, col=0, rowspan=1, colspan=1)
-        # self.px.setXLink(self.py)
-        # self.px.setMouseEnabled(x=False, y=True)
-        # #self.i_item = pg.ImageItem(border="k")
-        # #self.px.setAspectLocked(lock=True, ratio=1)
-        # self.px.showAxis("top", show=True)
-        # self.px.showAxis("bottom", show=True)
-        # self.px.showAxis("left", show=True)
-        # self.px.showAxis("right", show=True)
-        # ay2 = self.px.getAxis("left")
-        # by2 = self.px.getAxis("right")
-        # ax2 = self.px.getAxis("bottom")
-        # bx2 = self.px.getAxis("top")
-        # ay2.setLabel(text="x-drift",units="px")
-        # ay2.enableAutoSIPrefix(enable=True)
-        # ay2.setWidth(w=60)
-        # ax2.setLabel(text="Photon Energy",units="eV")
-        # ax2.enableAutoSIPrefix(enable=True)
-        # ay2.setStyle(tickLength=8)
-        # ax2.setStyle(tickLength=8)
-        # by2.setStyle(showValues=False,tickLength=0)
-        # bx2.setStyle(showValues=False,tickLength=0)
 
         self.button_ok.clicked.connect(self.OnAccept)
         self.button_cancel.clicked.connect(self.OnCancel)
@@ -10982,14 +10936,13 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
             self.slider_eng.sliderReleased.connect(self.ShowImage)
             self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
             self.slider_eng.setRange(0, self.stack.n_ev - 1)
-            # self.py.addItem(self.refmarkery, ignoreBounds=True)
-            #
-            # self.fit_x = pg.PlotCurveItem(pen=pg.mkPen(color="c", width=2))
-            # self.fit_y = pg.PlotCurveItem(pen=pg.mkPen(color="c", width=2))
-            # self.fit_x.setZValue(200)
-            # self.fit_y.setZValue(200)
-            # self.px.addItem(self.fit_x, ignoreBounds=True)
-            # self.py.addItem(self.fit_y, ignoreBounds=True)
+            self.pb_selectall.clicked.connect(self.OnSelectAll)
+            self.pb_clearall.clicked.connect(self.OnClearAll)
+            self.qlistchanged.connect(lambda row: self.qListChangeHandler(row))
+            #self.ev_widget.itemClicked.connect(lambda item: self.OnItemClicked(item))
+            self.ev_widget.mousePressEvent = self.mouseEventOnQList
+            self.ev_widget.mouseMoveEvent = self.mouseEventOnQList
+            self.ev_widget.itemSelectionChanged.connect(lambda item: self.OnItemClicked(item))
             self.SetupListEV()
             self.SetupPlot()
             self.OnScrollEng(0)
@@ -11025,6 +10978,59 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
             # self.xscatter.sigClicked.connect(self.OnPointClicked)
             # self.yscatter.sigClicked.connect(self.OnPointClicked)
             # self.cb_autocrop.toggled.connect(self.OnAutoCrop)
+
+    def mouseEventOnQList(self, e):
+        if e.type() == QtCore.QEvent.MouseMove or e.type() == QtCore.QEvent.MouseButtonPress:
+            qlist = self.ev_widget
+            pos = qlist.mapFromGlobal(QtGui.QCursor.pos())
+            row = qlist.indexAt(pos).row()
+            item = qlist.itemAt(pos)
+            #print(row,self.latest_row)
+            if row >= 0:
+                if e.type() != QtCore.QEvent.MouseMove or row != self.latest_row:
+                    if e.buttons() == QtCore.Qt.LeftButton:
+                        qlist.setCurrentRow(row)
+                        #params[1] = -1
+                        self.qlistchanged.emit(item)
+                        self.latest_row = row
+        return
+    def OnSelectionChanged(self):
+        self.RedrawNewPlot()
+        self.UpdateIndices()
+        self.region.blockSignals(True)
+        if self.idx_selected:
+            self.region.setRegion([self.stack.ev[min(self.idx_selected)], self.stack.ev[max(self.idx_selected)]])
+            self.region.blockSignals(False)
+            self.spectrum_plotwidget.setXRange(*self.region.getRegion())
+            self.spectrum_plotwidget.setYRange(np.min(self.plotitem_new.yData),np.max(self.plotitem_new.yData))
+        return
+    def UpdateIndices(self):
+        self.idx_selected = sorted([self.ev_widget.row(i) for i in self.ev_selected])
+    def RedrawNewPlot(self):
+        self.UpdateIndices()
+        if self.com.i0_loaded == 1:
+            odtotal = self.stack.od3d.sum(axis=0)
+        else:
+            odtotal = self.stack.absdata.sum(axis=0)
+
+        odtotal = odtotal.sum(axis=0)/(self.stack.n_rows*self.stack.n_cols)
+        x = [self.stack.ev[i] for i in self.idx_selected]
+        y = [odtotal[i] for i in self.idx_selected]
+        self.plotitem_new.setData(x,y)
+        if self.idx_selected:
+            self.region.show()
+    def qListChangeHandler(self,item):
+        if item in self.ev_selected:
+            #print(item, "deselect")
+            self.ev_selected.remove(item)
+            item.setBackground(QtGui.QColor(0, 0, 0, 0))
+        else:
+            #print(item, "select")
+            self.ev_selected.append(item)
+            item.setBackground(QtGui.QColor('#beaed4'))
+        self.OnScrollEng(self.ev_widget.row(item))
+        self.OnSelectionChanged()
+
     def SetupPlot(self):
         if self.com.i0_loaded == 1:
             odtotal = self.stack.od3d.sum(axis=0)
@@ -11055,15 +11061,10 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
         ax = plot.getAxis("bottom")
 
         ax.setLabel(text="Photon energy [eV]")
-        ## Little hack to display vertical axis as log.
-        #plot.getViewBox().setLimits(yMin=0,yMax=np.max(y))
         ay.setLabel(text="Flux")
-        #y[y < 1] = 1
-        #y = np.log10(y)
-        plot.setLogMode(x=False, y=False) ## Log mode is not working correctly at the moment.
-        ##
+
         self.plotitem = plot.plot(x, y, pen=pg.mkPen(color=0.8, width=2))
-        self.plotitem_new = plot.plot(x, y, pen=pg.mkPen(color="b", width=1))
+        self.plotitem_new = plot.plot(x, y, pen=pg.mkPen(color="b", width=2))
         self.refmarker = pg.InfiniteLine(angle=90, movable=False,
                                          pen=pg.mkPen(color="b", width=2, style=QtCore.Qt.DashLine))
         # self.refmarkery = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen(color="b", width=2, style=QtCore.Qt.DashLine))
@@ -11080,65 +11081,103 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
         #self.region.sigRegionChanged.connect(lambda: update(self.region.getRegion()))
     def UpdateRegion(self, region):
         min, max = region.getRegion()
-        min_idx = np.argmin(np.abs(np.array(self.stack.ev) - min))
-        max_idx = np.argmin(np.abs(np.array(self.stack.ev) - max))
+        min_idx = np.argmin(np.abs(self.plotitem.xData - min))
+        max_idx = np.argmin(np.abs(self.plotitem.xData - max))
         if min_idx == max_idx:
             min_idx = 0
-            max_idx = self.stack.n_ev -1
+            max_idx = self.stack.n_ev - 1
         region.blockSignals(True)
-        region.setRegion([self.stack.ev[min_idx], self.stack.ev[max_idx]])  # snap region to data points
+        region.setRegion([self.plotitem.xData[min_idx], self.plotitem.xData[max_idx]])  # snap region to data points
         region.blockSignals(False)
         y_vals = self.plotitem.yData[min_idx:max_idx + 1]
         x_vals = self.plotitem.xData[min_idx:max_idx + 1]
-        self.spectrum_plotwidget.setRange(yRange=[np.min(y_vals), np.max(y_vals)], xRange=[np.min(x_vals), np.max(x_vals)], disableAutoRange=True, padding=0.1)
-        #self.plotitem.setRange(yRange=[np.min(y_vals), np.max(y_vals)], disableAutoRange=True, padding=0.1)
-        # for i in range(len(self.xpts)):
-        #     self.xpts[i]['brush'] = QtGui.QColor('red')
-        # for i in range(min_idx, max_idx + 1):
-        #     if self.maskedvals[i]:  # highlight badly correlated or masked data
-        #         self.xpts[i]['brush'] = QtGui.QColor('blue')
-        # self.xscatter.setData(self.xpts)
+        self.spectrum_plotwidget.setRange(yRange=[np.min(y_vals), np.max(y_vals)], xRange=[np.min(x_vals), np.max(x_vals)], disableAutoRange=True, padding=0.2)
+        if min_idx not in self.idx_selected:
+            for idx in range(int(min_idx),np.min(self.idx_selected)):
+                self.ev_selected.append(self.ev_widget.item(idx))
+                self.ev_widget.item(idx).setBackground(QtGui.QColor('#beaed4'))
+        else:
+            for idx in range(np.min(self.idx_selected),int(min_idx)):
+                try:
+                    self.ev_selected.remove(self.ev_widget.item(idx))
+                except ValueError:
+                    pass
+                self.ev_widget.item(idx).setBackground(QtGui.QColor(0, 0, 0, 0))
+        if max_idx not in self.idx_selected:
+            for idx in range(np.max(self.idx_selected)+1,int(max_idx)+1):
+                try:
+                    self.ev_selected.append(self.ev_widget.item(idx))
+                except ValueError:
+                    pass
+                self.ev_widget.item(idx).setBackground(QtGui.QColor('#beaed4'))
+        else:
+            for idx in range(int(max_idx)+1,np.max(self.idx_selected)+1):
+                try:
+                    self.ev_selected.remove(self.ev_widget.item(idx))
+                except ValueError:
+                    pass
+                self.ev_widget.item(idx).setBackground(QtGui.QColor(0, 0, 0, 0))
+        self.RedrawNewPlot()
+    def OnSelectAll(self):
+        self.ev_widget.clear()
+        self.SetupListEV()
+        self.region.setRegion((min(self.stack.ev), max(self.stack.ev)))
+        self.region.show()
+        self.RedrawNewPlot()
+    def OnClearAll(self):
+        #self.ev_widget.clear()
+        #self.SetupListEV()
+        self.region.hide()
+        for idx in self.idx_selected:
+            self.ev_widget.item(idx).setBackground(QtGui.QColor(0, 0, 0, 0))
+        self.ev_selected = []
+        self.idx_selected = []
+        self.RedrawNewPlot()
+
     def SetupListEV(self):
+        self.ev_selected = []
+        self.idx_selected = []
         for i,e in enumerate(self.stack.ev): # Fill QList with energies
             #self.stk.shifts.append([1,0,(0.0,0.0)]) #checked [0,1]; pre, post, undefined state for map [-1,1,0],(xshift [float],yshift [float])
             item = QtGui.QListWidgetItem(str(int(i)).zfill(3)+"     at     " + format(e, '.2f') + " eV")
             self.ev_widget.addItem(item)
-            self.ev_widget.item(i).setBackground(QtGui.QColor('#beaed4'))
-            self.ev_widget.item(i).setForeground(QtGui.QColor(0, 0, 0, 128))
-    def OnEVSlectionChanged(self):
+            self.ev_selected.append(item)
+            self.idx_selected.append(i)
+            item.setBackground(QtGui.QColor('#beaed4'))
+            item.setForeground(QtGui.QColor(0, 0, 0, 128))
+    def OnEVSelectionChanged(self):
         self.OnScrollEng(self.ev_widget.currentRow())
-    def OnAutoCrop(self):
-        if self.aligned:
-            self.button_ok.setEnabled(True)
-            self.cb_autocrop.blockSignals(True)
-            self.CropStack()
-            self.cb_autocrop.blockSignals(False)
-            self.OnScrollEng(self.iev)
-
-    def CropStack(self):
-        self.stack.absdata_shifted_cropped = self.stack.absdata_shifted.copy()
-        if self.cb_autocrop.isChecked():
-            self.box.hide()
-            l = -int(np.floor(min(self.x_shiftstemp)))
-            r = -int(np.ceil(max(self.x_shiftstemp)))
-            cr = r if r < 0 else None
-            if l < 0:
-                l = 0
-                cr = cr - l
-            t = -int(np.ceil(max(self.y_shiftstemp)))
-            ct = t if t < 0 else None
-            b = -int(np.floor(min(self.y_shiftstemp)))
-            if b < 0:
-                b = 0
-                ct = ct - b
-            print(self.stack.absdata[:,:,0].shape, r,l,t,b)
-            if self.stack.absdata[:,:,0].shape < (abs(l-r), abs(b-t)):
-                QtWidgets.QMessageBox.warning(self, 'Error', 'The alignment failed. Cropping would result in a zero-dimensional image. Please check your settings. Auto-crop has been disabled. You can re-enable it manually.')
-                self.cb_autocrop.setChecked(False)
-            else:
-                self.stack.absdata_shifted_cropped = self.stack.absdata_shifted_cropped[l:cr,b:ct,:]
-        else:
-            self.box.show()
+    # def OnAutoCrop(self):
+    #     if self.aligned:
+    #         self.button_ok.setEnabled(True)
+    #         self.cb_autocrop.blockSignals(True)
+    #         self.CropStack()
+    #         self.cb_autocrop.blockSignals(False)
+    #         self.OnScrollEng(self.iev)
+    # def CropStack(self):
+    #     self.stack.absdata_shifted_cropped = self.stack.absdata_shifted.copy()
+    #     if self.cb_autocrop.isChecked():
+    #         self.box.hide()
+    #         l = -int(np.floor(min(self.x_shiftstemp)))
+    #         r = -int(np.ceil(max(self.x_shiftstemp)))
+    #         cr = r if r < 0 else None
+    #         if l < 0:
+    #             l = 0
+    #             cr = cr - l
+    #         t = -int(np.ceil(max(self.y_shiftstemp)))
+    #         ct = t if t < 0 else None
+    #         b = -int(np.floor(min(self.y_shiftstemp)))
+    #         if b < 0:
+    #             b = 0
+    #             ct = ct - b
+    #         #print(self.stack.absdata[:,:,0].shape, r,l,t,b)
+    #         if self.stack.absdata[:,:,0].shape < (abs(l-r), abs(b-t)):
+    #             QtWidgets.QMessageBox.warning(self, 'Error', 'The alignment failed. Cropping would result in a zero-dimensional image. Please check your settings. Auto-crop has been disabled. You can re-enable it manually.')
+    #             self.cb_autocrop.setChecked(False)
+    #         else:
+    #             self.stack.absdata_shifted_cropped = self.stack.absdata_shifted_cropped[l:cr,b:ct,:]
+    #     else:
+    #         self.box.show()
 
     def OnScrollEng(self, value):
         self.slider_eng.setValue(value)
@@ -11183,6 +11222,7 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
         bottom = int(self.box.pos().y())
         top = bottom + int(self.box.size().y())
         # self.stack.absdata_cropped = self.stack.absdata[left:right, bottom:top, :].copy()
+
     def ResetAllItems(self,widget):
         for i in range(widget.count()):
             widget.item(i).setForeground(QtGui.QColor(0, 0, 0, 128))
@@ -11213,37 +11253,47 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.close()
     # ----------------------------------------------------------------------
     def OnAccept(self, evt):
-        if self.com.stack_4d == 0:
-            self.stack.absdata = self.stack.absdata_shifted_cropped
-            #self.stack.data_struct.exchange.data = self.stack.absdata
-        else:
-            QtWidgets.QMessageBox.warning(self, 'Error', '4D stack not yet supported.')
+        # print self.stack.n_ev, self.stack.ev.shape
+        self.stack.n_ev = len(self.idx_selected)
+        self.stack.ev = self.stack.ev[self.idx_selected]
+        self.stack.data_dwell = self.stack.data_dwell[self.idx_selected]
+        #print(self.stack.absdata.shape)
+        #print(self.stack.n_ev, self.stack.ev)
+        self.stack.absdata = self.stack.absdata[:,:,self.idx_selected]
+        #print(self.stack.absdata.shape)
 
-        # datadim = np.int32(self.stack.absdata.shape)
-        #
-        # self.stack.n_cols = datadim[0].copy()
-        # self.stack.n_rows =  datadim[1].copy()
-        #
-        # self.stack.xshifts = self.x_shiftstemp
-        # self.stack.yshifts = self.y_shiftstemp
-        #
-        # self.stack.data_struct.exchange.energy = self.stack.ev
-        # self.stack.data_struct.spectromicroscopy.xshifts = self.x_shiftstemp
-        # self.stack.data_struct.spectromicroscopy.yshifts = self.y_shiftstemp
-        #
-        # self.parent.page1.slider_eng.setRange(0,self.stack.n_ev-1)
-        # self.parent.page1.iev = int(self.stack.n_ev/2)
-        # self.parent.page1.slider_eng.setValue(self.parent.page1.iev)
-        #
-        # self.parent.page1.ix = int(self.stack.n_cols/2)
-        # self.parent.page1.iy = int(self.stack.n_rows/2)
-        #
-        # self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
-        # self.parent.page1.loadImage()
-        #
-        # if showmaptab:
-        #     self.parent.page9.Clear()
-        #     self.parent.page9.LoadEntries()
+        if self.com.i0_loaded == 1:
+            self.stack.od3d =  self.stack.od3d[:,:,self.idx_selected]
+
+            self.stack.od = self.stack.od3d.copy()
+
+            self.stack.od = np.reshape(self.stack.od, (self.stack.n_rows * self.stack.n_cols, self.stack.n_ev),
+                                       order='F')
+
+        self.stack.fill_h5_struct_from_stk()
+        if self.com.i0_loaded == 1:
+            self.stack.fill_h5_struct_normalization()
+
+        # if self.com.stack_4d == 1:
+        #     self.stack.stack4D = self.stack.stack4D[:, :, self.limitevmin:self.limitevmax + 1, :]
+        #     if self.com.i0_loaded == 1:
+        #         self.stack.od4D = self.stack.od4D[:, :, self.limitevmin:self.limitevmax + 1, :]
+
+        # Fix the slider on Page 1!
+        self.parent.page1.slider_eng.setRange(0, self.stack.n_ev - 1)
+        self.parent.page1.iev = int(self.stack.n_ev / 2)
+        self.parent.page1.slider_eng.setValue(int(self.parent.page1.iev))
+
+        self.parent.page0.slider_eng.setRange(0, self.stack.n_ev - 1)
+        self.parent.page0.iev = int(self.stack.n_ev / 2)
+        self.parent.page0.slider_eng.setValue(int(self.parent.page1.iev))
+
+        self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
+        self.parent.page1.loadImage()
+
+        if showmaptab:
+            self.parent.page9.Clear()
+            self.parent.page9.LoadEntries()
 
         self.close()
 
@@ -13716,7 +13766,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
             if b < 0:
                 b = 0
                 ct = ct - b
-            print(self.stack.absdata[:,:,0].shape, r,l,t,b)
+            #print(self.stack.absdata[:,:,0].shape, r,l,t,b)
             if self.stack.absdata[:,:,0].shape < (abs(l-r), abs(b-t)):
                 QtWidgets.QMessageBox.warning(self, 'Error', 'The alignment failed. Cropping would result in a zero-dimensional image. Please check your settings. Auto-crop has been disabled. You can re-enable it manually.')
                 self.cb_autocrop.setChecked(False)
@@ -14963,7 +15013,7 @@ class PageMap(QtWidgets.QWidget):
                           'Greys', 'Purples', 'Blues', 'Greens', 'Oranges', 'Reds',
                           'YlOrBr', 'YlOrRd', 'OrRd', 'PuRd', 'RdPu', 'BuPu',
                           'GnBu', 'PuBu', 'YlGnBu', 'PuBuGn', 'BuGn', 'YlGn']),
-                      ('Sequential (2)', [
+                                            ('Sequential (2)', [
                           'binary', 'gist_yarg', 'gist_gray', 'gray', 'bone', 'pink',
                           'spring', 'summer', 'autumn', 'winter', 'cool', 'Wistia',
                           'hot', 'afmhot', 'gist_heat', 'copper']),
