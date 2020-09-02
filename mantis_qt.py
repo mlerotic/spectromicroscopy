@@ -10944,40 +10944,9 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
             self.ev_widget.mouseMoveEvent = self.mouseEventOnQList
             self.ev_widget.itemSelectionChanged.connect(lambda item: self.OnItemClicked(item))
             self.SetupListEV()
-            self.SetupPlot()
             self.OnScrollEng(0)
             self.SetupROI()
-
-
-            # self.button_align.clicked.connect(self.OnAlign)
-            # self.xregion = pg.LinearRegionItem(brush=[255, 0, 0, 45], bounds=[self.stack.ev[0], self.stack.ev[-1]])
-            # self.yregion = pg.LinearRegionItem(brush=[255, 0, 0, 45], bounds=[self.stack.ev[0], self.stack.ev[-1]])
-            # self.xregion.setRegion([self.stack.ev[0], self.stack.ev[-1]])
-            # self.yregion.setRegion([self.stack.ev[0], self.stack.ev[-1]])
-            # self.yregion.setZValue(100)
-            # self.xregion.setZValue(100)
-            # self.px.addItem(self.xregion, ignoreBounds=False)
-            # self.py.addItem(self.yregion, ignoreBounds=False)
-            # self.xregion.sigRegionChangeFinished.connect(lambda region: self.OnLinRegion(region, id="x"))
-            # self.yregion.sigRegionChangeFinished.connect(lambda region: self.OnLinRegion(region, id="y"))
-
-            # self.xscatter = pg.ScatterPlotItem(pxMode=False)  ## Set pxMode=False to allow spots to transform with the view
-            # self.yscatter = pg.ScatterPlotItem(pxMode=False)  ## Set pxMode=False to allow spots to transform with the view
-            # self.xpts = []
-            # self.ypts = []
-            # for i in self.stack.ev:
-            #     self.xpts.append({'pos': (1 * i, 0), 'size': 10,  # 'pen': {'color': 'w', 'width': 2},
-            #                  'brush': QtGui.QColor('blue')})
-            #     self.ypts.append({'pos': (1 * i, 0), 'size': 10,  # 'pen': {'color': 'w', 'width': 2},
-            #                  'brush': QtGui.QColor('blue')})
-            # self.xscatter.addPoints(spots=self.xpts, pxMode=True)
-            # self.yscatter.addPoints(spots=self.ypts, pxMode=True)
-            # self.px.addItem(self.xscatter)
-            # self.py.addItem(self.yscatter)
-            # self.shifts = self.stack.shifts.copy()
-            # self.xscatter.sigClicked.connect(self.OnPointClicked)
-            # self.yscatter.sigClicked.connect(self.OnPointClicked)
-            # self.cb_autocrop.toggled.connect(self.OnAutoCrop)
+            self.SetupPlot()
 
     def mouseEventOnQList(self, e):
         if e.type() == QtCore.QEvent.MouseMove or e.type() == QtCore.QEvent.MouseButtonPress:
@@ -10996,7 +10965,7 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
         return
     def OnSelectionChanged(self):
         self.RedrawNewPlot()
-        self.UpdateIndices()
+        #self.UpdateIndices()
         self.region.blockSignals(True)
         if self.idx_selected:
             self.region.setRegion([self.stack.ev[min(self.idx_selected)], self.stack.ev[max(self.idx_selected)]])
@@ -11006,16 +10975,13 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
         return
     def UpdateIndices(self):
         self.idx_selected = sorted([self.ev_widget.row(i) for i in self.ev_selected])
+    def RedrawPlots(self):
+        x,y = self.GenerateSpectrum(list(range(self.stack.n_ev)))
+        self.plotitem.setData(x,y)
+        self.OnSelectionChanged()
     def RedrawNewPlot(self):
         self.UpdateIndices()
-        if self.com.i0_loaded == 1:
-            odtotal = self.stack.od3d.sum(axis=0)
-        else:
-            odtotal = self.stack.absdata.sum(axis=0)
-
-        odtotal = odtotal.sum(axis=0)/(self.stack.n_rows*self.stack.n_cols)
-        x = [self.stack.ev[i] for i in self.idx_selected]
-        y = [odtotal[i] for i in self.idx_selected]
+        x,y = self.GenerateSpectrum(self.idx_selected)
         self.plotitem_new.setData(x,y)
         if self.idx_selected:
             self.region.show()
@@ -11032,14 +10998,7 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.OnSelectionChanged()
 
     def SetupPlot(self):
-        if self.com.i0_loaded == 1:
-            odtotal = self.stack.od3d.sum(axis=0)
-        else:
-            odtotal = self.stack.absdata.sum(axis=0)
-
-        odtotal = odtotal.sum(axis=0)/(self.stack.n_rows*self.stack.n_cols)
-        x = self.stack.ev
-        y = odtotal
+        x,y = self.GenerateSpectrum(list(range(self.stack.n_ev)))
         self.spectrum_plotwidget.setBackground("w")
 
         self.region = pg.LinearRegionItem(brush=[255,0,0,45],bounds=[np.min(x),np.max(x)])
@@ -11067,19 +11026,11 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.plotitem_new = plot.plot(x, y, pen=pg.mkPen(color="b", width=2))
         self.refmarker = pg.InfiniteLine(angle=90, movable=False,
                                          pen=pg.mkPen(color="b", width=2, style=QtCore.Qt.DashLine))
-        # self.refmarkery = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen(color="b", width=2, style=QtCore.Qt.DashLine))
         plot.addItem(self.refmarker, ignoreBounds=True)
-        #def update(region):
-            #self.region.setZValue(10)
-            #minX, maxX = region
-            #self.draw_image(minX, maxX)
-            #self.SetupROI()
-            #self.MaskImage.setZValue(10)
-
         self.region.setRegion((min(x),max(x)))
-        self.region.sigRegionChangeFinished.connect(lambda region: self.UpdateRegion(region))
-        #self.region.sigRegionChanged.connect(lambda: update(self.region.getRegion()))
-    def UpdateRegion(self, region):
+        self.region.sigRegionChangeFinished.connect(lambda region: self.UpdateEVRegion(region))
+
+    def UpdateEVRegion(self, region):
         min, max = region.getRegion()
         min_idx = np.argmin(np.abs(self.plotitem.xData - min))
         max_idx = np.argmin(np.abs(self.plotitem.xData - max))
@@ -11147,44 +11098,15 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
             item.setForeground(QtGui.QColor(0, 0, 0, 128))
     def OnEVSelectionChanged(self):
         self.OnScrollEng(self.ev_widget.currentRow())
-    # def OnAutoCrop(self):
-    #     if self.aligned:
-    #         self.button_ok.setEnabled(True)
-    #         self.cb_autocrop.blockSignals(True)
-    #         self.CropStack()
-    #         self.cb_autocrop.blockSignals(False)
-    #         self.OnScrollEng(self.iev)
-    # def CropStack(self):
-    #     self.stack.absdata_shifted_cropped = self.stack.absdata_shifted.copy()
-    #     if self.cb_autocrop.isChecked():
-    #         self.box.hide()
-    #         l = -int(np.floor(min(self.x_shiftstemp)))
-    #         r = -int(np.ceil(max(self.x_shiftstemp)))
-    #         cr = r if r < 0 else None
-    #         if l < 0:
-    #             l = 0
-    #             cr = cr - l
-    #         t = -int(np.ceil(max(self.y_shiftstemp)))
-    #         ct = t if t < 0 else None
-    #         b = -int(np.floor(min(self.y_shiftstemp)))
-    #         if b < 0:
-    #             b = 0
-    #             ct = ct - b
-    #         #print(self.stack.absdata[:,:,0].shape, r,l,t,b)
-    #         if self.stack.absdata[:,:,0].shape < (abs(l-r), abs(b-t)):
-    #             QtWidgets.QMessageBox.warning(self, 'Error', 'The alignment failed. Cropping would result in a zero-dimensional image. Please check your settings. Auto-crop has been disabled. You can re-enable it manually.')
-    #             self.cb_autocrop.setChecked(False)
-    #         else:
-    #             self.stack.absdata_shifted_cropped = self.stack.absdata_shifted_cropped[l:cr,b:ct,:]
-    #     else:
-    #         self.box.show()
-
     def OnScrollEng(self, value):
         self.slider_eng.setValue(value)
         self.ResetAllItems(self.ev_widget)
         self.iev = value
         self.ShowImage()
-        self.refmarker.setValue(self.stack.ev[self.iev])
+        try:
+            self.refmarker.setValue(self.stack.ev[self.iev])
+        except:
+            pass
         self.ev_widget.setCurrentRow(self.iev)
         if self.com.stack_loaded == 1:
             self.ev_widget.item(value).setForeground(QtGui.QColor(0, 0, 0, 255))
@@ -11201,7 +11123,7 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
                               sideScalers=False, removable=False, scaleSnap=True, translateSnap=True,
                               maxBounds=self.i_item.boundingRect())
         self.vb.addItem(self.box, ignoreBounds=False)
-        self.box.sigRegionChangeFinished.connect(self.OnRegionChanged)
+        self.box.sigRegionChangeFinished.connect(self.RedrawPlots)
         self.box.sigRegionChangeStarted.connect(self.OnRegionChange)
         self.button_rstroi.clicked.connect(self.OnResetROI)
     ## The ROI is limited to the visible image area. OnMouseMoveOutside handles the behavior when
@@ -11212,7 +11134,7 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
     def OnRegionChange(self):
         self.boxsize = self.box.size()
         self.proxy = pg.SignalProxy(self.vb.scene().sigMouseMoved, rateLimit=30, slot=self.OnMouseMoveOutside)
-    def OnRegionChanged(self):
+    def GetRegion(self):
         try:
             self.proxy.disconnect()
         except AttributeError:
@@ -11222,6 +11144,21 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
         bottom = int(self.box.pos().y())
         top = bottom + int(self.box.size().y())
         # self.stack.absdata_cropped = self.stack.absdata[left:right, bottom:top, :].copy()
+        return (left,right,top,bottom)
+    def GenerateSpectrum(self, evselection):
+        left,right,top,bottom = self.GetRegion()
+        if self.com.i0_loaded == 1:
+            total = self.stack.od3d[left:right, bottom:top, :].copy()
+        else:
+            total = self.stack.absdata[left:right, bottom:top, :].copy()
+        total = total.sum(axis=(0,1)) / (int(self.box.size().x()) * int(self.box.size().y()))
+        x = [self.stack.ev[i] for i in evselection]
+        y = [total[i] for i in evselection]
+        self.label_spatial_range.setText("Stack size: [ "+str(int(self.box.size().x()))+" x "+str(int(self.box.size().y()))+" ] px²")
+        self.label_ev_range.setText(
+            "Energy range: [ " + str(min(x, default=0)) + " .. " + str(max(x, default=0)) + " ] eV, # values: "+ str(len(x)))
+        #print(y)
+        return (x, y)
 
     def ResetAllItems(self,widget):
         for i in range(widget.count()):
@@ -11243,27 +11180,34 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
                     self.box.setSize([mousepos.x()-self.box.pos().x(),self.i_item.boundingRect().bottom()-self.box.pos().y()], update=True, snap=True, finish=False)
     # ----------------------------------------------------------------------
     def OnCancel(self, evt):
-        #self.stack.absdata_shifted_cropped = self.stack.absdata
-        #self.parent.page1.loadImage()
-
-        # if showmaptab:
-        #     self.parent.page9.Clear()
-        #     self.parent.page9.LoadEntries()
-
         self.close()
     # ----------------------------------------------------------------------
     def OnAccept(self, evt):
-        # print self.stack.n_ev, self.stack.ev.shape
-        self.stack.n_ev = len(self.idx_selected)
-        self.stack.ev = self.stack.ev[self.idx_selected]
-        self.stack.data_dwell = self.stack.data_dwell[self.idx_selected]
-        #print(self.stack.absdata.shape)
-        #print(self.stack.n_ev, self.stack.ev)
-        self.stack.absdata = self.stack.absdata[:,:,self.idx_selected]
-        #print(self.stack.absdata.shape)
+        if self.cb_croptoroi.isChecked():
+            left, right, top, bottom = self.GetRegion()
+        else:
+            left, right, top, bottom = (None,None,None,None)
+
+        if self.cb_remove_evs.isChecked():
+            selection = self.idx_selected
+            if len(selection) == 0:
+                QtWidgets.QMessageBox.warning(self, 'Error', 'Please select at least one energy value!')
+                return
+            self.stack.n_ev = len(selection)
+            self.stack.ev = self.stack.ev[selection]
+            self.stack.data_dwell = self.stack.data_dwell[selection]
+        else:
+            selection = list(range(self.stack.n_ev))
+
+
+        self.stack.absdata = self.stack.absdata[left:right,bottom:top,selection]
+        self.stack.n_cols = self.stack.absdata.shape[0]
+        self.stack.n_rows = self.stack.absdata.shape[1]
+        self.parent.page1.ix = int(self.stack.n_cols/2)
+        self.parent.page1.iy = int(self.stack.n_rows/2)
 
         if self.com.i0_loaded == 1:
-            self.stack.od3d =  self.stack.od3d[:,:,self.idx_selected]
+            self.stack.od3d =  self.stack.od3d[left:right,bottom:top,selection]
 
             self.stack.od = self.stack.od3d.copy()
 
@@ -11297,450 +11241,450 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
 
         self.close()
 
-#----------------------------------------------------------------------
-class LimitEv(QtWidgets.QDialog):
-
-    def __init__(self, parent,  common, stack):
-        QtWidgets.QWidget.__init__(self, parent)
-
-        self.parent = parent
-
-        self.stack = stack
-        self.com = common
-
-        self.resize(630, 450)
-        self.setWindowTitle('Limit energy range')
-
-        pal = QtGui.QPalette()
-        self.setAutoFillBackground(True)
-        pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
-        self.setPalette(pal)
-
-
-        self.evlimited = 0
-        self.limitevmin = 0
-        self.limitevmax = self.stack.n_ev-1
-
-        self.patch = None
-
-        vbox = QtWidgets.QVBoxLayout()
-
-
-        frame = QtWidgets.QFrame()
-        frame.setFrameStyle(QtWidgets.QFrame.StyledPanel|QtWidgets.QFrame.Sunken)
-        fbox = QtWidgets.QHBoxLayout()
-
-        self.specfig = Figure((6.0, 4.2))
-        self.SpectrumPanel = FigureCanvas(self.specfig)
-        self.SpectrumPanel.setParent(self)
-        self.SpectrumPanel.mpl_connect('button_press_event', self.OnSelection1)
-        self.SpectrumPanel.mpl_connect('button_release_event', self.OnSelection2)
-
-
-        fbox.addWidget(self.SpectrumPanel)
-        frame.setLayout(fbox)
-        vbox.addWidget(frame)
-
-
-        hbox2 = QtWidgets.QHBoxLayout()
-        sizer2 = QtWidgets.QGroupBox('Energy')
-        self.textctrl = QtWidgets.QLabel(self)
-        self.textctrl.setText(' ')
-        hbox2.addWidget(self.textctrl, 0)
-        sizer2.setLayout(hbox2)
-        vbox.addWidget(sizer2)
-
-        hbox = QtWidgets.QHBoxLayout()
-
-
-        button_ok = QtWidgets.QPushButton('Accept')
-        button_ok.clicked.connect(self.OnAccept)
-        hbox.addWidget(button_ok)
-
-        button_cancel = QtWidgets.QPushButton('Cancel')
-        button_cancel.clicked.connect(self.close)
-        hbox.addWidget(button_cancel)
-
-        vbox.addLayout(hbox)
-
-        self.setLayout(vbox)
-
-        self.draw_limitev_plot()
-
-
-#----------------------------------------------------------------------
-    def draw_limitev_plot(self):
-
-
-        if self.com.i0_loaded == 1:
-            odtotal = self.stack.od3d.sum(axis=0)
-        else:
-            odtotal = self.stack.absdata.sum(axis=0)
-
-        odtotal = odtotal.sum(axis=0)/(self.stack.n_rows*self.stack.n_cols)
-
-        fig = self.specfig
-        fig.clf()
-        fig.add_axes((0.15,0.15,0.75,0.75))
-        self.axes = fig.gca()
-
-
-        specplot = self.axes.plot(self.stack.ev,odtotal)
-
-        self.axes.set_xlabel('Photon Energy [eV]')
-        self.axes.set_ylabel('Optical Density')
-
-        if self.evlimited == 1:
-            self.patch = self.axes.axvspan(self.stack.ev[self.limitevmin], self.stack.ev[self.limitevmax], facecolor='g', alpha=0.5)
-
-
-        self.SpectrumPanel.draw()
-
-        self.textctrl.setText('Min energy {0:5.2f} eV\n'.format(float(self.stack.ev[self.limitevmin]))
-                              + 'Max energy {0:5.2f} eV'.format(float(self.stack.ev[self.limitevmax])))
-
-#----------------------------------------------------------------------
-    def OnSelection1(self, evt):
-
-
-        x1 = evt.xdata
-
-        self.button_pressed = True
-        self.conn = self.SpectrumPanel.mpl_connect('motion_notify_event', self.OnSelectionMotion)
-
-        if x1 == None:
-            return
-
-
-        self.limitevmin = np.abs(self.stack.ev-x1).argmin()
-
-
-
-#----------------------------------------------------------------------
-    def OnSelection2(self, evt):
-
-        x2 = evt.xdata
-
-
-        self.button_pressed = False
-        self.SpectrumPanel.mpl_disconnect(self.conn)
-
-        if x2 == None:
-            return
-
-
-        #self.limitevmin = np.abs(self.stack.ev-x1).argmin()
-        self.limitevmax = np.abs(self.stack.ev-x2).argmin()
-
-        self.evlimited = 1
-
-        self.draw_limitev_plot()
-
-
-#----------------------------------------------------------------------
-    def OnSelectionMotion(self, event):
-
-        x2 = event.xdata
-
-        if x2 == None:
-            return
-
-        self.limitevmax = np.abs(self.stack.ev-x2).argmin()
-
-        fig = self.specfig
-
-        axes = fig.gca()
-
-        if self.patch != None:
-            self.patch.remove()
-        self.patch = self.axes.axvspan(self.stack.ev[self.limitevmin], self.stack.ev[self.limitevmax], facecolor='w', alpha=0.5)
-
-        self.SpectrumPanel.draw()
-
-
-#----------------------------------------------------------------------
-    def OnAccept(self, evt):
-        #change the energy range to limitevmin-limitev-max
-        #print self.stack.n_ev, self.stack.ev.shape
-        self.stack.n_ev = self.limitevmax+1-self.limitevmin
-        self.stack.ev = self.stack.ev[self.limitevmin:self.limitevmax+1]
-        self.stack.data_dwell = self.stack.data_dwell[self.limitevmin:self.limitevmax+1]
-
-        #print self.stack.n_ev, self.stack.ev.shape
-
-
-        self.stack.absdata = self.stack.absdata[:,:,self.limitevmin:self.limitevmax+1]
-
-        if self.com.i0_loaded == 1:
-            self.stack.od3d = self.stack.od3d[:,:,self.limitevmin:self.limitevmax+1]
-
-            self.stack.od = self.stack.od3d.copy()
-
-            self.stack.od = np.reshape(self.stack.od, (self.stack.n_rows*self.stack.n_cols, self.stack.n_ev), order='F')
-
-        self.stack.fill_h5_struct_from_stk()
-        if self.com.i0_loaded == 1:
-            self.stack.fill_h5_struct_normalization()
-
-
-        if self.com.stack_4d == 1:
-            self.stack.stack4D = self.stack.stack4D[:,:,self.limitevmin:self.limitevmax+1,:]
-            if self.com.i0_loaded == 1:
-                self.stack.od4D = self.stack.od4D[:,:,self.limitevmin:self.limitevmax+1,:]
-
-
-        #Fix the slider on Page 1!
-        self.parent.page1.slider_eng.setRange(0,self.stack.n_ev-1)
-        self.parent.page1.iev = int(self.stack.n_ev/2)
-        self.parent.page1.slider_eng.setValue(self.parent.page1.iev)
-
-        self.parent.page0.slider_eng.setRange(0,self.stack.n_ev-1)
-        self.parent.page0.iev = int(self.stack.n_ev/2)
-        self.parent.page0.slider_eng.setValue(self.parent.page1.iev)
-
-        self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
-        self.parent.page1.loadImage()
-
-        if showmaptab:
-            self.parent.page9.Clear()
-            self.parent.page9.LoadEntries()
-
-        self.close()
-
-
-#----------------------------------------------------------------------
-class CliptoSubregion(QtWidgets.QDialog):
-
-    def __init__(self, parent,  common, stack):
-        QtWidgets.QWidget.__init__(self, parent)
-
-        self.parent = parent
-
-        self.stack = stack
-        self.com = common
-
-        self.resize(500, 470)
-        self.setWindowTitle('Clip to Subregion')
-
-        pal = QtGui.QPalette()
-        self.setAutoFillBackground(True)
-        pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
-        self.setPalette(pal)
-
-        self.new_x1 = int(self.stack.n_cols*0.10)
-        self.new_x2 = int(self.stack.n_cols*0.90)
-        self.new_y2 = self.stack.n_rows-1-int(self.stack.n_rows*0.10)
-        self.new_y1 = self.stack.n_rows-1-int(self.stack.n_rows*0.90)
-
-        self.new_ncols = self.new_x2 - self.new_x1
-        self.new_nrows = self.new_y2 - self.new_y1
-
-        vbox = QtWidgets.QVBoxLayout()
-
-        sizer = QtWidgets.QGroupBox('Select new stack size')
-        vbox1 = QtWidgets.QVBoxLayout()
-        self.textctrl1 = QtWidgets.QLabel(self)
-        self.textctrl1.setText('Original stack size:\t{0:5d}   x{1:5d} '.format(self.stack.n_cols, self.stack.n_rows))
-        vbox1.addWidget(self.textctrl1)
-
-        self.textctrl2 = QtWidgets.QLabel(self)
-        self.textctrl2.setText('New stack size:\t{0:5d}   x{1:5d} '.format(self.new_ncols, self.new_nrows))
-        vbox1.addWidget(self.textctrl2)
-
-        self.textctrl3 = QtWidgets.QLabel(self)
-        self.textctrl3.setText('Clip coordinates [[x1, x2], [y1, y2]] : [[{0:5d},{1:5d}], [{2:5d},{3:5d}]]'.format(
-                                    self.new_x1, self.new_x2, self.new_y1, self.new_y2))
-        vbox1.addWidget(self.textctrl3)
-
-        self.absimgfig = Figure((PlotH,PlotH))
-        self.AbsImagePanel = FigureCanvas(self.absimgfig)
-        self.AbsImagePanel.setParent(self)
-        self.AbsImagePanel.mpl_connect('button_press_event', self.OnSelection1)
-        self.AbsImagePanel.mpl_connect('button_release_event', self.OnSelection2)
-
-        vbox1.addWidget(self.AbsImagePanel)
-        sizer.setLayout(vbox1)
-        vbox.addWidget(sizer)
-
-        hbox = QtWidgets.QHBoxLayout()
-
-        button_ok = QtWidgets.QPushButton('Accept')
-        button_ok.clicked.connect(self.OnAccept)
-        hbox.addWidget(button_ok)
-
-        button_cancel = QtWidgets.QPushButton('Cancel')
-        button_cancel.clicked.connect(self.close)
-        hbox.addWidget(button_cancel)
-
-        vbox.addLayout(hbox)
-
-        self.setLayout(vbox)
-
-        self.draw_image()
-
-
-#----------------------------------------------------------------------
-    def draw_image(self):
-
-        image = self.stack.absdata[:,:,int(self.stack.n_ev/2)].copy()
-
-        fig = self.absimgfig
-        fig.clf()
-        fig.add_axes((0.02,0.02,0.96,0.96))
-
-        axes = fig.gca()
-        fig.patch.set_alpha(1.0)
-
-        im = axes.imshow(np.rot90(image), cmap=matplotlib.cm.get_cmap("gray"))
-
-        # Draw the rectangle
-        line1=matplotlib.lines.Line2D([self.new_x1,self.new_x2], [self.new_y1,self.new_y1] ,color="red")
-        line1.set_clip_on(False)
-        self.l1 = axes.add_line(line1)
-
-        line2=matplotlib.lines.Line2D([self.new_x1,self.new_x2], [self.new_y2,self.new_y2] ,color="red")
-        line2.set_clip_on(False)
-        self.l2 = axes.add_line(line2)
-
-        line3=matplotlib.lines.Line2D([self.new_x1,self.new_x1], [self.new_y1,self.new_y2] ,color="red")
-        line3.set_clip_on(False)
-        self.l3 = axes.add_line(line3)
-
-        line4=matplotlib.lines.Line2D([self.new_x2,self.new_x2], [self.new_y1,self.new_y2] ,color="red")
-        line4.set_clip_on(False)
-        self.l4 = axes.add_line(line4)
-
-        axes.axis("off")
-        self.AbsImagePanel.draw()
-
-
-#----------------------------------------------------------------------
-    def OnSelection1(self, evt):
-
-        x1, y1 = evt.xdata, evt.ydata
-
-        self.button_pressed = True
-        self.conn = self.AbsImagePanel.mpl_connect('motion_notify_event', self.OnSelectionMotion)
-
-        if (x1 == None) or (y1 == None):
-            return
-
-        self.new_y1 = int(y1)
-        self.new_x1 = int(x1)
-
-        self.new_ncols = self.new_x2 - self.new_x1 + 1
-        self.new_nrows = self.new_y1 - self.new_y2 + 1
-
-#         self.textctrl2.SetValue('New stack size:\t{0:5d}   x{1:5d} '.format(self.new_ncols, self.new_nrows))
-#         self.textctrl3.SetValue('Clip coordinates [[x1, x2], [y1, y2]]:[[{0:5d},{1:5d}], [{2:5d},{3:5d}]]'.format(
+# #----------------------------------------------------------------------
+# class LimitEv(QtWidgets.QDialog):
+#
+#     def __init__(self, parent,  common, stack):
+#         QtWidgets.QWidget.__init__(self, parent)
+#
+#         self.parent = parent
+#
+#         self.stack = stack
+#         self.com = common
+#
+#         self.resize(630, 450)
+#         self.setWindowTitle('Limit energy range')
+#
+#         pal = QtGui.QPalette()
+#         self.setAutoFillBackground(True)
+#         pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
+#         self.setPalette(pal)
+#
+#
+#         self.evlimited = 0
+#         self.limitevmin = 0
+#         self.limitevmax = self.stack.n_ev-1
+#
+#         self.patch = None
+#
+#         vbox = QtWidgets.QVBoxLayout()
+#
+#
+#         frame = QtWidgets.QFrame()
+#         frame.setFrameStyle(QtWidgets.QFrame.StyledPanel|QtWidgets.QFrame.Sunken)
+#         fbox = QtWidgets.QHBoxLayout()
+#
+#         self.specfig = Figure((6.0, 4.2))
+#         self.SpectrumPanel = FigureCanvas(self.specfig)
+#         self.SpectrumPanel.setParent(self)
+#         self.SpectrumPanel.mpl_connect('button_press_event', self.OnSelection1)
+#         self.SpectrumPanel.mpl_connect('button_release_event', self.OnSelection2)
+#
+#
+#         fbox.addWidget(self.SpectrumPanel)
+#         frame.setLayout(fbox)
+#         vbox.addWidget(frame)
+#
+#
+#         hbox2 = QtWidgets.QHBoxLayout()
+#         sizer2 = QtWidgets.QGroupBox('Energy')
+#         self.textctrl = QtWidgets.QLabel(self)
+#         self.textctrl.setText(' ')
+#         hbox2.addWidget(self.textctrl, 0)
+#         sizer2.setLayout(hbox2)
+#         vbox.addWidget(sizer2)
+#
+#         hbox = QtWidgets.QHBoxLayout()
+#
+#
+#         button_ok = QtWidgets.QPushButton('Accept')
+#         button_ok.clicked.connect(self.OnAccept)
+#         hbox.addWidget(button_ok)
+#
+#         button_cancel = QtWidgets.QPushButton('Cancel')
+#         button_cancel.clicked.connect(self.close)
+#         hbox.addWidget(button_cancel)
+#
+#         vbox.addLayout(hbox)
+#
+#         self.setLayout(vbox)
+#
+#         self.draw_limitev_plot()
+#
+#
+# #----------------------------------------------------------------------
+#     def draw_limitev_plot(self):
+#
+#
+#         if self.com.i0_loaded == 1:
+#             odtotal = self.stack.od3d.sum(axis=0)
+#         else:
+#             odtotal = self.stack.absdata.sum(axis=0)
+#
+#         odtotal = odtotal.sum(axis=0)/(self.stack.n_rows*self.stack.n_cols)
+#
+#         fig = self.specfig
+#         fig.clf()
+#         fig.add_axes((0.15,0.15,0.75,0.75))
+#         self.axes = fig.gca()
+#
+#
+#         specplot = self.axes.plot(self.stack.ev,odtotal)
+#
+#         self.axes.set_xlabel('Photon Energy [eV]')
+#         self.axes.set_ylabel('Optical Density')
+#
+#         if self.evlimited == 1:
+#             self.patch = self.axes.axvspan(self.stack.ev[self.limitevmin], self.stack.ev[self.limitevmax], facecolor='g', alpha=0.5)
+#
+#
+#         self.SpectrumPanel.draw()
+#
+#         self.textctrl.setText('Min energy {0:5.2f} eV\n'.format(float(self.stack.ev[self.limitevmin]))
+#                               + 'Max energy {0:5.2f} eV'.format(float(self.stack.ev[self.limitevmax])))
+#
+# #----------------------------------------------------------------------
+#     def OnSelection1(self, evt):
+#
+#
+#         x1 = evt.xdata
+#
+#         self.button_pressed = True
+#         self.conn = self.SpectrumPanel.mpl_connect('motion_notify_event', self.OnSelectionMotion)
+#
+#         if x1 == None:
+#             return
+#
+#
+#         self.limitevmin = np.abs(self.stack.ev-x1).argmin()
+#
+#
+#
+# #----------------------------------------------------------------------
+#     def OnSelection2(self, evt):
+#
+#         x2 = evt.xdata
+#
+#
+#         self.button_pressed = False
+#         self.SpectrumPanel.mpl_disconnect(self.conn)
+#
+#         if x2 == None:
+#             return
+#
+#
+#         #self.limitevmin = np.abs(self.stack.ev-x1).argmin()
+#         self.limitevmax = np.abs(self.stack.ev-x2).argmin()
+#
+#         self.evlimited = 1
+#
+#         self.draw_limitev_plot()
+#
+#
+# #----------------------------------------------------------------------
+#     def OnSelectionMotion(self, event):
+#
+#         x2 = event.xdata
+#
+#         if x2 == None:
+#             return
+#
+#         self.limitevmax = np.abs(self.stack.ev-x2).argmin()
+#
+#         fig = self.specfig
+#
+#         axes = fig.gca()
+#
+#         if self.patch != None:
+#             self.patch.remove()
+#         self.patch = self.axes.axvspan(self.stack.ev[self.limitevmin], self.stack.ev[self.limitevmax], facecolor='w', alpha=0.5)
+#
+#         self.SpectrumPanel.draw()
+#
+#
+# #----------------------------------------------------------------------
+#     def OnAccept(self, evt):
+#         #change the energy range to limitevmin-limitev-max
+#         #print self.stack.n_ev, self.stack.ev.shape
+#         self.stack.n_ev = self.limitevmax+1-self.limitevmin
+#         self.stack.ev = self.stack.ev[self.limitevmin:self.limitevmax+1]
+#         self.stack.data_dwell = self.stack.data_dwell[self.limitevmin:self.limitevmax+1]
+#
+#         #print self.stack.n_ev, self.stack.ev.shape
+#
+#
+#         self.stack.absdata = self.stack.absdata[:,:,self.limitevmin:self.limitevmax+1]
+#
+#         if self.com.i0_loaded == 1:
+#             self.stack.od3d = self.stack.od3d[:,:,self.limitevmin:self.limitevmax+1]
+#
+#             self.stack.od = self.stack.od3d.copy()
+#
+#             self.stack.od = np.reshape(self.stack.od, (self.stack.n_rows*self.stack.n_cols, self.stack.n_ev), order='F')
+#
+#         self.stack.fill_h5_struct_from_stk()
+#         if self.com.i0_loaded == 1:
+#             self.stack.fill_h5_struct_normalization()
+#
+#
+#         if self.com.stack_4d == 1:
+#             self.stack.stack4D = self.stack.stack4D[:,:,self.limitevmin:self.limitevmax+1,:]
+#             if self.com.i0_loaded == 1:
+#                 self.stack.od4D = self.stack.od4D[:,:,self.limitevmin:self.limitevmax+1,:]
+#
+#
+#         #Fix the slider on Page 1!
+#         self.parent.page1.slider_eng.setRange(0,self.stack.n_ev-1)
+#         self.parent.page1.iev = int(self.stack.n_ev/2)
+#         self.parent.page1.slider_eng.setValue(self.parent.page1.iev)
+#
+#         self.parent.page0.slider_eng.setRange(0,self.stack.n_ev-1)
+#         self.parent.page0.iev = int(self.stack.n_ev/2)
+#         self.parent.page0.slider_eng.setValue(self.parent.page1.iev)
+#
+#         self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
+#         self.parent.page1.loadImage()
+#
+#         if showmaptab:
+#             self.parent.page9.Clear()
+#             self.parent.page9.LoadEntries()
+#
+#         self.close()
+#
+#
+# #----------------------------------------------------------------------
+# class CliptoSubregion(QtWidgets.QDialog):
+#
+#     def __init__(self, parent,  common, stack):
+#         QtWidgets.QWidget.__init__(self, parent)
+#
+#         self.parent = parent
+#
+#         self.stack = stack
+#         self.com = common
+#
+#         self.resize(500, 470)
+#         self.setWindowTitle('Clip to Subregion')
+#
+#         pal = QtGui.QPalette()
+#         self.setAutoFillBackground(True)
+#         pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
+#         self.setPalette(pal)
+#
+#         self.new_x1 = int(self.stack.n_cols*0.10)
+#         self.new_x2 = int(self.stack.n_cols*0.90)
+#         self.new_y2 = self.stack.n_rows-1-int(self.stack.n_rows*0.10)
+#         self.new_y1 = self.stack.n_rows-1-int(self.stack.n_rows*0.90)
+#
+#         self.new_ncols = self.new_x2 - self.new_x1
+#         self.new_nrows = self.new_y2 - self.new_y1
+#
+#         vbox = QtWidgets.QVBoxLayout()
+#
+#         sizer = QtWidgets.QGroupBox('Select new stack size')
+#         vbox1 = QtWidgets.QVBoxLayout()
+#         self.textctrl1 = QtWidgets.QLabel(self)
+#         self.textctrl1.setText('Original stack size:\t{0:5d}   x{1:5d} '.format(self.stack.n_cols, self.stack.n_rows))
+#         vbox1.addWidget(self.textctrl1)
+#
+#         self.textctrl2 = QtWidgets.QLabel(self)
+#         self.textctrl2.setText('New stack size:\t{0:5d}   x{1:5d} '.format(self.new_ncols, self.new_nrows))
+#         vbox1.addWidget(self.textctrl2)
+#
+#         self.textctrl3 = QtWidgets.QLabel(self)
+#         self.textctrl3.setText('Clip coordinates [[x1, x2], [y1, y2]] : [[{0:5d},{1:5d}], [{2:5d},{3:5d}]]'.format(
+#                                     self.new_x1, self.new_x2, self.new_y1, self.new_y2))
+#         vbox1.addWidget(self.textctrl3)
+#
+#         self.absimgfig = Figure((PlotH,PlotH))
+#         self.AbsImagePanel = FigureCanvas(self.absimgfig)
+#         self.AbsImagePanel.setParent(self)
+#         self.AbsImagePanel.mpl_connect('button_press_event', self.OnSelection1)
+#         self.AbsImagePanel.mpl_connect('button_release_event', self.OnSelection2)
+#
+#         vbox1.addWidget(self.AbsImagePanel)
+#         sizer.setLayout(vbox1)
+#         vbox.addWidget(sizer)
+#
+#         hbox = QtWidgets.QHBoxLayout()
+#
+#         button_ok = QtWidgets.QPushButton('Accept')
+#         button_ok.clicked.connect(self.OnAccept)
+#         hbox.addWidget(button_ok)
+#
+#         button_cancel = QtWidgets.QPushButton('Cancel')
+#         button_cancel.clicked.connect(self.close)
+#         hbox.addWidget(button_cancel)
+#
+#         vbox.addLayout(hbox)
+#
+#         self.setLayout(vbox)
+#
+#         self.draw_image()
+#
+#
+# #----------------------------------------------------------------------
+#     def draw_image(self):
+#
+#         image = self.stack.absdata[:,:,int(self.stack.n_ev/2)].copy()
+#
+#         fig = self.absimgfig
+#         fig.clf()
+#         fig.add_axes((0.02,0.02,0.96,0.96))
+#
+#         axes = fig.gca()
+#         fig.patch.set_alpha(1.0)
+#
+#         im = axes.imshow(np.rot90(image), cmap=matplotlib.cm.get_cmap("gray"))
+#
+#         # Draw the rectangle
+#         line1=matplotlib.lines.Line2D([self.new_x1,self.new_x2], [self.new_y1,self.new_y1] ,color="red")
+#         line1.set_clip_on(False)
+#         self.l1 = axes.add_line(line1)
+#
+#         line2=matplotlib.lines.Line2D([self.new_x1,self.new_x2], [self.new_y2,self.new_y2] ,color="red")
+#         line2.set_clip_on(False)
+#         self.l2 = axes.add_line(line2)
+#
+#         line3=matplotlib.lines.Line2D([self.new_x1,self.new_x1], [self.new_y1,self.new_y2] ,color="red")
+#         line3.set_clip_on(False)
+#         self.l3 = axes.add_line(line3)
+#
+#         line4=matplotlib.lines.Line2D([self.new_x2,self.new_x2], [self.new_y1,self.new_y2] ,color="red")
+#         line4.set_clip_on(False)
+#         self.l4 = axes.add_line(line4)
+#
+#         axes.axis("off")
+#         self.AbsImagePanel.draw()
+#
+#
+# #----------------------------------------------------------------------
+#     def OnSelection1(self, evt):
+#
+#         x1, y1 = evt.xdata, evt.ydata
+#
+#         self.button_pressed = True
+#         self.conn = self.AbsImagePanel.mpl_connect('motion_notify_event', self.OnSelectionMotion)
+#
+#         if (x1 == None) or (y1 == None):
+#             return
+#
+#         self.new_y1 = int(y1)
+#         self.new_x1 = int(x1)
+#
+#         self.new_ncols = self.new_x2 - self.new_x1 + 1
+#         self.new_nrows = self.new_y1 - self.new_y2 + 1
+#
+# #         self.textctrl2.SetValue('New stack size:\t{0:5d}   x{1:5d} '.format(self.new_ncols, self.new_nrows))
+# #         self.textctrl3.SetValue('Clip coordinates [[x1, x2], [y1, y2]]:[[{0:5d},{1:5d}], [{2:5d},{3:5d}]]'.format(
+# #                                     self.new_x1, self.new_x2, self.new_y1, self.new_y2))
+# #
+# #         self.draw_image()
+#
+# #----------------------------------------------------------------------
+#     def OnSelection2(self, evt):
+#
+#         x2, y2 = evt.xdata, evt.ydata
+#
+#         self.button_pressed = False
+#         self.AbsImagePanel.mpl_disconnect(self.conn)
+#
+#         if (x2 == None) or (y2 == None):
+#             return
+#
+#         self.new_y2 = int(y2)
+#         self.new_x2 = int(x2)
+#
+#         if self.new_x1 > self.new_x2:
+#             temp = self.new_x1
+#             self.new_x1 = self.new_x2
+#             self.new_x2 = temp
+#
+#         if self.new_y1 > self.new_y2:
+#             temp = self.new_y1
+#             self.new_y1 = self.new_y2
+#             self.new_y2 = temp
+#
+#         self.new_ncols = self.new_x2 - self.new_x1 + 1
+#         self.new_nrows = self.new_y2 - self.new_y1 + 1
+#
+#         self.textctrl2.setText('New stack size:\t{0:5d}   x{1:5d} '.format(self.new_ncols, self.new_nrows))
+#         self.textctrl3.setText('Clip coordinates [[x1, x2], [y1, y2]]:[[{0:5d},{1:5d}], [{2:5d},{3:5d}]]'.format(
 #                                     self.new_x1, self.new_x2, self.new_y1, self.new_y2))
 #
 #         self.draw_image()
-
-#----------------------------------------------------------------------
-    def OnSelection2(self, evt):
-
-        x2, y2 = evt.xdata, evt.ydata
-
-        self.button_pressed = False
-        self.AbsImagePanel.mpl_disconnect(self.conn)
-
-        if (x2 == None) or (y2 == None):
-            return
-
-        self.new_y2 = int(y2)
-        self.new_x2 = int(x2)
-
-        if self.new_x1 > self.new_x2:
-            temp = self.new_x1
-            self.new_x1 = self.new_x2
-            self.new_x2 = temp
-
-        if self.new_y1 > self.new_y2:
-            temp = self.new_y1
-            self.new_y1 = self.new_y2
-            self.new_y2 = temp
-
-        self.new_ncols = self.new_x2 - self.new_x1 + 1
-        self.new_nrows = self.new_y2 - self.new_y1 + 1
-
-        self.textctrl2.setText('New stack size:\t{0:5d}   x{1:5d} '.format(self.new_ncols, self.new_nrows))
-        self.textctrl3.setText('Clip coordinates [[x1, x2], [y1, y2]]:[[{0:5d},{1:5d}], [{2:5d},{3:5d}]]'.format(
-                                    self.new_x1, self.new_x2, self.new_y1, self.new_y2))
-
-        self.draw_image()
-
-#----------------------------------------------------------------------
-    def OnSelectionMotion(self, event):
-
-        x2, y2 = event.xdata, event.ydata
-
-        if x2 == None:
-            return
-
-        self.new_y2 = int(y2)
-        self.new_x2 = int(x2)
-
-        fig = self.absimgfig
-
-        axes = fig.gca()
-
-        self.l1.remove()
-        self.l2.remove()
-        self.l3.remove()
-        self.l4.remove()
-
-        line1=matplotlib.lines.Line2D([self.new_x1,self.new_x2], [self.new_y1,self.new_y1] ,color="red")
-        line1.set_clip_on(False)
-        self.l1 = axes.add_line(line1)
-
-        line2=matplotlib.lines.Line2D([self.new_x1,self.new_x2], [self.new_y2,self.new_y2] ,color="red")
-        line2.set_clip_on(False)
-        self.l2 = axes.add_line(line2)
-
-        line3=matplotlib.lines.Line2D([self.new_x1,self.new_x1], [self.new_y1,self.new_y2] ,color="red")
-        line3.set_clip_on(False)
-        self.l3 = axes.add_line(line3)
-
-        line4=matplotlib.lines.Line2D([self.new_x2,self.new_x2], [self.new_y1,self.new_y2] ,color="red")
-        line4.set_clip_on(False)
-        self.l4 = axes.add_line(line4)
-
-
-        self.AbsImagePanel.draw()
-
-
-#----------------------------------------------------------------------
-    def OnAccept(self, evt):
-
-        #change the stack size to [x1,x2], [y1,y2]
-        self.stack.absdata = self.stack.absdata[ self.new_x1:self.new_x2+1, self.stack.n_rows-self.new_y2-1:self.stack.n_rows-self.new_y1, :]
-        if self.com.i0_loaded == 1:
-            self.stack.od3d = self.stack.od3d[ self.new_x1:self.new_x2+1, self.stack.n_rows-self.new_y2-1:self.stack.n_rows-self.new_y1, :]
-            self.stack.od = self.stack.od3d.copy()
-
-        self.stack.n_cols = self.stack.absdata.shape[0]
-        self.stack.n_rows = self.stack.absdata.shape[1]
-
-        if self.com.i0_loaded == 1:
-            self.stack.od = np.reshape(self.stack.od, (self.stack.n_rows * self.stack.n_cols, self.stack.n_ev), order='F')
-
-        #Fix the slider on Page 1!
-        self.parent.page1.ix = int(self.stack.n_cols/2)
-        self.parent.page1.iy = int(self.stack.n_rows/2)
-
-        self.stack.fill_h5_struct_from_stk()
-        self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
-        self.parent.page1.loadImage()
-        #self.parent.page0.ShowImage()
-        self.parent.page0.Clear()
-        self.parent.page0.LoadEntries()
-
-        if showmaptab:
-            self.parent.page9.Clear()
-            self.parent.page9.LoadEntries()
-
-        self.close()
+#
+# #----------------------------------------------------------------------
+#     def OnSelectionMotion(self, event):
+#
+#         x2, y2 = event.xdata, event.ydata
+#
+#         if x2 == None:
+#             return
+#
+#         self.new_y2 = int(y2)
+#         self.new_x2 = int(x2)
+#
+#         fig = self.absimgfig
+#
+#         axes = fig.gca()
+#
+#         self.l1.remove()
+#         self.l2.remove()
+#         self.l3.remove()
+#         self.l4.remove()
+#
+#         line1=matplotlib.lines.Line2D([self.new_x1,self.new_x2], [self.new_y1,self.new_y1] ,color="red")
+#         line1.set_clip_on(False)
+#         self.l1 = axes.add_line(line1)
+#
+#         line2=matplotlib.lines.Line2D([self.new_x1,self.new_x2], [self.new_y2,self.new_y2] ,color="red")
+#         line2.set_clip_on(False)
+#         self.l2 = axes.add_line(line2)
+#
+#         line3=matplotlib.lines.Line2D([self.new_x1,self.new_x1], [self.new_y1,self.new_y2] ,color="red")
+#         line3.set_clip_on(False)
+#         self.l3 = axes.add_line(line3)
+#
+#         line4=matplotlib.lines.Line2D([self.new_x2,self.new_x2], [self.new_y1,self.new_y2] ,color="red")
+#         line4.set_clip_on(False)
+#         self.l4 = axes.add_line(line4)
+#
+#
+#         self.AbsImagePanel.draw()
+#
+#
+# #----------------------------------------------------------------------
+#     def OnAccept(self, evt):
+#
+#         #change the stack size to [x1,x2], [y1,y2]
+#         self.stack.absdata = self.stack.absdata[ self.new_x1:self.new_x2+1, self.stack.n_rows-self.new_y2-1:self.stack.n_rows-self.new_y1, :]
+#         if self.com.i0_loaded == 1:
+#             self.stack.od3d = self.stack.od3d[ self.new_x1:self.new_x2+1, self.stack.n_rows-self.new_y2-1:self.stack.n_rows-self.new_y1, :]
+#             self.stack.od = self.stack.od3d.copy()
+#
+#         self.stack.n_cols = self.stack.absdata.shape[0]
+#         self.stack.n_rows = self.stack.absdata.shape[1]
+#
+#         if self.com.i0_loaded == 1:
+#             self.stack.od = np.reshape(self.stack.od, (self.stack.n_rows * self.stack.n_cols, self.stack.n_ev), order='F')
+#
+#         #Fix the slider on Page 1!
+#         self.parent.page1.ix = int(self.stack.n_cols/2)
+#         self.parent.page1.iy = int(self.stack.n_rows/2)
+#
+#         self.stack.fill_h5_struct_from_stk()
+#         self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
+#         self.parent.page1.loadImage()
+#         #self.parent.page0.ShowImage()
+#         self.parent.page0.Clear()
+#         self.parent.page0.LoadEntries()
+#
+#         if showmaptab:
+#             self.parent.page9.Clear()
+#             self.parent.page9.LoadEntries()
+#
+#         self.close()
 
 class ImageRegistrationDialog(QtWidgets.QDialog):
 
@@ -15076,7 +15020,8 @@ class PageMap(QtWidgets.QWidget):
         self.CMCatBox.currentIndexChanged.connect(self.OnCatChanged)
         self.CMMapBox.currentIndexChanged.connect(lambda: self.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value()))
         self.StepSpin.valueChanged.connect(lambda: self.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value()))
-
+        self.filterSpinBox.valueChanged.connect(lambda: self.ShowMap(self.prelst, self.postlst))
+        self.filterSpinBox.setEnabled(False)
         self.MapSelectWidget1.mousePressEvent = self.mouseEventOnQList
         self.MapSelectWidget1.mouseMoveEvent = self.mouseEventOnQList
         self.data_struct = data_struct
@@ -15233,6 +15178,7 @@ class PageMap(QtWidgets.QWidget):
             self.ODHighSpinBox.setEnabled(False)
             self.ODLowSpinBox.setEnabled(False)
             self.pbRSTOD.setEnabled(False)
+            self.filterSpinBox.setEnabled(False)
             self.pbExpData.setEnabled(False)
             self.pbExpImg.setEnabled(False)
 
@@ -15503,6 +15449,7 @@ class PageMap(QtWidgets.QWidget):
         self.ODHighSpinBox.setEnabled(False)
         self.ODLowSpinBox.setEnabled(False)
         self.pbRSTOD.setEnabled(False)
+        self.filterSpinBox.setEnabled(False)
         self.pbExpData.setEnabled(False)
         self.pbExpImg.setEnabled(False)
         self.pbClrSel.setEnabled(False)
@@ -15722,6 +15669,8 @@ class PageMap(QtWidgets.QWidget):
                                  + str(round(self.stk.ev[postidx[0]], 2)) + ' ... ' + str(round(self.stk.ev[postidx[-1]], 2)) + " eV</center>",
                                            size='10pt')
             self.OD = self.CalcODMap(preidx, postidx)
+            if self.filterSpinBox.value() > 1:
+                self.OD = ndimage.filters.uniform_filter(self.OD, size=self.filterSpinBox.value(), mode='nearest')
             self.ODmin = np.min(self.OD)
             self.ODmax = np.max(self.OD)
             self.ODHighSpinBox.setEnabled(True)
@@ -15738,6 +15687,7 @@ class PageMap(QtWidgets.QWidget):
             self.ODHighSpinBox.blockSignals(False)
             self.ODLowSpinBox.blockSignals(False)
             self.pbRSTOD.setEnabled(True)
+            self.filterSpinBox.setEnabled(True)
             self.pbExpData.setEnabled(True)
             self.pbExpImg.setEnabled(True)
             #self.pglayout.layout.setColumnMaximumWidth(1, self.p1.width())
