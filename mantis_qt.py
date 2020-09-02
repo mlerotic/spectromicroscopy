@@ -9897,7 +9897,7 @@ class PageStack(QtWidgets.QWidget):
     def loadImage(self):
 
 
-        if (self.defaultdisplay == 1.0):
+        if self.defaultdisplay == 1.0:
             #use a pointer to the data not a copy
             if self.showflux:
                 #Show flux image
@@ -10880,7 +10880,7 @@ class ShowArtefacts(QtWidgets.QDialog):
     def OnAccept(self, evt):
         a, wf = self.LevelCalc(self.stack.absdata.astype('float64'),final=True)
         self.stack.absdata = a
-        #self.parent.page1.loadSpectrum(self.page1.ix, self.page1.iy)
+        self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
         self.parent.page1.loadImage()
         self.parent.page0.Clear()
         self.parent.page0.LoadEntries()
@@ -10892,7 +10892,8 @@ class ShowArtefacts(QtWidgets.QDialog):
         self.close()
 #----------------------------------------------------------------------
 class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
-    qlistchanged = pyqtSignal([object])
+    evlistchanged = pyqtSignal([object])
+    thetalistchanged = pyqtSignal([object])
     def __init__(self, parent, common, stack):
         QtWidgets.QWidget.__init__(self, parent)
         uic.loadUi(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'showmulticrop.ui'), self)
@@ -10900,6 +10901,7 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.stack = stack
         self.com = common
         self.iev = 0
+        self.itheta = 0
         #self.stack.absdata_shifted_cropped = self.stack.absdata_shifted.copy()
 
         self.poolthread = QtCore.QThread()
@@ -10930,6 +10932,9 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
                 self.slider_theta.setVisible(True)
                 self.cb_remove_theta.setVisible(True)
                 self.groupBox_theta.setVisible(True)
+                self.slider_theta.setRange(0, self.stack.n_theta - 1)
+                self.slider_theta.valueChanged[int].connect(self.OnScrollTheta)
+                self.SetupListTheta()
             # self.maskedvals = [True] * int(self.stack.n_ev)
             # self.spinBoxError.setEnabled(False)
             self.slider_eng.sliderPressed.connect(self.ShowImage)
@@ -10938,17 +10943,20 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
             self.slider_eng.setRange(0, self.stack.n_ev - 1)
             self.pb_selectall.clicked.connect(self.OnSelectAll)
             self.pb_clearall.clicked.connect(self.OnClearAll)
-            self.qlistchanged.connect(lambda row: self.qListChangeHandler(row))
+            self.evlistchanged.connect(lambda row: self.qListChangeHandler(row, "energy"))
+            self.thetalistchanged.connect(lambda row: self.qListChangeHandler(row, "theta"))
             #self.ev_widget.itemClicked.connect(lambda item: self.OnItemClicked(item))
-            self.ev_widget.mousePressEvent = self.mouseEventOnQList
-            self.ev_widget.mouseMoveEvent = self.mouseEventOnQList
-            self.ev_widget.itemSelectionChanged.connect(lambda item: self.OnItemClicked(item))
+            self.ev_widget.mousePressEvent = self.mouseEventOnEVList
+            self.ev_widget.mouseMoveEvent = self.mouseEventOnEVList
+            self.theta_widget.mousePressEvent = self.mouseEventOnThetaList
+            self.theta_widget.mouseMoveEvent = self.mouseEventOnThetaList
+            #self.ev_widget.itemSelectionChanged.connect(lambda item: self.OnItemClicked(item))
             self.SetupListEV()
             self.OnScrollEng(0)
             self.SetupROI()
             self.SetupPlot()
 
-    def mouseEventOnQList(self, e):
+    def mouseEventOnEVList(self, e):
         if e.type() == QtCore.QEvent.MouseMove or e.type() == QtCore.QEvent.MouseButtonPress:
             qlist = self.ev_widget
             pos = qlist.mapFromGlobal(QtGui.QCursor.pos())
@@ -10959,8 +10967,21 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
                 if e.type() != QtCore.QEvent.MouseMove or row != self.latest_row:
                     if e.buttons() == QtCore.Qt.LeftButton:
                         qlist.setCurrentRow(row)
-                        #params[1] = -1
-                        self.qlistchanged.emit(item)
+                        self.evlistchanged.emit(item)
+                        self.latest_row = row
+        return
+    def mouseEventOnThetaList(self, e):
+        if e.type() == QtCore.QEvent.MouseMove or e.type() == QtCore.QEvent.MouseButtonPress:
+            qlist = self.theta_widget
+            pos = qlist.mapFromGlobal(QtGui.QCursor.pos())
+            row = qlist.indexAt(pos).row()
+            item = qlist.itemAt(pos)
+            #print(row,self.latest_row)
+            if row >= 0:
+                if e.type() != QtCore.QEvent.MouseMove or row != self.latest_row:
+                    if e.buttons() == QtCore.Qt.LeftButton:
+                        qlist.setCurrentRow(row)
+                        self.thetalistchanged.emit(item)
                         self.latest_row = row
         return
     def OnSelectionChanged(self):
@@ -10975,6 +10996,8 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
         return
     def UpdateIndices(self):
         self.idx_selected = sorted([self.ev_widget.row(i) for i in self.ev_selected])
+        if self.com.stack_4d:
+            self.thetaidx_selected = sorted([self.theta_widget.row(i) for i in self.theta_selected])
     def RedrawPlots(self):
         x,y = self.GenerateSpectrum(list(range(self.stack.n_ev)))
         self.plotitem.setData(x,y)
@@ -10985,16 +11008,24 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.plotitem_new.setData(x,y)
         if self.idx_selected:
             self.region.show()
-    def qListChangeHandler(self,item):
-        if item in self.ev_selected:
-            #print(item, "deselect")
-            self.ev_selected.remove(item)
-            item.setBackground(QtGui.QColor(0, 0, 0, 0))
+    def qListChangeHandler(self,row, dimension):
+        if dimension == "theta":
+            selection = self.theta_selected
+            widget = self.theta_widget
+        elif dimension == "energy":
+            selection = self.ev_selected
+            widget = self.ev_widget
+
+        if row in selection:
+            selection.remove(row)
+            row.setBackground(QtGui.QColor(0, 0, 0, 0))
         else:
-            #print(item, "select")
-            self.ev_selected.append(item)
-            item.setBackground(QtGui.QColor('#beaed4'))
-        self.OnScrollEng(self.ev_widget.row(item))
+            selection.append(row)
+            row.setBackground(QtGui.QColor('#beaed4'))
+        if dimension == "theta":
+            self.OnScrollTheta(widget.row(row))
+        elif dimension == "energy":
+            self.OnScrollEng(widget.row(row))
         self.OnSelectionChanged()
 
     def SetupPlot(self):
@@ -11072,6 +11103,9 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
     def OnSelectAll(self):
         self.ev_widget.clear()
         self.SetupListEV()
+        if self.com.stack_4d:
+            self.theta_widget.clear()
+            self.SetupListTheta()
         self.region.setRegion((min(self.stack.ev), max(self.stack.ev)))
         self.region.show()
         self.RedrawNewPlot()
@@ -11083,8 +11117,23 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
             self.ev_widget.item(idx).setBackground(QtGui.QColor(0, 0, 0, 0))
         self.ev_selected = []
         self.idx_selected = []
+        if self.com.stack_4d:
+            for idx in self.thetaidx_selected:
+                self.theta_widget.item(idx).setBackground(QtGui.QColor(0, 0, 0, 0))
+            self.theta_selected = []
+            self.thetaidx_selected = []
         self.RedrawNewPlot()
-
+    def SetupListTheta(self):
+        self.theta_selected = []
+        self.thetaidx_selected = []
+        for i,e in enumerate(self.stack.theta): # Fill QList with energies
+            #self.stk.shifts.append([1,0,(0.0,0.0)]) #checked [0,1]; pre, post, undefined state for map [-1,1,0],(xshift [float],yshift [float])
+            item = QtGui.QListWidgetItem(str(int(i)).zfill(3)+"     at     " + format(e, '.1f') + "°")
+            self.theta_widget.addItem(item)
+            self.theta_selected.append(item)
+            self.thetaidx_selected.append(i)
+            item.setBackground(QtGui.QColor('#beaed4'))
+            item.setForeground(QtGui.QColor(0, 0, 0, 128))
     def SetupListEV(self):
         self.ev_selected = []
         self.idx_selected = []
@@ -11096,8 +11145,17 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
             self.idx_selected.append(i)
             item.setBackground(QtGui.QColor('#beaed4'))
             item.setForeground(QtGui.QColor(0, 0, 0, 128))
-    def OnEVSelectionChanged(self):
-        self.OnScrollEng(self.ev_widget.currentRow())
+
+    def OnScrollTheta(self, value):
+        self.slider_theta.setValue(value)
+        self.ResetAllItems(self.theta_widget)
+        self.itheta = value
+        #self.stack.absdata = self.stack.stack4D[:,:,:,self.itheta].copy()
+        self.ShowImage()
+        self.theta_widget.setCurrentRow(self.itheta)
+        if self.com.stack_loaded == 1:
+            self.theta_widget.item(value).setForeground(QtGui.QColor(0, 0, 0, 255))
+        self.RedrawPlots()
     def OnScrollEng(self, value):
         self.slider_eng.setValue(value)
         self.ResetAllItems(self.ev_widget)
@@ -11110,10 +11168,13 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.ev_widget.setCurrentRow(self.iev)
         if self.com.stack_loaded == 1:
             self.ev_widget.item(value).setForeground(QtGui.QColor(0, 0, 0, 255))
-        # self.refmarkery.setValue(self.stack.ev[self.iev])
     def ShowImage(self):
-        self.i_item.setImage(self.stack.absdata[:, :, int(self.iev)])
-        self.groupBox.setTitle(str('Stack Browser | Image at {0:5.2f} eV').format(float(self.stack.ev[self.iev])))
+        if self.com.stack_4d == 1:
+            self.i_item.setImage(self.stack.stack4D[:, :, int(self.iev),int(self.itheta)])
+            self.groupBox.setTitle(str('Stack Browser | Image at {0:5.2f} eV and {1:5.1f}°').format(float(self.stack.ev[self.iev]),float(self.stack.theta[self.itheta]), ))
+        else:
+            self.i_item.setImage(self.stack.absdata[:, :, int(self.iev)])
+            self.groupBox.setTitle(str('Stack Browser | Image at {0:5.2f} eV').format(float(self.stack.ev[self.iev])))
 
     ## Setup a ROI for an alignment rectangle. By default the whole image area is used.
     def SetupROI(self):
@@ -11143,21 +11204,32 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
         right = left + int(self.box.size().x())
         bottom = int(self.box.pos().y())
         top = bottom + int(self.box.size().y())
-        # self.stack.absdata_cropped = self.stack.absdata[left:right, bottom:top, :].copy()
         return (left,right,top,bottom)
+
     def GenerateSpectrum(self, evselection):
         left,right,top,bottom = self.GetRegion()
         if self.com.i0_loaded == 1:
-            total = self.stack.od3d[left:right, bottom:top, :].copy()
+            if self.com.stack_4d == 1:
+                total = self.stack.od4d[left:right, bottom:top, :, int(self.itheta)].copy()
+            else:
+                total = self.stack.od3d[left:right, bottom:top, :].copy()
+
         else:
-            total = self.stack.absdata[left:right, bottom:top, :].copy()
+            if self.com.stack_4d == 1:
+                t = [self.stack.theta[i] for i in self.thetaidx_selected]
+                self.label_theta_range.setText(
+                    "Theta range: [ " + str(min(t, default=0)) + "° .. " + str(
+                        max(t, default=0)) + "° ], # values: " + str(
+                        len(t)))
+                total = self.stack.stack4D[left:right, bottom:top, :, int(self.itheta)].copy()
+            else:
+                total = self.stack.absdata[left:right, bottom:top, :].copy()
         total = total.sum(axis=(0,1)) / (int(self.box.size().x()) * int(self.box.size().y()))
         x = [self.stack.ev[i] for i in evselection]
         y = [total[i] for i in evselection]
         self.label_spatial_range.setText("Stack size: [ "+str(int(self.box.size().x()))+" x "+str(int(self.box.size().y()))+" ] px²")
         self.label_ev_range.setText(
             "Energy range: [ " + str(min(x, default=0)) + " .. " + str(max(x, default=0)) + " ] eV, # values: "+ str(len(x)))
-        #print(y)
         return (x, y)
 
     def ResetAllItems(self,widget):
@@ -11206,34 +11278,58 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.parent.page1.ix = int(self.stack.n_cols/2)
         self.parent.page1.iy = int(self.stack.n_rows/2)
 
-        if self.com.i0_loaded == 1:
-            self.stack.od3d =  self.stack.od3d[left:right,bottom:top,selection]
+        if self.com.stack_4d:
+            if self.cb_remove_theta.isChecked():
+                thetas = self.thetaidx_selected
+                if len(thetas) == 0:
+                    QtWidgets.QMessageBox.warning(self, 'Error', 'Please select at least one energy value!')
+                    return
+                self.stack.n_theta = len(thetas)
+                self.stack.theta = self.stack.theta[thetas]
 
-            self.stack.od = self.stack.od3d.copy()
-
-            self.stack.od = np.reshape(self.stack.od, (self.stack.n_rows * self.stack.n_cols, self.stack.n_ev),
+            else:
+                thetas = list(range(self.stack.n_theta))
+            self.stack.stack4D = self.stack.stack4D[left:right, bottom:top, selection, :]
+            self.stack.stack4D = self.stack.stack4D[:,:, :, thetas]
+        if self.com.i0_loaded:
+            if self.com.stack_4d:
+                self.stack.od4D = self.stack.od4D[left:right,bottom:top,selection, thetas]
+            else:
+                self.stack.od3d =  self.stack.od3d[left:right,bottom:top,selection]
+                self.stack.od = self.stack.od3d.copy()
+                self.stack.od = np.reshape(self.stack.od, (self.stack.n_rows * self.stack.n_cols, self.stack.n_ev),
                                        order='F')
 
         self.stack.fill_h5_struct_from_stk()
         if self.com.i0_loaded == 1:
             self.stack.fill_h5_struct_normalization()
 
-        # if self.com.stack_4d == 1:
-        #     self.stack.stack4D = self.stack.stack4D[:, :, self.limitevmin:self.limitevmax + 1, :]
-        #     if self.com.i0_loaded == 1:
-        #         self.stack.od4D = self.stack.od4D[:, :, self.limitevmin:self.limitevmax + 1, :]
-
         # Fix the slider on Page 1!
+        if self.com.stack_4d:
+            self.parent.page1.slider_theta.setRange(0, self.stack.n_theta - 1)
+            self.parent.page1.itheta = 0
+            self.parent.page1.slider_theta.blockSignals(True)
+            self.parent.page1.slider_theta.setValue(int(self.parent.page1.itheta))
+            self.parent.page1.slider_theta.blockSignals(False)
+
+            self.parent.page0.slider_theta.setRange(0, self.stack.n_theta - 1)
+            self.parent.page0.itheta = 0
+            self.parent.page0.slider_theta.blockSignals(True)
+            self.parent.page0.slider_theta.setValue(int(self.parent.page1.itheta))
+            self.parent.page0.slider_theta.blockSignals(False)
+
         self.parent.page1.slider_eng.setRange(0, self.stack.n_ev - 1)
-        self.parent.page1.iev = int(self.stack.n_ev / 2)
+        self.parent.page1.iev = 0
         self.parent.page1.slider_eng.setValue(int(self.parent.page1.iev))
 
         self.parent.page0.slider_eng.setRange(0, self.stack.n_ev - 1)
-        self.parent.page0.iev = int(self.stack.n_ev / 2)
+        self.parent.page0.iev = 0
         self.parent.page0.slider_eng.setValue(int(self.parent.page1.iev))
 
         self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
         self.parent.page1.loadImage()
+        self.parent.page0.Clear()
+        self.parent.page0.LoadEntries()
 
         if showmaptab:
             self.parent.page9.Clear()
