@@ -1,0 +1,27 @@
+QPushButton {
+    font: 11px "Ubuntu";
+}
+QTabWidget {
+    font: 11px "Ubuntu";
+}
+QGroupBox {
+    font: 11px "Ubuntu";
+}
+QComboBox {
+    font: 11px "Ubuntu";
+}
+QCheckBox {
+    font: 11px "Ubuntu";
+}
+QLabel {
+    font: 11px "Ubuntu";
+}
+QSpinBox {
+    font: 11px "Ubuntu";
+}
+QDoubleSpinBox {
+    font: 11px "Ubuntu";
+}
+QWidget {
+    font: 11px "Ubuntu";
+}

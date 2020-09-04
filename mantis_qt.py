@@ -72,6 +72,8 @@ from file_plugins import file_csv
 
 
 version = '3.0.03'
+## Global Stylesheet
+qsspath = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'stylesheet_global.qss')
 
 if sys.platform == 'win32':
     Winsizex = 1000
@@ -14789,7 +14791,6 @@ class ColorTableFrame(QtWidgets.QDialog):
 class PageLoadData(QtWidgets.QWidget):
     def __init__(self, common, data_struct, stack):
         super(PageLoadData, self).__init__()
-
         uic.loadUi(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pageloaddata.ui'), self)
         self.show()
         self.cmaps = [('Perceptually Uniform Sequential', [
@@ -17009,6 +17010,8 @@ def main():
 
     app = QtWidgets.QApplication(sys.argv)
     #print('main', threading.get_ident())
+    with open(qsspath, "r") as stylesheet:
+        app.setStyleSheet(stylesheet.read())
     frame = MainFrame()
     sys.exit(app.exec_())
 
