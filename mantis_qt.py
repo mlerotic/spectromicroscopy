@@ -11051,7 +11051,10 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
         ax = plot.getAxis("bottom")
 
         ax.setLabel(text="Photon energy [eV]")
-        ay.setLabel(text="Flux")
+        if self.com.i0_loaded:
+            ay.setLabel(text="Optical density")
+        else:
+            ay.setLabel(text="Photon flux [cps]")
 
         self.plotitem = plot.plot(x, y, pen=pg.mkPen(color=0.8, width=2))
         self.plotitem_new = plot.plot(x, y, pen=pg.mkPen(color="b", width=2))
@@ -11173,12 +11176,15 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
             self.i_item.setImage(self.stack.stack4D[:, :, int(self.iev),int(self.itheta)])
             self.groupBox.setTitle(str('Stack Browser | Image at {0:5.2f} eV and {1:5.1f}°').format(float(self.stack.ev[self.iev]),float(self.stack.theta[self.itheta]), ))
         else:
-            self.i_item.setImage(self.stack.absdata[:, :, int(self.iev)])
+            if self.com.i0_loaded:
+                self.i_item.setImage(self.stack.od3d[:, :, int(self.iev)])
+            else:
+                self.i_item.setImage(self.stack.absdata[:, :, int(self.iev)])
             self.groupBox.setTitle(str('Stack Browser | Image at {0:5.2f} eV').format(float(self.stack.ev[self.iev])))
 
     ## Setup a ROI for an alignment rectangle. By default the whole image area is used.
     def SetupROI(self):
-        self.stack.absdata = self.stack.absdata.copy()
+        #self.stack.absdata = self.stack.absdata.copy()
         self.box = pg.RectROI(self.i_item.boundingRect().topLeft(), self.i_item.boundingRect().bottomRight(),
                               pen=(5, 8), handlePen=QtGui.QPen(QtGui.QColor(255, 0, 128, 255)), centered=False,
                               sideScalers=False, removable=False, scaleSnap=True, translateSnap=True,
