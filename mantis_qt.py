@@ -13812,10 +13812,10 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
             if b < 0:
                 b = 0
                 ct = ct - b
-            #print(self.stack.absdata[:,:,0].shape, r,l,t,b)
-            if self.stack.absdata[:,:,0].shape < (abs(l-r), abs(b-t)):
+            if 0 in self.stack.absdata_shifted_cropped[l:cr,b:ct,:].shape:
                 QtWidgets.QMessageBox.warning(self, 'Error', 'The alignment failed. Cropping would result in a zero-dimensional image. Please check your settings. Auto-crop has been disabled. You can re-enable it manually.')
                 self.cb_autocrop.setChecked(False)
+                self.OnResetROI()
             else:
                 self.stack.absdata_shifted_cropped = self.stack.absdata_shifted_cropped[l:cr,b:ct,:]
         else:
