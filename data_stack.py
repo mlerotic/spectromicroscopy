@@ -129,7 +129,6 @@ class data:
     def read_ncb4D(self, filenames):
         self.new_data()
         file_ncb.read_ncb4D(self, filenames)
-
         now = datetime.datetime.now()
 
         self.data_struct.implements = 'information:exchange:spectromicroscopy'
@@ -142,7 +141,7 @@ class data:
         self.data_struct.exchange.data_signal = 1
         self.data_struct.exchange.data_axes = 'x:y:energy:theta'
 
-        self.data_struct.exchange.theta = self.theta
+        self.data_struct.exchange.theta = np.array(self.theta)
         self.data_struct.exchange.theta_units = 'degrees'
 
         self.data_struct.exchange.x = self.x_dist

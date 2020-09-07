@@ -317,7 +317,13 @@ def read(filename, self, selection=None, *args, **kwargs):
             if 'axes' in dsdata.attrs:
                 data_struct.exchange.data_axes = dsdata.attrs['axes']
 
-
+                if 'x' in exchangeGrp:
+                    dsx = exchangeGrp['x']
+                    data_struct.exchange.x = dsx[...]
+                    self.have_dimscale = 1
+                if 'y' in exchangeGrp:
+                    dsy = exchangeGrp['y']
+                    data_struct.exchange.y = dsy[...]
 #
 #                 if 'x' in detectorGrp:
 #                     dsx = detectorGrp['x']
@@ -469,9 +475,8 @@ def read(filename, self, selection=None, *args, **kwargs):
         self.x_dist = data_struct.exchange.x
         self.y_dist = data_struct.exchange.y
     else:
-        self.x_dist = range(self.n_cols)
-        self.y_dist = range(self.n_rows)
-
+        self.x_dist = [*range(self.n_cols)]
+        self.y_dist = [*range(self.n_rows)]
 
     self.i0data = data_struct.spectromicroscopy.normalization.white_spectrum
     self.evi0 = data_struct.spectromicroscopy.normalization.white_spectrum_energy

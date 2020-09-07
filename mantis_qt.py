@@ -11273,7 +11273,7 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
             if len(selection) == 0:
                 QtWidgets.QMessageBox.warning(self, 'Error', 'Please select at least one energy value!')
                 return
-            self.stack.n_ev = len(selection)
+            self.stack.n_ev = np.array(len(selection))
             self.stack.ev = self.stack.ev[selection]
             self.stack.data_dwell = self.stack.data_dwell[selection]
         else:
@@ -16561,7 +16561,8 @@ class MainFrame(QtWidgets.QMainWindow):
 
 
             #Update widgets
-
+            if not hasattr(self.stk, 'theta') or type(self.stk.theta) == int:
+                raise TypeError("Not a 4D stack")
             self.common.stack_4d = 1
 
             x=self.stk.n_cols
