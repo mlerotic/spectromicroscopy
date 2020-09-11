@@ -23,6 +23,7 @@ from __future__ import absolute_import
 import sys
 import os
 import time
+import copy
 
 import numpy as np
 import getopt
@@ -13742,7 +13743,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
     def OnAlign(self):
         self.button_align.setEnabled(False)
         ref_idx = self.iev
-        idx = self.stack.n_ev.copy()
+        idx = copy.copy(self.stack.n_ev)
         self.errorlst =[0] * int(self.stack.n_ev)
         # Reset reference img:
         self.xpts[ref_idx]['pos'] = (self.stack.ev[ref_idx], 0)
