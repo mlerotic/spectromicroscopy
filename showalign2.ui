@@ -63,27 +63,44 @@
          <number>0</number>
         </property>
         <item>
-         <widget class="GraphicsView" name="canvas">
-          <property name="font">
-           <font>
-            <family>Ubuntu</family>
-            <pointsize>8</pointsize>
-           </font>
+         <layout class="QGridLayout" name="gridLayout_6">
+          <property name="rightMargin">
+           <number>0</number>
           </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QScrollBar" name="slider_eng">
-          <property name="font">
-           <font>
-            <family>Ubuntu</family>
-            <pointsize>8</pointsize>
-           </font>
+          <property name="spacing">
+           <number>0</number>
           </property>
-          <property name="orientation">
-           <enum>Qt::Vertical</enum>
-          </property>
-         </widget>
+          <item row="0" column="0">
+           <widget class="GraphicsView" name="canvas">
+            <property name="font">
+             <font>
+              <family>Ubuntu</family>
+              <pointsize>8</pointsize>
+             </font>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QScrollBar" name="slider_eng">
+            <property name="font">
+             <font>
+              <family>Ubuntu</family>
+              <pointsize>8</pointsize>
+             </font>
+            </property>
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QScrollBar" name="slider_theta">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
        </layout>
       </widget>
@@ -624,12 +641,12 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>GraphicsLayoutWidget</class>
+   <class>GraphicsView</class>
    <extends>QGraphicsView</extends>
    <header location="global">pyqtgraph</header>
   </customwidget>
   <customwidget>
-   <class>GraphicsView</class>
+   <class>GraphicsLayoutWidget</class>
    <extends>QGraphicsView</extends>
    <header location="global">pyqtgraph</header>
   </customwidget>

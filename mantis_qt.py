@@ -11799,10 +11799,10 @@ class ImageRegistrationDialog(QtWidgets.QDialog):
         self.parent = parent
         self.com = common
         # Currently disabled for Tomo data
-        if self.com.stack_4d == 1:
-            self.bt_align2.setEnabled(False)
-        else:
-            self.bt_align2.setEnabled(True)
+        # if self.com.stack_4d == 1:
+        #     self.bt_align2.setEnabled(True)
+        # else:
+        #     self.bt_align2.setEnabled(True)
         self.bt_align.clicked.connect(self.parent.page1.OnAlignImgs)
         self.bt_align2.clicked.connect(self.parent.page1.OnAlignImgs2)
         self.bt_align.clicked.connect(self.done)
@@ -13458,11 +13458,10 @@ class GeneralPurposeProcessor(QtCore.QRunnable):
             #self.signals.newdriftvalue.emit()
             #self.signals.driftcalcfinished.emit((errorlst, round(np.mean(errorlst),4)))
 
-    def ShiftImg(self, row,x,y):
-        #print(row,x,y)
-        shifted = ndimage.fourier_shift(np.fft.fft2(self.parent.stack.absdata[:, :, row]), [float(-x), float(-y)])
+    def ShiftImg(self, row,x,y,itheta):
+        shifted = ndimage.fourier_shift(np.fft.fft2(self.parent.stack.absdata4d[:, :, row,itheta]), [float(-x), float(-y)])
         shifted = np.fft.ifft2(shifted)
-        self.parent.stack.absdata_shifted[:, :, row] = shifted.real
+        self.parent.stack.absdata4d_shifted[:, :, row, itheta] = shifted.real
         return
 
     def Gauss(self, im):
@@ -13505,12 +13504,19 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.stack = stack
         self.com = common
         self.iev = 0
-        self.stack.absdata_shifted_cropped = self.stack.absdata_shifted.copy()
-
+        self.itheta = 0
+        if self.com.stack_loaded == 1:
+            if self.com.stack_4d:
+                self.stack.absdata4d = self.stack.stack4D.copy()
+            else:
+                self.stack.absdata4d = np.expand_dims(self.stack.absdata.copy(), axis=3)
+            self.stack.absdata4d_shifted = self.stack.absdata4d.copy()
+            self.stack.absdata4d_shifted_cropped = self.stack.absdata4d_shifted.copy()
+        #self.stack.absdata_unaligned = self.stack.absdata_shifted_cropped
         self.poolthread = QtCore.QThread()
         self.aligned = False
         self.button_ok.setEnabled(False)
-
+        self.slider_theta.setVisible(False)
         self.setWindowTitle('Align Stack v2')
         self.pglayout = pg.GraphicsLayout(border=None)
         self.canvas.setBackground("w") # canvas is a pg.GraphicsView widget
@@ -13575,6 +13581,10 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.button_cancel.clicked.connect(self.OnCancel)
 
         if self.com.stack_loaded == 1:
+            if self.com.stack_4d:
+                self.slider_theta.setVisible(True)
+                self.slider_theta.setRange(0, self.stack.n_theta - 1)
+                self.slider_theta.valueChanged[int].connect(self.OnScrollTheta)
             self.maskedvals = [True] * int(self.stack.n_ev)
             self.spinBoxError.setEnabled(False)
             self.slider_eng.sliderPressed.connect(self.ShowImage)
@@ -13629,7 +13639,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.maskedvals[points[0].index()] = not self.maskedvals[points[0].index()]
         if self.aligned:
             self.OnPostFiltering()
-        self.CropStack()
+        self.CropStack3D()
         self.OnScrollEng(points[0].index())
     def OnAligned(self):
         self.aligned = True
@@ -13718,14 +13728,15 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
             self.y_shiftstemp = fitdata[1]
         return True
     def OnFitDone(self,xshifts, yshifts):
+        print("onfitdone")
         # ToDo: Find leak that accumulates function calls. Maybe thread is not properly destroyed?
         self.resetPoolThread()
+        self.pool.finished.connect(self.OnAutoCrop)
         for i in range(self.stack.n_ev):
             if self.stack.shifts[i][2] != (xshifts[i],yshifts[i]):
                 self.stack.shifts[i].pop(2)  # remove tuple
                 self.stack.shifts[i].insert(2, (xshifts[i], yshifts[i]))
-                self.pool.enqueuetask("ShiftImg", i, xshifts[i], yshifts[i])
-        self.pool.finished.connect(self.OnAutoCrop)
+                self.pool.enqueuetask("ShiftImg", i, xshifts[i], yshifts[i],self.itheta)
         if not self.pool.queue.empty():
             self.poolthread.start()
 
@@ -13784,6 +13795,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
                 if running:
                     idx -= 1
                 else:
+                    print("registration done")
                     break
         self.poolthread.start()
     # ----------------------------------------------------------------------
@@ -13795,32 +13807,34 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         if self.aligned:
             self.button_ok.setEnabled(True)
             self.cb_autocrop.blockSignals(True)
-            self.CropStack()
+            self.CropStack3D()
             self.cb_autocrop.blockSignals(False)
             self.OnScrollEng(self.iev)
 
-    def CropStack(self):
-        self.stack.absdata_shifted_cropped = self.stack.absdata_shifted.copy()
+    def CropStack3D(self):
+        self.stack.absdata4d_shifted_cropped = self.stack.absdata4d_shifted.copy()
+        print(self.stack.absdata4d_shifted_cropped.shape)
         if self.cb_autocrop.isChecked():
-            self.box.hide()
-            l = -int(np.floor(min(self.x_shiftstemp)))
-            r = -int(np.ceil(max(self.x_shiftstemp)))
-            cr = r if r < 0 else None
-            if l < 0:
-                l = 0
-                cr = cr - l
-            t = -int(np.ceil(max(self.y_shiftstemp)))
-            ct = t if t < 0 else None
-            b = -int(np.floor(min(self.y_shiftstemp)))
-            if b < 0:
-                b = 0
-                ct = ct - b
-            if 0 in self.stack.absdata_shifted_cropped[l:cr,b:ct,:].shape:
-                QtWidgets.QMessageBox.warning(self, 'Error', 'The alignment failed. Cropping would result in a zero-dimensional image. Please check your settings. Auto-crop has been disabled. You can re-enable it manually.')
-                self.cb_autocrop.setChecked(False)
-                self.OnResetROI()
-            else:
-                self.stack.absdata_shifted_cropped = self.stack.absdata_shifted_cropped[l:cr,b:ct,:]
+            if not self.com.stack_4d:
+                self.box.hide()
+                l = -int(np.floor(min(self.x_shiftstemp)))
+                r = -int(np.ceil(max(self.x_shiftstemp)))
+                cr = r if r < 0 else None
+                if l < 0:
+                    l = 0
+                    cr = cr - l
+                t = -int(np.ceil(max(self.y_shiftstemp)))
+                ct = t if t < 0 else None
+                b = -int(np.floor(min(self.y_shiftstemp)))
+                if b < 0:
+                    b = 0
+                    ct = ct - b
+                if 0 in self.stack.absdata4d_shifted_cropped[l:cr,b:ct,:,self.itheta].shape:
+                    QtWidgets.QMessageBox.warning(self, 'Error', 'The alignment failed. Cropping would result in a zero-dimensional image. Please check your settings. Auto-crop has been disabled. You can re-enable it manually.')
+                    self.cb_autocrop.setChecked(False)
+                    self.OnResetROI()
+                else:
+                    self.stack.absdata4d_shifted_cropped = self.stack.absdata4d_shifted_cropped[l:cr,b:ct,:,:]
         else:
             self.box.show()
 
@@ -13830,13 +13844,21 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.ShowImage()
         self.refmarkerx.setValue(self.stack.ev[self.iev])
         self.refmarkery.setValue(self.stack.ev[self.iev])
+    def OnScrollTheta(self, value):
+        self.itheta = value
+        self.ClearShifts()
+        self.ShowImage()
     def ShowImage(self):
+        self.stack.absdata_shifted_cropped = self.stack.absdata4d_shifted_cropped[:, :, :, int(self.itheta)]
         self.i_item.setImage(self.stack.absdata_shifted_cropped[:, :, int(self.iev)])
-        self.groupBox.setTitle(str('Stack Browser | Image at {0:5.2f} eV').format(float(self.stack.ev[self.iev])))
+        if self.com.stack_4d == 1:
+            self.groupBox.setTitle(str('Stack Browser | Image at {0:5.2f} eV and {1:5.1f}°').format(float(self.stack.ev[self.iev]),float(self.stack.theta[self.itheta]), ))
+        else:
+            self.groupBox.setTitle(str('Stack Browser | Image at {0:5.2f} eV').format(float(self.stack.ev[self.iev])))
 
     ## Setup a ROI for an alignment rectangle. By default the whole image area is used.
     def SetupROI(self):
-        self.stack.absdata_cropped = self.stack.absdata.copy()
+        self.stack.absdata_cropped = self.stack.absdata4d[:,:, :,self.itheta].copy()
         self.box = pg.RectROI(self.i_item.boundingRect().topLeft(), self.i_item.boundingRect().bottomRight(),
                               pen=(5, 8), handlePen=QtGui.QPen(QtGui.QColor(255, 0, 128, 255)), centered=False,
                               sideScalers=False, removable=False, scaleSnap=True, translateSnap=True,
@@ -13846,7 +13868,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.box.sigRegionChangeStarted.connect(self.OnRegionChange)
         self.button_rstroi.clicked.connect(self.OnResetROI)
     ## The ROI is limited to the visible image area. OnMouseMoveOutside handles the behavior when
-    def OnResetROI(self):
+    def ClearShifts(self):
         self.aligned = False
         self.xpts = []
         self.ypts = []
@@ -13861,7 +13883,11 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
                               'brush': QtGui.QColor('blue')})
         self.xscatter.setData(self.xpts)
         self.yscatter.setData(self.ypts)
-        self.stack.absdata_shifted_cropped = self.stack.absdata.copy()
+    def OnResetROI(self):
+        self.ClearShifts()
+        #self.stack.absdata_shifted = self.stack.absdata4d[:,:,:,self.itheta].copy()
+        #self.stack.absdata_shifted_cropped = self.stack.absdata_shifted.copy()
+        self.stack.absdata4d_shifted_cropped = self.stack.absdata4d.copy()
         self.OnScrollEng(self.iev)
 
         self.box.setPos(0, 0, update=False, finish=False)
@@ -13879,7 +13905,8 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         right = left + int(self.box.size().x())
         bottom = int(self.box.pos().y())
         top = bottom + int(self.box.size().y())
-        self.stack.absdata_cropped = self.stack.absdata[left:right, bottom:top, :].copy()
+        self.stack.absdata_cropped = self.stack.absdata4d[left:right, bottom:top, :,self.itheta].copy()
+
     def OnPostFiltering(self):
         self.UpdateScatterPlots(self.xregion, id="x")
         if self.UpdateScatterPlots(self.yregion, id="y"):
@@ -13948,7 +13975,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
     # ----------------------------------------------------------------------
     def OnAccept(self, evt):
         if self.com.stack_4d == 0:
-            self.stack.absdata = self.stack.absdata_shifted_cropped
+            self.stack.absdata = self.stack.absdata4d_shifted_cropped[:,:,:,0]
             self.stack.data_struct.exchange.data = self.stack.absdata
         else:
             QtWidgets.QMessageBox.warning(self, 'Error', '4D stack not yet supported.')
@@ -16667,6 +16694,9 @@ class MainFrame(QtWidgets.QMainWindow):
 
             QtWidgets.QApplication.restoreOverrideCursor()
 
+            if showmaptab:
+                self.page9.Clear()
+                self.page9.LoadEntries()
         except:
 
             self.common.stack_loaded = 0
