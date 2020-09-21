@@ -146,10 +146,9 @@ def read(filename, self, selection=None, *args, **kwargs):
         self.x_dist = numpy.array([float(i) for i in JS.js['ScanDefinition']['Regions'][selection[0]+1]['PAxis']['Points'][1:] ])
         self.y_dist = numpy.array([float(i) for i in JS.js['ScanDefinition']['Regions'][selection[0]+1]['QAxis']['Points'][1:] ])
         self.ev = numpy.array([float(i) for i in JS.js['ScanDefinition']['StackAxis']['Points'][1:] ])
-        print(self.x_dist,self.y_dist)
-        self.n_cols = numpy.array(len(self.x_dist))
-        self.n_rows = numpy.array(len(self.y_dist))
-        self.n_ev = numpy.array(len(self.ev))
+        self.n_cols = len(self.x_dist)
+        self.n_rows = len(self.y_dist)
+        self.n_ev = len(self.ev)
 
         msec = float(JS.js['ScanDefinition']['Dwell'])
         self.data_dwell = numpy.ones((self.n_ev))*msec

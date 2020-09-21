@@ -69,7 +69,7 @@ def read(filename, self, selection=None, *args, **kwargs):
     y_start = float(temp[0])
     y_stop = float(temp[1])
 
-    self.n_ev = np.array(int(lines[3]))
+    self.n_ev = int(lines[3])
 
     # print self.n_ev
 
@@ -432,7 +432,7 @@ class Cncb:
         y_start = float(temp[0])
         y_stop = float(temp[1])
 
-        self.n_ev = np.array(int(lines[3]))
+        self.n_ev = int(lines[3])
 
         # print self.n_ev
 

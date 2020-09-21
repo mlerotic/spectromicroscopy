@@ -243,9 +243,9 @@ def read(filename, self, selection=None, JSONstatus=None):
         self.y_dist = numpy.array([float(i) for i in HDR.hdr['ScanDefinition']['Regions'][selection[0]+1]['QAxis']['Points'][1:] ])
         self.ev = numpy.array([float(i) for i in HDR.hdr['ScanDefinition']['StackAxis']['Points'][1:] ])
 
-        self.n_cols = numpy.array(len(self.x_dist))
-        self.n_rows = numpy.array(len(self.y_dist))
-        self.n_ev = numpy.array(len(self.ev))
+        self.n_cols = len(self.x_dist)
+        self.n_rows = len(self.y_dist)
+        self.n_ev = len(self.ev)
 
         msec = float(HDR.hdr['ScanDefinition']['Dwell'])
         self.data_dwell = numpy.ones((self.n_ev))*msec

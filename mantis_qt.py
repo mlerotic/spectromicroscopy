@@ -10154,7 +10154,7 @@ class PageStack(QtWidgets.QWidget):
             self.ROIpix = np.zeros((self.stk.n_cols,self.stk.n_rows))
 
 
-        print(self.stk.n_cols, self.stk.n_rows)
+        #print(self.stk.n_cols, self.stk.n_rows)
 
         for i in range(self.stk.n_cols):
             for j in range(self.stk.n_rows):
@@ -14855,6 +14855,8 @@ class PageLoadData(QtWidgets.QWidget):
         self.CMMapBox.currentIndexChanged.connect(lambda: self.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value()))
         self.StepSpin.valueChanged.connect(lambda: self.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value()))
 
+        self.pb_rotate.clicked.connect(self.OnRotate)
+        self.pb_mirror.clicked.connect(self.OnMirror)
         self.pglayout = pg.GraphicsLayout(border=None)
         self.canvas.setBackground("w") # canvas is a pg.GraphicsView widget
         self.canvas.setCentralWidget(self.pglayout)
@@ -14970,6 +14972,44 @@ class PageLoadData(QtWidgets.QWidget):
 
     def calcBinSize(self,i,N):
         return int(round(256*(i+1)/N) - round(256*i/N))
+    def OnMirror(self):
+        if self.com.stack_loaded == 1:
+            if self.com.stack_4d == 1:
+                self.stk.stack4D = np.flip(self.stk.stack4D,axis=0)
+                self.stk.absdata = self.stk.stack4D[:, :, :, self.itheta].copy()
+            else:
+                self.stk.absdata = np.flip(self.stk.absdata, axis=0)
+            self.OnScrollEng(self.iev)
+            # Update/Refresh widgets:
+            if showmaptab:
+                self.window().page9.Clear()
+                self.window().page9.LoadEntries()
+            self.window().page1.loadImage()
+        return
+
+    def OnRotate(self):
+        if self.com.stack_loaded == 1:
+            if self.com.stack_4d == 1:
+                self.stk.stack4D = np.rot90(self.stk.stack4D,3)
+                self.stk.absdata = self.stk.stack4D[:, :, :, self.itheta].copy()
+            else:
+                self.stk.absdata = np.rot90(self.stk.absdata,3)
+            # Swap x/y constants:
+            self.stk.n_cols, self.stk.n_rows = self.stk.n_rows, self.stk.n_cols
+            self.stk.x_pxsize, self.stk.y_pxsize = self.stk.y_pxsize, self.stk.x_pxsize
+            self.stk.x_start, self.stk.y_start = self.stk.y_start, self.stk.x_start
+            self.stk.x_dist, self.stk.y_dist = self.stk.y_dist, self.stk.x_dist
+            # Update/Refresh widgets:
+            self.OnScrollEng(self.iev)
+            self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked())
+            if showmaptab:
+                self.window().page9.Clear()
+                self.window().page9.LoadEntries()
+            self.window().page1.ix = int(self.stk.n_cols / 2)
+            self.window().page1.iy = int(self.stk.n_rows / 2)
+            self.window().page1.loadSpectrum(self.window().page1.ix, self.window().page1.iy)
+            self.window().page1.loadImage()
+        return
 
     def OnColormap(self,map="gray", colors=256):
         if self.com.stack_loaded == 1:
