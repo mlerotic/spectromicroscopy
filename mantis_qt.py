@@ -13384,6 +13384,45 @@ class ImageRegistration(QtWidgets.QDialog):
                 self.button_applyman.setEnabled(True)
 
 # ----------------------------------------------------------------------
+class ThetaAlignProcessor(QtCore.QRunnable):
+    def __init__(self, parent, queue):
+        super(ThetaAlignProcessor, self).__init__()
+        #self.signals = GeneralPurposeSignals()
+        #self.funcdict = {"ShiftImg": self.ShiftImg, "AlignReferenced": self.AlignReferenced, "ThetaBatch": self.ThetaBatch}
+        self.parent = parent
+        self.queue = queue
+        self.running = True
+
+    @pyqtSlot()
+    def run(self):
+        while self.running:
+            #print(QtCore.QThread.currentThread())
+            #print(self.parent.pool.pool.activeThreadCount())
+            #print(QtCore.QThreadPool.activeThreadCount())
+            if not self.queue.empty():
+                print("index: ", self.parent.itheta)
+                itheta = self.queue.get(False)[0]
+                #self.parent.itheta = self.parent.itheta
+                self.parent.slider_theta.blockSignals(True)
+                self.parent.slider_theta.setValue(itheta)
+                self.parent.slider_theta.blockSignals(False)
+                # self.ClearShifts()
+                self.parent.ShowImage()
+                self.parent.itheta = itheta + 1
+                #self.parent.OnAlign()
+                #workerfunc, *rest = self.queue.get(False)
+                #args = rest[0]
+                #kwargs = rest[1]
+                #self.funcdict[workerfunc](*args)
+                # if workerfunc == "ThetaBatch":
+                #     print("lock")
+                #     mutex.lock()
+                #print("busy with task {}".format(workerfunc))
+            else:
+                self.running = False
+                break
+
+
 class GeneralPurposeProcessor(QtCore.QRunnable):
     def __init__(self, parent, queue):
         super(GeneralPurposeProcessor, self).__init__()
@@ -13406,32 +13445,7 @@ class GeneralPurposeProcessor(QtCore.QRunnable):
             else:
                 self.running = False
                 break
-    # @pyqtSlot()
-    # def runConsecutive(self):
-    #     drift_x = [0,0] # list for cumsum in negative and positive direction starting from reference image
-    #     drift_y = [0,0]
-    #     errorlst =[0] * int(self.parent.stack.n_ev)
-    #     while not self.q.empty():
-    #         self.mutex.lock()
-    #         data = self.q.get()
-    #         drift, error, _ = register_translation(self.gauss(self.parent.stack.absdata[:, :, data[0]]),
-    #                                                      self.gauss(self.parent.stack.absdata[:, :, data[1]]), 20)
-    #         errorlst[data[0]] = round(error,4)
-    #         if data[0] - data[1] == 1:
-    #             drift_x[1] = round(drift_x[1] + drift[0],2) # Calculate the cumulative sum of drifts
-    #             drift_y[1] = round(drift_y[1] + drift[1],2)
-    #             self.parent.xpts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_x[1] )
-    #             self.parent.ypts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_y[1] )
-    #         else:
-    #             drift_x[0] = round(drift_x[0] + drift[0],2) # Calculate the cumulative sum of drifts
-    #             drift_y[0] = round(drift_y[0] + drift[1],2)
-    #             self.parent.xpts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_x[0] )
-    #             self.parent.ypts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_y[0] )
-    #         self.mutex.unlock()
-    #         self.newdriftvalue.emit()
-    #     self.newdriftvalue.emit()
-    #     self.driftcalcfinished.emit((errorlst, round(np.mean(errorlst),4)))
-    #     self.parent.thread.exit()
+
     @pyqtSlot()
     def AlignReferenced(self, data):
         drift_x = [0,0]
@@ -13474,6 +13488,7 @@ class TaskDispatcher(QtCore.QObject):
         #print("dispatcher called")
         super(TaskDispatcher, self).__init__()
         self.pool = QtCore.QThreadPool.globalInstance()
+        self.mutex = QtCore.QMutex()
         try:
             cpus = len(os.sched_getaffinity(0)) # number of cpu threads. not supported on some platforms.
         except:
@@ -13493,6 +13508,13 @@ class TaskDispatcher(QtCore.QObject):
         self.finished.emit()
         #print("all threads dead")
     #add a task to the queue
+    @pyqtSlot()
+    def runtheta(self):
+        worker = ThetaAlignProcessor(self.parent, self.queue)
+        self.pool.start(worker)
+        self.pool.waitForDone()
+        self.finished.emit()
+
     def enqueuetask(self, func, *args, **kargs):
         self.queue.put((func, args, kargs))
 
@@ -13508,8 +13530,13 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         if self.com.stack_loaded == 1:
             if self.com.stack_4d:
                 self.stack.absdata4d = self.stack.stack4D.copy()
+                self.button_alignbatch.setVisible(True)
+                self.button_align.setText("Align single")
+                self.thetathread = QtCore.QThread()
             else:
                 self.stack.absdata4d = np.expand_dims(self.stack.absdata.copy(), axis=3)
+                self.button_alignbatch.setVisible(False)
+                self.button_align.setText("Align")
             self.stack.absdata4d_shifted = self.stack.absdata4d.copy()
             self.stack.absdata4d_shifted_cropped = self.stack.absdata4d_shifted.copy()
         #self.stack.absdata_unaligned = self.stack.absdata_shifted_cropped
@@ -13606,6 +13633,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
             self.OnScrollEng(0)
             self.SetupROI()
             self.button_align.clicked.connect(self.OnAlign)
+            self.button_alignbatch.clicked.connect(self.OnAlignBatch)
             self.xregion = pg.LinearRegionItem(brush=[255, 0, 0, 45], bounds=[self.stack.ev[0], self.stack.ev[-1]])
             self.yregion = pg.LinearRegionItem(brush=[255, 0, 0, 45], bounds=[self.stack.ev[0], self.stack.ev[-1]])
             self.xregion.setRegion([self.stack.ev[0], self.stack.ev[-1]])
@@ -13643,6 +13671,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.OnScrollEng(points[0].index())
     def OnAligned(self):
         self.aligned = True
+        print("aligned")
         self.button_align.setEnabled(True)
         self.cb_autoerror.stateChanged.connect(self.OnAutoError)
         self.cb_extrapolate.stateChanged.connect(lambda: self.OnMaskScatterSpots(None))
@@ -13731,7 +13760,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         print("onfitdone")
         # ToDo: Find leak that accumulates function calls. Maybe thread is not properly destroyed?
         self.resetPoolThread()
-        self.pool.finished.connect(self.OnAutoCrop)
+        #self.pool.finished.connect(self.OnAutoCrop)
         for i in range(self.stack.n_ev):
             if self.stack.shifts[i][2] != (xshifts[i],yshifts[i]):
                 self.stack.shifts[i].pop(2)  # remove tuple
@@ -13750,7 +13779,80 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.pool = TaskDispatcher(self)
         self.pool.moveToThread(self.poolthread) # GUI is not blocking during calculation due to this
         self.poolthread.started.connect(self.pool.run)
+        self.pool.finished.connect(self.OnAutoCrop)
 
+    def OnThetaCrop(self):
+        print("batch done")
+        self.resetThetaThread()
+    def resetThetaThread(self):
+        print("rst theta")
+        try:
+            self.thetathread.quit()
+            self.thetathread.wait()
+            self.thetathread.started.disconnect()
+        except:
+            pass
+        self.thetapool = TaskDispatcher(self)
+        self.thetapool.moveToThread(self.thetathread) # GUI is not blocking during calculation due to this
+        self.thetathread.started.connect(self.thetapool.runtheta)
+        self.thetapool.finished.connect(self.AlignBatch)
+
+    def OnAlignBatch(self):
+        self.itheta = 0
+        self.AlignBatch()
+
+    def AlignBatch(self):
+        #self.thetathread.mutex.unlock()
+        self.resetThetaThread()
+        if self.itheta < self.stack.n_theta:
+            self.thetapool.enqueuetask(self.itheta)
+            self.thetathread.start()
+        else:
+            print("the end")
+
+        # idx = copy.copy(self.stack.n_theta)
+        # for i in range(idx):
+        #     self.OnScrollTheta(i)
+        #     print(i,idx)
+        #     #self.OnAlign()
+        #     time.sleep(0.2)
+        #         #if self.readyfornexttheta:
+        #             #print("end")
+        # print("batch done")
+    #     # return
+    # def AlignBatch(self):
+    #
+    #         self.button_align.setEnabled(False)
+    #         ref_idx = self.iev
+    #         idx = copy.copy(self.stack.n_ev)
+    #         self.errorlst =[0] * int(self.stack.n_ev)
+    #         # Reset reference img:
+    #         self.xpts[ref_idx]['pos'] = (self.stack.ev[ref_idx], 0)
+    #         self.ypts[ref_idx]['pos'] = (self.stack.ev[ref_idx], 0)
+    #         self.resetPoolThread()
+    #         self.pool.finished.connect(self.OnBatchAligned)
+    #
+    #         if self.rB_referenced.isChecked(): # Make queue with pairs relative to reference image
+    #             while idx: # Generate pairs of indices starting at reference image index.
+    #                 running = 2
+    #                 if (ref_idx + (self.stack.n_ev-idx)) < self.stack.n_ev-1:
+    #                     self.pool.enqueuetask("AlignReferenced", (ref_idx + (self.stack.n_ev-idx) + 1, ref_idx))
+    #                     #q.put((ref_idx + (self.stack.n_ev-idx) + 1, ref_idx))
+    #                 else:
+    #                     running -= 1
+    #                 if ref_idx - (self.stack.n_ev-idx) > 0:
+    #                     self.pool.enqueuetask("AlignReferenced", (ref_idx - (self.stack.n_ev-idx) - 1, ref_idx))
+    #                     #q.put(((ref_idx - (self.stack.n_ev-idx) - 1),ref_idx))
+    #                 else:
+    #                     running -= 1
+    #                 if running:
+    #                     idx -= 1
+    #                 else:
+    #                     print("registration done")
+    #                     break
+    #         self.poolthread.start()
+    # def OnBatchAligned(self):
+    #     self.busywiththeta = False
     def OnAlign(self):
         self.button_align.setEnabled(False)
         ref_idx = self.iev
@@ -13795,7 +13897,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
                 if running:
                     idx -= 1
                 else:
-                    print("registration done")
+                    print("queue composed")
                     break
         self.poolthread.start()
     # ----------------------------------------------------------------------
@@ -13810,6 +13912,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
             self.CropStack3D()
             self.cb_autocrop.blockSignals(False)
             self.OnScrollEng(self.iev)
+            #self.busywiththeta = False
 
     def CropStack3D(self):
         self.stack.absdata4d_shifted_cropped = self.stack.absdata4d_shifted.copy()
