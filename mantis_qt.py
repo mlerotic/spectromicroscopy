@@ -13384,70 +13384,40 @@ class ImageRegistration(QtWidgets.QDialog):
                 self.button_applyman.setEnabled(True)
 
 # ----------------------------------------------------------------------
-class ThetaAlignProcessor(QtCore.QRunnable):
-    def __init__(self, parent, queue):
-        super(ThetaAlignProcessor, self).__init__()
-        #self.signals = GeneralPurposeSignals()
-        #self.funcdict = {"ShiftImg": self.ShiftImg, "AlignReferenced": self.AlignReferenced, "ThetaBatch": self.ThetaBatch}
-        self.parent = parent
-        self.queue = queue
-        self.running = True
-
-    @pyqtSlot()
-    def run(self):
-        while self.running:
-            #print(QtCore.QThread.currentThread())
-            #print(self.parent.pool.pool.activeThreadCount())
-            #print(QtCore.QThreadPool.activeThreadCount())
-            if not self.queue.empty():
-                print("index: ", self.parent.itheta)
-                itheta = self.queue.get(False)[0]
-                #self.parent.itheta = self.parent.itheta
-                self.parent.slider_theta.blockSignals(True)
-                self.parent.slider_theta.setValue(itheta)
-                self.parent.slider_theta.blockSignals(False)
-                # self.ClearShifts()
-                self.parent.ShowImage()
-                self.parent.itheta = itheta + 1
-                #self.parent.OnAlign()
-                #workerfunc, *rest = self.queue.get(False)
-                #args = rest[0]
-                #kwargs = rest[1]
-                #self.funcdict[workerfunc](*args)
-                # if workerfunc == "ThetaBatch":
-                #     print("lock")
-                #     mutex.lock()
-                #print("busy with task {}".format(workerfunc))
-            else:
-                self.running = False
-                break
-
-
 class GeneralPurposeProcessor(QtCore.QRunnable):
-    def __init__(self, parent, queue):
+    def __init__(self, parent, queue, thetaqueue):
         super(GeneralPurposeProcessor, self).__init__()
         #self.signals = GeneralPurposeSignals()
+        self.mutex = QtCore.QMutex()
         self.funcdict = {"ShiftImg": self.ShiftImg, "AlignReferenced": self.AlignReferenced}
         self.parent = parent
         self.queue = queue
+        self.thetaqueue = thetaqueue
         self.running = True
     def run(self):
+        # if not self.thetaqueue.empty():
+        #     self.mutex.lock()
+        #     rest = self.thetaqueue.get(False)
+        #     print(self.thetaqueue.qsize())
+        #     print("thetaqueue, ", rest)
         while self.running:
             #print(QtCore.QThread.currentThread())
             #print(self.parent.pool.pool.activeThreadCount())
             #print(QtCore.QThreadPool.activeThreadCount())
-            if not self.queue.empty():
-                workerfunc, *rest = self.queue.get(False)
-                args = rest[0]
-                kwargs = rest[1]
-                self.funcdict[workerfunc](*args)
-                #print("busy with task {}".format(workerfunc))
-            else:
-                self.running = False
-                break
+                if not self.queue.empty():
+                    workerfunc, *rest = self.queue.get(False)
+                    args = rest[0]
+                    kwargs = rest[1]
+                    self.funcdict[workerfunc](*args)
+                    print("busy with task {}".format(workerfunc))
+                else:
+                    self.running = False
+                    #print("break")
+                    break
 
     @pyqtSlot()
     def AlignReferenced(self, data):
+        print("align ",data)
         drift_x = [0,0]
         drift_y = [0,0]
         drift, error, _ = phase_cross_correlation(self.Gauss(self.parent.stack.absdata_cropped[:, :, data[0]]),
@@ -13488,13 +13458,13 @@ class TaskDispatcher(QtCore.QObject):
         #print("dispatcher called")
         super(TaskDispatcher, self).__init__()
         self.pool = QtCore.QThreadPool.globalInstance()
-        self.mutex = QtCore.QMutex()
         try:
             cpus = len(os.sched_getaffinity(0)) # number of cpu threads. not supported on some platforms.
         except:
             cpus = os.cpu_count()
         self.pool.setMaxThreadCount(cpus)
         self.queue = SimpleQueue()
+        self.thetaqueue = SimpleQueue()
         self.parent = parent
 
     @pyqtSlot()
@@ -13502,19 +13472,15 @@ class TaskDispatcher(QtCore.QObject):
         #print("(re)starting threads")
         #print(self.queue.qsize())
         for n in range(min(self.pool.maxThreadCount(),self.queue.qsize())): #start as many threads as needed.
-            worker = GeneralPurposeProcessor(self.parent,self.queue)
+            worker = GeneralPurposeProcessor(self.parent,self.queue,self.thetaqueue)
             self.pool.start(worker)
         self.pool.waitForDone()
+        # print("all threads dead")
         self.finished.emit()
         #print("all threads dead")
     #add a task to the queue
-    @pyqtSlot()
-    def runtheta(self):
-        worker = ThetaAlignProcessor(self.parent, self.queue)
-        self.pool.start(worker)
-        self.pool.waitForDone()
-        self.finished.emit()
-
+    def enqueuetheta(self, args):
+        self.thetaqueue.put(args)
     def enqueuetask(self, func, *args, **kargs):
         self.queue.put((func, args, kargs))
 
@@ -13781,78 +13747,61 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.poolthread.started.connect(self.pool.run)
         self.pool.finished.connect(self.OnAutoCrop)
 
-    def OnThetaCrop(self):
-        print("batch done")
-        self.resetThetaThread()
-    def resetThetaThread(self):
-        print("rst theta")
-        try:
-            self.thetathread.quit()
-            self.thetathread.wait()
-            self.thetathread.started.disconnect()
-        except:
-            pass
-        self.thetapool = TaskDispatcher(self)
-        self.thetapool.moveToThread(self.thetathread) # GUI is not blocking during calculation due to this
-        self.thetathread.started.connect(self.thetapool.runtheta)
-        self.thetapool.finished.connect(self.AlignBatch)
+    # def OnThetaCrop(self):
+    #     print("batch done")
+    #     self.resetThetaThread()
+    # def resetThetaThread(self):
+    #     print("rst theta")
+    #     try:
+    #         self.thetathread.quit()
+    #         self.thetathread.wait()
+    #         self.thetathread.started.disconnect()
+    #     except:
+    #         pass
+    #     self.thetapool = TaskDispatcher(self)
+    #     self.thetapool.moveToThread(self.thetathread) # GUI is not blocking during calculation due to this
+    #     self.thetathread.started.connect(self.thetapool.runtheta)
+    #     self.thetapool.finished.connect(self.OnThetaCrop)
 
     def OnAlignBatch(self):
-        self.itheta = 0
-        self.AlignBatch()
 
-    def AlignBatch(self):
-        #self.thetathread.mutex.unlock()
-        self.resetThetaThread()
-        if self.itheta < self.stack.n_theta:
-            self.thetapool.enqueuetask(self.itheta)
-            self.thetathread.start()
-        else:
-            print("the end")
+        self.button_align.setEnabled(False)
+        ref_idx = self.iev
+        idx = copy.copy(self.stack.n_ev)
+        self.errorlst =[0] * int(self.stack.n_ev)
+        # Reset reference img:
+        self.xpts[ref_idx]['pos'] = (self.stack.ev[ref_idx], 0)
+        self.ypts[ref_idx]['pos'] = (self.stack.ev[ref_idx], 0)
+        self.resetPoolThread()
+        self.pool.finished.connect(self.OnAligned)
 
-        # idx = copy.copy(self.stack.n_theta)
-        # for i in range(idx):
-        #     self.OnScrollTheta(i)
-        #     print(i,idx)
-        #     #self.OnAlign()
-        #     time.sleep(0.2)
-        #         #if self.readyfornexttheta:
-        #             #print("end")
-        # print("batch done")
-    #     # return
-    # def AlignBatch(self):
-    #
-    #         self.button_align.setEnabled(False)
-    #         ref_idx = self.iev
-    #         idx = copy.copy(self.stack.n_ev)
-    #         self.errorlst =[0] * int(self.stack.n_ev)
-    #         # Reset reference img:
-    #         self.xpts[ref_idx]['pos'] = (self.stack.ev[ref_idx], 0)
-    #         self.ypts[ref_idx]['pos'] = (self.stack.ev[ref_idx], 0)
-    #         self.resetPoolThread()
-    #         self.pool.finished.connect(self.OnBatchAligned)
-    #
-    #         if self.rB_referenced.isChecked(): # Make queue with pairs relative to reference image
-    #             while idx: # Generate pairs of indices starting at reference image index.
-    #                 running = 2
-    #                 if (ref_idx + (self.stack.n_ev-idx)) < self.stack.n_ev-1:
-    #                     self.pool.enqueuetask("AlignReferenced", (ref_idx + (self.stack.n_ev-idx) + 1, ref_idx))
-    #                     #q.put((ref_idx + (self.stack.n_ev-idx) + 1, ref_idx))
-    #                 else:
-    #                     running -= 1
-    #                 if ref_idx - (self.stack.n_ev-idx) > 0:
-    #                     self.pool.enqueuetask("AlignReferenced", (ref_idx - (self.stack.n_ev-idx) - 1, ref_idx))
-    #                     #q.put(((ref_idx - (self.stack.n_ev-idx) - 1),ref_idx))
-    #                 else:
-    #                     running -= 1
-    #                 if running:
-    #                     idx -= 1
-    #                 else:
-    #                     print("registration done")
-    #                     break
-    #         self.poolthread.start()
-    # def OnBatchAligned(self):
-    #     self.busywiththeta = False
+        itheta = 0
+        while itheta < self.stack.n_theta:
+            print(itheta)
+            self.pool.enqueuetheta(itheta)
+            itheta = itheta + 1
+        print("thetaqueue full")
+
+        if self.rB_referenced.isChecked(): # Make queue with pairs relative to reference image
+            while idx: # Generate pairs of indices starting at reference image index.
+                running = 2
+                if (ref_idx + (self.stack.n_ev-idx)) < self.stack.n_ev-1:
+                    self.pool.enqueuetask("AlignReferenced", (ref_idx + (self.stack.n_ev-idx) + 1, ref_idx))
+                    #q.put((ref_idx + (self.stack.n_ev-idx) + 1, ref_idx))
+                else:
+                    running -= 1
+                if ref_idx - (self.stack.n_ev-idx) > 0:
+                    self.pool.enqueuetask("AlignReferenced", (ref_idx - (self.stack.n_ev-idx) - 1, ref_idx))
+                    #q.put(((ref_idx - (self.stack.n_ev-idx) - 1),ref_idx))
+                else:
+                    running -= 1
+                if running:
+                    idx -= 1
+                else:
+                    print("queue composed")
+                    break
+        self.poolthread.start()
+
     def OnAlign(self):
         self.button_align.setEnabled(False)
         ref_idx = self.iev
