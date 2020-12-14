@@ -631,19 +631,6 @@
            </property>
           </widget>
          </item>
-         <item>
-          <widget class="QPushButton" name="button_alignbatch">
-           <property name="font">
-            <font>
-             <family>Ubuntu</family>
-             <pointsize>8</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>Align batch</string>
-           </property>
-          </widget>
-         </item>
         </layout>
        </item>
       </layout>

@@ -10808,7 +10808,7 @@ class ShowArtefacts(QtWidgets.QDialog):
         self.vb.addItem(self.i_item, ignoreBounds=False)
 
         self.stack.absdata_level = self.stack.absdata.copy()
-        if self.stack.i0data.any():
+        if self.com.i0_loaded:
             self.rb_median_i0.setCheckable(True)
             self.rb_median_i0.setChecked(True)
             self.label_4.setText('I0 mask contribution:')
@@ -11291,7 +11291,7 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
             if self.cb_remove_theta.isChecked():
                 thetas = self.thetaidx_selected
                 if len(thetas) == 0:
-                    QtWidgets.QMessageBox.warning(self, 'Error', 'Please select at least one energy value!')
+                    QtWidgets.QMessageBox.warning(self, 'Error', 'Please select at least one theta value!')
                     return
                 self.stack.n_theta = len(thetas)
                 self.stack.theta = self.stack.theta[thetas]
@@ -13383,41 +13383,49 @@ class ImageRegistration(QtWidgets.QDialog):
             elif self.man_align == 2:
                 self.button_applyman.setEnabled(True)
 
+class GeneralPurposeSignals(QtCore.QObject):
+    finished = pyqtSignal()
+    ithetaprogress = pyqtSignal(int)
+    #progress = pyqtSignal()
 # ----------------------------------------------------------------------
 class GeneralPurposeProcessor(QtCore.QRunnable):
-    def __init__(self, parent, queue, thetaqueue):
+    def __init__(self, parent, queue):
         super(GeneralPurposeProcessor, self).__init__()
-        #self.signals = GeneralPurposeSignals()
-        self.mutex = QtCore.QMutex()
+        self.signals = GeneralPurposeSignals()
+        #self.mutex = QtCore.QMutex()
         self.funcdict = {"ShiftImg": self.ShiftImg, "AlignReferenced": self.AlignReferenced}
         self.parent = parent
         self.queue = queue
-        self.thetaqueue = thetaqueue
         self.running = True
+        self.current_itheta = 0
     def run(self):
-        # if not self.thetaqueue.empty():
-        #     self.mutex.lock()
-        #     rest = self.thetaqueue.get(False)
-        #     print(self.thetaqueue.qsize())
-        #     print("thetaqueue, ", rest)
         while self.running:
             #print(QtCore.QThread.currentThread())
             #print(self.parent.pool.pool.activeThreadCount())
             #print(QtCore.QThreadPool.activeThreadCount())
                 if not self.queue.empty():
-                    workerfunc, *rest = self.queue.get(False)
-                    args = rest[0]
-                    kwargs = rest[1]
-                    self.funcdict[workerfunc](*args)
-                    print("busy with task {}".format(workerfunc))
+                    #print("queue size: "+ str(self.queue.qsize()))
+                    workerfunc, *args = self.queue.get(False)
+                    #itheta = args[0][-1]
+                    # args = rest[0][0]
+                    #kwargs = rest[1]
+                    #print(args[0][1])
+                    self.funcdict[workerfunc](*args[0])
+                    #print("busy with task {}".format(workerfunc))
                 else:
                     self.running = False
                     #print("break")
+                    #self.signals.blockSignals(True)
+                    #self.signals.finished.emit()
                     break
 
     @pyqtSlot()
-    def AlignReferenced(self, data):
-        print("align ",data)
+    def AlignReferenced(self, data, itheta):
+        #print("align ",data, itheta)
+        if self.current_itheta != itheta:
+            self.current_itheta = itheta
+            #print("next theta: " + str(itheta))
+            self.signals.ithetaprogress.emit(itheta)
         drift_x = [0,0]
         drift_y = [0,0]
         drift, error, _ = phase_cross_correlation(self.Gauss(self.parent.stack.absdata_cropped[:, :, data[0]]),
@@ -13453,7 +13461,8 @@ class GeneralPurposeProcessor(QtCore.QRunnable):
         return gaussed
 
 class TaskDispatcher(QtCore.QObject):
-    finished = pyqtSignal()
+    # finished = pyqtSignal()
+    # progress = pyqtSignal(int)
     def __init__(self,parent):
         #print("dispatcher called")
         super(TaskDispatcher, self).__init__()
@@ -13464,23 +13473,29 @@ class TaskDispatcher(QtCore.QObject):
             cpus = os.cpu_count()
         self.pool.setMaxThreadCount(cpus)
         self.queue = SimpleQueue()
-        self.thetaqueue = SimpleQueue()
+        #self.thetaqueue = SimpleQueue()
         self.parent = parent
 
     @pyqtSlot()
     def run(self):
         #print("(re)starting threads")
         #print(self.queue.qsize())
-        for n in range(min(self.pool.maxThreadCount(),self.queue.qsize())): #start as many threads as needed.
-            worker = GeneralPurposeProcessor(self.parent,self.queue,self.thetaqueue)
+        if self.parent.com.stack_4d == 0:
+            preferred_qsize = int(self.queue.qsize())
+        else:
+            preferred_qsize = int(self.queue.qsize() / self.parent.stack.n_theta)
+        for n in range(min(self.pool.maxThreadCount(),preferred_qsize)): #start as many threads as needed.
+            worker = GeneralPurposeProcessor(self.parent,self.queue)
+            worker.signals.ithetaprogress.connect(self.parent.IThetaProgress)
+            worker.signals.finished.connect(self.parent.ThreadComplete)
             self.pool.start(worker)
         self.pool.waitForDone()
-        # print("all threads dead")
-        self.finished.emit()
+        print("all threads dead")
+        worker.signals.finished.emit()
         #print("all threads dead")
     #add a task to the queue
-    def enqueuetheta(self, args):
-        self.thetaqueue.put(args)
+    # def enqueuetheta(self, args):
+    #     self.thetaqueue.put(args)
     def enqueuetask(self, func, *args, **kargs):
         self.queue.put((func, args, kargs))
 
@@ -13496,12 +13511,12 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         if self.com.stack_loaded == 1:
             if self.com.stack_4d:
                 self.stack.absdata4d = self.stack.stack4D.copy()
-                self.button_alignbatch.setVisible(True)
-                self.button_align.setText("Align single")
+                #self.button_alignbatch.setVisible(True)
+                self.button_align.setText("Align Batch")
                 self.thetathread = QtCore.QThread()
             else:
                 self.stack.absdata4d = np.expand_dims(self.stack.absdata.copy(), axis=3)
-                self.button_alignbatch.setVisible(False)
+                #self.button_alignbatch.setVisible(False)
                 self.button_align.setText("Align")
             self.stack.absdata4d_shifted = self.stack.absdata4d.copy()
             self.stack.absdata4d_shifted_cropped = self.stack.absdata4d_shifted.copy()
@@ -13599,7 +13614,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
             self.OnScrollEng(0)
             self.SetupROI()
             self.button_align.clicked.connect(self.OnAlign)
-            self.button_alignbatch.clicked.connect(self.OnAlignBatch)
+            #self.button_alignbatch.clicked.connect(self.OnAlign)
             self.xregion = pg.LinearRegionItem(brush=[255, 0, 0, 45], bounds=[self.stack.ev[0], self.stack.ev[-1]])
             self.yregion = pg.LinearRegionItem(brush=[255, 0, 0, 45], bounds=[self.stack.ev[0], self.stack.ev[-1]])
             self.xregion.setRegion([self.stack.ev[0], self.stack.ev[-1]])
@@ -13646,7 +13661,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.comboBox_approx.currentIndexChanged.connect(lambda: self.OnMaskScatterSpots(None))
         self.xscatter.setData(self.xpts)
         self.yscatter.setData(self.ypts)
-        self.pool.finished.disconnect()
+        #self.pool.finished.disconnect()
         self.OnMaskScatterSpots(errorvals=(self.errorlst, round(np.mean(self.errorlst),4)))
     # ----------------------------------------------------------------------
     def OnAutoError(self):
@@ -13726,7 +13741,6 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         print("onfitdone")
         # ToDo: Find leak that accumulates function calls. Maybe thread is not properly destroyed?
         self.resetPoolThread()
-        #self.pool.finished.connect(self.OnAutoCrop)
         for i in range(self.stack.n_ev):
             if self.stack.shifts[i][2] != (xshifts[i],yshifts[i]):
                 self.stack.shifts[i].pop(2)  # remove tuple
@@ -13745,110 +13759,78 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.pool = TaskDispatcher(self)
         self.pool.moveToThread(self.poolthread) # GUI is not blocking during calculation due to this
         self.poolthread.started.connect(self.pool.run)
-        self.pool.finished.connect(self.OnAutoCrop)
+        #self.pool.pool.signals.finished.connect(self.OnAligned)
+        #self.pool.worker.signals.finished.connect(self.parent.ThreadComplete)
+        #self.pool.worker.signals.finished.connect(self.OnAutoCrop)
 
-    # def OnThetaCrop(self):
-    #     print("batch done")
-    #     self.resetThetaThread()
-    # def resetThetaThread(self):
-    #     print("rst theta")
-    #     try:
-    #         self.thetathread.quit()
-    #         self.thetathread.wait()
-    #         self.thetathread.started.disconnect()
-    #     except:
-    #         pass
-    #     self.thetapool = TaskDispatcher(self)
-    #     self.thetapool.moveToThread(self.thetathread) # GUI is not blocking during calculation due to this
-    #     self.thetathread.started.connect(self.thetapool.runtheta)
-    #     self.thetapool.finished.connect(self.OnThetaCrop)
+    def IThetaProgress(self,itheta):
+        #print("Progress"+str(itheta))
+        #self.OnScrollTheta(itheta)
+        self.slider_theta.setValue(itheta)
+        #print(self.pool.pool.activeThreadCount())
 
-    def OnAlignBatch(self):
-
-        self.button_align.setEnabled(False)
-        ref_idx = self.iev
-        idx = copy.copy(self.stack.n_ev)
-        self.errorlst =[0] * int(self.stack.n_ev)
-        # Reset reference img:
-        self.xpts[ref_idx]['pos'] = (self.stack.ev[ref_idx], 0)
-        self.ypts[ref_idx]['pos'] = (self.stack.ev[ref_idx], 0)
-        self.resetPoolThread()
-        self.pool.finished.connect(self.OnAligned)
-
-        itheta = 0
-        while itheta < self.stack.n_theta:
-            print(itheta)
-            self.pool.enqueuetheta(itheta)
-            itheta = itheta + 1
-        print("thetaqueue full")
-
-        if self.rB_referenced.isChecked(): # Make queue with pairs relative to reference image
-            while idx: # Generate pairs of indices starting at reference image index.
-                running = 2
-                if (ref_idx + (self.stack.n_ev-idx)) < self.stack.n_ev-1:
-                    self.pool.enqueuetask("AlignReferenced", (ref_idx + (self.stack.n_ev-idx) + 1, ref_idx))
-                    #q.put((ref_idx + (self.stack.n_ev-idx) + 1, ref_idx))
-                else:
-                    running -= 1
-                if ref_idx - (self.stack.n_ev-idx) > 0:
-                    self.pool.enqueuetask("AlignReferenced", (ref_idx - (self.stack.n_ev-idx) - 1, ref_idx))
-                    #q.put(((ref_idx - (self.stack.n_ev-idx) - 1),ref_idx))
-                else:
-                    running -= 1
-                if running:
-                    idx -= 1
-                else:
-                    print("queue composed")
-                    break
-        self.poolthread.start()
+    def ThreadComplete(self):
+        print(str(self.pool.pool.activeThreadCount())+" THREADS REMAINING FROM POOL.")
+        self.slider_theta.setValue(0)
+        if not self.aligned:
+            self.OnAligned()
+        else:
+            self.OnAutoCrop()
 
     def OnAlign(self):
         self.button_align.setEnabled(False)
         ref_idx = self.iev
-        idx = copy.copy(self.stack.n_ev)
         self.errorlst =[0] * int(self.stack.n_ev)
         # Reset reference img:
         self.xpts[ref_idx]['pos'] = (self.stack.ev[ref_idx], 0)
         self.ypts[ref_idx]['pos'] = (self.stack.ev[ref_idx], 0)
         self.resetPoolThread()
-        self.pool.finished.connect(self.OnAligned)
-        # if self.rB_consecutive.isChecked(): # Make queue with consecutive images
-        #     while idx: # Generate pairs of indices starting at reference image index.
-        #         running = 2
-        #         if (ref_idx + (self.stack.n_ev-idx)) < self.stack.n_ev-1:
-        #             q.put((ref_idx + (self.stack.n_ev-idx) + 1, ref_idx + (self.stack.n_ev-idx)))
-        #         else:
-        #             running -= 1
-        #         if ref_idx - (self.stack.n_ev-idx) > 0:
-        #             q.put(((ref_idx - (self.stack.n_ev-idx) - 1),(ref_idx - (self.stack.n_ev-idx))))
-        #         else:
-        #             running -= 1
-        #         if running:
-        #             idx -= 1
-        #         else:
-        #             break
-        #     self.thread.started.connect(self.worker.runConsecutive)
-        #     self.thread.start()
 
         if self.rB_referenced.isChecked(): # Make queue with pairs relative to reference image
-            while idx: # Generate pairs of indices starting at reference image index.
-                running = 2
-                if (ref_idx + (self.stack.n_ev-idx)) < self.stack.n_ev-1:
-                    self.pool.enqueuetask("AlignReferenced", (ref_idx + (self.stack.n_ev-idx) + 1, ref_idx))
-                    #q.put((ref_idx + (self.stack.n_ev-idx) + 1, ref_idx))
-                else:
-                    running -= 1
-                if ref_idx - (self.stack.n_ev-idx) > 0:
-                    self.pool.enqueuetask("AlignReferenced", (ref_idx - (self.stack.n_ev-idx) - 1, ref_idx))
-                    #q.put(((ref_idx - (self.stack.n_ev-idx) - 1),ref_idx))
-                else:
-                    running -= 1
-                if running:
-                    idx -= 1
-                else:
-                    print("queue composed")
-                    break
+            itheta = 0
+            if self.com.stack_4d:
+                ntheta = self.stack.n_theta
+            else:
+                ntheta = 1 # necessary work around for 3d stacks and if 4d stack is loaded with LoadStack()
+            while itheta < ntheta:
+                idx = copy.copy(self.stack.n_ev)
+                while idx: # Generate pairs of indices starting at reference image index.
+                    running = 2
+                    if (ref_idx + (self.stack.n_ev-idx)) < self.stack.n_ev-1:
+                        self.pool.enqueuetask("AlignReferenced", (ref_idx + (self.stack.n_ev-idx) + 1, ref_idx), itheta)
+                        #q.put((ref_idx + (self.stack.n_ev-idx) + 1, ref_idx))
+                    else:
+                        running -= 1
+                    if ref_idx - (self.stack.n_ev-idx) > 0:
+                        self.pool.enqueuetask("AlignReferenced", (ref_idx - (self.stack.n_ev-idx) - 1, ref_idx), itheta)
+                        #q.put(((ref_idx - (self.stack.n_ev-idx) - 1),ref_idx))
+                    else:
+                        running -= 1
+                    if running:
+                        idx -= 1
+                    else:
+                        break
+                itheta = itheta + 1
+        print("total queue composed. starting poolthread")
         self.poolthread.start()
+        # # if self.rB_consecutive.isChecked(): # Make queue with consecutive images
+        # #     while idx: # Generate pairs of indices starting at reference image index.
+        # #         running = 2
+        # #         if (ref_idx + (self.stack.n_ev-idx)) < self.stack.n_ev-1:
+        # #             q.put((ref_idx + (self.stack.n_ev-idx) + 1, ref_idx + (self.stack.n_ev-idx)))
+        # #         else:
+        # #             running -= 1
+        # #         if ref_idx - (self.stack.n_ev-idx) > 0:
+        # #             q.put(((ref_idx - (self.stack.n_ev-idx) - 1),(ref_idx - (self.stack.n_ev-idx))))
+        # #         else:
+        # #             running -= 1
+        # #         if running:
+        # #             idx -= 1
+        # #         else:
+        # #             break
+        # #     self.thread.started.connect(self.worker.runConsecutive)
+        # #     self.thread.start()
+
     # ----------------------------------------------------------------------
     def GetIndexPairs(self):
         idxtuplelst = [(i+1,i) for i in range(self.stack.n_ev-1)]
@@ -13897,9 +13879,12 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.refmarkerx.setValue(self.stack.ev[self.iev])
         self.refmarkery.setValue(self.stack.ev[self.iev])
     def OnScrollTheta(self, value):
-        self.itheta = value
-        self.ClearShifts()
-        self.ShowImage()
+        if value != self.itheta:
+            #print("Theta slider" + str(value))
+            self.slider_theta.setValue(value)
+            self.itheta = value
+            self.ClearShifts()
+            self.ShowImage()
     def ShowImage(self):
         self.stack.absdata_shifted_cropped = self.stack.absdata4d_shifted_cropped[:, :, :, int(self.itheta)]
         self.i_item.setImage(self.stack.absdata_shifted_cropped[:, :, int(self.iev)])
