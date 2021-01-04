@@ -9449,15 +9449,15 @@ class PageStack(QtWidgets.QWidget):
         multicropwin = MultiCrop(self.window(), self.com, self.stk)
         multicropwin.show()
 #----------------------------------------------------------------------
-    def OnLimitEv(self, evt):
-
-        limitevwin = LimitEv(self.window(), self.com, self.stk)
-        limitevwin.show()
-
-#----------------------------------------------------------------------
-    def OnCliptoSubregion(self, evt):
-        clipwin = CliptoSubregion(self.window(), self.com, self.stk)
-        clipwin.show()
+#     def OnLimitEv(self, evt):
+#
+#         limitevwin = LimitEv(self.window(), self.com, self.stk)
+#         limitevwin.show()
+#
+# #----------------------------------------------------------------------
+#     def OnCliptoSubregion(self, evt):
+#         clipwin = CliptoSubregion(self.window(), self.com, self.stk)
+#         clipwin.show()
 
 #----------------------------------------------------------------------
     def Save(self, filename, path, spec_png = True, spec_pdf = False, spec_svg = False, sp_csv = False,
@@ -11066,17 +11066,26 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
         plot.addItem(self.refmarker, ignoreBounds=True)
         self.region.setRegion((min(x),max(x)))
         self.region.sigRegionChangeFinished.connect(lambda region: self.UpdateEVRegion(region))
-
+    # ----------------------------------------------------------------------
+    def getDataClosestToRegion(self,region,plotitem,snapregion=False):
+        minidx, maxidx = region.getRegion()
+        data = plotitem.getData()[0]
+        index = lambda x: np.argmin(np.abs(data - x))
+        minidx = index(minidx)
+        maxidx = index(maxidx)
+        if minidx == maxidx:
+            minidx = 0
+            maxidx = np.argmax(data)
+        mindata = data[minidx]
+        maxdata = data[maxidx]
+        if snapregion:
+            region.blockSignals(True)
+            region.setRegion([mindata, maxdata])  # snap region to data points
+            region.blockSignals(False)
+        return minidx, maxidx, mindata, maxdata
+    
     def UpdateEVRegion(self, region):
-        min, max = region.getRegion()
-        min_idx = np.argmin(np.abs(self.plotitem.xData - min))
-        max_idx = np.argmin(np.abs(self.plotitem.xData - max))
-        if min_idx == max_idx:
-            min_idx = 0
-            max_idx = self.stack.n_ev - 1
-        region.blockSignals(True)
-        region.setRegion([self.plotitem.xData[min_idx], self.plotitem.xData[max_idx]])  # snap region to data points
-        region.blockSignals(False)
+        min_idx, max_idx,*_  = self.getDataClosestToRegion(region,self.plotitem, True)
         y_vals = self.plotitem.yData[min_idx:max_idx + 1]
         x_vals = self.plotitem.xData[min_idx:max_idx + 1]
         self.spectrum_plotwidget.setRange(yRange=[np.min(y_vals), np.max(y_vals)], xRange=[np.min(x_vals), np.max(x_vals)], disableAutoRange=True, padding=0.2)
@@ -11194,14 +11203,14 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
                               maxBounds=self.i_item.boundingRect())
         self.vb.addItem(self.box, ignoreBounds=False)
         self.box.sigRegionChangeFinished.connect(self.RedrawPlots)
-        self.box.sigRegionChangeStarted.connect(self.OnRegionChange)
+        self.box.sigRegionChangeStarted.connect(self.OnBoxChanging)
         self.button_rstroi.clicked.connect(self.OnResetROI)
     ## The ROI is limited to the visible image area. OnMouseMoveOutside handles the behavior when
     def OnResetROI(self):
         self.box.setPos(0, 0, update=False, finish=False)
         self.box.setSize(self.i_item.boundingRect().bottomRight() - self.box.pos(), update=True, snap=True, finish=True)
         self.box.show()
-    def OnRegionChange(self):
+    def OnBoxChanging(self):
         self.boxsize = self.box.size()
         self.proxy = pg.SignalProxy(self.vb.scene().sigMouseMoved, rateLimit=30, slot=self.OnMouseMoveOutside)
     def GetRegion(self):
@@ -11345,451 +11354,6 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
             self.parent.page9.LoadEntries()
 
         self.close()
-
-# #----------------------------------------------------------------------
-# class LimitEv(QtWidgets.QDialog):
-#
-#     def __init__(self, parent,  common, stack):
-#         QtWidgets.QWidget.__init__(self, parent)
-#
-#         self.parent = parent
-#
-#         self.stack = stack
-#         self.com = common
-#
-#         self.resize(630, 450)
-#         self.setWindowTitle('Limit energy range')
-#
-#         pal = QtGui.QPalette()
-#         self.setAutoFillBackground(True)
-#         pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
-#         self.setPalette(pal)
-#
-#
-#         self.evlimited = 0
-#         self.limitevmin = 0
-#         self.limitevmax = self.stack.n_ev-1
-#
-#         self.patch = None
-#
-#         vbox = QtWidgets.QVBoxLayout()
-#
-#
-#         frame = QtWidgets.QFrame()
-#         frame.setFrameStyle(QtWidgets.QFrame.StyledPanel|QtWidgets.QFrame.Sunken)
-#         fbox = QtWidgets.QHBoxLayout()
-#
-#         self.specfig = Figure((6.0, 4.2))
-#         self.SpectrumPanel = FigureCanvas(self.specfig)
-#         self.SpectrumPanel.setParent(self)
-#         self.SpectrumPanel.mpl_connect('button_press_event', self.OnSelection1)
-#         self.SpectrumPanel.mpl_connect('button_release_event', self.OnSelection2)
-#
-#
-#         fbox.addWidget(self.SpectrumPanel)
-#         frame.setLayout(fbox)
-#         vbox.addWidget(frame)
-#
-#
-#         hbox2 = QtWidgets.QHBoxLayout()
-#         sizer2 = QtWidgets.QGroupBox('Energy')
-#         self.textctrl = QtWidgets.QLabel(self)
-#         self.textctrl.setText(' ')
-#         hbox2.addWidget(self.textctrl, 0)
-#         sizer2.setLayout(hbox2)
-#         vbox.addWidget(sizer2)
-#
-#         hbox = QtWidgets.QHBoxLayout()
-#
-#
-#         button_ok = QtWidgets.QPushButton('Accept')
-#         button_ok.clicked.connect(self.OnAccept)
-#         hbox.addWidget(button_ok)
-#
-#         button_cancel = QtWidgets.QPushButton('Cancel')
-#         button_cancel.clicked.connect(self.close)
-#         hbox.addWidget(button_cancel)
-#
-#         vbox.addLayout(hbox)
-#
-#         self.setLayout(vbox)
-#
-#         self.draw_limitev_plot()
-#
-#
-# #----------------------------------------------------------------------
-#     def draw_limitev_plot(self):
-#
-#
-#         if self.com.i0_loaded == 1:
-#             odtotal = self.stack.od3d.sum(axis=0)
-#         else:
-#             odtotal = self.stack.absdata.sum(axis=0)
-#
-#         odtotal = odtotal.sum(axis=0)/(self.stack.n_rows*self.stack.n_cols)
-#
-#         fig = self.specfig
-#         fig.clf()
-#         fig.add_axes((0.15,0.15,0.75,0.75))
-#         self.axes = fig.gca()
-#
-#
-#         specplot = self.axes.plot(self.stack.ev,odtotal)
-#
-#         self.axes.set_xlabel('Photon Energy [eV]')
-#         self.axes.set_ylabel('Optical Density')
-#
-#         if self.evlimited == 1:
-#             self.patch = self.axes.axvspan(self.stack.ev[self.limitevmin], self.stack.ev[self.limitevmax], facecolor='g', alpha=0.5)
-#
-#
-#         self.SpectrumPanel.draw()
-#
-#         self.textctrl.setText('Min energy {0:5.2f} eV\n'.format(float(self.stack.ev[self.limitevmin]))
-#                               + 'Max energy {0:5.2f} eV'.format(float(self.stack.ev[self.limitevmax])))
-#
-# #----------------------------------------------------------------------
-#     def OnSelection1(self, evt):
-#
-#
-#         x1 = evt.xdata
-#
-#         self.button_pressed = True
-#         self.conn = self.SpectrumPanel.mpl_connect('motion_notify_event', self.OnSelectionMotion)
-#
-#         if x1 == None:
-#             return
-#
-#
-#         self.limitevmin = np.abs(self.stack.ev-x1).argmin()
-#
-#
-#
-# #----------------------------------------------------------------------
-#     def OnSelection2(self, evt):
-#
-#         x2 = evt.xdata
-#
-#
-#         self.button_pressed = False
-#         self.SpectrumPanel.mpl_disconnect(self.conn)
-#
-#         if x2 == None:
-#             return
-#
-#
-#         #self.limitevmin = np.abs(self.stack.ev-x1).argmin()
-#         self.limitevmax = np.abs(self.stack.ev-x2).argmin()
-#
-#         self.evlimited = 1
-#
-#         self.draw_limitev_plot()
-#
-#
-# #----------------------------------------------------------------------
-#     def OnSelectionMotion(self, event):
-#
-#         x2 = event.xdata
-#
-#         if x2 == None:
-#             return
-#
-#         self.limitevmax = np.abs(self.stack.ev-x2).argmin()
-#
-#         fig = self.specfig
-#
-#         axes = fig.gca()
-#
-#         if self.patch != None:
-#             self.patch.remove()
-#         self.patch = self.axes.axvspan(self.stack.ev[self.limitevmin], self.stack.ev[self.limitevmax], facecolor='w', alpha=0.5)
-#
-#         self.SpectrumPanel.draw()
-#
-#
-# #----------------------------------------------------------------------
-#     def OnAccept(self, evt):
-#         #change the energy range to limitevmin-limitev-max
-#         #print self.stack.n_ev, self.stack.ev.shape
-#         self.stack.n_ev = self.limitevmax+1-self.limitevmin
-#         self.stack.ev = self.stack.ev[self.limitevmin:self.limitevmax+1]
-#         self.stack.data_dwell = self.stack.data_dwell[self.limitevmin:self.limitevmax+1]
-#
-#         #print self.stack.n_ev, self.stack.ev.shape
-#
-#
-#         self.stack.absdata = self.stack.absdata[:,:,self.limitevmin:self.limitevmax+1]
-#
-#         if self.com.i0_loaded == 1:
-#             self.stack.od3d = self.stack.od3d[:,:,self.limitevmin:self.limitevmax+1]
-#
-#             self.stack.od = self.stack.od3d.copy()
-#
-#             self.stack.od = np.reshape(self.stack.od, (self.stack.n_rows*self.stack.n_cols, self.stack.n_ev), order='F')
-#
-#         self.stack.fill_h5_struct_from_stk()
-#         if self.com.i0_loaded == 1:
-#             self.stack.fill_h5_struct_normalization()
-#
-#
-#         if self.com.stack_4d == 1:
-#             self.stack.stack4D = self.stack.stack4D[:,:,self.limitevmin:self.limitevmax+1,:]
-#             if self.com.i0_loaded == 1:
-#                 self.stack.od4D = self.stack.od4D[:,:,self.limitevmin:self.limitevmax+1,:]
-#
-#
-#         #Fix the slider on Page 1!
-#         self.parent.page1.slider_eng.setRange(0,self.stack.n_ev-1)
-#         self.parent.page1.iev = int(self.stack.n_ev/2)
-#         self.parent.page1.slider_eng.setValue(self.parent.page1.iev)
-#
-#         self.parent.page0.slider_eng.setRange(0,self.stack.n_ev-1)
-#         self.parent.page0.iev = int(self.stack.n_ev/2)
-#         self.parent.page0.slider_eng.setValue(self.parent.page1.iev)
-#
-#         self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
-#         self.parent.page1.loadImage()
-#
-#         if showmaptab:
-#             self.parent.page9.Clear()
-#             self.parent.page9.LoadEntries()
-#
-#         self.close()
-#
-#
-# #----------------------------------------------------------------------
-# class CliptoSubregion(QtWidgets.QDialog):
-#
-#     def __init__(self, parent,  common, stack):
-#         QtWidgets.QWidget.__init__(self, parent)
-#
-#         self.parent = parent
-#
-#         self.stack = stack
-#         self.com = common
-#
-#         self.resize(500, 470)
-#         self.setWindowTitle('Clip to Subregion')
-#
-#         pal = QtGui.QPalette()
-#         self.setAutoFillBackground(True)
-#         pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
-#         self.setPalette(pal)
-#
-#         self.new_x1 = int(self.stack.n_cols*0.10)
-#         self.new_x2 = int(self.stack.n_cols*0.90)
-#         self.new_y2 = self.stack.n_rows-1-int(self.stack.n_rows*0.10)
-#         self.new_y1 = self.stack.n_rows-1-int(self.stack.n_rows*0.90)
-#
-#         self.new_ncols = self.new_x2 - self.new_x1
-#         self.new_nrows = self.new_y2 - self.new_y1
-#
-#         vbox = QtWidgets.QVBoxLayout()
-#
-#         sizer = QtWidgets.QGroupBox('Select new stack size')
-#         vbox1 = QtWidgets.QVBoxLayout()
-#         self.textctrl1 = QtWidgets.QLabel(self)
-#         self.textctrl1.setText('Original stack size:\t{0:5d}   x{1:5d} '.format(self.stack.n_cols, self.stack.n_rows))
-#         vbox1.addWidget(self.textctrl1)
-#
-#         self.textctrl2 = QtWidgets.QLabel(self)
-#         self.textctrl2.setText('New stack size:\t{0:5d}   x{1:5d} '.format(self.new_ncols, self.new_nrows))
-#         vbox1.addWidget(self.textctrl2)
-#
-#         self.textctrl3 = QtWidgets.QLabel(self)
-#         self.textctrl3.setText('Clip coordinates [[x1, x2], [y1, y2]] : [[{0:5d},{1:5d}], [{2:5d},{3:5d}]]'.format(
-#                                     self.new_x1, self.new_x2, self.new_y1, self.new_y2))
-#         vbox1.addWidget(self.textctrl3)
-#
-#         self.absimgfig = Figure((PlotH,PlotH))
-#         self.AbsImagePanel = FigureCanvas(self.absimgfig)
-#         self.AbsImagePanel.setParent(self)
-#         self.AbsImagePanel.mpl_connect('button_press_event', self.OnSelection1)
-#         self.AbsImagePanel.mpl_connect('button_release_event', self.OnSelection2)
-#
-#         vbox1.addWidget(self.AbsImagePanel)
-#         sizer.setLayout(vbox1)
-#         vbox.addWidget(sizer)
-#
-#         hbox = QtWidgets.QHBoxLayout()
-#
-#         button_ok = QtWidgets.QPushButton('Accept')
-#         button_ok.clicked.connect(self.OnAccept)
-#         hbox.addWidget(button_ok)
-#
-#         button_cancel = QtWidgets.QPushButton('Cancel')
-#         button_cancel.clicked.connect(self.close)
-#         hbox.addWidget(button_cancel)
-#
-#         vbox.addLayout(hbox)
-#
-#         self.setLayout(vbox)
-#
-#         self.draw_image()
-#
-#
-# #----------------------------------------------------------------------
-#     def draw_image(self):
-#
-#         image = self.stack.absdata[:,:,int(self.stack.n_ev/2)].copy()
-#
-#         fig = self.absimgfig
-#         fig.clf()
-#         fig.add_axes((0.02,0.02,0.96,0.96))
-#
-#         axes = fig.gca()
-#         fig.patch.set_alpha(1.0)
-#
-#         im = axes.imshow(np.rot90(image), cmap=matplotlib.cm.get_cmap("gray"))
-#
-#         # Draw the rectangle
-#         line1=matplotlib.lines.Line2D([self.new_x1,self.new_x2], [self.new_y1,self.new_y1] ,color="red")
-#         line1.set_clip_on(False)
-#         self.l1 = axes.add_line(line1)
-#
-#         line2=matplotlib.lines.Line2D([self.new_x1,self.new_x2], [self.new_y2,self.new_y2] ,color="red")
-#         line2.set_clip_on(False)
-#         self.l2 = axes.add_line(line2)
-#
-#         line3=matplotlib.lines.Line2D([self.new_x1,self.new_x1], [self.new_y1,self.new_y2] ,color="red")
-#         line3.set_clip_on(False)
-#         self.l3 = axes.add_line(line3)
-#
-#         line4=matplotlib.lines.Line2D([self.new_x2,self.new_x2], [self.new_y1,self.new_y2] ,color="red")
-#         line4.set_clip_on(False)
-#         self.l4 = axes.add_line(line4)
-#
-#         axes.axis("off")
-#         self.AbsImagePanel.draw()
-#
-#
-# #----------------------------------------------------------------------
-#     def OnSelection1(self, evt):
-#
-#         x1, y1 = evt.xdata, evt.ydata
-#
-#         self.button_pressed = True
-#         self.conn = self.AbsImagePanel.mpl_connect('motion_notify_event', self.OnSelectionMotion)
-#
-#         if (x1 == None) or (y1 == None):
-#             return
-#
-#         self.new_y1 = int(y1)
-#         self.new_x1 = int(x1)
-#
-#         self.new_ncols = self.new_x2 - self.new_x1 + 1
-#         self.new_nrows = self.new_y1 - self.new_y2 + 1
-#
-# #         self.textctrl2.SetValue('New stack size:\t{0:5d}   x{1:5d} '.format(self.new_ncols, self.new_nrows))
-# #         self.textctrl3.SetValue('Clip coordinates [[x1, x2], [y1, y2]]:[[{0:5d},{1:5d}], [{2:5d},{3:5d}]]'.format(
-# #                                     self.new_x1, self.new_x2, self.new_y1, self.new_y2))
-# #
-# #         self.draw_image()
-#
-# #----------------------------------------------------------------------
-#     def OnSelection2(self, evt):
-#
-#         x2, y2 = evt.xdata, evt.ydata
-#
-#         self.button_pressed = False
-#         self.AbsImagePanel.mpl_disconnect(self.conn)
-#
-#         if (x2 == None) or (y2 == None):
-#             return
-#
-#         self.new_y2 = int(y2)
-#         self.new_x2 = int(x2)
-#
-#         if self.new_x1 > self.new_x2:
-#             temp = self.new_x1
-#             self.new_x1 = self.new_x2
-#             self.new_x2 = temp
-#
-#         if self.new_y1 > self.new_y2:
-#             temp = self.new_y1
-#             self.new_y1 = self.new_y2
-#             self.new_y2 = temp
-#
-#         self.new_ncols = self.new_x2 - self.new_x1 + 1
-#         self.new_nrows = self.new_y2 - self.new_y1 + 1
-#
-#         self.textctrl2.setText('New stack size:\t{0:5d}   x{1:5d} '.format(self.new_ncols, self.new_nrows))
-#         self.textctrl3.setText('Clip coordinates [[x1, x2], [y1, y2]]:[[{0:5d},{1:5d}], [{2:5d},{3:5d}]]'.format(
-#                                     self.new_x1, self.new_x2, self.new_y1, self.new_y2))
-#
-#         self.draw_image()
-#
-# #----------------------------------------------------------------------
-#     def OnSelectionMotion(self, event):
-#
-#         x2, y2 = event.xdata, event.ydata
-#
-#         if x2 == None:
-#             return
-#
-#         self.new_y2 = int(y2)
-#         self.new_x2 = int(x2)
-#
-#         fig = self.absimgfig
-#
-#         axes = fig.gca()
-#
-#         self.l1.remove()
-#         self.l2.remove()
-#         self.l3.remove()
-#         self.l4.remove()
-#
-#         line1=matplotlib.lines.Line2D([self.new_x1,self.new_x2], [self.new_y1,self.new_y1] ,color="red")
-#         line1.set_clip_on(False)
-#         self.l1 = axes.add_line(line1)
-#
-#         line2=matplotlib.lines.Line2D([self.new_x1,self.new_x2], [self.new_y2,self.new_y2] ,color="red")
-#         line2.set_clip_on(False)
-#         self.l2 = axes.add_line(line2)
-#
-#         line3=matplotlib.lines.Line2D([self.new_x1,self.new_x1], [self.new_y1,self.new_y2] ,color="red")
-#         line3.set_clip_on(False)
-#         self.l3 = axes.add_line(line3)
-#
-#         line4=matplotlib.lines.Line2D([self.new_x2,self.new_x2], [self.new_y1,self.new_y2] ,color="red")
-#         line4.set_clip_on(False)
-#         self.l4 = axes.add_line(line4)
-#
-#
-#         self.AbsImagePanel.draw()
-#
-#
-# #----------------------------------------------------------------------
-#     def OnAccept(self, evt):
-#
-#         #change the stack size to [x1,x2], [y1,y2]
-#         self.stack.absdata = self.stack.absdata[ self.new_x1:self.new_x2+1, self.stack.n_rows-self.new_y2-1:self.stack.n_rows-self.new_y1, :]
-#         if self.com.i0_loaded == 1:
-#             self.stack.od3d = self.stack.od3d[ self.new_x1:self.new_x2+1, self.stack.n_rows-self.new_y2-1:self.stack.n_rows-self.new_y1, :]
-#             self.stack.od = self.stack.od3d.copy()
-#
-#         self.stack.n_cols = self.stack.absdata.shape[0]
-#         self.stack.n_rows = self.stack.absdata.shape[1]
-#
-#         if self.com.i0_loaded == 1:
-#             self.stack.od = np.reshape(self.stack.od, (self.stack.n_rows * self.stack.n_cols, self.stack.n_ev), order='F')
-#
-#         #Fix the slider on Page 1!
-#         self.parent.page1.ix = int(self.stack.n_cols/2)
-#         self.parent.page1.iy = int(self.stack.n_rows/2)
-#
-#         self.stack.fill_h5_struct_from_stk()
-#         self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
-#         self.parent.page1.loadImage()
-#         #self.parent.page0.ShowImage()
-#         self.parent.page0.Clear()
-#         self.parent.page0.LoadEntries()
-#
-#         if showmaptab:
-#             self.parent.page9.Clear()
-#             self.parent.page9.LoadEntries()
-#
-#         self.close()
 
 class ImageRegistrationDialog(QtWidgets.QDialog):
 
@@ -13430,17 +12994,20 @@ class GeneralPurposeProcessor(QtCore.QRunnable):
         drift_y = [0,0]
         drift, error, _ = phase_cross_correlation(self.Gauss(self.parent.stack.absdata_cropped[:, :, data[0]]),
                                                      self.Gauss(self.parent.stack.absdata_cropped[:, :, data[1]]),upsample_factor=20) ## 20 means 0.05 px precision
-        self.parent.errorlst[data[0]] = round(error,4)
+        #self.parent.errorlst[data[0]] = round(error,4)
+        self.parent.stack.shiftsdict[itheta]["errors"][data[0]] = round(error,4)
         if data[0] - data[1] > 0:
             drift_x[1] = round(drift[0],2)
             drift_y[1] = round(drift[1],2)
-            self.parent.xpts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_x[1] )
-            self.parent.ypts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_y[1] )
+            self.parent.stack.shiftsdict[itheta]["xdots"][data[0]]= drift_x[1]
+            self.parent.stack.shiftsdict[itheta]["ydots"][data[0]]= drift_y[1]
         else:
             drift_x[0] = round(drift[0],2)
             drift_y[0] = round(drift[1],2)
-            self.parent.xpts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_x[0] )
-            self.parent.ypts[data[0]]['pos'] = (self.parent.stack.ev[data[0]], drift_y[0] )
+            self.parent.stack.shiftsdict[itheta]["xdots"][data[0]]= drift_x[0]
+            self.parent.stack.shiftsdict[itheta]["ydots"][data[0]]= drift_y[0]
+        #print(self.parent.stack.shiftsdict)
+        #print(self.parent.xpts, self.parent.ypts)
         #self.mutex.unlock()
         #self.signals.newdriftvalue.emit()
         #self.newdriftvalue.emit()
@@ -13449,7 +13016,7 @@ class GeneralPurposeProcessor(QtCore.QRunnable):
         #     print("done")
             #self.signals.newdriftvalue.emit()
             #self.signals.driftcalcfinished.emit((errorlst, round(np.mean(errorlst),4)))
-
+    @pyqtSlot()
     def ShiftImg(self, row,x,y,itheta):
         shifted = ndimage.fourier_shift(np.fft.fft2(self.parent.stack.absdata4d[:, :, row,itheta]), [float(-x), float(-y)])
         shifted = np.fft.ifft2(shifted)
@@ -13487,7 +13054,7 @@ class TaskDispatcher(QtCore.QObject):
         for n in range(min(self.pool.maxThreadCount(),preferred_qsize)): #start as many threads as needed.
             worker = GeneralPurposeProcessor(self.parent,self.queue)
             worker.signals.ithetaprogress.connect(self.parent.IThetaProgress)
-            worker.signals.finished.connect(self.parent.ThreadComplete)
+            worker.signals.finished.connect(self.parent.ThreadPoolComplete)
             self.pool.start(worker)
         self.pool.waitForDone()
         print("all threads dead")
@@ -13523,6 +13090,9 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         #self.stack.absdata_unaligned = self.stack.absdata_shifted_cropped
         self.poolthread = QtCore.QThread()
         self.aligned = False
+        self.SetupUI()
+
+    def SetupUI(self):
         self.button_ok.setEnabled(False)
         self.slider_theta.setVisible(False)
         self.setWindowTitle('Align Stack v2')
@@ -13593,7 +13163,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
                 self.slider_theta.setVisible(True)
                 self.slider_theta.setRange(0, self.stack.n_theta - 1)
                 self.slider_theta.valueChanged[int].connect(self.OnScrollTheta)
-            self.maskedvals = [True] * int(self.stack.n_ev)
+            #self.maskedvals = [True] * int(self.stack.n_ev)
             self.spinBoxError.setEnabled(False)
             self.slider_eng.sliderPressed.connect(self.ShowImage)
             self.slider_eng.sliderReleased.connect(self.ShowImage)
@@ -13613,8 +13183,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
 
             self.OnScrollEng(0)
             self.SetupROI()
-            self.button_align.clicked.connect(self.OnAlign)
-            #self.button_alignbatch.clicked.connect(self.OnAlign)
+            self.button_align.clicked.connect(self.ComposeAlignQueue)
             self.xregion = pg.LinearRegionItem(brush=[255, 0, 0, 45], bounds=[self.stack.ev[0], self.stack.ev[-1]])
             self.yregion = pg.LinearRegionItem(brush=[255, 0, 0, 45], bounds=[self.stack.ev[0], self.stack.ev[-1]])
             self.xregion.setRegion([self.stack.ev[0], self.stack.ev[-1]])
@@ -13623,101 +13192,170 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
             self.xregion.setZValue(100)
             self.px.addItem(self.xregion, ignoreBounds=False)
             self.py.addItem(self.yregion, ignoreBounds=False)
-            self.xregion.sigRegionChangeFinished.connect(lambda region: self.OnLinRegion(region, id="x"))
-            self.yregion.sigRegionChangeFinished.connect(lambda region: self.OnLinRegion(region, id="y"))
+            self.xregion.sigRegionChangeFinished.connect(lambda region: self.OnLinRegion(region))
+            self.yregion.sigRegionChangeFinished.connect(lambda region: self.OnLinRegion(region))
 
-            self.xscatter = pg.ScatterPlotItem(pxMode=False)  ## Set pxMode=False to allow spots to transform with the view
-            self.yscatter = pg.ScatterPlotItem(pxMode=False)  ## Set pxMode=False to allow spots to transform with the view
-            self.xpts = []
-            self.ypts = []
-            for i in self.stack.ev:
-                self.xpts.append({'pos': (1 * i, 0), 'size': 10,  # 'pen': {'color': 'w', 'width': 2},
-                             'brush': QtGui.QColor('blue')})
-                self.ypts.append({'pos': (1 * i, 0), 'size': 10,  # 'pen': {'color': 'w', 'width': 2},
-                             'brush': QtGui.QColor('blue')})
-            self.xscatter.addPoints(spots=self.xpts, pxMode=True)
-            self.yscatter.addPoints(spots=self.ypts, pxMode=True)
+            self.xscatter = pg.ScatterPlotItem(pxMode=False)
+            self.yscatter = pg.ScatterPlotItem(pxMode=False)
+
+            self.InitShiftsDict()
+
             self.px.addItem(self.xscatter)
             self.py.addItem(self.yscatter)
-            self.shifts = self.stack.shifts.copy()
+            self.MakeNewScatterPlots()
+            #self.shifts = self.stack.shifts.copy()
             self.xscatter.sigClicked.connect(self.OnPointClicked)
             self.yscatter.sigClicked.connect(self.OnPointClicked)
             self.cb_autocrop.toggled.connect(self.OnAutoCrop)
+    def InitShiftsDict(self):
+        outer_keys = range(max(self.stack.n_theta,1))
+        inner_keys = ["xdots", "ydots", "xshifts", "yshifts", "errors", "errormaskedx","errormaskedy","manualmaskedx","manualmaskedy"]
+        self.stack.shiftsdict = {intkey : {key: [False] * int(self.stack.n_ev) for key in inner_keys} for intkey in outer_keys}
+
+    def CreateScatterDots(self,shifts,mask):
+        scatterdots = [{'pos': tup[0:2], 'size': 10,
+                           #'pen': {'color': 'w', 'width': 2},
+                           'brush': QtGui.QColor('red')} if tup[2] else {'pos': tup[0:2], 'size': 10,
+                           #'pen': {'color': 'w', 'width': 2},
+                           'brush': QtGui.QColor('blue')} for tup in list(zip(self.stack.ev, shifts, mask))]
+        return scatterdots
 
     def OnPointClicked(self, obj, points): # Manually add/remove points to/from fit if in selected region
-        self.maskedvals[points[0].index()] = not self.maskedvals[points[0].index()]
-        if self.aligned:
-            self.OnPostFiltering()
-        self.CropStack3D()
-        self.OnScrollEng(points[0].index())
+        selectscatter = {self.xscatter: ["errormaskedx","manualmaskedx",self.xregion], self.yscatter: ["errormaskedy","manualmaskedy",self.yregion]}
+        idx = points[0].index()
+        mask1 = self.stack.shiftsdict[self.itheta][selectscatter[obj][1]]
+        mask2 = self.stack.shiftsdict[self.itheta][selectscatter[obj][0]]
+        min_idx, max_idx, *_ = self.getDataClosestToRegion(selectscatter[obj][2], obj)
+        if min_idx <= idx <= max_idx :
+            mask1[idx] = not np.logical_or(mask1[idx],mask2[idx])
+            mask2[idx] = mask1[idx]
+            #if self.aligned:
+            #    self.OnPostFiltering()
+            #self.CropStack3D()
+            self.ColorizeScatterDots()
+            self.OnScrollEng(points[0].index())
+            if self.aligned:
+                #print("ComposeShiftQueue" + selectscatter[obj][0])
+                self.ComposeShiftQueue()
     def OnAligned(self):
         self.aligned = True
         print("aligned")
         self.button_align.setEnabled(True)
-        self.cb_autoerror.stateChanged.connect(self.OnAutoError)
-        self.cb_extrapolate.stateChanged.connect(lambda: self.OnMaskScatterSpots(None))
-        self.spinBoxFiltersize.valueChanged.connect(lambda: self.OnMaskScatterSpots(None))
-        self.spinBoxError.valueChanged.connect(lambda: self.OnMaskScatterSpots(None))
-        self.comboBox_approx.currentIndexChanged.connect(lambda: self.OnMaskScatterSpots(None))
-        self.xscatter.setData(self.xpts)
-        self.yscatter.setData(self.ypts)
+        self.MakeNewScatterPlots()
+        self.OnLinRegion(self.xregion, update=False)
+        self.OnLinRegion(self.yregion)
+        #self.ColorizeScatterDots()
+        #self.stack.shiftsdict[self.itheta]["xapprox"] = self.ApplyApproximationFunction(self.xregion)
+        #self.stack.shiftsdict[self.itheta]["yapprox"] = self.ApplyApproximationFunction(self.yregion)
+        #self.ComposeShiftQueue(self.ApplyApproximationFunction(self.xregion),self.ApplyApproximationFunction(self.yregion))
+        #self.ColorizeScatterDots()
         #self.pool.finished.disconnect()
-        self.OnMaskScatterSpots(errorvals=(self.errorlst, round(np.mean(self.errorlst),4)))
+        #self.UpdateScatterPlots(self.xregion, id="x")
+        #self.UpdateScatterPlots(self.yregion, id="y")
+        #self.OnPostFiltering()
     # ----------------------------------------------------------------------
+    def MaskedScatterDotsArray(self,region):
+        selection = {self.xregion : ["errormaskedx","manualmaskedx"], self.yregion : ["errormaskedy","manualmaskedy"]}
+        array = np.logical_or(self.stack.shiftsdict[self.itheta][selection[region][0]], self.stack.shiftsdict[self.itheta][selection[region][1]])
+        return array
+    def MakeNewScatterPlots(self):
+        #print(self.stack.shiftsdict)
+        errors = self.stack.shiftsdict[self.itheta]["errors"]
+        self.errormean = round(np.mean(errors),4)
+        self.MaskScatterDotsAboveErrorThreshold((errors,self.errormean,self.itheta))
+        maskedx = self.MaskedScatterDotsArray(self.xregion)
+        maskedy = self.MaskedScatterDotsArray(self.yregion)
+
+        self.cb_autoerror.stateChanged.connect(self.OnAutoError)
+        self.cb_extrapolate.stateChanged.connect(self.ComposeShiftQueue)
+        self.spinBoxFiltersize.valueChanged.connect(self.ComposeShiftQueue)
+        self.spinBoxError.blockSignals(True)
+        self.spinBoxError.setDecimals(4)
+        self.spinBoxError.valueChanged.connect(lambda value: self.OnSpinBoxError(value))
+        self.spinBoxError.blockSignals(False)
+        self.comboBox_approx.currentIndexChanged.connect(self.ComposeShiftQueue)
+
+        #self.spinBoxError.setValue(self.errormean)
+        self.spinBoxError.setMinimum(np.partition(errors, 1)[1])  # makes sure that at least two elements are selected
+        self.spinBoxError.setDecimals(4)
+        self.spinBoxError.setStepType(QtWidgets.QAbstractSpinBox.AdaptiveDecimalStepType)
+        self.OnAutoError()
+        #self.OnMaskScatterDotsAboveErrorThreshold(errorvals=(errors, round(np.mean(errors),4)))
+        #self.xscatter.addPoints(spots=self.CreateScatterDots(xdots), pxMode=True)
+        #self.yscatter.addPoints(spots=self.CreateScatterDots(ydots), pxMode=True)
+        xdots = self.stack.shiftsdict[self.itheta]["xdots"]
+        ydots = self.stack.shiftsdict[self.itheta]["ydots"]
+        self.xscatter.setData(spots=self.CreateScatterDots(xdots,maskedx), pxMode=True)
+        self.yscatter.setData(spots=self.CreateScatterDots(ydots,maskedy), pxMode=True)
+
     def OnAutoError(self):
         if self.cb_autoerror.isChecked():
             self.spinBoxError.setEnabled(True)
-            self.spinBoxError.setValue(self.drifterrormean)
+            self.spinBoxError.setValue(self.errormean)
         else:
             self.spinBoxError.setEnabled(False)
             self.spinBoxError.setValue(1)
-    def OnMaskScatterSpots(self, errorvals=None):
-        if errorvals == None: # When spinBoxError is changed
-            self.maskedvals = (self.drifterrorlst <= np.float64(self.spinBoxError.value()))
-        else: # If signal comes from alignment thread
-            self.drifterrorlst, self.drifterrormean = errorvals
-            if self.cb_autoerror.isChecked():
-                self.spinBoxError.setEnabled(True)
-                self.maskedvals = (self.drifterrorlst <= self.drifterrormean) # create boolean mask of badly correlated images
-                # avoid calling OnMaskScatterSpots too many times.
-                self.spinBoxError.blockSignals(True)
-                self.spinBoxFiltersize.blockSignals(True)
-                self.cb_extrapolate.blockSignals(True)
-                self.cb_autoerror.blockSignals(True)
+    def OnSpinBoxError(self,value):
+        self.MaskScatterDotsAboveErrorThreshold((self.stack.shiftsdict[self.itheta]["errors"], value, self.itheta))
+        self.ColorizeScatterDots()
+        self.ComposeShiftQueue()
+    def ColorizeScatterDots(self):
+        brushesx = [QtGui.QColor('red') if bool else QtGui.QColor('blue') for bool in self.MaskedScatterDotsArray(self.xregion)]
+        brushesy = [QtGui.QColor('red') if bool else QtGui.QColor('blue') for bool in self.MaskedScatterDotsArray(self.yregion)]
+        self.xscatter.setBrush(brushesx,update=True)
+        self.yscatter.setBrush(brushesy,update=True)
 
-                self.spinBoxError.setValue(self.drifterrormean)
-                self.spinBoxError.setMinimum(np.partition(self.drifterrorlst, 1)[1]) # makes sure that at least two elements are selected
-                self.spinBoxError.blockSignals(False)
-            self.cb_extrapolate.blockSignals(False)
-            self.cb_autoerror.blockSignals(False)
-            self.spinBoxFiltersize.blockSignals(False)
-        self.OnPostFiltering()
+    def MaskScatterDotsAboveErrorThreshold(self, errorvals=None):
+        errors, errormean, itheta = errorvals
+        if self.cb_autoerror.isChecked():
+            self.stack.shiftsdict[itheta]["errormaskedx"] = (errors > np.float64(errormean))
+            self.stack.shiftsdict[itheta]["errormaskedy"] = (errors > np.float64(errormean))
+        else:
+            self.stack.shiftsdict[itheta]["errormaskedx"] = [False] * len(errors)
+            self.stack.shiftsdict[itheta]["errormaskedy"] = [False] * len(errors)
 
     # ----------------------------------------------------------------------
-    def MakeFit(self,id):
-        #print("makefit "+ id)
-        selectregion= {"x": self.xregion, "y": self.yregion}
-        selectscatter = {"x": self.xscatter.data , "y": self.yscatter.data}
-        selectfit= {"x": self.fit_x, "y": self.fit_y}
-        scatter = selectscatter[id]
-        fit = selectfit[id]
-        region = selectregion[id]
-        min_ev, max_ev = region.getRegion()
-        min_idx = np.argmin(np.abs(np.array(self.stack.ev) - min_ev))
-        max_idx = np.argmin(np.abs(np.array(self.stack.ev) - max_ev))
-
-        selection = [[scatter[direction][i] for i in range(min_idx, max_idx + 1)
-                       if self.maskedvals[i]] for direction in ["x","y"]]
-        if len(selection[0]) < 2:
-            QtWidgets.QMessageBox.warning(self, 'Error', 'Select at least two images in {}-direction!'.format(id))
-            return False
-        if self.comboBox_approx.currentIndex() == 0:
+    def getDataClosestToRegion(self,region,plotitem,snapregion=False):
+        minidx, maxidx = region.getRegion()
+        data = plotitem.getData()[0]
+        index = lambda x: np.argmin(np.abs(data - x))
+        minidx = index(minidx)
+        maxidx = index(maxidx)
+        if minidx == maxidx:
+            minidx = 0
+            maxidx = np.argmax(data)
+        mindata = data[minidx]
+        maxdata = data[maxidx]
+        if snapregion:
+            region.blockSignals(True)
+            region.setRegion([mindata, maxdata])  # snap region to data points
+            region.blockSignals(False)
+        return minidx, maxidx, mindata, maxdata
+    
+    def ApplyApproximationFunction(self,region):
+        boolarray = self.MaskedScatterDotsArray(region)
+        selectscatter = {self.xregion: [self.xscatter, "x"] , self.yregion: [self.yscatter, "y"]}
+        selectfit= {self.xregion : self.fit_x, self.yregion : self.fit_y}
+        scatter = selectscatter[region][0]
+        fit = selectfit[region]
+        #min_idx, max_idx, *_ = self.getDataClosestToRegion(region,scatter)
+        selected = np.count_nonzero(boolarray == False)
+        xdata, ydata = scatter.getData()
+        #xdata = xdata[min_idx:max_idx]
+        xdata = xdata[~boolarray]
+        #ydata = ydata[min_idx:max_idx]
+        ydata = ydata[~boolarray]
+        #print(selected)
+        if selected < 2:
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Select at least two images in {}-direction!'.format(selectscatter[region][1]))
+            return []
+        if self.comboBox_approx.currentIndex() == 0: # moving average
             self.spinBoxFiltersize.setEnabled(True)
-            approximated= ndimage.filters.uniform_filter1d(selection[1],self.spinBoxFiltersize.value(),mode = "nearest")
-        elif self.comboBox_approx.currentIndex() == 1:
+            approximated= ndimage.filters.uniform_filter1d(ydata,self.spinBoxFiltersize.value(),mode = "nearest")
+        elif self.comboBox_approx.currentIndex() == 1: # linear regression
             self.spinBoxFiltersize.setEnabled(False)
-            reg = linregress(selection)
-            approximated = [reg.slope * i + reg.intercept for i in selection[0]]
+            reg = linregress([xdata,ydata])
+            approximated = [reg.slope * i + reg.intercept for i in xdata]
         # elif self.comboBox_approx.currentIndex() == 2: # deprecated because moving average with bin size = 1 is equivalent.
         #     self.spinBoxFiltersize.setEnabled(False)
         #     fit.setData(x=[], y=[])
@@ -13728,26 +13366,12 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         else:
             fillval=(approximated[0],approximated[-1])
 
-        interpolate_func = interp1d(selection[0], approximated,kind="linear",fill_value=fillval,bounds_error=False)
+        interpolate_func = interp1d(xdata, approximated,kind="linear",fill_value=fillval,bounds_error=False)
         fitdata = [self.stack.ev,np.around(interpolate_func(self.stack.ev),1)] # round fit to a tenth of a px
+        #print(fitdata[1])
         fit.setData(x=fitdata[0], y=fitdata[1])
         fit.show()
-        if id=="x":
-            self.x_shiftstemp = fitdata[1]
-        elif id == "y":
-            self.y_shiftstemp = fitdata[1]
-        return True
-    def OnFitDone(self,xshifts, yshifts):
-        print("onfitdone")
-        # ToDo: Find leak that accumulates function calls. Maybe thread is not properly destroyed?
-        self.resetPoolThread()
-        for i in range(self.stack.n_ev):
-            if self.stack.shifts[i][2] != (xshifts[i],yshifts[i]):
-                self.stack.shifts[i].pop(2)  # remove tuple
-                self.stack.shifts[i].insert(2, (xshifts[i], yshifts[i]))
-                self.pool.enqueuetask("ShiftImg", i, xshifts[i], yshifts[i],self.itheta)
-        if not self.pool.queue.empty():
-            self.poolthread.start()
+        return fitdata[1]
 
     def resetPoolThread(self):
         try:
@@ -13760,38 +13384,35 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.pool.moveToThread(self.poolthread) # GUI is not blocking during calculation due to this
         self.poolthread.started.connect(self.pool.run)
         #self.pool.pool.signals.finished.connect(self.OnAligned)
-        #self.pool.worker.signals.finished.connect(self.parent.ThreadComplete)
+        #self.pool.worker.signals.finished.connect(self.parent.ThreadPoolComplete)
         #self.pool.worker.signals.finished.connect(self.OnAutoCrop)
 
     def IThetaProgress(self,itheta):
-        #print("Progress"+str(itheta))
-        #self.OnScrollTheta(itheta)
-        self.slider_theta.setValue(itheta)
+        # Each thread calls this function. The condition prevents multiple calls.
+        if self.slider_theta.value() != itheta:
+            self.slider_theta.setValue(itheta)
         #print(self.pool.pool.activeThreadCount())
 
-    def ThreadComplete(self):
-        print(str(self.pool.pool.activeThreadCount())+" THREADS REMAINING FROM POOL.")
+    def ThreadPoolComplete(self):
+        #print(str(self.pool.pool.activeThreadCount())+" THREADS REMAINING FROM POOL.")
         self.slider_theta.setValue(0)
-        if not self.aligned:
+        if not self.aligned and self.pool.pool.activeThreadCount() == 0:
             self.OnAligned()
-        else:
+            #print("onaligned")
+        elif self.aligned and self.pool.pool.activeThreadCount() == 0:
+            #print("onautocrop")
             self.OnAutoCrop()
 
-    def OnAlign(self):
+    def ComposeAlignQueue(self):
         self.button_align.setEnabled(False)
         ref_idx = self.iev
-        self.errorlst =[0] * int(self.stack.n_ev)
+        #self.InitShiftsDict()
         # Reset reference img:
-        self.xpts[ref_idx]['pos'] = (self.stack.ev[ref_idx], 0)
-        self.ypts[ref_idx]['pos'] = (self.stack.ev[ref_idx], 0)
         self.resetPoolThread()
 
         if self.rB_referenced.isChecked(): # Make queue with pairs relative to reference image
             itheta = 0
-            if self.com.stack_4d:
-                ntheta = self.stack.n_theta
-            else:
-                ntheta = 1 # necessary work around for 3d stacks and if 4d stack is loaded with LoadStack()
+            ntheta = max(self.stack.n_theta,1) # necessary work around for 3d stacks and if 4d stack is loaded with LoadStack()
             while itheta < ntheta:
                 idx = copy.copy(self.stack.n_ev)
                 while idx: # Generate pairs of indices starting at reference image index.
@@ -13811,9 +13432,10 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
                     else:
                         break
                 itheta = itheta + 1
-        print("total queue composed. starting poolthread")
+        print("total alignqueue composed. starting poolthread")
         self.poolthread.start()
-        # # if self.rB_consecutive.isChecked(): # Make queue with consecutive images
+        # Compose consecutive image queue. Currently disabled, probably no use case.
+        # # if self.rB_consecutive.isChecked(): 
         # #     while idx: # Generate pairs of indices starting at reference image index.
         # #         running = 2
         # #         if (ref_idx + (self.stack.n_ev-idx)) < self.stack.n_ev-1:
@@ -13830,6 +13452,31 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         # #             break
         # #     self.thread.started.connect(self.worker.runConsecutive)
         # #     self.thread.start()
+        
+    def ComposeShiftQueue(self):
+        # if empty arrays, i.e., if less than 2 dots selected, do nothing
+        xshifts = self.ApplyApproximationFunction(self.xregion)
+        yshifts = self.ApplyApproximationFunction(self.yregion)
+        if [] in (xshifts, yshifts):
+            return
+        # ToDo: Find leak that accumulates function calls. Maybe thread is not properly destroyed?
+        self.resetPoolThread()
+        #array = np.logical_or(self.MaskedScatterDotsArray(self.xregion),self.MaskedScatterDotsArray(self.yregion))
+        for i in range(self.stack.n_ev):
+        #print(array)
+        #for i in [i for i, x in enumerate(array) if not x]:
+            # Only enqueue if new shift val is different to previous shift
+            #print(i)
+            if (self.stack.shiftsdict[self.itheta]["xshifts"][i],self.stack.shiftsdict[self.itheta]["yshifts"][i]) != (xshifts[i],yshifts[i]):
+                #self.stack.shifts[i].pop(2)  # remove tuple
+                #self.stack.shifts[i].insert(2, (xshifts[i], yshifts[i]))
+                #print(i)
+                self.stack.shiftsdict[self.itheta]["xshifts"][i] = xshifts[i]
+                self.stack.shiftsdict[self.itheta]["yshifts"][i] = yshifts[i]
+                self.pool.enqueuetask("ShiftImg", i, xshifts[i], yshifts[i],self.itheta)
+        if not self.pool.queue.empty():
+            print("total shiftqueue composed. starting poolthread")
+            self.poolthread.start()
 
     # ----------------------------------------------------------------------
     def GetIndexPairs(self):
@@ -13847,19 +13494,20 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
 
     def CropStack3D(self):
         self.stack.absdata4d_shifted_cropped = self.stack.absdata4d_shifted.copy()
-        print(self.stack.absdata4d_shifted_cropped.shape)
+        #print(self.stack.absdata4d_shifted_cropped.shape)
+        # Cropping currently not supported in 4D
         if self.cb_autocrop.isChecked():
             if not self.com.stack_4d:
                 self.box.hide()
-                l = -int(np.floor(min(self.x_shiftstemp)))
-                r = -int(np.ceil(max(self.x_shiftstemp)))
+                l = -int(np.floor(min(self.stack.shiftsdict[self.itheta]["xshifts"])))
+                r = -int(np.ceil(max(self.stack.shiftsdict[self.itheta]["xshifts"])))
                 cr = r if r < 0 else None
                 if l < 0:
                     l = 0
                     cr = cr - l
-                t = -int(np.ceil(max(self.y_shiftstemp)))
+                b = -int(np.floor(min(self.stack.shiftsdict[self.itheta]["yshifts"])))
+                t = -int(np.ceil(max(self.stack.shiftsdict[self.itheta]["yshifts"])))
                 ct = t if t < 0 else None
-                b = -int(np.floor(min(self.y_shiftstemp)))
                 if b < 0:
                     b = 0
                     ct = ct - b
@@ -13879,12 +13527,12 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.refmarkerx.setValue(self.stack.ev[self.iev])
         self.refmarkery.setValue(self.stack.ev[self.iev])
     def OnScrollTheta(self, value):
-        if value != self.itheta:
-            #print("Theta slider" + str(value))
-            self.slider_theta.setValue(value)
-            self.itheta = value
-            self.ClearShifts()
-            self.ShowImage()
+        #if value != self.itheta:
+        #print("Theta slider" + str(value))
+        self.slider_theta.setValue(value)
+        self.itheta = value
+        #self.ClearShifts()
+        self.ShowImage()
     def ShowImage(self):
         self.stack.absdata_shifted_cropped = self.stack.absdata4d_shifted_cropped[:, :, :, int(self.itheta)]
         self.i_item.setImage(self.stack.absdata_shifted_cropped[:, :, int(self.iev)])
@@ -13901,39 +13549,31 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
                               sideScalers=False, removable=False, scaleSnap=True, translateSnap=True,
                               maxBounds=self.i_item.boundingRect())
         self.vb.addItem(self.box, ignoreBounds=False)
-        self.box.sigRegionChangeFinished.connect(self.OnRegionChanged)
-        self.box.sigRegionChangeStarted.connect(self.OnRegionChange)
+        self.box.sigRegionChangeFinished.connect(self.OnBoxChanged)
+        self.box.sigRegionChangeStarted.connect(self.OnBoxChanging)
         self.button_rstroi.clicked.connect(self.OnResetROI)
     ## The ROI is limited to the visible image area. OnMouseMoveOutside handles the behavior when
     def ClearShifts(self):
         self.aligned = False
-        self.xpts = []
-        self.ypts = []
-        self.stack.shifts =[]
-        self.fit_x.hide()
-        self.fit_y.hide()
-        for i in self.stack.ev:
-            self.stack.shifts.append([1,0,(0.0,0.0)])
-            self.xpts.append({'pos': (1 * i, 0), 'size': 10,  # 'pen': {'color': 'w', 'width': 2},
-                              'brush': QtGui.QColor('blue')})
-            self.ypts.append({'pos': (1 * i, 0), 'size': 10,  # 'pen': {'color': 'w', 'width': 2},
-                              'brush': QtGui.QColor('blue')})
-        self.xscatter.setData(self.xpts)
-        self.yscatter.setData(self.ypts)
+        self.cb_autoerror.stateChanged.disconnect()
+        self.button_align.setEnabled(True)
+        # self.stack.shifts =[]
+        # self.fit_x.hide()
+        # self.fit_y.hide()
+        self.InitShiftsDict()
+        self.MakeNewScatterPlots()
     def OnResetROI(self):
         self.ClearShifts()
-        #self.stack.absdata_shifted = self.stack.absdata4d[:,:,:,self.itheta].copy()
-        #self.stack.absdata_shifted_cropped = self.stack.absdata_shifted.copy()
         self.stack.absdata4d_shifted_cropped = self.stack.absdata4d.copy()
         self.OnScrollEng(self.iev)
 
         self.box.setPos(0, 0, update=False, finish=False)
         self.box.setSize(self.i_item.boundingRect().bottomRight() - self.box.pos(), update=True, snap=True, finish=True)
         self.box.show()
-    def OnRegionChange(self):
+    def OnBoxChanging(self):
         self.boxsize = self.box.size()
         self.proxy = pg.SignalProxy(self.vb.scene().sigMouseMoved, rateLimit=30, slot=self.OnMouseMoveOutside)
-    def OnRegionChanged(self):
+    def OnBoxChanged(self):
         try:
             self.proxy.disconnect()
         except AttributeError:
@@ -13944,62 +13584,71 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         top = bottom + int(self.box.size().y())
         self.stack.absdata_cropped = self.stack.absdata4d[left:right, bottom:top, :,self.itheta].copy()
 
-    def OnPostFiltering(self):
-        self.UpdateScatterPlots(self.xregion, id="x")
-        if self.UpdateScatterPlots(self.yregion, id="y"):
-            self.OnFitDone(self.x_shiftstemp, self.y_shiftstemp)
-    def OnLinRegion(self, region,id):
-        #print("onlinregion "+ id)
-        self.UpdateScatterPlots(region, id)
-        if self.aligned:
-            self.OnFitDone(self.x_shiftstemp, self.y_shiftstemp)
-    def UpdateScatterPlots(self, region,id): # Rescale scatter plot on linear region changed
-        min, max = region.getRegion()
-        #print("changed_lin_region", min,max)
-        min_idx = np.argmin(np.abs(np.array(self.stack.ev) - min))
-        max_idx = np.argmin(np.abs(np.array(self.stack.ev) - max))
-        if min_idx == max_idx:
-            min_idx = 0
-            max_idx = self.stack.n_ev -1
-        region.blockSignals(True)
-        region.setRegion([self.stack.ev[min_idx], self.stack.ev[max_idx]])  # snap region to data points
-        region.blockSignals(False)
-        if id == "x":
-            y_vals= self.xscatter.data["y"][min_idx:max_idx + 1]
-            self.px.setRange(yRange=[np.min(y_vals), np.max(y_vals)], disableAutoRange=True, padding=0.1)
-            for i in range(len(self.xpts)):
-                self.xpts[i]['brush'] = QtGui.QColor('red')
-            for i in range(min_idx, max_idx+1):
-                if self.maskedvals[i]: # highlight badly correlated or masked data
-                    self.xpts[i]['brush'] = QtGui.QColor('blue')
-            self.xscatter.setData(self.xpts)
-        elif id == "y":
-            y_vals= self.yscatter.data["y"][min_idx:max_idx + 1]
-            self.py.setRange(yRange=[np.min(y_vals), np.max(y_vals)], disableAutoRange=True, padding=0.1)
-            for i in range(len(self.ypts)):
-                self.ypts[i]['brush'] = QtGui.QColor('red')
-            for i in range(min_idx, max_idx+1):
-                if self.maskedvals[i]: # highlight badly correlated or masked data
-                    self.ypts[i]['brush'] = QtGui.QColor('blue')
-            self.yscatter.setData(self.ypts)
-        if self.aligned:
-            return self.MakeFit(id)
+    # def OnPostFiltering(self):
+    #     self.UpdateScatterPlots(self.xregion, id="x")
+    #     if self.UpdateScatterPlots(self.yregion, id="y"):
+    #         self.ComposeShiftQueue(self.x_shiftstemp, self.y_shiftstemp)
+    def OnLinRegion(self, region, update=True):
+        #print("OnLinRegion")
+        selectregion= {self.xregion : "manualmaskedx", self.yregion : "manualmaskedy"}
+        selectscatter = {self.xregion : self.xscatter, self.yregion : self.yscatter}
+        selectplot = {self.xregion : self.px, self.yregion : self.py}
+        #print("onlinregion "+ selectregion[region])
+        scatter = selectscatter[region]
+        min_idx, max_idx, min_ev, max_ev = self.getDataClosestToRegion(region,scatter,True)
+        selection = [*range(min_idx, max_idx+1)]
+        for idx,val in enumerate(self.stack.shiftsdict[self.itheta]["manualmaskedx"]):
+            if idx not in selection:
+                self.stack.shiftsdict[self.itheta][selectregion[region]][idx] = True
+            else:
+                self.stack.shiftsdict[self.itheta][selectregion[region]][idx] = False
+        y_vals= selectscatter[region].data["y"][min_idx:max_idx + 1]
+        selectplot[region].setRange(yRange=[np.min(y_vals), np.max(y_vals)], disableAutoRange=True, padding=0.1)
+        self.ColorizeScatterDots()
+        #filter = [True if idx in selection else False for idx,bool in enumerate(self.stack.shiftsdict[self.itheta]["manualmaskedx"])]
+        #print(selection,filter)
+        #self.UpdateScatterPlots(region, id)
+        if self.aligned and update:
+            #print("ComposeShiftQueue"+selectregion[region])
+            self.ComposeShiftQueue()
+
+        # if id == "x":
+        #     y_vals= self.xscatter.data["y"][min_idx:max_idx + 1]
+        #     self.px.setRange(yRange=[np.min(y_vals), np.max(y_vals)], disableAutoRange=True, padding=0.1)
+        #     for i in range(len(self.xscatter.data["y"])):
+        #         self.xscatter.data['brush'][i] = QtGui.QColor('red')
+        #     for i in range(min_idx, max_idx+1):
+        #         if self.maskedvals[i]: # highlight badly correlated or masked data
+        #             self.xscatter.data['brush'][i] = QtGui.QColor('blue')
+        #     self.xscatter.updateSpots()
+        # elif id == "y":
+        #     y_vals= self.yscatter.data["y"][min_idx:max_idx + 1]
+        #     self.py.setRange(yRange=[np.min(y_vals), np.max(y_vals)], disableAutoRange=True, padding=0.1)
+        #     for i in range(len(self.yscatter.data["y"])):
+        #         self.yscatter.data['brush'][i] = QtGui.QColor('red')
+        #     for i in range(min_idx, max_idx+1):
+        #         if self.maskedvals[i]: # highlight badly correlated or masked data
+        #             self.yscatter.data['brush'][i]= QtGui.QColor('blue')
+        #     self.yscatter.updateSpots()
+        #     print(self.yscatter.data['brush'])
+        # if self.aligned:
+        #     return self.ApplyApproximationFunction(id)
 
     def OnMouseMoveOutside(self, ev):
-            mousepos = self.vb.mapSceneToView(ev[0])
-            if not self.vb.itemBoundingRect(self.i_item).contains(mousepos):
-                maxrect = self.i_item.boundingRect().bottomRight()
-                # if bounds exceeded
-                out_x = max((mousepos-maxrect).x(),0)
-                out_y = max((mousepos-maxrect).y(), 0)
-                if self.box.size() != self.boxsize: # prevents taking action when the box is just dragged and not resized
-                    if out_x and out_y:
-                        self.box.setSize(self.i_item.boundingRect().bottomRight()-self.box.pos(), update=True, snap=True, finish=False)
-                    elif out_x:
-                        self.box.setSize([self.i_item.boundingRect().right()-self.box.pos().x(),mousepos.y()-self.box.pos().y()], update=True, snap=True, finish=False)
-                    elif out_y:
-                        self.box.setSize([mousepos.x()-self.box.pos().x(),self.i_item.boundingRect().bottom()-self.box.pos().y()], update=True, snap=True, finish=False)
-    # ----------------------------------------------------------------------
+        mousepos = self.vb.mapSceneToView(ev[0])
+        if not self.vb.itemBoundingRect(self.i_item).contains(mousepos):
+            maxrect = self.i_item.boundingRect().bottomRight()
+            # if bounds exceeded
+            out_x = max((mousepos-maxrect).x(),0)
+            out_y = max((mousepos-maxrect).y(), 0)
+            if self.box.size() != self.boxsize: # prevents taking action when the box is just dragged and not resized
+                if out_x and out_y:
+                    self.box.setSize(self.i_item.boundingRect().bottomRight()-self.box.pos(), update=True, snap=True, finish=False)
+                elif out_x:
+                    self.box.setSize([self.i_item.boundingRect().right()-self.box.pos().x(),mousepos.y()-self.box.pos().y()], update=True, snap=True, finish=False)
+                elif out_y:
+                    self.box.setSize([mousepos.x()-self.box.pos().x(),self.i_item.boundingRect().bottom()-self.box.pos().y()], update=True, snap=True, finish=False)
+# ----------------------------------------------------------------------
     def OnCancel(self, evt):
         self.stack.absdata_shifted_cropped = self.stack.absdata
         self.parent.page1.loadImage()
