@@ -38,8 +38,7 @@ from scipy.interpolate import interp1d
 # from skimage.feature import register_translation ## deprecated
 from skimage.registration import phase_cross_correlation
 from queue import SimpleQueue
-from threading import Event
-
+import threading
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import (
         NavigationToolbar2QT as NavigationToolbar)
@@ -12962,28 +12961,29 @@ class GeneralPurposeProcessor(QtCore.QRunnable):
         self.queue = queue
         self.running = True
         self.current_itheta = 0
-    def run(self):
-        while self.running:
-            #print(QtCore.QThread.currentThread())
-            #print(self.parent.pool.pool.activeThreadCount())
-            #print(QtCore.QThreadPool.activeThreadCount())
-                if not self.queue.empty():
-                    #print("queue size: "+ str(self.queue.qsize()))
-                    workerfunc, *args = self.queue.get(False)
-                    #itheta = args[0][-1]
-                    # args = rest[0][0]
-                    #kwargs = rest[1]
-                    #print(args[0][1])
-                    self.funcdict[workerfunc](*args[0])
-                    #print("busy with task {}".format(workerfunc))
-                else:
-                    self.running = False
-                    #print("break")
-                    #self.signals.blockSignals(True)
-                    #self.signals.finished.emit()
-                    break
 
     @pyqtSlot()
+    def run(self):
+        #print('worker', threading.get_ident())
+        while self.running:
+            #print(self.parent.pool.pool.activeThreadCount())
+            #print(QtCore.QThreadPool.activeThreadCount())
+            if not self.queue.empty():
+                #print("queue size: "+ str(self.queue.qsize()))
+                workerfunc, *args = self.queue.get(False)
+                #itheta = args[0][-1]
+                # args = rest[0][0]
+                #kwargs = rest[1]
+                #print(args[0][1])
+                self.funcdict[workerfunc](*args[0])
+                #print("busy with task {}".format(workerfunc))
+            else:
+                self.running = False
+                #print("break")
+                #self.signals.blockSignals(True)
+                #self.signals.finished.emit()
+                break
+
     def AlignReferenced(self, data, itheta):
         #print("align ",data, itheta)
         if self.current_itheta != itheta:
@@ -12992,8 +12992,8 @@ class GeneralPurposeProcessor(QtCore.QRunnable):
             self.signals.ithetaprogress.emit(itheta)
         drift_x = [0,0]
         drift_y = [0,0]
-        drift, error, _ = phase_cross_correlation(self.Gauss(self.parent.stack.absdata_cropped[:, :, data[0]]),
-                                                     self.Gauss(self.parent.stack.absdata_cropped[:, :, data[1]]),upsample_factor=20) ## 20 means 0.05 px precision
+        drift, error, _ = phase_cross_correlation(self.Gauss(self.parent.stack.absdata_cropped[:, :, data[0],itheta]),
+                                                  self.Gauss(self.parent.stack.absdata_cropped[:, :, data[1],itheta]),upsample_factor=20) ## 20 means 0.05 px precision
         #self.parent.errorlst[data[0]] = round(error,4)
         self.parent.stack.shiftsdict[itheta]["errors"][data[0]] = round(error,4)
         if data[0] - data[1] > 0:
@@ -13016,7 +13016,7 @@ class GeneralPurposeProcessor(QtCore.QRunnable):
         #     print("done")
             #self.signals.newdriftvalue.emit()
             #self.signals.driftcalcfinished.emit((errorlst, round(np.mean(errorlst),4)))
-    @pyqtSlot()
+
     def ShiftImg(self, row,x,y,itheta):
         shifted = ndimage.fourier_shift(np.fft.fft2(self.parent.stack.absdata4d[:, :, row,itheta]), [float(-x), float(-y)])
         shifted = np.fft.ifft2(shifted)
@@ -13031,8 +13031,13 @@ class TaskDispatcher(QtCore.QObject):
     # finished = pyqtSignal()
     # progress = pyqtSignal(int)
     def __init__(self,parent):
-        #print("dispatcher called")
+        print("0 - dispatcher called, pool initiated")
         super(TaskDispatcher, self).__init__()
+        try:
+            self.worker.signals.ithetaprogress.disconnect()
+            self.worker.signals.finished.disconnect()
+        except:
+            pass
         self.pool = QtCore.QThreadPool.globalInstance()
         try:
             cpus = len(os.sched_getaffinity(0)) # number of cpu threads. not supported on some platforms.
@@ -13040,25 +13045,29 @@ class TaskDispatcher(QtCore.QObject):
             cpus = os.cpu_count()
         self.pool.setMaxThreadCount(cpus)
         self.queue = SimpleQueue()
-        #self.thetaqueue = SimpleQueue()
         self.parent = parent
-
+        #print("maxthreadcount", self.pool.maxThreadCount())
     @pyqtSlot()
     def run(self):
-        #print("(re)starting threads")
         #print(self.queue.qsize())
-        if self.parent.com.stack_4d == 0:
-            preferred_qsize = int(self.queue.qsize())
-        else:
-            preferred_qsize = int(self.queue.qsize() / self.parent.stack.n_theta)
-        for n in range(min(self.pool.maxThreadCount(),preferred_qsize)): #start as many threads as needed.
+        #print('pool', threading.get_ident())
+        # if self.parent.com.stack_4d == 0:
+        qsize = int(self.queue.qsize())
+        # else:
+        #     qsize = int(self.queue.qsize() / self.parent.stack.n_theta)
+        print("1 - starting threads", min(self.pool.maxThreadCount(),qsize), "threads needed, number of tasks:",qsize)
+        for n in range(min(self.pool.maxThreadCount(),qsize)): #start as many threads as needed.
             worker = GeneralPurposeProcessor(self.parent,self.queue)
+            #worker.signals.ithetaprogress.disconnect()
+            #worker.signals.finished.disconnect()
             worker.signals.ithetaprogress.connect(self.parent.IThetaProgress)
-            worker.signals.finished.connect(self.parent.ThreadPoolComplete)
             self.pool.start(worker)
         self.pool.waitForDone()
-        print("all threads dead")
+        print("2 - all threads dead")
+        worker.signals.finished.connect(self.parent.ThreadPoolComplete)
         worker.signals.finished.emit()
+        #worker.signals.ithetaprogress.disconnect()
+        #worker.signals.finished.disconnect()
         #print("all threads dead")
     #add a task to the queue
     # def enqueuetheta(self, args):
@@ -13067,6 +13076,7 @@ class TaskDispatcher(QtCore.QObject):
         self.queue.put((func, args, kargs))
 
 class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
+    # ToDo: AutoQualityFilter and StackExtrapolation checkbox status not saved for each theta value!
     def __init__(self, parent, common, stack):
         QtWidgets.QWidget.__init__(self, parent)
         uic.loadUi(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'showalign2.ui'), self)
@@ -13085,8 +13095,9 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
                 self.stack.absdata4d = np.expand_dims(self.stack.absdata.copy(), axis=3)
                 #self.button_alignbatch.setVisible(False)
                 self.button_align.setText("Align")
-            self.stack.absdata4d_shifted = self.stack.absdata4d.copy()
-            self.stack.absdata4d_shifted_cropped = self.stack.absdata4d_shifted.copy()
+            self.stack.absdata_cropped = self.stack.absdata4d.copy() # This image stack is used by the alignment/shift routine and cropped to the ROI rectangle
+            self.stack.absdata4d_shifted = self.stack.absdata4d.copy() # This is the full-sized output of the alignment/shift routine
+            self.stack.absdata4d_shifted_cropped = self.stack.absdata4d.copy() # This is the output cropped to the common region
         #self.stack.absdata_unaligned = self.stack.absdata_shifted_cropped
         self.poolthread = QtCore.QThread()
         self.aligned = False
@@ -13211,7 +13222,9 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         outer_keys = range(max(self.stack.n_theta,1))
         inner_keys = ["xdots", "ydots", "xshifts", "yshifts", "errors", "errormaskedx","errormaskedy","manualmaskedx","manualmaskedy"]
         self.stack.shiftsdict = {intkey : {key: [False] * int(self.stack.n_ev) for key in inner_keys} for intkey in outer_keys}
-
+        single_keys = ["filter", "method", "threshold", "regionlimitx", "regionlimity"]
+        for intkey in outer_keys:
+            self.stack.shiftsdict[intkey].update({key: False for key in single_keys})
     def CreateScatterDots(self,shifts,mask):
         scatterdots = [{'pos': tup[0:2], 'size': 10,
                            #'pen': {'color': 'w', 'width': 2},
@@ -13231,7 +13244,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
             mask2[idx] = mask1[idx]
             #if self.aligned:
             #    self.OnPostFiltering()
-            #self.CropStack3D()
+            #self.CropStack4D()
             self.ColorizeScatterDots()
             self.OnScrollEng(points[0].index())
             if self.aligned:
@@ -13241,45 +13254,48 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.aligned = True
         print("aligned")
         self.button_align.setEnabled(True)
+        self.cb_autoerror.stateChanged.disconnect()
+        self.cb_extrapolate.stateChanged.disconnect()
+        self.spinBoxFiltersize.valueChanged.disconnect()
+        self.spinBoxError.valueChanged.disconnect()
+        self.comboBox_approx.currentIndexChanged.disconnect()
         self.MakeNewScatterPlots()
         self.OnLinRegion(self.xregion, update=False)
-        self.OnLinRegion(self.yregion)
-        #self.ColorizeScatterDots()
-        #self.stack.shiftsdict[self.itheta]["xapprox"] = self.ApplyApproximationFunction(self.xregion)
-        #self.stack.shiftsdict[self.itheta]["yapprox"] = self.ApplyApproximationFunction(self.yregion)
-        #self.ComposeShiftQueue(self.ApplyApproximationFunction(self.xregion),self.ApplyApproximationFunction(self.yregion))
-        #self.ColorizeScatterDots()
-        #self.pool.finished.disconnect()
-        #self.UpdateScatterPlots(self.xregion, id="x")
-        #self.UpdateScatterPlots(self.yregion, id="y")
-        #self.OnPostFiltering()
+        self.OnLinRegion(self.yregion, update=False)
+        self.ComposeShiftQueue(init=True)
+
     # ----------------------------------------------------------------------
     def MaskedScatterDotsArray(self,region):
         selection = {self.xregion : ["errormaskedx","manualmaskedx"], self.yregion : ["errormaskedy","manualmaskedy"]}
         array = np.logical_or(self.stack.shiftsdict[self.itheta][selection[region][0]], self.stack.shiftsdict[self.itheta][selection[region][1]])
         return array
     def MakeNewScatterPlots(self):
-        #print(self.stack.shiftsdict)
+        print("makenewscatte")
+        errorthreshold = self.stack.shiftsdict[self.itheta]["threshold"]
         errors = self.stack.shiftsdict[self.itheta]["errors"]
-        self.errormean = round(np.mean(errors),4)
-        self.MaskScatterDotsAboveErrorThreshold((errors,self.errormean,self.itheta))
+        if not errorthreshold:
+            errorthreshold = round(np.mean(errors), 4)
+            self.errormean = errorthreshold.copy()
+        self.MaskScatterDotsAboveErrorThreshold((errors,errorthreshold,self.itheta))
         maskedx = self.MaskedScatterDotsArray(self.xregion)
         maskedy = self.MaskedScatterDotsArray(self.yregion)
 
         self.cb_autoerror.stateChanged.connect(self.OnAutoError)
-        self.cb_extrapolate.stateChanged.connect(self.ComposeShiftQueue)
-        self.spinBoxFiltersize.valueChanged.connect(self.ComposeShiftQueue)
+        self.cb_extrapolate.stateChanged.connect(self.OnExtrapolate)
+        self.spinBoxFiltersize.valueChanged.connect(self.OnFilter)
+        self.spinBoxError.valueChanged.connect(lambda value: self.OnSpinBoxError(value))
+        self.comboBox_approx.currentIndexChanged.connect(lambda: self.ComposeShiftQueue(init=False))
+
         self.spinBoxError.blockSignals(True)
         self.spinBoxError.setDecimals(4)
-        self.spinBoxError.valueChanged.connect(lambda value: self.OnSpinBoxError(value))
-        self.spinBoxError.blockSignals(False)
-        self.comboBox_approx.currentIndexChanged.connect(self.ComposeShiftQueue)
-
-        #self.spinBoxError.setValue(self.errormean)
         self.spinBoxError.setMinimum(np.partition(errors, 1)[1])  # makes sure that at least two elements are selected
-        self.spinBoxError.setDecimals(4)
         self.spinBoxError.setStepType(QtWidgets.QAbstractSpinBox.AdaptiveDecimalStepType)
         self.OnAutoError()
+        self.spinBoxError.blockSignals(False)
+
+
+        #self.spinBoxError.setValue(self.errormean)
+
         #self.OnMaskScatterDotsAboveErrorThreshold(errorvals=(errors, round(np.mean(errors),4)))
         #self.xscatter.addPoints(spots=self.CreateScatterDots(xdots), pxMode=True)
         #self.yscatter.addPoints(spots=self.CreateScatterDots(ydots), pxMode=True)
@@ -13289,16 +13305,25 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.yscatter.setData(spots=self.CreateScatterDots(ydots,maskedy), pxMode=True)
 
     def OnAutoError(self):
-        if self.cb_autoerror.isChecked():
+        print("onautoerror",self.errormean)
+        if self.cb_autoerror.isChecked() and self.aligned:
             self.spinBoxError.setEnabled(True)
             self.spinBoxError.setValue(self.errormean)
         else:
             self.spinBoxError.setEnabled(False)
             self.spinBoxError.setValue(1)
     def OnSpinBoxError(self,value):
+        print("onspinboxerror")
+        self.stack.shiftsdict[self.itheta]["threshold"] = value
+        print(self.stack.shiftsdict[self.itheta]["threshold"])
         self.MaskScatterDotsAboveErrorThreshold((self.stack.shiftsdict[self.itheta]["errors"], value, self.itheta))
         self.ColorizeScatterDots()
-        self.ComposeShiftQueue()
+        self.ComposeShiftQueue(init=False)
+    def OnExtrapolate(self):
+        self.ComposeShiftQueue(init=False)
+    def OnFilter(self):
+        self.ComposeShiftQueue(init=False)
+
     def ColorizeScatterDots(self):
         brushesx = [QtGui.QColor('red') if bool else QtGui.QColor('blue') for bool in self.MaskedScatterDotsArray(self.xregion)]
         brushesy = [QtGui.QColor('red') if bool else QtGui.QColor('blue') for bool in self.MaskedScatterDotsArray(self.yregion)]
@@ -13306,15 +13331,26 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.yscatter.setBrush(brushesy,update=True)
 
     def MaskScatterDotsAboveErrorThreshold(self, errorvals=None):
-        errors, errormean, itheta = errorvals
+        #print("maskscatterdotsabove")
+        errors, errorthreshold, itheta = errorvals
+        # self.spinBoxError.blockSignals(True)
+        # self.spinBoxError.setValue(errorthreshold)
+        # self.spinBoxError.blockSignals(False)
         if self.cb_autoerror.isChecked():
-            self.stack.shiftsdict[itheta]["errormaskedx"] = (errors > np.float64(errormean))
-            self.stack.shiftsdict[itheta]["errormaskedy"] = (errors > np.float64(errormean))
+            self.stack.shiftsdict[itheta]["errormaskedx"] = (errors > np.float64(errorthreshold))
+            self.stack.shiftsdict[itheta]["errormaskedy"] = (errors > np.float64(errorthreshold))
         else:
             self.stack.shiftsdict[itheta]["errormaskedx"] = [False] * len(errors)
             self.stack.shiftsdict[itheta]["errormaskedy"] = [False] * len(errors)
 
     # ----------------------------------------------------------------------
+    def restoreRegion(self,region, limits):
+        region.blockSignals(True)
+        if limits:
+            region.setRegion(list(limits))
+        else:
+            region.setRegion([self.stack.ev[0],self.stack.ev[-1]])
+        region.blockSignals(False)
     def getDataClosestToRegion(self,region,plotitem,snapregion=False):
         minidx, maxidx = region.getRegion()
         data = plotitem.getData()[0]
@@ -13327,9 +13363,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         mindata = data[minidx]
         maxdata = data[maxidx]
         if snapregion:
-            region.blockSignals(True)
-            region.setRegion([mindata, maxdata])  # snap region to data points
-            region.blockSignals(False)
+            self.restoreRegion(region,(mindata,maxdata))  # snap region to data points
         return minidx, maxidx, mindata, maxdata
     
     def ApplyApproximationFunction(self,region):
@@ -13375,9 +13409,9 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
 
     def resetPoolThread(self):
         try:
+            self.poolthread.started.disconnect()
             self.poolthread.quit()
             self.poolthread.wait()
-            self.poolthread.started.disconnect()
         except:
             pass
         self.pool = TaskDispatcher(self)
@@ -13388,17 +13422,21 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         #self.pool.worker.signals.finished.connect(self.OnAutoCrop)
 
     def IThetaProgress(self,itheta):
+        #print("ithetaprogress")
         # Each thread calls this function. The condition prevents multiple calls.
         if self.slider_theta.value() != itheta:
+            #self.slider_theta.blockSignals(True)
             self.slider_theta.setValue(itheta)
+            #self.slider_theta.blockSignals(False)
         #print(self.pool.pool.activeThreadCount())
 
     def ThreadPoolComplete(self):
         #print(str(self.pool.pool.activeThreadCount())+" THREADS REMAINING FROM POOL.")
-        self.slider_theta.setValue(0)
+        #self.slider_theta.setValue(0)
         if not self.aligned and self.pool.pool.activeThreadCount() == 0:
-            self.OnAligned()
             #print("onaligned")
+            self.OnAligned()
+
         elif self.aligned and self.pool.pool.activeThreadCount() == 0:
             #print("onautocrop")
             self.OnAutoCrop()
@@ -13432,8 +13470,9 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
                     else:
                         break
                 itheta = itheta + 1
-        print("total alignqueue composed. starting poolthread")
-        self.poolthread.start()
+        if not self.pool.queue.empty():
+            print("total alignqueue composed. starting poolthread")
+            self.poolthread.start()
         # Compose consecutive image queue. Currently disabled, probably no use case.
         # # if self.rB_consecutive.isChecked(): 
         # #     while idx: # Generate pairs of indices starting at reference image index.
@@ -13453,29 +13492,32 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         # #     self.thread.started.connect(self.worker.runConsecutive)
         # #     self.thread.start()
         
-    def ComposeShiftQueue(self):
-        # if empty arrays, i.e., if less than 2 dots selected, do nothing
-        xshifts = self.ApplyApproximationFunction(self.xregion)
-        yshifts = self.ApplyApproximationFunction(self.yregion)
-        if [] in (xshifts, yshifts):
-            return
-        # ToDo: Find leak that accumulates function calls. Maybe thread is not properly destroyed?
+    def ComposeShiftQueue(self, init=False):
+        print("composeshift initial?",str(init))
         self.resetPoolThread()
         #array = np.logical_or(self.MaskedScatterDotsArray(self.xregion),self.MaskedScatterDotsArray(self.yregion))
-        for i in range(self.stack.n_ev):
-        #print(array)
-        #for i in [i for i, x in enumerate(array) if not x]:
-            # Only enqueue if new shift val is different to previous shift
-            #print(i)
-            if (self.stack.shiftsdict[self.itheta]["xshifts"][i],self.stack.shiftsdict[self.itheta]["yshifts"][i]) != (xshifts[i],yshifts[i]):
-                #self.stack.shifts[i].pop(2)  # remove tuple
-                #self.stack.shifts[i].insert(2, (xshifts[i], yshifts[i]))
-                #print(i)
-                self.stack.shiftsdict[self.itheta]["xshifts"][i] = xshifts[i]
-                self.stack.shiftsdict[self.itheta]["yshifts"][i] = yshifts[i]
-                self.pool.enqueuetask("ShiftImg", i, xshifts[i], yshifts[i],self.itheta)
+        if not init:
+            ntheta = [self.itheta]
+        else:
+            ntheta = range(max(self.stack.n_theta,1)) # necessary work around for 3d stacks and if 4d stack is loaded with LoadStack()
+        for itheta in ntheta:
+            #print(itheta)
+            self.slider_theta.setValue(itheta)
+            #time.sleep(0.2)
+            xshifts = self.ApplyApproximationFunction(self.xregion)
+            yshifts = self.ApplyApproximationFunction(self.yregion)
+            # if empty arrays, i.e., if less than 2 dots selected, do nothing
+            if [] in (xshifts, yshifts):
+                return
+            for ev in range(self.stack.n_ev):
+                # Only enqueue if new shift val is different to previous shift
+                if (self.stack.shiftsdict[itheta]["xshifts"][ev],self.stack.shiftsdict[itheta]["yshifts"][ev]) != (xshifts[ev],yshifts[ev]):
+                    self.stack.shiftsdict[itheta]["xshifts"][ev] = xshifts[ev]
+                    self.stack.shiftsdict[itheta]["yshifts"][ev] = yshifts[ev]
+                    self.pool.enqueuetask("ShiftImg", ev, xshifts[ev], yshifts[ev],itheta)
+                    #print("ShiftImg", ev, xshifts[ev], yshifts[ev],itheta)
         if not self.pool.queue.empty():
-            print("total shiftqueue composed. starting poolthread")
+            print("total shiftqueue composed. starting poolthread with queue size",self.pool.queue.qsize())
             self.poolthread.start()
 
     # ----------------------------------------------------------------------
@@ -13487,36 +13529,40 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         if self.aligned:
             self.button_ok.setEnabled(True)
             self.cb_autocrop.blockSignals(True)
-            self.CropStack3D()
+            self.CropStack4D()
             self.cb_autocrop.blockSignals(False)
             self.OnScrollEng(self.iev)
-            #self.busywiththeta = False
 
-    def CropStack3D(self):
+    def CropStack4D(self):
         self.stack.absdata4d_shifted_cropped = self.stack.absdata4d_shifted.copy()
-        #print(self.stack.absdata4d_shifted_cropped.shape)
-        # Cropping currently not supported in 4D
         if self.cb_autocrop.isChecked():
-            if not self.com.stack_4d:
-                self.box.hide()
-                l = -int(np.floor(min(self.stack.shiftsdict[self.itheta]["xshifts"])))
-                r = -int(np.ceil(max(self.stack.shiftsdict[self.itheta]["xshifts"])))
-                cr = r if r < 0 else None
-                if l < 0:
-                    l = 0
-                    cr = cr - l
-                b = -int(np.floor(min(self.stack.shiftsdict[self.itheta]["yshifts"])))
-                t = -int(np.ceil(max(self.stack.shiftsdict[self.itheta]["yshifts"])))
-                ct = t if t < 0 else None
-                if b < 0:
-                    b = 0
-                    ct = ct - b
-                if 0 in self.stack.absdata4d_shifted_cropped[l:cr,b:ct,:,self.itheta].shape:
-                    QtWidgets.QMessageBox.warning(self, 'Error', 'The alignment failed. Cropping would result in a zero-dimensional image. Please check your settings. Auto-crop has been disabled. You can re-enable it manually.')
-                    self.cb_autocrop.setChecked(False)
-                    self.OnResetROI()
-                else:
-                    self.stack.absdata4d_shifted_cropped = self.stack.absdata4d_shifted_cropped[l:cr,b:ct,:,:]
+            ntheta = range(max(self.stack.n_theta,1)) # necessary work around for 3d stacks and if 4d stack is loaded with LoadStack()
+            #print(ntheta)
+            globalminx = min([j for i in [self.stack.shiftsdict[theta]["xshifts"] for theta in ntheta] for j in i])
+            globalmaxx = max([j for i in [self.stack.shiftsdict[theta]["xshifts"] for theta in ntheta] for j in i])
+            globalminy = min([j for i in [self.stack.shiftsdict[theta]["yshifts"] for theta in ntheta] for j in i])
+            globalmaxy = max([j for i in [self.stack.shiftsdict[theta]["yshifts"] for theta in ntheta] for j in i])
+            print("cropstack4d: ",globalminx,globalmaxx,globalminy,globalmaxy)
+            #if not self.com.stack_4d:
+            self.box.hide()
+            l = -int(np.floor(globalminx))
+            r = -int(np.ceil(globalmaxx))
+            cr = r if r < 0 else None
+            if l < 0:
+                l = 0
+                cr = cr - l
+            b = -int(np.floor(globalminy))
+            t = -int(np.ceil(globalmaxy))
+            ct = t if t < 0 else None
+            if b < 0:
+                b = 0
+                ct = ct - b
+            if 0 in self.stack.absdata4d_shifted_cropped[l:cr,b:ct,:,self.itheta].shape:
+                QtWidgets.QMessageBox.warning(self, 'Error', 'The alignment failed. Cropping would result in a zero-dimensional image. Please check your settings. Auto-crop has been disabled. You can re-enable it manually.')
+                self.cb_autocrop.setChecked(False)
+                self.OnResetROI()
+            else:
+                self.stack.absdata4d_shifted_cropped = self.stack.absdata4d_shifted_cropped[l:cr,b:ct,:,:]
         else:
             self.box.show()
 
@@ -13533,6 +13579,36 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.itheta = value
         #self.ClearShifts()
         self.ShowImage()
+        if self.aligned:
+            #self.MakeNewScatterPlots()
+            errorthreshold = self.stack.shiftsdict[self.itheta]["threshold"]
+            errors = self.stack.shiftsdict[self.itheta]["errors"]
+            if not errorthreshold:
+                errorthreshold = round(np.mean(errors), 4)
+            self.MaskScatterDotsAboveErrorThreshold((errors, errorthreshold, self.itheta))
+            if self.cb_autoerror.isChecked():
+                self.spinBoxError.blockSignals(True)
+                self.spinBoxError.setValue(errorthreshold)
+                self.spinBoxError.blockSignals(False)
+            xdots = self.stack.shiftsdict[self.itheta]["xdots"]
+            ydots = self.stack.shiftsdict[self.itheta]["ydots"]
+            maskedx = self.MaskedScatterDotsArray(self.xregion)
+            maskedy = self.MaskedScatterDotsArray(self.yregion)
+            self.xscatter.setData(spots=self.CreateScatterDots(xdots, maskedx), pxMode=True)
+            self.yscatter.setData(spots=self.CreateScatterDots(ydots, maskedy), pxMode=True)
+            self.fit_x.setData(x=self.stack.ev, y=self.stack.shiftsdict[self.itheta]["xshifts"])
+            self.fit_y.setData(x=self.stack.ev, y=self.stack.shiftsdict[self.itheta]["yshifts"])
+
+            #min_idx, max_idx, min_ev, max_ev = self.getDataClosestToRegion(self.xregion, self.xscatter, True)
+            #min_idx, max_idx, min_ev, max_ev = self.getDataClosestToRegion(self.yregion, self.yscatter, True)
+            limitsx = self.stack.shiftsdict[self.itheta]["regionlimitx"]
+            limitsy = self.stack.shiftsdict[self.itheta]["regionlimity"]
+            #self.fit_x.show()
+            self.restoreRegion(self.xregion, limitsx)
+            self.restoreRegion(self.yregion, limitsy)
+            self.OnLinRegion(self.xregion, update=False)
+            self.OnLinRegion(self.yregion, update=False)
+
     def ShowImage(self):
         self.stack.absdata_shifted_cropped = self.stack.absdata4d_shifted_cropped[:, :, :, int(self.itheta)]
         self.i_item.setImage(self.stack.absdata_shifted_cropped[:, :, int(self.iev)])
@@ -13543,7 +13619,6 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
 
     ## Setup a ROI for an alignment rectangle. By default the whole image area is used.
     def SetupROI(self):
-        self.stack.absdata_cropped = self.stack.absdata4d[:,:, :,self.itheta].copy()
         self.box = pg.RectROI(self.i_item.boundingRect().topLeft(), self.i_item.boundingRect().bottomRight(),
                               pen=(5, 8), handlePen=QtGui.QPen(QtGui.QColor(255, 0, 128, 255)), centered=False,
                               sideScalers=False, removable=False, scaleSnap=True, translateSnap=True,
@@ -13558,15 +13633,14 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.cb_autoerror.stateChanged.disconnect()
         self.button_align.setEnabled(True)
         # self.stack.shifts =[]
-        # self.fit_x.hide()
-        # self.fit_y.hide()
+        self.fit_x.hide()
+        self.fit_y.hide()
         self.InitShiftsDict()
         self.MakeNewScatterPlots()
     def OnResetROI(self):
         self.ClearShifts()
         self.stack.absdata4d_shifted_cropped = self.stack.absdata4d.copy()
         self.OnScrollEng(self.iev)
-
         self.box.setPos(0, 0, update=False, finish=False)
         self.box.setSize(self.i_item.boundingRect().bottomRight() - self.box.pos(), update=True, snap=True, finish=True)
         self.box.show()
@@ -13582,20 +13656,17 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         right = left + int(self.box.size().x())
         bottom = int(self.box.pos().y())
         top = bottom + int(self.box.size().y())
-        self.stack.absdata_cropped = self.stack.absdata4d[left:right, bottom:top, :,self.itheta].copy()
+        self.stack.absdata_cropped = self.stack.absdata4d[left:right, bottom:top, :,:].copy()
 
-    # def OnPostFiltering(self):
-    #     self.UpdateScatterPlots(self.xregion, id="x")
-    #     if self.UpdateScatterPlots(self.yregion, id="y"):
-    #         self.ComposeShiftQueue(self.x_shiftstemp, self.y_shiftstemp)
     def OnLinRegion(self, region, update=True):
-        #print("OnLinRegion")
+        #print("OnLinRegion", str(update))
         selectregion= {self.xregion : "manualmaskedx", self.yregion : "manualmaskedy"}
         selectscatter = {self.xregion : self.xscatter, self.yregion : self.yscatter}
+        selectregionlimit= {self.xregion : "regionlimitx", self.yregion : "regionlimity"}
         selectplot = {self.xregion : self.px, self.yregion : self.py}
         #print("onlinregion "+ selectregion[region])
         scatter = selectscatter[region]
-        min_idx, max_idx, min_ev, max_ev = self.getDataClosestToRegion(region,scatter,True)
+        min_idx, max_idx, min_ev, max_ev = self.getDataClosestToRegion(region,scatter,update)
         selection = [*range(min_idx, max_idx+1)]
         for idx,val in enumerate(self.stack.shiftsdict[self.itheta]["manualmaskedx"]):
             if idx not in selection:
@@ -13608,31 +13679,13 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         #filter = [True if idx in selection else False for idx,bool in enumerate(self.stack.shiftsdict[self.itheta]["manualmaskedx"])]
         #print(selection,filter)
         #self.UpdateScatterPlots(region, id)
+        if not self.aligned:
+            for theta in range(self.stack.n_theta):
+                self.stack.shiftsdict[theta][selectregionlimit[region]] = (min_ev, max_ev)
         if self.aligned and update:
+            self.stack.shiftsdict[self.itheta][selectregionlimit[region]] = (min_ev, max_ev)
             #print("ComposeShiftQueue"+selectregion[region])
             self.ComposeShiftQueue()
-
-        # if id == "x":
-        #     y_vals= self.xscatter.data["y"][min_idx:max_idx + 1]
-        #     self.px.setRange(yRange=[np.min(y_vals), np.max(y_vals)], disableAutoRange=True, padding=0.1)
-        #     for i in range(len(self.xscatter.data["y"])):
-        #         self.xscatter.data['brush'][i] = QtGui.QColor('red')
-        #     for i in range(min_idx, max_idx+1):
-        #         if self.maskedvals[i]: # highlight badly correlated or masked data
-        #             self.xscatter.data['brush'][i] = QtGui.QColor('blue')
-        #     self.xscatter.updateSpots()
-        # elif id == "y":
-        #     y_vals= self.yscatter.data["y"][min_idx:max_idx + 1]
-        #     self.py.setRange(yRange=[np.min(y_vals), np.max(y_vals)], disableAutoRange=True, padding=0.1)
-        #     for i in range(len(self.yscatter.data["y"])):
-        #         self.yscatter.data['brush'][i] = QtGui.QColor('red')
-        #     for i in range(min_idx, max_idx+1):
-        #         if self.maskedvals[i]: # highlight badly correlated or masked data
-        #             self.yscatter.data['brush'][i]= QtGui.QColor('blue')
-        #     self.yscatter.updateSpots()
-        #     print(self.yscatter.data['brush'])
-        # if self.aligned:
-        #     return self.ApplyApproximationFunction(id)
 
     def OnMouseMoveOutside(self, ev):
         mousepos = self.vb.mapSceneToView(ev[0])
@@ -13664,19 +13717,58 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
             self.stack.absdata = self.stack.absdata4d_shifted_cropped[:,:,:,0]
             self.stack.data_struct.exchange.data = self.stack.absdata
         else:
-            QtWidgets.QMessageBox.warning(self, 'Error', '4D stack not yet supported.')
+            self.stack.stack4D = self.stack.absdata4d_shifted_cropped
+            self.stack.absdata = self.stack.stack4D[:, :, :, self.itheta]
+            self.stack.data_struct.exchange.data = self.stack.stack4D
+            #QtWidgets.QMessageBox.warning(self, 'Error', '4D stack not yet supported.')
 
         datadim = np.int32(self.stack.absdata.shape)
 
         self.stack.n_cols = datadim[0].copy()
         self.stack.n_rows =  datadim[1].copy()
+        #ToDo: Handshake data
+        #self.stack.xshifts = self.x_shiftstemp
+        #self.stack.yshifts = self.y_shiftstemp
 
-        self.stack.xshifts = self.x_shiftstemp
-        self.stack.yshifts = self.y_shiftstemp
+        #ToDo: How to handle aligned i0 data?
+
+        # if self.com.i0_loaded == 1:
+        #     if self.com.stack_4d == 0:
+        #         #Resize optical density
+        #         for i in range(self.stack.n_ev):
+        #
+        #             img = self.stack.od3d[:,:,i]
+        #             shifted_img = self.stack.apply_image_registration(img, self.xshifts[i], self.yshifts[i])
+        #             self.stack.od3d[:,:,i] = shifted_img
+        #
+        #
+        #         self.stack.od3d = self.stack.od3d[self.xleft:self.xright, self.ybottom:self.ytop, :]
+        #
+        #         self.stack.od = self.stack.od3d.copy()
+        #         self.stack.od = np.reshape(self.stack.od, (self.stack.n_cols*self.stack.n_rows, self.stack.n_ev), order='F')
+        #
+        #     else:
+        #         #Resize optical density for 4D stack
+        #
+        #         for i in range(self.stack.n_ev):
+        #             for j in range(self.stack.n_theta):
+        #                 img = self.stack.od4D[:,:,i,j]
+        #                 shifted_img = self.stack.apply_image_registration(img, self.xshifts[i,j], self.yshifts[i,j])
+        #                 self.stack.od4D[:,:,i,j] = shifted_img
+        #
+        #         self.stack.od4D = self.stack.od4D[self.xleft:self.xright, self.ybottom:self.ytop, :, :]
+        #
+        #         self.stack.od3d = self.stack.od4D[:,:,:,self.itheta]
+        #         self.stack.od = self.stack.od3d.copy()
+        #         n_pixels = self.stack.n_cols*self.stack.n_rows
+        #         self.stack.od = np.reshape(self.stack.od, (n_pixels, self.stack.n_ev), order='F')
+        #
+        #     self.stack.data_struct.spectromicroscopy.optical_density = self.stack.od
 
         self.stack.data_struct.exchange.energy = self.stack.ev
-        self.stack.data_struct.spectromicroscopy.xshifts = self.x_shiftstemp
-        self.stack.data_struct.spectromicroscopy.yshifts = self.y_shiftstemp
+        #ToDo: Handshake shift data
+        #self.stack.data_struct.spectromicroscopy.xshifts = self.x_shiftstemp
+        #self.stack.data_struct.spectromicroscopy.yshifts = self.y_shiftstemp
 
         self.parent.page1.slider_eng.setRange(0,self.stack.n_ev-1)
         self.parent.page1.iev = int(self.stack.n_ev/2)
@@ -16767,7 +16859,7 @@ class MainFrame(QtWidgets.QMainWindow):
 def main():
 
     app = QtWidgets.QApplication(sys.argv)
-    #print('main', threading.get_ident())
+    print('main', threading.get_ident())
     with open(qsspath, "r") as stylesheet:
         app.setStyleSheet(stylesheet.read())
     frame = MainFrame()
