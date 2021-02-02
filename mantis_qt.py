@@ -37,7 +37,7 @@ from scipy.stats import linregress
 from scipy.interpolate import interp1d
 # from skimage.feature import register_translation ## deprecated
 from skimage.registration import phase_cross_correlation
-from queue import SimpleQueue
+from queue import Queue, Empty
 import threading
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import (
@@ -12949,37 +12949,33 @@ class ImageRegistration(QtWidgets.QDialog):
 class GeneralPurposeSignals(QtCore.QObject):
     finished = pyqtSignal()
     ithetaprogress = pyqtSignal(int)
-    #progress = pyqtSignal()
 # ----------------------------------------------------------------------
 class GeneralPurposeProcessor(QtCore.QRunnable):
     def __init__(self, parent, queue):
         super(GeneralPurposeProcessor, self).__init__()
         self.signals = GeneralPurposeSignals()
-        #self.mutex = QtCore.QMutex()
         self.funcdict = {"ShiftImg": self.ShiftImg, "AlignReferenced": self.AlignReferenced}
         self.parent = parent
         self.queue = queue
-        self.running = True
         self.current_itheta = 0
 
     @pyqtSlot()
     def run(self):
         #print('worker', threading.get_ident())
-        while self.running:
+        while True:
             #print(self.parent.pool.pool.activeThreadCount())
             #print(QtCore.QThreadPool.activeThreadCount())
-            if not self.queue.empty():
-                #print("queue size: "+ str(self.queue.qsize()))
+            try:
                 workerfunc, *args = self.queue.get(False)
+                #print("row: ",type(args[0][0]))
+                #print("queue size3: "+ str(self.queue.qsize()))
                 #itheta = args[0][-1]
                 # args = rest[0][0]
                 #kwargs = rest[1]
-                #print(args[0][1])
                 self.funcdict[workerfunc](*args[0])
                 #print("busy with task {}".format(workerfunc))
-            else:
-                self.running = False
-                #print("break")
+            except Empty: # if queue empty
+                #self.running = False
                 #self.signals.blockSignals(True)
                 #self.signals.finished.emit()
                 break
@@ -13018,7 +13014,7 @@ class GeneralPurposeProcessor(QtCore.QRunnable):
             #self.signals.driftcalcfinished.emit((errorlst, round(np.mean(errorlst),4)))
 
     def ShiftImg(self, row,x,y,itheta):
-        shifted = ndimage.fourier_shift(np.fft.fft2(self.parent.stack.absdata4d[:, :, row,itheta]), [float(-x), float(-y)])
+        shifted = ndimage.fourier_shift(np.fft.fft2(self.parent.stack.absdata4d[:, :, row,itheta]), [float(-x),float(-y)])
         shifted = np.fft.ifft2(shifted)
         self.parent.stack.absdata4d_shifted[:, :, row, itheta] = shifted.real
         return
@@ -13044,34 +13040,33 @@ class TaskDispatcher(QtCore.QObject):
         except:
             cpus = os.cpu_count()
         self.pool.setMaxThreadCount(cpus)
-        self.queue = SimpleQueue()
+        self.queue = Queue()
         self.parent = parent
-        #print("maxthreadcount", self.pool.maxThreadCount())
+
     @pyqtSlot()
     def run(self):
         #print(self.queue.qsize())
         #print('pool', threading.get_ident())
         # if self.parent.com.stack_4d == 0:
         qsize = int(self.queue.qsize())
-        # else:
-        #     qsize = int(self.queue.qsize() / self.parent.stack.n_theta)
-        print("1 - starting threads", min(self.pool.maxThreadCount(),qsize), "threads needed, number of tasks:",qsize)
-        for n in range(min(self.pool.maxThreadCount(),qsize)): #start as many threads as needed.
+        maxthreads = self.pool.maxThreadCount()
+        preferred_thread_number = min(maxthreads, qsize)
+        print("1 - starting threads",preferred_thread_number, "threads needed, number of tasks:",qsize)
+        while int(self.queue.qsize()) and self.pool.activeThreadCount() < preferred_thread_number: #start as many threads as needed.
+            #print("active threads"+str(self.pool.activeThreadCount())+" qsize "+str(int(self.queue.qsize())))
             worker = GeneralPurposeProcessor(self.parent,self.queue)
             #worker.signals.ithetaprogress.disconnect()
             #worker.signals.finished.disconnect()
             worker.signals.ithetaprogress.connect(self.parent.IThetaProgress)
             self.pool.start(worker)
+            time.sleep(0.02) # artifical delay to start threads with a little time separation. Otherwise ShiftImgs freezes in Win10 and MacOS for small stacks!
         self.pool.waitForDone()
         print("2 - all threads dead")
         worker.signals.finished.connect(self.parent.ThreadPoolComplete)
         worker.signals.finished.emit()
         #worker.signals.ithetaprogress.disconnect()
         #worker.signals.finished.disconnect()
-        #print("all threads dead")
     #add a task to the queue
-    # def enqueuetheta(self, args):
-    #     self.thetaqueue.put(args)
     def enqueuetask(self, func, *args, **kargs):
         self.queue.put((func, args, kargs))
 
@@ -13253,7 +13248,6 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
     def OnAligned(self):
         self.aligned = True
         print("aligned")
-        self.button_align.setEnabled(True)
         self.cb_autoerror.stateChanged.disconnect()
         self.cb_extrapolate.stateChanged.disconnect()
         self.spinBoxFiltersize.valueChanged.disconnect()
@@ -13402,7 +13396,6 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
 
         interpolate_func = interp1d(xdata, approximated,kind="linear",fill_value=fillval,bounds_error=False)
         fitdata = [self.stack.ev,np.around(interpolate_func(self.stack.ev),1)] # round fit to a tenth of a px
-        #print(fitdata[1])
         fit.setData(x=fitdata[0], y=fitdata[1])
         fit.show()
         return fitdata[1]
@@ -13527,6 +13520,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
     # ----------------------------------------------------------------------
     def OnAutoCrop(self):
         if self.aligned:
+            self.button_align.setEnabled(True)
             self.button_ok.setEnabled(True)
             self.cb_autocrop.blockSignals(True)
             self.CropStack4D()
