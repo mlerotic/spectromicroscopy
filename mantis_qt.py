@@ -1655,7 +1655,7 @@ class File_GUI():
         dlg=QtWidgets.QFileDialog(None)
         dlg.setWindowTitle('Choose File')
         dlg.setViewMode(QtWidgets.QFileDialog.Detail)
-        dlg.setOption(QtWidgets.QFileDialog.DontUseNativeDialog)
+        #dlg.setOption(QtWidgets.QFileDialog.DontUseNativeDialog)
         if action == "write":
             dlg.setAcceptMode(QtWidgets.QFileDialog.AcceptSave)
         dlg.setDirectory(self.last_path[action][data_type])
@@ -13071,7 +13071,6 @@ class TaskDispatcher(QtCore.QObject):
         self.queue.put((func, args, kargs))
 
 class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
-    # ToDo: AutoQualityFilter and StackExtrapolation checkbox status not saved for each theta value!
     def __init__(self, parent, common, stack):
         QtWidgets.QWidget.__init__(self, parent)
         uic.loadUi(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'showalign2.ui'), self)
@@ -13217,7 +13216,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         outer_keys = range(max(self.stack.n_theta,1))
         inner_keys = ["xdots", "ydots", "xshifts", "yshifts", "errors", "errormaskedx","errormaskedy","manualmaskedx","manualmaskedy"]
         self.stack.shiftsdict = {intkey : {key: [False] * int(self.stack.n_ev) for key in inner_keys} for intkey in outer_keys}
-        single_keys = ["filter", "method", "threshold", "regionlimitx", "regionlimity"]
+        single_keys = ["filter", "method", "autoquality", "extrapolation", "threshold", "regionlimitx", "regionlimity"]
         for intkey in outer_keys:
             self.stack.shiftsdict[intkey].update({key: False for key in single_keys})
     def CreateScatterDots(self,shifts,mask):
@@ -13267,9 +13266,10 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         print("makenewscatte")
         errorthreshold = self.stack.shiftsdict[self.itheta]["threshold"]
         errors = self.stack.shiftsdict[self.itheta]["errors"]
-        if not errorthreshold:
-            errorthreshold = round(np.mean(errors), 4)
-            self.errormean = errorthreshold.copy()
+        # if not errorthreshold:
+        #     errorthreshold = round(np.mean(errors), 4)
+        #     self.stack.shiftsdict[self.itheta]["threshold"] = errorthreshold
+        #     self.errormean = errorthreshold.copy()
         self.MaskScatterDotsAboveErrorThreshold((errors,errorthreshold,self.itheta))
         maskedx = self.MaskedScatterDotsArray(self.xregion)
         maskedy = self.MaskedScatterDotsArray(self.yregion)
@@ -13299,10 +13299,13 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.yscatter.setData(spots=self.CreateScatterDots(ydots,maskedy), pxMode=True)
 
     def OnAutoError(self):
-        print("onautoerror",self.errormean)
+        print("onautoerror",self.stack.shiftsdict[self.itheta]["threshold"])
+        self.stack.shiftsdict[self.itheta]["autoquality"] = self.cb_autoerror.isChecked()
+        self.stack.shiftsdict[self.itheta]["threshold"] = round(np.mean(self.stack.shiftsdict[self.itheta]["errors"]),
+                                                                4)
         if self.cb_autoerror.isChecked() and self.aligned:
             self.spinBoxError.setEnabled(True)
-            self.spinBoxError.setValue(self.errormean)
+            self.spinBoxError.setValue(self.stack.shiftsdict[self.itheta]["threshold"])
         else:
             self.spinBoxError.setEnabled(False)
             self.spinBoxError.setValue(1)
@@ -13338,14 +13341,62 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
             self.stack.shiftsdict[itheta]["errormaskedy"] = [False] * len(errors)
 
     # ----------------------------------------------------------------------
-    def restoreRegion(self,region, limits):
-        region.blockSignals(True)
-        if limits:
-            region.setRegion(list(limits))
+    def initParams(self, itheta):
+        self.stack.shiftsdict[itheta]["regionlimitx"] = self.getDataClosestToRegion(self.xregion,self.xscatter,False)[2:]
+        self.stack.shiftsdict[itheta]["regionlimity"] = self.getDataClosestToRegion(self.yregion,self.yscatter,False)[2:]
+        self.stack.shiftsdict[itheta]["filter"] = self.spinBoxFiltersize.value()
+        self.stack.shiftsdict[itheta]["method"] = self.comboBox_approx.currentIndex()
+        #print(self.stack.shiftsdict[itheta]["method"])
+        #self.stack.shiftsdict[itheta]["autoquality"] = self.cb_autoerror.isChecked()
+        self.stack.shiftsdict[itheta]["extrapolation"] = self.cb_extrapolate.isChecked()
+        self.stack.shiftsdict[itheta]["threshold"] = round(np.mean(self.stack.shiftsdict[itheta]["errors"]), 4)
+    def restoreParams(self,itheta):
+        self.xregion.blockSignals(True)
+        self.yregion.blockSignals(True)
+        self.cb_autoerror.blockSignals(True)
+        self.cb_extrapolate.blockSignals(True)
+        self.comboBox_approx.blockSignals(True)
+        self.spinBoxFiltersize.blockSignals(True)
+        #self.spinBoxError.blockSignals(True)
+        # errors = self.stack.shiftsdict[self.itheta]["errors"]
+        # errorthreshold = self.stack.shiftsdict[itheta]["threshold"]
+        # if not errorthreshold:
+        #     errorthreshold = round(np.mean(errors), 4)
+        #self.spinBoxError.setValue(errorthreshold)
+        self.xregion.setRegion(self.stack.shiftsdict[itheta]["regionlimitx"])
+        self.yregion.setRegion(self.stack.shiftsdict[itheta]["regionlimity"])
+        self.cb_autoerror.setChecked(self.stack.shiftsdict[itheta]["autoquality"])
+        self.spinBoxError.blockSignals(True)
+        #self.spinBoxError.setValue(self.stack.shiftsdict[self.itheta]["threshold"])
+        if self.cb_autoerror.isChecked() and self.aligned:
+            self.spinBoxError.setEnabled(True)
+            self.spinBoxError.setValue(self.stack.shiftsdict[self.itheta]["threshold"])
         else:
-            region.setRegion([self.stack.ev[0],self.stack.ev[-1]])
-        region.blockSignals(False)
+            self.spinBoxError.setEnabled(False)
+            self.spinBoxError.setValue(1)
+        self.spinBoxError.blockSignals(False)
+        self.cb_extrapolate.setChecked(self.stack.shiftsdict[itheta]["extrapolation"])
+        self.comboBox_approx.setCurrentIndex(self.stack.shiftsdict[itheta]["method"])
+        if self.comboBox_approx.currentIndex() == 0:
+            self.spinBoxFiltersize.setEnabled(True)
+        elif self.comboBox_approx.currentIndex() == 1: # linear regression
+            self.spinBoxFiltersize.setEnabled(False)
+        self.spinBoxFiltersize.setValue(self.stack.shiftsdict[itheta]["filter"])
+        # if limits:
+        #     region.setRegion(list(limits))
+        # else:
+        #     region.setRegion([self.stack.ev[0],self.stack.ev[-1]])
+        #self.spinBoxError.blockSignals(False)
+        self.xregion.blockSignals(False)
+        self.yregion.blockSignals(False)
+        self.cb_autoerror.blockSignals(False)
+        self.cb_extrapolate.blockSignals(False)
+        self.comboBox_approx.blockSignals(False)
+        self.spinBoxFiltersize.blockSignals(False)
+
     def getDataClosestToRegion(self,region,plotitem,snapregion=False):
+        selectregion = {self.xregion : "regionlimitx", self.yregion : "regionlimity"}
+        limits = selectregion[region]
         minidx, maxidx = region.getRegion()
         data = plotitem.getData()[0]
         index = lambda x: np.argmin(np.abs(data - x))
@@ -13357,7 +13408,8 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         mindata = data[minidx]
         maxdata = data[maxidx]
         if snapregion:
-            self.restoreRegion(region,(mindata,maxdata))  # snap region to data points
+            self.stack.shiftsdict[self.itheta][limits] = (mindata,maxdata)  # snap region to data points
+            region.setRegion(mindata,maxdata)
         return minidx, maxidx, mindata, maxdata
     
     def ApplyApproximationFunction(self,region):
@@ -13493,8 +13545,12 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
             ntheta = [self.itheta]
         else:
             ntheta = range(max(self.stack.n_theta,1)) # necessary work around for 3d stacks and if 4d stack is loaded with LoadStack()
+            for itheta in ntheta:
+                self.initParams(itheta)
         for itheta in ntheta:
             #print(itheta)
+            self.stack.shiftsdict[self.itheta]["filter"] = self.spinBoxFiltersize.value()
+            self.stack.shiftsdict[self.itheta]["method"] = self.comboBox_approx.currentIndex()
             self.slider_theta.setValue(itheta)
             #time.sleep(0.2)
             xshifts = self.ApplyApproximationFunction(self.xregion)
@@ -13579,11 +13635,12 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
             errors = self.stack.shiftsdict[self.itheta]["errors"]
             if not errorthreshold:
                 errorthreshold = round(np.mean(errors), 4)
+            self.restoreParams(self.itheta)
             self.MaskScatterDotsAboveErrorThreshold((errors, errorthreshold, self.itheta))
-            if self.cb_autoerror.isChecked():
-                self.spinBoxError.blockSignals(True)
-                self.spinBoxError.setValue(errorthreshold)
-                self.spinBoxError.blockSignals(False)
+            # if self.cb_autoerror.isChecked():
+            #     self.spinBoxError.blockSignals(True)
+            #     self.spinBoxError.setValue(errorthreshold)
+            #     self.spinBoxError.blockSignals(False)
             xdots = self.stack.shiftsdict[self.itheta]["xdots"]
             ydots = self.stack.shiftsdict[self.itheta]["ydots"]
             maskedx = self.MaskedScatterDotsArray(self.xregion)
@@ -13595,11 +13652,8 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
 
             #min_idx, max_idx, min_ev, max_ev = self.getDataClosestToRegion(self.xregion, self.xscatter, True)
             #min_idx, max_idx, min_ev, max_ev = self.getDataClosestToRegion(self.yregion, self.yscatter, True)
-            limitsx = self.stack.shiftsdict[self.itheta]["regionlimitx"]
-            limitsy = self.stack.shiftsdict[self.itheta]["regionlimity"]
+
             #self.fit_x.show()
-            self.restoreRegion(self.xregion, limitsx)
-            self.restoreRegion(self.yregion, limitsy)
             self.OnLinRegion(self.xregion, update=False)
             self.OnLinRegion(self.yregion, update=False)
 
