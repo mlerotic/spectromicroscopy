@@ -9624,13 +9624,13 @@ class PageStack(QtWidgets.QWidget):
     def OnAlignImgs(self, event):
 
         #self.window().Hide()
-        imgregwin = ImageRegistration(self.window(), self.com, self.stk)
+        imgregwin = ImageRegistrationManual(self.window(), self.com, self.stk)
         imgregwin.show()
 
 # ----------------------------------------------------------------------
     def OnAlignImgs2(self, event):
 
-        imgreg2 = ImageRegistration2(self.window(), self.com, self.stk)
+        imgreg2 = ImageRegistrationFFT(self.window(), self.com, self.stk)
         imgreg2.show()
 
 #----------------------------------------------------------------------
@@ -11371,7 +11371,7 @@ class ImageRegistrationDialog(QtWidgets.QDialog):
         self.bt_align.clicked.connect(self.done)
         self.bt_align2.clicked.connect(self.done)
 #----------------------------------------------------------------------
-class ImageRegistration(QtWidgets.QDialog):
+class ImageRegistrationManual(QtWidgets.QDialog):
 
     def __init__(self, parent,  common, stack):
         QtWidgets.QWidget.__init__(self, parent)
@@ -13070,7 +13070,7 @@ class TaskDispatcher(QtCore.QObject):
     def enqueuetask(self, func, *args, **kargs):
         self.queue.put((func, args, kargs))
 
-class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
+class ImageRegistrationFFT(QtWidgets.QDialog, QtGui.QGraphicsScene):
     def __init__(self, parent, common, stack):
         QtWidgets.QWidget.__init__(self, parent)
         uic.loadUi(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'showalign2.ui'), self)
@@ -13409,7 +13409,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         maxdata = data[maxidx]
         if snapregion:
             self.stack.shiftsdict[self.itheta][limits] = (mindata,maxdata)  # snap region to data points
-            region.setRegion(mindata,maxdata)
+            region.setRegion((mindata,maxdata))
         return minidx, maxidx, mindata, maxdata
     
     def ApplyApproximationFunction(self,region):
