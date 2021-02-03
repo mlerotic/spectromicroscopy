@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="description" content="None">
+        
+        
+        <link rel="shortcut icon" href="img/favicon.ico">
+        <title>Mantis Docs</title>
+        <link href="css/bootstrap.min.css" rel="stylesheet">
+        <link href="css/font-awesome.min.css" rel="stylesheet">
+        <link href="css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+
+        <script src="js/jquery-1.10.2.min.js" defer></script>
+        <script src="js/bootstrap.min.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script> 
+    </head>
+
+    <body class="homepage">
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href=".">Mantis Docs</a>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+
+                    <ul class="nav navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-level="1"><a href="#mantis-user-guide" class="nav-link">Mantis User Guide</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-level="2"><a href="#introduction" class="nav-link">Introduction</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#installation" class="nav-link">Installation</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#download" class="nav-link">Download</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#processing-your-data" class="nav-link">Processing your data</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#pca-tab" class="nav-link">PCA tab</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#cluster-analysis-tab" class="nav-link">Cluster Analysis tab</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#spectral-maps-tab" class="nav-link">Spectral Maps tab</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#peak-id-tab" class="nav-link">Peak ID tab</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#xray-peak-fitting-tab" class="nav-link">Xray Peak Fitting tab</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#nnma-analysis-tab" class="nav-link">NNMA Analysis tab</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#references" class="nav-link">References</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="mantis-user-guide">Mantis User Guide</h1>
+<h2 id="introduction">Introduction</h2>
+<p>MANTiS is <strong>M</strong>ultivariate <strong>AN</strong>alysis <strong>T</strong>ool for <strong>S</strong>pectromicroscopy developed in Python. It uses Principal Component Analysis (PCA) and cluster analysis to classify pixels according to spectral similarity, as well as singular value decomposition for calculating image thicknesses based on known spectra; latest addition includes Non-Negative Matrix Approximation or NNMA-based analysis. The program is based on the earlier programs <a href="http://dx.doi.org/10.1046/j.1365-2818.2000.00640.x">stack_analyze</a> and <a href="http://dx.doi.org/10.1016/j.ultramic.2004.01.008">pca_gui</a>  in the <a href="http://www.exelisvis.com/ProductsServices/IDL.aspx">IDL</a>  programming language by Mirna Lerotic and Chris Jacobsen of the Stony Brook University x-ray microscopy group (the Stony Brook group moved to <a href="http://xrm.phys.northwestern.edu">Northwestern University</a>  in 2010). Initial development of MANTiS was supported by Argonne National Laboratory under LDRD project 2010-193-R1 9113, with further enhancements supported under LDRD 2013-168-N0.</p>
+<p>The <a href="http://dx.doi.org/10.1016/j.ultramic.2004.01.008">paper</a>  of Lerotic <em>et al.</em>, <em>Ultramicroscopy</em> <strong>100</strong>, 35-57 (2004), provides the mathematical description. In experiments one measures a set of images over <em>N</em> energies and <em>P</em> pixels, leading to a data matrix <em>D</em><sub><em>N</em> x <em>P</em></sub>.  One would like to describe this as a product of a set of spectra <em>u</em><sub><em>N</em> x <em>S</em></sub> and a set of thickness or weighting maps <em>t</em><sub><em>S</em> x <em>P</em></sub>; in this case <em>S</em> indexes a set of spectroscopically distinct components that one would like to discover.  If one already knows a set of spectra for all chemical components in the sample, the matrix <em>u</em><sub><em>N</em> x <em>S</em></sub> is already determined and one can simply find the thickness maps with <em>t</em><sub><em>S</em> x <em>P</em></sub>=(<em>u</em><sub><em>N</em> x <em>S</em></sub>)<sup>-1</sup>.<em>D</em><sub><em>N</em> x <em>P</em></sub>. When one does not know all of the spectra  <em>u</em><sub><em>N</em> x <em>S</em></sub> in advance, MANTiS provides a way to discover these spectra from correlations in the data.</p>
+<p>MANTiS presents the user with a sequence of panels to guide the analysis workflow.  This sequence is illustrated in the following schematic:</p>
+<p><img alt="WorkflowSchematic" src="/images/workflow_schematic.png" /></p>
+<p><strong>Figure 0</strong> Workflow Schematic</p>
+<hr />
+<h2 id="installation">Installation</h2>
+<p>Mantis python source code can be downloaded from http://spectromicroscopy.com/. Alternatively, a local copy of the spectromicroscopy Git repository can be made with this command:</p>
+<pre><code>git clone https://github.com/mlerotic/spectromicroscopy.git
+</code></pre>
+<p>The program requires Python 3 and following dependencies:</p>
+<ul>
+<li><a href="http://www.riverbankcomputing.com/software/pyqt/">PyQt5</a></li>
+<li><a href="http://numpy.scipy.org/">Numpy</a></li>
+<li><a href="http://numpy.scipy.org/">Scipy</a></li>
+<li><a href="http://matplotlib.sourceforge.net/">Matplotlib</a></li>
+<li><a href="http://code.google.com/p/h5py/">h5py</a></li>
+<li><a href="http://www.pythonware.com/products/pil/">Python Imaging Library (PIL)</a></li>
+<li><a href="https://lxml.de/">lxml</a></li>
+<li>(Optional) <a href="http://code.google.com/p/netcdf4-python/">netcdf4-python</a></li>
+</ul>
+<p>Python 2.7 with PyQt4 version of Mantis is still available (mantis_py2.7_PyQt4_v2.3.05.py) but it will not be updated with new features.</p>
+<p>We recommend using pip <a href="https://packaging.python.org/tutorials/installing-packages/">Python Packaging</a> to install required libraries. Alternatively, <a href="http://docs.continuum.io/anaconda/">Anaconda Python</a>  includes all the required libraries in compatible versions. Enthought Python Distribution <a href="http://www.enthought.com/products/epd.php">EPD</a> is another option.</p>
+<h2 id="download">Download</h2>
+<p>Alternatively, Mantis executables can be downloaded at http://spectromicroscopy.com/. Executables can be used without Python installation and are available for many operating systems. </p>
+<h2 id="processing-your-data">Processing your data</h2>
+<p>To carry out your analysis via PCA and clustering (see the above figure), you need to go through the following steps:</p>
+<ol>
+<li>Loading your data</li>
+<li>Preprocessing: alignment, normalization to optical density, removal of artifact images</li>
+<li>PCA (principal component analysis): orthogonalization of spectra (generation of eigenspectra), and selection of <em>S</em> principal components (removal of noisy eigenspectra)</li>
+<li>Cluster analysis: grouping of spectroscopically similar pixels together to find a representative set <em>S</em> of spectra (<em>i.e.</em>, to discover <em>u</em><sub><em>N</em> x <em>S</em></sub>)</li>
+<li>Spectral Maps: calculation of thickness or weighting maps <em>t</em><sub><em>S</em> x <em>P</em></sub> from <em>t</em><sub><em>S</em> x <em>P</em></sub>=(<em>u</em><sub><em>N</em> x <em>S</em></sub>)<sup>-1</sup>.<em>D</em><sub><em>N</em> x <em>P</em></sub>.  This step is also known as target mapping: you obtain maps of the distribution of a set of target spectra.
+These steps are described in turn below.</li>
+<li>NNMA Analysis: Non-negative matrix analysis for effective feature extraction </li>
+<li>Peak IDs: once you have a set of spectra <em>u</em><sub><em>N</em> x <em>S</em></sub>, you can either load or build a list of names and energies of functional group peaks you expect to find in the spectra (e.g., C=C aromatic bonds at 285.0 eV).</li>
+<li>Peak Fitting: here you can fit a particular spectrum <em>u</em><sub><em>N</em> x <em>s</em></sub>, for a particular component <em>s</em> to a set of near-edge absorption resonances and an absorption edge step.</li>
+<li>Tomography: compressed sensing reconstruction algorithm for 4D datasets  </li>
+<li>Image Maps: creating image maps by comparing images at different energies</li>
+</ol>
+<h3 id="reading-your-data">Reading your data</h3>
+<p>The first step in using Mantis is to read in a set of images over known photon energies (a <em>stack</em>).</p>
+<p><img alt="Load Data Tab" src="images/Mantis_ss00.png" /></p>
+<p><strong>Figure 1</strong> Load Data Tab. Loaded images can be viewed using the scroll-bar and arrows on Windows and Linux; on Mac the arrows are no longer available but the same functionality can be imitated by clicking on the scroll-bar and using arrow keys on the keyboard. </p>
+<hr />
+<p>To read in a pre-organized stack of files, use the <img alt="" src="images/mantis_openfile.png" /> <em>read stack</em> icon. At present, Mantis is able to read stacks in the following formats:
+  * <code>.hdf5</code> or <code>.h5</code> <a href="http://www.hdfgroup.org/HDF5/">HDF5</a> files organized in the <a href="http://www.aps.anl.gov/DataExchange/">DataExchange</a> schema developed at Argonne National Laboratory.
+  * <code>.hdr</code> self-describing files (SDF) initially developed for the ALS Scanning Transmission X-Ray Microscope (STXM) at beamline 5.3.2. (used by ALS and SLS).
+  * <code>.stk</code> <a href="http://en.wikipedia.org/wiki/External_Data_Representation">XDR</a> files as created by the  [<code>stack_analyze</code>)[http://dx.doi.org/10.1046/j.1365-2818.2000.00640.x) IDL program developed by the x-ray microscopy group at Stony Brook University.
+ * <code>.xrm</code> OLE Compound single energy files. The file format was developed by <a href="http://www.xradia.com/">Xradia</a>. 
+ * <code>.txrm</code> OLE Compound files. The file format was developed by <a href="http://www.xradia.com/">Xradia</a>.
+ * <code>.tif</code> Multi-Page TIFF files. A list of corresponding energies (in eV) has to be stored in a .txt file with the same file name as the data (e.g., mydata.tiff and mydata.txt). Multi-Page .tiff file can be created from individual .tiff images using <a href="http://imagej.net/Welcome">ImageJ</a>.
+More formats can be accommodated by request.</p>
+<p>To build a stack from a set of individual images, use the <img alt="" src="/images/mantis_opendirectory.png" /> <em>open directory</em> icon.  This will allow you to read in a sequence of files. Supported single energy file formats are
+  * <code>.sm</code> <a href="http://www.unidata.ucar.edu/software/netcdf/">NetCDF</a> files written by the soft x-ray scanning transmission x-ray microscope developed by Stony Brook University and formerly operated at beamline X1A at NSLS at Brookhaven; and
+  * .xrm OLE Compound single energy files, in a format developed by [Xradia)http://www.xradia.com/).</p>
+<p>Again, more image file types can be accommodated by request.  This is illustrated in Fig. 2.</p>
+<p><img alt="" src="images/Mantis_ss02.png" /></p>
+<p><strong>Figure 2</strong> The <em>open directory</em> widget is used to build an image stack from a list of files (in this case, a set of  <code>.sm</code> <a href="http://www.unidata.ucar.edu/software/netcdf/">NetCDF</a> files written by the soft x-ray scanning transmission x-ray microscope developed by Stony Brook University and formerly operated at beamline X1A at NSLS at Brookhaven). You pick a starting and ending file, and then these files (plus all in between) are used to create a list of files that belong to a stack.</p>
+<hr />
+<h3 id="preprocessing-of-your-data-the-image-stack-tab">Preprocessing of your data: the Image Stack tab</h3>
+<p>Once you have read in a sequence of files, you have an assembled stack for examination and preprocessing. A suggested workflow is as follows:
+  * Align your image sequence.
+  * Normalize your images to obtain the optical density (in the case of transmission imaging).</p>
+<p><img alt="" src="images/Mantis_ss01.png" /></p>
+<p><strong>Figure 3</strong> Preprocess Tab </p>
+<hr />
+<h3 id="image-alignment">Image Alignment</h3>
+<p>Acquiring images at successive energies often requires that a focusing stage be adjusted, and these stages often have a runout error which causes the center position of the image to shift.  One must therefore align the stack to eliminate image-to-image wobble; this is done using the <strong>Align images</strong> button which brings up the window shown in Fig. 4.</p>
+<p>The <strong>Registration</strong> or automatic alignment routine attempts to align images by Fourier cross-correlation.  The first step is to drag the slider to the right of the left-hand image to select a photon energy with an image that is sharp and with good contrast; you then click on <strong>Set as Reference Image</strong>.  You then click on the <strong>Register Images</strong> button to start the automatic alignment procedure; if you have checked the <strong>Show Cross-correlation</strong> box you'll see how the calculation proceeds (at a cost in speed due to the need to display a large number of images).  The program goes through and calculates the <strong>Image shifts</strong> in pixels between successive images and the reference image.  At the end of this process, you should click on <strong>Crop Aligned Images</strong> to trim the edges that are present in only a subset of the image sequence.</p>
+<p>Sometimes the automatic alignment routine just cannot seem to get a stack to align; for example, there might be similar features present at different locations in the image and the alignment routine might suddenly align feature A in image 1 with feature B in image 2. You may then want to resort to <strong>Manual Alignment</strong>. In this procedure, you are told first to <strong>Pick a point on reference image</strong>, where you should use a readily-identified fine feature in the reference image. You will then be asked to <strong>Pick a corresponding point</strong> or to click on this same feature in each of the images in the stack.  When you're done, you must click on <strong>Apply manual shifts</strong> to apply the new alignment to the stack.</p>
+<p><strong>Crop Aligned Images</strong> will crop the images to a region of pixels that are present in every single image in the stack. That is, as images have been shifted around in alignment, there may be some features that appear at the edges of some images but fall outside the field of view of other images. These edges which are not present in all of the files are clipped out.</p>
+<p><strong>Remove Image</strong> will remove the displayed image from the stack. </p>
+<p><strong>Accept changes</strong> will apply the registration shifts to the stack and return to the main frame.</p>
+<p><img alt="" src="images/Mantis_ss05.png" /></p>
+<p><strong>Figure 4</strong> The image alignment window.</p>
+<hr />
+<h3 id="image-normalization">Image Normalization</h3>
+<p>Once your images are aligned, you can now thing about normalization of the images in the <strong>Image Stack</strong> window. Often in experiments the transmitted flux <em>I</em> is recorded, but this decays exponentially with sample thickness <em>t</em> as <em>I</em>=<em>I</em><sub>0</sub>exp(-<i>ut</i>), where <em>u</em> is the absorption coefficient (the same <em>u</em> as obtained from a specific photon energy <em>n</em> and chemical component <em>s</em> from <em>u</em><sub><em>N</em> x <em>S</em></sub>).  For spectromicroscopy analysis, it is preferable to work instead with the optical density <em>D</em>=-log(<em>I</em> <em>/I</em><sub>0</sub>)=<em>ut</em> which is linear with specimen thickness.  To calculate the optical density matrix <em>D</em><sub><em>N</em> x <em>P</em></sub>, you need to obtain the incident flux spectrum <em>I</em><sub>0</sub>(<em>N</em>).  This can be obtained from a blank area in the image stack, or from a separate measurement; both can be determined from within the <strong>Preprocess Data</strong> tab in Mantis as shown in Fig. 2.</p>
+<h3 id="evaluating-your-images-the-preprocess-data-tab">Evaluating your images: the Preprocess Data tab</h3>
+<p>The <strong>Preprocess Data</strong> tab displays the page shown in Fig. 2. After the image stack has been loaded, an image and a spectrum will be displayed. One can view images acquired at different photon energies using either the slidebar to the right of the image, or by clicking on the spectrum at the desired energy. One can also change the pixel from which the spectrum is displayed by clicking at points on the image.  If the data is normalized, you can chose to display either the transmitted flux <em>I</em> or the optical density <em>D</em>.</p>
+<h3 id="preprocess-tab">Preprocess tab</h3>
+<p>There are two methods for determining the incident flux spectrum <em>I</em><sub>0</sub>(<em>N</em>):
+ * <strong>I0 from file</strong> reads in an <em>I</em><sub>0</sub>(<em>N</em>) spectrum file, in case you have it in a separate measurement. The spectrum should be saved in a simple ASCII format of (eV, flux in kHz) stored line-by-line, such as a <code>.csv</code> file (comment lines that start with text or non-numeric symbols will be ignored). You should make sure that this file was recorded under similar conditions, like the same slit settings, ring current, and so on.
+ * <strong>Select I0</strong>  is used to determine the <em>I</em><sub>0</sub> spectrum from the histogram of image intensities.  This is described in the caption of Fig. 5.</p>
+<p><img alt="" src="images/Mantis_ss03.png" /></p>
+<p><strong>Figure 5</strong> Clicking on <strong>Select I0</strong> produces this window, which displays a histogram of image intensities (top).  One can then obtain a <em>I</em><sub>0</sub>(<em>N</em>) spectrum by picking the pixels with the greatest average signal level, such as the pixels corresponding to a whole in the image.  By clicking and dragging over an energy range, one obtains a red box indicating the flux range used for the <em>I</em><sub>0</sub>(<em>N</em>) spectrum in the histogram at top, and these pixels are highlighted in red in the image below. It is also possible to select an <em>I</em><sub>0</sub>(<em>N</em>) region by drawing on the image. </p>
+<hr />
+<p><strong>Show I0</strong> displays the <em>I</em><sub>0</sub>(<em>N</em>) normalization spectrum.</p>
+<p><strong>Crop Stack</strong> button brings up a frame shown on Fig. 6. This allows one to exclude images outside of a defined energy range from subsequent analysis.  Sometimes the best results are obtained by limiting cluster analysis to the energy range of the near-edge absorption "wiggles" only, without the extended pre-edge and post-edge spectral regions that are otherwise useful for absorption calibration. Stack pixel range can also be cropped by draging the small quadrangle in the top right corner and moving the resulting frame.</p>
+<p><strong>Save images</strong> button displays a frame where different things can be saved as .png, .pdf, or .svg files.   The .pdf and .svg files use vector graphics and font-based text, so you can use a program like Adobe Illustrator or Inkscape to tweak the graphics output files.</p>
+<p><img alt="" src="images/Mantis_ss04.png" /></p>
+<p><strong>Figure 6</strong> The <strong>Crop stack</strong> window of Mantis.  By dragging the mouse across an energy region, one can define a limited range used for subsequent spectromicroscopy analysis. Pixel range can be cropped by changing the frame on the image.</p>
+<hr />
+<h3 id="display-settings">Display settings</h3>
+<p><strong>Despike</strong> When using a gas-filled proportional counter, sometimes you can get single pixels with very large values (one or a few bright white dots) due to electrical discharges, cosmic rays hitting the detector, and so on. This option looks for such pixels and sets them to the average of their neighboring pixels for all images in the stack.</p>
+<p>You can choose to display either the transmitted flux or the optical density OD = −log (I/I0).
+You can adjust the contrast of the image by playing with Minimum, Maximum, and Gamma. The image is displayed as</p>
+<p><img alt="" src="images/optical_density.png" /></p>
+<p>The program starts out displaying the full range of the data at a contrast of gamma=1. </p>
+<p><strong>Color Table</strong> is used to adjust the colormap used to display the image  Colors button.</p>
+<h3 id="region-of-interest">Region of Interest</h3>
+<p>Spatial regions of interest (ROIs) are sets of pixels from which one averages the individual spectra to obtain an ROI spectrum.
+<strong>Select ROI (Lasso)</strong> will enable you to start defining a new Region of Interest (ROI) as shown on Fig. 6. After clicking the button you can then define a region drawing on the image. If a ROI is already present and accepted, the new region will be added to the old one. When the ROI is defined, the ROI spectrum obtained by averaging the per-pixel spectra within this area will be shown. </p>
+<p><strong>Reset ROI</strong> will reset ROIs and return to regular use (showing single pixel spectra)</p>
+<p><strong>Save ROI Spectrum</strong> will save the ROI spectrum as a .xas file, which is a plain text file of ev, signal per line (e.g., Microsoft Excel can read it as a .csv or comma space value file).</p>
+<p><img alt="" src="images/Mantis_ss10.png" /></p>
+<p><strong>Figure 7</strong> Selecting a Region of Interest.</p>
+<hr />
+<p><strong>Spectral ROI</strong> lets you can average a number of images in the pre-edge spectral region for a single I0 image, and a number of images in a post-edge spectral region for a single I image (you can also use just one file for each spectral region). This lets you get a very high signal-to-noise ratio for making a map or image of the optical density of a selected element (for example by using several images below and then above in energy the Carbon absorption edge). The panel is shown on Fig. 8.</p>
+<p><img alt="" src="images/Mantis_ss11.png" /></p>
+<p><strong>Figure 8</strong> Spectral ROI is used to calculate an element map.   Pre-absorption-edge and post-edge regions are selected by directing a user to by dragging the mouse across an energy regions.</p>
+<hr />
+<h2 id="pca-tab">PCA tab</h2>
+<p>Principal Component Analysis (PCA) tab is used to calculate eigenspectra and eigenimages from the image stack. The eigenspectra are an orthogonal set of spectra that, in linear combination, can describe any observed spectrum in the dataset.  The eigenvalue associated with each eigenspectrum gives a typical weighting of that eigenspectrum in the entire data set, so that the later eigenspectra (with small eigenvalues) represent less and less common variations in the data.  For this reason it is often possible to have an excellent approximation of all observed spectra using a linear combination of only a limited set of eigenspectra (the principal components); finding this limited set is what PCA is all about.</p>
+<p>Because optical density OD is used for the calculation it is necessary to define a normalization spectrum I0. If the data was normalized beforehand and a normalization spectrum is not required, a .xas file with flux values of -1.0 can be loaded. </p>
+<p>If the image stack and I0 spectrum are both loaded, the <strong>Calculate PCA</strong> button of Fig. 9 becomes sensitive. The button launches the calculation of principal components. </p>
+<p>The PCA tab has three graphic areas which display eigenimages, eigenspectra, and eigenvalues. Eigenvalues are depicted in the plot on upper right corner. The current eigenimage is shown on the lower left corner in a blue-red intensity scale. The scale is such that negative values are scaled red, positive values blue, and zero is white. The current eigenspectrum is shown in the lower left corner. The slider to the right of the eigenimage plot is used to select which eigenimage and eigenvalue are shown. </p>
+<p>Your goal in examining eigenspectra and eigenimages is to select the number of significant components present in the sample. You can generally tell when components become insigificant by observing a “salt and pepper” pattern in eigenimages (indicating that the component is showing only random rather than systematic variations of signal from pixel-to-pixel), and random fluctuations in the eigenspectra. Based on this examination, you should adjust the <strong>Number of Significant Components</strong> to be used in further analyses of the data. Initial estimation of the number of significant components is calculated using  <a href="http://www.tandfonline.com/doi/abs/10.1207/s15327906mbr0102_10">the Cattell scree test</a>, where the number of significant components is given by detecting an "elbow" in the eigenvalue plot. Cumulative variance captured by the Significant Components is displayed. </p>
+<p><strong>Save</strong> button displays a frame where different things can be saved as .png, .pdf, or .svg files.</p>
+<p><img alt="" src="images/Mantis_ss06.png" /></p>
+<p><strong>Figure 9</strong> Principal component analysis tab. After pressing the <strong>Calculate PCA</strong> button, you must decide the number of significant components based on observations of the eigenvalues, eigenimages, and eigenspectra.</p>
+<hr />
+<h2 id="cluster-analysis-tab">Cluster Analysis tab</h2>
+<p>The <strong>Cluster analysis</strong> tab shown in Fig. 10 is used to classify data in the image stack according to spectral similarities. When searching for clusters, you are looking for pixels with similar weightings of eigenspectra. Therefore the <strong>Calculate Clusters</strong>  button becomes sensitive only after Principal Components have been calculated in the PCA Tab. Before running cluster analysis it is required to choose the <strong>Number of clusters</strong> to be sought with the  slide-bar in the upper left corner. Generally speaking it’s suggested that you search for several more clusters than the number of components you have identified as significant.</p>
+<p>In some cases, it is also useful to exclude the first component from the cluster search, so as to reduce sensitivity to thickness variations (the first component represents the average absorption spectrum present in the dataset, while subsequent components represent variations from that average in decreasing significance). <strong>Reduce thickness effects</strong> will preform cluster analysis without the first component.</p>
+<p>While <em>k</em>-means clustering attempts to cluster pixels together based on minimum Euclidian distances in eigenspectrum-weighting space, it sometimes delivers clusters where one or a few pixels with unique spectroscopic signatures are incorrectly grouped with a large number of more self-similar pixels.  Selecting the option of <strong>Divide clusters with large Sigma</strong> will look for the cluster with the biggest variance of Euclidian distances from the cluster center, and break it into two clusters.</p>
+<p>Once you have decided upon the above settings, click on <strong>Calculate Clusters</strong> to start the clustering calculation. When the calculation is finished, results are displayed on four graphical areas:</p>
+<ul>
+<li>Composite cluster image: A pseudo-color image of cluster pixels for first twelve clusters is generated by displaying members of different clusters with different colors.</li>
+<li>Cluster <em>i</em>: An image of pixels which are part of the currently-selected cluster is shown in the upper right corner. The index for this cluster can be chosen using the slider to the right of the image.</li>
+<li>Cluster <em>i</em> spectrum: The spectrum of the current cluster is displayed in the lower right corner.</li>
+<li>Cluster distance map: Distances from cluster centers provide a way to detect errors in clustering. This image shows scaled distances from pixels to their respective cluster center, with white pixels being the farthest away (i.e., the least similar spectroscopically to the other pixels in their respective cluster). </li>
+</ul>
+<p><strong>Show scatter plots</strong> button opens the scatter plot widget shown on Fig. 11.</p>
+<p><strong>Save CA results</strong> button displays a frame where images, spectra, and/or scatterplots can be saved as .png, .pdf, .svg, or .hdf5 files.</p>
+<p><img alt="" src="images/Mantis_ss07.png" /></p>
+<p><strong>Figure 10</strong> Cluster analysis tab.</p>
+<hr />
+<p><img alt="" src="images/Mantis_ss08.png" /></p>
+<p><strong>Figure 11</strong> The scatter plot shows pixels plotted according to their weights in two selected component axes. Because clustering is done over a number of dimensions equal to the number of selected components, a particular two dimensional view will give an incomplete sense of how the data are clustered.</p>
+<hr />
+<h2 id="spectral-maps-tab">Spectral Maps tab</h2>
+<p>The Spectral Maps tab shown in Fig. 12 allows one to get thickness or spectral weighting maps <em>t</em><sub><em>S</em> x <em>P</em></sub> from already-known spectra <em>u</em><sub><em>N</em> x <em>S</em></sub>, whether from the cluster spectra (if clustering has been done) or from a different set of spectra loaded into MANTiS.</p>
+<p>Once any spectrum has been loaded, thickness maps are calculated according to <em>t</em><sub><em>S</em> x <em>P</em></sub>=(<em>u</em><sub><em>N</em> x <em>S</em></sub>)<sup>-1</sup>.<em>D</em><sub><em>N</em> x <em>P</em></sub> even for as few as <em>S</em>=1 spectra.  This means that the spectra should have units of linear absorption coefficients in inverse micrometers (the <em>u</em> in exp[-<i>ut</i>]).   If you have multiple spectra to include, simply continue loading the additional spectra; if you choose instead to <strong>Add Cluster Spectra</strong> you will get the entire set of thickness or spectral weighting maps corresponding to the full set of cluster spectra.</p>
+<p>If you know all spectra, you can get thickness maps using SVD by selecting <strong>Load Spectrum</strong> to load any known target spectra as linear absorption c (“mu”) in a .xas file format.</p>
+<p>The option <strong>Add flat spectrum</strong> loads one “flat,” constant-at-all-energies spectrum for evaluating fit residuals.</p>
+<p><strong>Add cluster spectra</strong> loads all cluster spectra from the current cluster analysis. </p>
+<p>The list of loaded <strong>Target Spectra</strong> is shown in the upper right corner.</p>
+<p><strong>Remove spectrum</strong> removes the displayed target spectrum. <em>Move spectrum up</em><em> moves a displayed spectrum up in the list, while </em><em>Move spectrum down</em>* moves a displayed spectrum down in the list. There is also an option to show maps from raw spectra or spectra fitted with principal components (Composition Map).</p>
+<p>The current target spectrum is shown in the lower left corner. The slider to the right of the  plot is used to select which target spectrum and thickness map are shown. The plot shows raw spectrum as well as spectrum fitting with PCA components and absolute difference spectrum. The fit weights for the current spectrum are displayed under <strong>Fit Weights</strong>.</p>
+<p>After the spectrum is loaded, the calculated thickness map is shown on the lower left corner in a white-red intensity scale. The scale is such that negative values are scaled red, positive values white, and zero is black.</p>
+<p><img alt="" src="images/Mantis_ss09.png" /></p>
+<p><strong>Figure 12</strong> Spectral Analysis tab.</p>
+<hr />
+<p><strong>Composite RGB image</strong> can be created using the widget shown on Fig 13. </p>
+<p><img alt="" src="images/Mantis_ss12.png" /></p>
+<p><strong>Figure 13</strong> Composite RGB image created from three selected spectra.</p>
+<hr />
+<h2 id="peak-id-tab">Peak ID tab</h2>
+<p>The Peak ID tab shown in Fig 14 can be used to identify peaks by comparing them to a set of predefined peak energies. </p>
+<p><img alt="" src="images/Mantis_ss13.png" /></p>
+<p><strong>Figure 14</strong> Peak ID tab</p>
+<hr />
+<h2 id="xray-peak-fitting-tab">Xray Peak Fitting tab</h2>
+<p>The Xray Peak Fitting tab shown in Fig 15 can be used to fit the spectra using Step, Gaussian and Base spectra. To fit a spectrum first load the spectra from either cluster analysis with <strong>Add cluster spectra</strong> or from a file with <strong>Load spectrum</strong>. After spectra have been loaded choose the number of peaks and steps to fit using <strong>Number of steps</strong> and <strong>Number of peaks</strong> and set the initial parameters in <strong>Fit Parameters</strong>. Once you have set the initial parameters, click on <strong>Fit Spectrum</strong> to start the fitting. When the fitting is finished, results are overlaid on a spectrum and the peak positions are listed bellow.  </p>
+<p><img alt="" src="images/Mantis_ss14.png" /></p>
+<p><strong>Figure 15</strong> Xray Peak Fitting tab</p>
+<hr />
+<h2 id="nnma-analysis-tab">NNMA Analysis tab</h2>
+<p>To counter the unphysical negative weightings produced in cluster analysis, non-negative matrix approximation (NNMA) analysis was introduced to extract features while constraining the weightings to be non-negative. 'Cluster spectra similarity' regularization, where we input the initial spectra from cluster analysis, is used to tune how closely the reconstructed NNMA spectra should match those calculated using cluster analysis.  We have found that the combination of sparseness and cluster spectra similarity regularizations gives favorable results in terms of feasible spectra and thickness maps. </p>
+<p>Because optical density OD is used for the calculation it is necessary to define a normalization spectrum I0. If the data was normalized beforehand and a normalization spectrum is not required, a .xas file with flux values of -1.0 can be loaded.</p>
+<p>If the image stack and I0 spectrum are both loaded, the <strong>Calculate NNMA</strong> button of Fig. 16 becomes sensitive. The button launches the calculation of NNMA. Before running the calculation you should load a set of initial spectra from one of the three options:
+ # <strong>Load initial cluster spectra</strong> will load a set of spectra that were calculated using Cluster analysis. This button will become sensitive after cluster spectra have been calculated using <strong>Cluster Analysis</strong> tab. We have found that using cluster spectra ass initial guess for NNMA produces the best results. 
+ # <strong>Load initial standard spectra</strong> a set of initial spectra can be loaded from files in either 'csv' or 'xas' format. Multiple spectra can be loaded from the file dialog.
+ # <strong>Load initial random spectra</strong> will define a set of random spectra that will be use a starting spectra for NNMA.</p>
+<p>Before running NNMA analysis it is required to choose the "Number of components k"  to be sought with the slide-bar in the "NNMA settings" section. If using cluster or standard spectra make sure that the number of components k is equal to the number of initial spectra that where loaded. </p>
+<p><strong>Regularization parameters</strong> can be used to tune the analysis by giving more or less emphasis to different constraints.</p>
+<p>The recommended steps to run NNMA are
+ # Load the stack.
+ # If stack was not normalized, run the normalization (see Image Normalization).
+ # <strong>Calculate PCA</strong> using the <strong>PCA Tab</strong> and then choose the number of significant components.
+ # Choose the <strong>Number of clusters</strong> and <strong>Calculate Clusters</strong> on <strong>Cluster Analysis</strong> Tab.
+ # Select <strong>NNMA Analysis</strong> tab:
+  ## Set the <strong>Number of components k</strong> to be the same as the number of clusters used in step 4.
+  ## <strong>Load initial cluster spectra</strong> to initialize starting spectra.
+  ## <strong>Calculate NNMA</strong> to run the analysis. </p>
+<p><img alt="" src="images/Mantis_ss15.png" /></p>
+<p><strong>Figure 16</strong> NNMA Analysis tab</p>
+<hr />
+<h2 id="references">References</h2>
+<p># Lerotic M, Mak R, Wirick S, Meirer F, Jacobsen C. MANTiS: a program for the analysis of X-ray spectromicroscopy data.  J. Synchrotron Rad. 2014 Sep; 21(5); 1206–1212  - [[http://dx.doi.org/10.1107/S1600577514013964]]
+  # Mak R, Lerotic M, Fleckenstein H, Vogt S, Wild SM, Leyffer S, Sheynkin Y, Jacobsen C. Non-Negative Matrix Analysis for Effective Feature Extraction in X-Ray Spectromicroscopy. Faraday Discussions. 2014 Apr; 171- [[http://doi.org/10.1039/C4FD00023D]]
+  # Lerotic M, Jacobsen C, Gillow JB, Francis AJ, Wirick S, Vogt S, Maser J. Cluster analysis in soft X-ray spectromicroscopy: Finding the patterns in complex specimens. Journal of Electron Spectroscopy and Related Phenomena. 2005 Jun; 144–147, p:1137-1143 - [[http://dx.doi.org/10.1016/j.elspec.2005.01.158 ]]
+  # Lerotic M, Jacobsen C, Schäfer T, Vogt S. Cluster analysis of soft X-ray spectromicroscopy data. Ultramicroscopy. 2004 Jul; 100(1–2), p:35-57 - [[http://doi.org/10.1016/j.ultramic.2004.01.008 ]]</p>
+<p>Please use the following reference when quoting Mantis</p>
+<p>Lerotic M, Mak R, Wirick S, Meirer F, Jacobsen C. MANTiS: a program for the analysis of X-ray spectromicroscopy data.  J. Synchrotron Rad. 2014 Sep; 21(5); 1206–1212</p></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script>
+            var base_url = ".",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="js/base.js" defer></script>
+        <script src="search/main.js" defer></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+                <p>
+                    From here you can search these documents. Enter
+                    your search terms below.
+                </p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>
+
+<!--
+MkDocs version : 1.1.2
+Build Date UTC : 2021-02-03 11:28:50.953010+00:00
+-->
