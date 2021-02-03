@@ -285,23 +285,29 @@ You can adjust the contrast of the image by playing with Minimum, Maximum, and G
  # <strong>Load initial random spectra</strong> will define a set of random spectra that will be use a starting spectra for NNMA.</p>
 <p>Before running NNMA analysis it is required to choose the "Number of components k"  to be sought with the slide-bar in the "NNMA settings" section. If using cluster or standard spectra make sure that the number of components k is equal to the number of initial spectra that where loaded. </p>
 <p><strong>Regularization parameters</strong> can be used to tune the analysis by giving more or less emphasis to different constraints.</p>
-<p>The recommended steps to run NNMA are
- # Load the stack.
- # If stack was not normalized, run the normalization (see Image Normalization).
- # <strong>Calculate PCA</strong> using the <strong>PCA Tab</strong> and then choose the number of significant components.
- # Choose the <strong>Number of clusters</strong> and <strong>Calculate Clusters</strong> on <strong>Cluster Analysis</strong> Tab.
- # Select <strong>NNMA Analysis</strong> tab:
-  ## Set the <strong>Number of components k</strong> to be the same as the number of clusters used in step 4.
-  ## <strong>Load initial cluster spectra</strong> to initialize starting spectra.
-  ## <strong>Calculate NNMA</strong> to run the analysis. </p>
+<p>The recommended steps to run NNMA are</p>
+<ul>
+<li>Load the stack.</li>
+<li>If stack was not normalized, run the normalization (see Image Normalization).</li>
+<li><strong>Calculate PCA</strong> using the <strong>PCA Tab</strong> and then choose the number of significant components.</li>
+<li>Choose the <strong>Number of clusters</strong> and <strong>Calculate Clusters</strong> on <strong>Cluster Analysis</strong> Tab.</li>
+<li>Select <strong>NNMA Analysis</strong> tab:<ul>
+<li>Set the <strong>Number of components k</strong> to be the same as the number of clusters used in step 4.</li>
+<li><strong>Load initial cluster spectra</strong> to initialize starting spectra.</li>
+<li><strong>Calculate NNMA</strong> to run the analysis. </li>
+</ul>
+</li>
+</ul>
 <p><img alt="" src="images/Mantis_ss15.png" /></p>
 <p><strong>Figure 16</strong> NNMA Analysis tab</p>
 <hr />
 <h2 id="references">References</h2>
-<p># Lerotic M, Mak R, Wirick S, Meirer F, Jacobsen C. MANTiS: a program for the analysis of X-ray spectromicroscopy data.  J. Synchrotron Rad. 2014 Sep; 21(5); 1206–1212  - [[http://dx.doi.org/10.1107/S1600577514013964]]
-  # Mak R, Lerotic M, Fleckenstein H, Vogt S, Wild SM, Leyffer S, Sheynkin Y, Jacobsen C. Non-Negative Matrix Analysis for Effective Feature Extraction in X-Ray Spectromicroscopy. Faraday Discussions. 2014 Apr; 171- [[http://doi.org/10.1039/C4FD00023D]]
-  # Lerotic M, Jacobsen C, Gillow JB, Francis AJ, Wirick S, Vogt S, Maser J. Cluster analysis in soft X-ray spectromicroscopy: Finding the patterns in complex specimens. Journal of Electron Spectroscopy and Related Phenomena. 2005 Jun; 144–147, p:1137-1143 - [[http://dx.doi.org/10.1016/j.elspec.2005.01.158 ]]
-  # Lerotic M, Jacobsen C, Schäfer T, Vogt S. Cluster analysis of soft X-ray spectromicroscopy data. Ultramicroscopy. 2004 Jul; 100(1–2), p:35-57 - [[http://doi.org/10.1016/j.ultramic.2004.01.008 ]]</p>
+<ul>
+<li>Lerotic M, Mak R, Wirick S, Meirer F, Jacobsen C. MANTiS: a program for the analysis of X-ray spectromicroscopy data.  J. Synchrotron Rad. 2014 Sep; 21(5); 1206–1212  - [[http://dx.doi.org/10.1107/S1600577514013964]]</li>
+<li>Mak R, Lerotic M, Fleckenstein H, Vogt S, Wild SM, Leyffer S, Sheynkin Y, Jacobsen C. Non-Negative Matrix Analysis for Effective Feature Extraction in X-Ray Spectromicroscopy. Faraday Discussions. 2014 Apr; 171- [[http://doi.org/10.1039/C4FD00023D]]</li>
+<li>Lerotic M, Jacobsen C, Gillow JB, Francis AJ, Wirick S, Vogt S, Maser J. Cluster analysis in soft X-ray spectromicroscopy: Finding the patterns in complex specimens. Journal of Electron Spectroscopy and Related Phenomena. 2005 Jun; 144–147, p:1137-1143 - [[http://dx.doi.org/10.1016/j.elspec.2005.01.158 ]]</li>
+<li>Lerotic M, Jacobsen C, Schäfer T, Vogt S. Cluster analysis of soft X-ray spectromicroscopy data. Ultramicroscopy. 2004 Jul; 100(1–2), p:35-57 - [[http://doi.org/10.1016/j.ultramic.2004.01.008 ]]</li>
+</ul>
 <p>Please use the following reference when quoting Mantis</p>
 <p>Lerotic M, Mak R, Wirick S, Meirer F, Jacobsen C. MANTiS: a program for the analysis of X-ray spectromicroscopy data.  J. Synchrotron Rad. 2014 Sep; 21(5); 1206–1212</p></div>
             </div>
@@ -387,5 +393,5 @@ You can adjust the contrast of the image by playing with Minimum, Maximum, and G
 
 <!--
 MkDocs version : 1.1.2
-Build Date UTC : 2021-02-03 11:28:50.953010+00:00
+Build Date UTC : 2021-02-03 12:06:56.080855+00:00
 -->
