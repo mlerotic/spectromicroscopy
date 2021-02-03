@@ -110,7 +110,7 @@
 <p>MANTiS is <strong>M</strong>ultivariate <strong>AN</strong>alysis <strong>T</strong>ool for <strong>S</strong>pectromicroscopy developed in Python. It uses Principal Component Analysis (PCA) and cluster analysis to classify pixels according to spectral similarity, as well as singular value decomposition for calculating image thicknesses based on known spectra; latest addition includes Non-Negative Matrix Approximation or NNMA-based analysis. The program is based on the earlier programs <a href="http://dx.doi.org/10.1046/j.1365-2818.2000.00640.x">stack_analyze</a> and <a href="http://dx.doi.org/10.1016/j.ultramic.2004.01.008">pca_gui</a>  in the <a href="http://www.exelisvis.com/ProductsServices/IDL.aspx">IDL</a>  programming language by Mirna Lerotic and Chris Jacobsen of the Stony Brook University x-ray microscopy group (the Stony Brook group moved to <a href="http://xrm.phys.northwestern.edu">Northwestern University</a>  in 2010). Initial development of MANTiS was supported by Argonne National Laboratory under LDRD project 2010-193-R1 9113, with further enhancements supported under LDRD 2013-168-N0.</p>
 <p>The <a href="http://dx.doi.org/10.1016/j.ultramic.2004.01.008">paper</a>  of Lerotic <em>et al.</em>, <em>Ultramicroscopy</em> <strong>100</strong>, 35-57 (2004), provides the mathematical description. In experiments one measures a set of images over <em>N</em> energies and <em>P</em> pixels, leading to a data matrix <em>D</em><sub><em>N</em> x <em>P</em></sub>.  One would like to describe this as a product of a set of spectra <em>u</em><sub><em>N</em> x <em>S</em></sub> and a set of thickness or weighting maps <em>t</em><sub><em>S</em> x <em>P</em></sub>; in this case <em>S</em> indexes a set of spectroscopically distinct components that one would like to discover.  If one already knows a set of spectra for all chemical components in the sample, the matrix <em>u</em><sub><em>N</em> x <em>S</em></sub> is already determined and one can simply find the thickness maps with <em>t</em><sub><em>S</em> x <em>P</em></sub>=(<em>u</em><sub><em>N</em> x <em>S</em></sub>)<sup>-1</sup>.<em>D</em><sub><em>N</em> x <em>P</em></sub>. When one does not know all of the spectra  <em>u</em><sub><em>N</em> x <em>S</em></sub> in advance, MANTiS provides a way to discover these spectra from correlations in the data.</p>
 <p>MANTiS presents the user with a sequence of panels to guide the analysis workflow.  This sequence is illustrated in the following schematic:</p>
-<p><img alt="" src="/images/workflow_schematic.png" /></p>
+<p><img alt="WorkflowSchematic" src="images/workflow_schematic.png" /></p>
 <p><strong>Figure 0</strong> Workflow Schematic</p>
 <hr />
 <h2 id="installation">Installation</h2>
@@ -393,5 +393,5 @@ You can adjust the contrast of the image by playing with Minimum, Maximum, and G
 
 <!--
 MkDocs version : 1.1.2
-Build Date UTC : 2021-02-03 12:47:59.596272+00:00
+Build Date UTC : 2021-02-03 12:49:37.013407+00:00
 -->
