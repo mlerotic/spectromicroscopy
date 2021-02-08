@@ -1,4 +1,6 @@
 # Mantis User Guide
+[Mantis](https://spectromicroscopy.com/) was developed by [2nd Look Consulting](https://2ndlookconsulting.com/).
+
 
 ##  Introduction
 MANTiS is **M**ultivariate **AN**alysis **T**ool for **S**pectromicroscopy developed in Python. It uses Principal Component Analysis (PCA) and cluster analysis to classify pixels according to spectral similarity, as well as singular value decomposition for calculating image thicknesses based on known spectra; latest addition includes Non-Negative Matrix Approximation or NNMA-based analysis. The program is based on the earlier programs [stack_analyze](http://dx.doi.org/10.1046/j.1365-2818.2000.00640.x) and [pca_gui](http://dx.doi.org/10.1016/j.ultramic.2004.01.008)  in the [IDL](http://www.exelisvis.com/ProductsServices/IDL.aspx)  programming language by Mirna Lerotic and Chris Jacobsen of the Stony Brook University x-ray microscopy group (the Stony Brook group moved to [Northwestern University](http://xrm.phys.northwestern.edu)  in 2010). Initial development of MANTiS was supported by Argonne National Laboratory under LDRD project 2010-193-R1 9113, with further enhancements supported under LDRD 2013-168-N0.
@@ -30,7 +32,7 @@ The program requires Python 3 and following dependencies:
  - [lxml](https://lxml.de/)
  - (Optional) [netcdf4-python](http://code.google.com/p/netcdf4-python/)
 
-Python 2.7 with PyQt4 version of Mantis is still available (mantis_py2.7_PyQt4_v2.3.05.py) but it will not be updated with new features.
+Python 2.7 with PyQt4 version of Mantis is still available on Github as a separate branch and [binaries](https://github.com/mlerotic/spectromicroscopy/releases/tag/2.3.02) but it will not be updated with new features. The user guide for 2.3. Mantis version can be dowloaded [here](https://github.com/mlerotic/spectromicroscopy/files/5944025/UserGuide_2.3.02.pdf).
 
 We recommend using pip [Python Packaging](https://packaging.python.org/tutorials/installing-packages/) to install required libraries. Alternatively, [Anaconda Python](http://docs.continuum.io/anaconda/)  includes all the required libraries in compatible versions. Enthought Python Distribution [EPD](http://www.enthought.com/products/epd.php) is another option.
 
