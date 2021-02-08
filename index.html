@@ -4,9 +4,9 @@
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta name="description" content="None">
-        
-        
+        <meta name="description" content="MANTiS - Multivariate ANalysis Tool for Spectromicroscopy User Guide.">
+        <meta name="author" content="Mirna Lerotic">
+        <link rel="canonical" href="https://spectromicroscopy.com/">
         <link rel="shortcut icon" href="img/favicon.ico">
         <title>Mantis Docs</title>
         <link href="css/bootstrap.min.css" rel="stylesheet">
@@ -24,6 +24,10 @@
         <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
             <div class="container">
                 <a class="navbar-brand" href=".">Mantis Docs</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
 
                 <!-- Expanded navigation -->
                 <div id="navbar-collapse" class="navbar-collapse collapse">
@@ -34,6 +38,9 @@
                                 <i class="fa fa-search"></i> Search
                             </a>
                         </li>
+                            <li class="nav-item">
+                                <a href="https://github.com/mlerotic/spectromicroscopy/edit/master/docs/index.md" class="nav-link"><i class="fa fa-github"></i> Edit on GitHub</a>
+                            </li>
                     </ul>
                 </div>
             </div>
@@ -106,6 +113,7 @@
                     <div class="col-md-9" role="main">
 
 <h1 id="mantis-user-guide">Mantis User Guide</h1>
+<p><a href="https://spectromicroscopy.com/">Mantis</a> was developed by <a href="https://2ndlookconsulting.com/">2nd Look Consulting</a>.</p>
 <h2 id="introduction">Introduction</h2>
 <p>MANTiS is <strong>M</strong>ultivariate <strong>AN</strong>alysis <strong>T</strong>ool for <strong>S</strong>pectromicroscopy developed in Python. It uses Principal Component Analysis (PCA) and cluster analysis to classify pixels according to spectral similarity, as well as singular value decomposition for calculating image thicknesses based on known spectra; latest addition includes Non-Negative Matrix Approximation or NNMA-based analysis. The program is based on the earlier programs <a href="http://dx.doi.org/10.1046/j.1365-2818.2000.00640.x">stack_analyze</a> and <a href="http://dx.doi.org/10.1016/j.ultramic.2004.01.008">pca_gui</a>  in the <a href="http://www.exelisvis.com/ProductsServices/IDL.aspx">IDL</a>  programming language by Mirna Lerotic and Chris Jacobsen of the Stony Brook University x-ray microscopy group (the Stony Brook group moved to <a href="http://xrm.phys.northwestern.edu">Northwestern University</a>  in 2010). Initial development of MANTiS was supported by Argonne National Laboratory under LDRD project 2010-193-R1 9113, with further enhancements supported under LDRD 2013-168-N0.</p>
 <p>The <a href="http://dx.doi.org/10.1016/j.ultramic.2004.01.008">paper</a>  of Lerotic <em>et al.</em>, <em>Ultramicroscopy</em> <strong>100</strong>, 35-57 (2004), provides the mathematical description. In experiments one measures a set of images over <em>N</em> energies and <em>P</em> pixels, leading to a data matrix <em>D</em><sub><em>N</em> x <em>P</em></sub>.  One would like to describe this as a product of a set of spectra <em>u</em><sub><em>N</em> x <em>S</em></sub> and a set of thickness or weighting maps <em>t</em><sub><em>S</em> x <em>P</em></sub>; in this case <em>S</em> indexes a set of spectroscopically distinct components that one would like to discover.  If one already knows a set of spectra for all chemical components in the sample, the matrix <em>u</em><sub><em>N</em> x <em>S</em></sub> is already determined and one can simply find the thickness maps with <em>t</em><sub><em>S</em> x <em>P</em></sub>=(<em>u</em><sub><em>N</em> x <em>S</em></sub>)<sup>-1</sup>.<em>D</em><sub><em>N</em> x <em>P</em></sub>. When one does not know all of the spectra  <em>u</em><sub><em>N</em> x <em>S</em></sub> in advance, MANTiS provides a way to discover these spectra from correlations in the data.</p>
@@ -128,7 +136,7 @@
 <li><a href="https://lxml.de/">lxml</a></li>
 <li>(Optional) <a href="http://code.google.com/p/netcdf4-python/">netcdf4-python</a></li>
 </ul>
-<p>Python 2.7 with PyQt4 version of Mantis is still available (mantis_py2.7_PyQt4_v2.3.05.py) but it will not be updated with new features.</p>
+<p>Python 2.7 with PyQt4 version of Mantis is still available on Github as a separate branch and <a href="https://github.com/mlerotic/spectromicroscopy/releases/tag/2.3.02">binaries</a> but it will not be updated with new features. The user guide for 2.3. Mantis version can be dowloaded <a href="https://github.com/mlerotic/spectromicroscopy/files/5944025/UserGuide_2.3.02.pdf">here</a>.</p>
 <p>We recommend using pip <a href="https://packaging.python.org/tutorials/installing-packages/">Python Packaging</a> to install required libraries. Alternatively, <a href="http://docs.continuum.io/anaconda/">Anaconda Python</a>  includes all the required libraries in compatible versions. Enthought Python Distribution <a href="http://www.enthought.com/products/epd.php">EPD</a> is another option.</p>
 <h2 id="download">Download</h2>
 <p>Alternatively, Mantis executables can be downloaded at http://spectromicroscopy.com/. Executables can be used without Python installation and are available for many operating systems. </p>
@@ -401,5 +409,5 @@ You can adjust the contrast of the image by playing with Minimum, Maximum, and G
 
 <!--
 MkDocs version : 1.1.2
-Build Date UTC : 2021-02-03 13:45:00.803926+00:00
+Build Date UTC : 2021-02-08 14:07:36.566898+00:00
 -->
