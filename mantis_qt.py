@@ -14662,6 +14662,7 @@ class PageLoadData(QtWidgets.QWidget):
 
         self.pb_rotate.clicked.connect(self.OnRotate)
         self.pb_mirror.clicked.connect(self.OnMirror)
+        self.pb_copy.clicked.connect(self.OnCopy)
         self.pglayout = pg.GraphicsLayout(border=None)
         self.canvas.setBackground("w") # canvas is a pg.GraphicsView widget
         self.canvas.setCentralWidget(self.pglayout)
@@ -14733,7 +14734,9 @@ class PageLoadData(QtWidgets.QWidget):
         self.p1.addItem(self.i_item)
         self.OnScrollEng(0) # Plot first image & set Scrollbar
         self.OnMetricScale(self.MetricCheckBox.isChecked(), True, False)
-
+    def keyPressEvent(self, e):
+        if e.key() == 67 and (e.modifiers() & QtCore.Qt.ControlModifier):
+            self.OnCopy()
     def OnMetricScale(self, setmetric= True, zeroorigin= True, square= False):
         if self.com.stack_loaded == 1:
             if setmetric==True:
@@ -14777,6 +14780,10 @@ class PageLoadData(QtWidgets.QWidget):
 
     def calcBinSize(self,i,N):
         return int(round(256*(i+1)/N) - round(256*i/N))
+    def OnCopy(self):
+        exp = pg.exporters.ImageExporter(self.pglayout)
+        exp.export(copy=True)
+        return
     def OnMirror(self):
         if self.com.stack_loaded == 1:
             if self.com.stack_4d == 1:
@@ -14948,6 +14955,7 @@ class PageMap(QtWidgets.QWidget):
 
         self.pbExpData.clicked.connect(self.OnSaveData)
         self.pbExpImg.clicked.connect(self.OnSaveImage)
+        self.pbCopy.clicked.connect(self.OnCopy)
 
         self.MetricCheckBox.toggled.connect(lambda: self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
         self.ZeroOriginCheckBox.toggled.connect(lambda: self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
@@ -15166,6 +15174,10 @@ class PageMap(QtWidgets.QWidget):
             img1.save(fileName)
         if ext == 'txt':
             np.savetxt(fileName, np.rot90(self.OD), delimiter='\t', newline='\n',fmt='%.5f')
+    def OnCopy(self):
+        exp = pg.exporters.ImageExporter(self.pglayout)
+        exp.export(copy=True)
+        return
     def OnSaveImage(self, event):
         # Save Image
         wildcard = "TIFF (*.tif);;PNG (*.png);;JPG (*.jpg);;SVG (*.svg);;"
@@ -15336,6 +15348,8 @@ class PageMap(QtWidgets.QWidget):
             noshift = False
         else:
             noshift = True
+        if e.key() == 67 and (e.modifiers() & QtCore.Qt.ControlModifier):
+            self.OnCopy()
         if e.key() == Qt.Key_Up or (e.key() == QtCore.Qt.Key_8):
             if noshift:
                 self.pbUU.click()

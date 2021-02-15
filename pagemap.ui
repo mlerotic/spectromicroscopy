@@ -1560,7 +1560,7 @@ OD limits</string>
          <property name="minimumSize">
           <size>
            <width>0</width>
-           <height>100</height>
+           <height>120</height>
           </size>
          </property>
          <property name="font">
@@ -1573,7 +1573,7 @@ OD limits</string>
           <string>Export</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_5">
-          <item row="0" column="0">
+          <item row="1" column="0">
            <widget class="QPushButton" name="pbExpData">
             <property name="enabled">
              <bool>false</bool>
@@ -1589,7 +1589,7 @@ OD limits</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="0">
+          <item row="2" column="0">
            <widget class="QPushButton" name="pbExpImg">
             <property name="enabled">
              <bool>false</bool>
@@ -1602,6 +1602,13 @@ OD limits</string>
             </property>
             <property name="text">
              <string>OD Image (*.svg,*.tif,*.png*.jpg)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QPushButton" name="pbCopy">
+            <property name="text">
+             <string>Copy to Clipboard (Ctrl+C)</string>
             </property>
            </widget>
           </item>
