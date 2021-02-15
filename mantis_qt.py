@@ -37,7 +37,7 @@ from scipy.stats import linregress
 from scipy.interpolate import interp1d
 # from skimage.feature import register_translation ## deprecated
 from skimage.registration import phase_cross_correlation
-from queue import Queue, Empty
+from queue import SimpleQueue, Empty
 import threading
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import (
@@ -13040,7 +13040,7 @@ class TaskDispatcher(QtCore.QObject):
         except:
             cpus = os.cpu_count()
         self.pool.setMaxThreadCount(cpus)
-        self.queue = Queue()
+        self.queue = SimpleQueue()
         self.parent = parent
 
     @pyqtSlot()
@@ -13576,12 +13576,12 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtGui.QGraphicsScene):
     # ----------------------------------------------------------------------
     def OnAutoCrop(self):
         if self.aligned:
-            self.button_align.setEnabled(True)
-            self.button_ok.setEnabled(True)
             self.cb_autocrop.blockSignals(True)
             self.CropStack4D()
             self.cb_autocrop.blockSignals(False)
             self.OnScrollEng(self.iev)
+            self.button_align.setEnabled(True)
+            self.button_ok.setEnabled(True)
 
     def CropStack4D(self):
         self.stack.absdata4d_shifted_cropped = self.stack.absdata4d_shifted.copy()
@@ -13679,11 +13679,11 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtGui.QGraphicsScene):
     def ClearShifts(self):
         self.aligned = False
         self.cb_autoerror.stateChanged.disconnect()
-        self.button_align.setEnabled(True)
         # self.stack.shifts =[]
         self.fit_x.hide()
         self.fit_y.hide()
         self.InitShiftsDict()
+        self.button_align.setEnabled(True)
         self.MakeNewScatterPlots()
     def OnResetROI(self):
         self.ClearShifts()
