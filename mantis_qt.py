@@ -37,7 +37,7 @@ from scipy.stats import linregress
 from scipy.interpolate import interp1d
 # from skimage.feature import register_translation ## deprecated
 from skimage.registration import phase_cross_correlation
-from queue import SimpleQueue
+from queue import Queue, Empty
 import threading
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import (
@@ -1655,7 +1655,7 @@ class File_GUI():
         dlg=QtWidgets.QFileDialog(None)
         dlg.setWindowTitle('Choose File')
         dlg.setViewMode(QtWidgets.QFileDialog.Detail)
-        dlg.setOption(QtWidgets.QFileDialog.DontUseNativeDialog)
+        #dlg.setOption(QtWidgets.QFileDialog.DontUseNativeDialog)
         if action == "write":
             dlg.setAcceptMode(QtWidgets.QFileDialog.AcceptSave)
         dlg.setDirectory(self.last_path[action][data_type])
@@ -9624,13 +9624,13 @@ class PageStack(QtWidgets.QWidget):
     def OnAlignImgs(self, event):
 
         #self.window().Hide()
-        imgregwin = ImageRegistration(self.window(), self.com, self.stk)
+        imgregwin = ImageRegistrationManual(self.window(), self.com, self.stk)
         imgregwin.show()
 
 # ----------------------------------------------------------------------
     def OnAlignImgs2(self, event):
 
-        imgreg2 = ImageRegistration2(self.window(), self.com, self.stk)
+        imgreg2 = ImageRegistrationFFT(self.window(), self.com, self.stk)
         imgreg2.show()
 
 #----------------------------------------------------------------------
@@ -11087,7 +11087,7 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
         min_idx, max_idx,*_  = self.getDataClosestToRegion(region,self.plotitem, True)
         y_vals = self.plotitem.yData[min_idx:max_idx + 1]
         x_vals = self.plotitem.xData[min_idx:max_idx + 1]
-        self.spectrum_plotwidget.setRange(yRange=[np.min(y_vals), np.max(y_vals)], xRange=[np.min(x_vals), np.max(x_vals)], disableAutoRange=True, padding=0.2)
+        self.spectrum_plotwidget.setRange(yRange=[np.min(y_vals), np.max(y_vals)], xRange=[np.min(x_vals), np.max(x_vals)], disableAutoRange=True, padding=0.05)
         if min_idx not in self.idx_selected:
             for idx in range(int(min_idx),np.min(self.idx_selected)):
                 self.ev_selected.append(self.ev_widget.item(idx))
@@ -11371,7 +11371,7 @@ class ImageRegistrationDialog(QtWidgets.QDialog):
         self.bt_align.clicked.connect(self.done)
         self.bt_align2.clicked.connect(self.done)
 #----------------------------------------------------------------------
-class ImageRegistration(QtWidgets.QDialog):
+class ImageRegistrationManual(QtWidgets.QDialog):
 
     def __init__(self, parent,  common, stack):
         QtWidgets.QWidget.__init__(self, parent)
@@ -12949,37 +12949,33 @@ class ImageRegistration(QtWidgets.QDialog):
 class GeneralPurposeSignals(QtCore.QObject):
     finished = pyqtSignal()
     ithetaprogress = pyqtSignal(int)
-    #progress = pyqtSignal()
 # ----------------------------------------------------------------------
 class GeneralPurposeProcessor(QtCore.QRunnable):
     def __init__(self, parent, queue):
         super(GeneralPurposeProcessor, self).__init__()
         self.signals = GeneralPurposeSignals()
-        #self.mutex = QtCore.QMutex()
         self.funcdict = {"ShiftImg": self.ShiftImg, "AlignReferenced": self.AlignReferenced}
         self.parent = parent
         self.queue = queue
-        self.running = True
         self.current_itheta = 0
 
     @pyqtSlot()
     def run(self):
         #print('worker', threading.get_ident())
-        while self.running:
+        while True:
             #print(self.parent.pool.pool.activeThreadCount())
             #print(QtCore.QThreadPool.activeThreadCount())
-            if not self.queue.empty():
-                #print("queue size: "+ str(self.queue.qsize()))
+            try:
                 workerfunc, *args = self.queue.get(False)
+                #print("row: ",type(args[0][0]))
+                #print("queue size3: "+ str(self.queue.qsize()))
                 #itheta = args[0][-1]
                 # args = rest[0][0]
                 #kwargs = rest[1]
-                #print(args[0][1])
                 self.funcdict[workerfunc](*args[0])
                 #print("busy with task {}".format(workerfunc))
-            else:
-                self.running = False
-                #print("break")
+            except Empty: # if queue empty
+                #self.running = False
                 #self.signals.blockSignals(True)
                 #self.signals.finished.emit()
                 break
@@ -13018,7 +13014,7 @@ class GeneralPurposeProcessor(QtCore.QRunnable):
             #self.signals.driftcalcfinished.emit((errorlst, round(np.mean(errorlst),4)))
 
     def ShiftImg(self, row,x,y,itheta):
-        shifted = ndimage.fourier_shift(np.fft.fft2(self.parent.stack.absdata4d[:, :, row,itheta]), [float(-x), float(-y)])
+        shifted = ndimage.fourier_shift(np.fft.fft2(self.parent.stack.absdata4d[:, :, row,itheta]), [float(-x),float(-y)])
         shifted = np.fft.ifft2(shifted)
         self.parent.stack.absdata4d_shifted[:, :, row, itheta] = shifted.real
         return
@@ -13044,39 +13040,37 @@ class TaskDispatcher(QtCore.QObject):
         except:
             cpus = os.cpu_count()
         self.pool.setMaxThreadCount(cpus)
-        self.queue = SimpleQueue()
+        self.queue = Queue()
         self.parent = parent
-        #print("maxthreadcount", self.pool.maxThreadCount())
+
     @pyqtSlot()
     def run(self):
         #print(self.queue.qsize())
         #print('pool', threading.get_ident())
         # if self.parent.com.stack_4d == 0:
         qsize = int(self.queue.qsize())
-        # else:
-        #     qsize = int(self.queue.qsize() / self.parent.stack.n_theta)
-        print("1 - starting threads", min(self.pool.maxThreadCount(),qsize), "threads needed, number of tasks:",qsize)
-        for n in range(min(self.pool.maxThreadCount(),qsize)): #start as many threads as needed.
+        maxthreads = self.pool.maxThreadCount()
+        preferred_thread_number = min(maxthreads, qsize)
+        print("1 - starting threads",preferred_thread_number, "threads needed, number of tasks:",qsize)
+        while int(self.queue.qsize()) and self.pool.activeThreadCount() < preferred_thread_number: #start as many threads as needed.
+            #print("active threads"+str(self.pool.activeThreadCount())+" qsize "+str(int(self.queue.qsize())))
             worker = GeneralPurposeProcessor(self.parent,self.queue)
             #worker.signals.ithetaprogress.disconnect()
             #worker.signals.finished.disconnect()
             worker.signals.ithetaprogress.connect(self.parent.IThetaProgress)
             self.pool.start(worker)
+            time.sleep(0.02) # artifical delay to start threads with a little time separation. Otherwise ShiftImgs freezes in Win10 and MacOS for small stacks!
         self.pool.waitForDone()
         print("2 - all threads dead")
         worker.signals.finished.connect(self.parent.ThreadPoolComplete)
         worker.signals.finished.emit()
         #worker.signals.ithetaprogress.disconnect()
         #worker.signals.finished.disconnect()
-        #print("all threads dead")
     #add a task to the queue
-    # def enqueuetheta(self, args):
-    #     self.thetaqueue.put(args)
     def enqueuetask(self, func, *args, **kargs):
         self.queue.put((func, args, kargs))
 
-class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
-    # ToDo: AutoQualityFilter and StackExtrapolation checkbox status not saved for each theta value!
+class ImageRegistrationFFT(QtWidgets.QDialog, QtGui.QGraphicsScene):
     def __init__(self, parent, common, stack):
         QtWidgets.QWidget.__init__(self, parent)
         uic.loadUi(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'showalign2.ui'), self)
@@ -13222,7 +13216,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         outer_keys = range(max(self.stack.n_theta,1))
         inner_keys = ["xdots", "ydots", "xshifts", "yshifts", "errors", "errormaskedx","errormaskedy","manualmaskedx","manualmaskedy"]
         self.stack.shiftsdict = {intkey : {key: [False] * int(self.stack.n_ev) for key in inner_keys} for intkey in outer_keys}
-        single_keys = ["filter", "method", "threshold", "regionlimitx", "regionlimity"]
+        single_keys = ["filter", "method", "autoquality", "extrapolation", "threshold", "regionlimitx", "regionlimity"]
         for intkey in outer_keys:
             self.stack.shiftsdict[intkey].update({key: False for key in single_keys})
     def CreateScatterDots(self,shifts,mask):
@@ -13253,7 +13247,6 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
     def OnAligned(self):
         self.aligned = True
         print("aligned")
-        self.button_align.setEnabled(True)
         self.cb_autoerror.stateChanged.disconnect()
         self.cb_extrapolate.stateChanged.disconnect()
         self.spinBoxFiltersize.valueChanged.disconnect()
@@ -13273,9 +13266,10 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         print("makenewscatte")
         errorthreshold = self.stack.shiftsdict[self.itheta]["threshold"]
         errors = self.stack.shiftsdict[self.itheta]["errors"]
-        if not errorthreshold:
-            errorthreshold = round(np.mean(errors), 4)
-            self.errormean = errorthreshold.copy()
+        # if not errorthreshold:
+        #     errorthreshold = round(np.mean(errors), 4)
+        #     self.stack.shiftsdict[self.itheta]["threshold"] = errorthreshold
+        #     self.errormean = errorthreshold.copy()
         self.MaskScatterDotsAboveErrorThreshold((errors,errorthreshold,self.itheta))
         maskedx = self.MaskedScatterDotsArray(self.xregion)
         maskedy = self.MaskedScatterDotsArray(self.yregion)
@@ -13305,10 +13299,13 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.yscatter.setData(spots=self.CreateScatterDots(ydots,maskedy), pxMode=True)
 
     def OnAutoError(self):
-        print("onautoerror",self.errormean)
+        print("onautoerror",self.stack.shiftsdict[self.itheta]["threshold"])
+        self.stack.shiftsdict[self.itheta]["autoquality"] = self.cb_autoerror.isChecked()
+        self.stack.shiftsdict[self.itheta]["threshold"] = round(np.mean(self.stack.shiftsdict[self.itheta]["errors"]),
+                                                                4)
         if self.cb_autoerror.isChecked() and self.aligned:
             self.spinBoxError.setEnabled(True)
-            self.spinBoxError.setValue(self.errormean)
+            self.spinBoxError.setValue(self.stack.shiftsdict[self.itheta]["threshold"])
         else:
             self.spinBoxError.setEnabled(False)
             self.spinBoxError.setValue(1)
@@ -13344,14 +13341,62 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
             self.stack.shiftsdict[itheta]["errormaskedy"] = [False] * len(errors)
 
     # ----------------------------------------------------------------------
-    def restoreRegion(self,region, limits):
-        region.blockSignals(True)
-        if limits:
-            region.setRegion(list(limits))
+    def initParams(self, itheta):
+        self.stack.shiftsdict[itheta]["regionlimitx"] = self.getDataClosestToRegion(self.xregion,self.xscatter,False)[2:]
+        self.stack.shiftsdict[itheta]["regionlimity"] = self.getDataClosestToRegion(self.yregion,self.yscatter,False)[2:]
+        self.stack.shiftsdict[itheta]["filter"] = self.spinBoxFiltersize.value()
+        self.stack.shiftsdict[itheta]["method"] = self.comboBox_approx.currentIndex()
+        #print(self.stack.shiftsdict[itheta]["method"])
+        #self.stack.shiftsdict[itheta]["autoquality"] = self.cb_autoerror.isChecked()
+        self.stack.shiftsdict[itheta]["extrapolation"] = self.cb_extrapolate.isChecked()
+        self.stack.shiftsdict[itheta]["threshold"] = round(np.mean(self.stack.shiftsdict[itheta]["errors"]), 4)
+    def restoreParams(self,itheta):
+        self.xregion.blockSignals(True)
+        self.yregion.blockSignals(True)
+        self.cb_autoerror.blockSignals(True)
+        self.cb_extrapolate.blockSignals(True)
+        self.comboBox_approx.blockSignals(True)
+        self.spinBoxFiltersize.blockSignals(True)
+        #self.spinBoxError.blockSignals(True)
+        # errors = self.stack.shiftsdict[self.itheta]["errors"]
+        # errorthreshold = self.stack.shiftsdict[itheta]["threshold"]
+        # if not errorthreshold:
+        #     errorthreshold = round(np.mean(errors), 4)
+        #self.spinBoxError.setValue(errorthreshold)
+        self.xregion.setRegion(self.stack.shiftsdict[itheta]["regionlimitx"])
+        self.yregion.setRegion(self.stack.shiftsdict[itheta]["regionlimity"])
+        self.cb_autoerror.setChecked(self.stack.shiftsdict[itheta]["autoquality"])
+        self.spinBoxError.blockSignals(True)
+        #self.spinBoxError.setValue(self.stack.shiftsdict[self.itheta]["threshold"])
+        if self.cb_autoerror.isChecked() and self.aligned:
+            self.spinBoxError.setEnabled(True)
+            self.spinBoxError.setValue(self.stack.shiftsdict[self.itheta]["threshold"])
         else:
-            region.setRegion([self.stack.ev[0],self.stack.ev[-1]])
-        region.blockSignals(False)
+            self.spinBoxError.setEnabled(False)
+            self.spinBoxError.setValue(1)
+        self.spinBoxError.blockSignals(False)
+        self.cb_extrapolate.setChecked(self.stack.shiftsdict[itheta]["extrapolation"])
+        self.comboBox_approx.setCurrentIndex(self.stack.shiftsdict[itheta]["method"])
+        if self.comboBox_approx.currentIndex() == 0:
+            self.spinBoxFiltersize.setEnabled(True)
+        elif self.comboBox_approx.currentIndex() == 1: # linear regression
+            self.spinBoxFiltersize.setEnabled(False)
+        self.spinBoxFiltersize.setValue(self.stack.shiftsdict[itheta]["filter"])
+        # if limits:
+        #     region.setRegion(list(limits))
+        # else:
+        #     region.setRegion([self.stack.ev[0],self.stack.ev[-1]])
+        #self.spinBoxError.blockSignals(False)
+        self.xregion.blockSignals(False)
+        self.yregion.blockSignals(False)
+        self.cb_autoerror.blockSignals(False)
+        self.cb_extrapolate.blockSignals(False)
+        self.comboBox_approx.blockSignals(False)
+        self.spinBoxFiltersize.blockSignals(False)
+
     def getDataClosestToRegion(self,region,plotitem,snapregion=False):
+        selectregion = {self.xregion : "regionlimitx", self.yregion : "regionlimity"}
+        limits = selectregion[region]
         minidx, maxidx = region.getRegion()
         data = plotitem.getData()[0]
         index = lambda x: np.argmin(np.abs(data - x))
@@ -13363,7 +13408,8 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         mindata = data[minidx]
         maxdata = data[maxidx]
         if snapregion:
-            self.restoreRegion(region,(mindata,maxdata))  # snap region to data points
+            self.stack.shiftsdict[self.itheta][limits] = (mindata,maxdata)  # snap region to data points
+            region.setRegion((mindata,maxdata))
         return minidx, maxidx, mindata, maxdata
     
     def ApplyApproximationFunction(self,region):
@@ -13402,7 +13448,6 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
 
         interpolate_func = interp1d(xdata, approximated,kind="linear",fill_value=fillval,bounds_error=False)
         fitdata = [self.stack.ev,np.around(interpolate_func(self.stack.ev),1)] # round fit to a tenth of a px
-        #print(fitdata[1])
         fit.setData(x=fitdata[0], y=fitdata[1])
         fit.show()
         return fitdata[1]
@@ -13500,8 +13545,12 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
             ntheta = [self.itheta]
         else:
             ntheta = range(max(self.stack.n_theta,1)) # necessary work around for 3d stacks and if 4d stack is loaded with LoadStack()
+            for itheta in ntheta:
+                self.initParams(itheta)
         for itheta in ntheta:
             #print(itheta)
+            self.stack.shiftsdict[self.itheta]["filter"] = self.spinBoxFiltersize.value()
+            self.stack.shiftsdict[self.itheta]["method"] = self.comboBox_approx.currentIndex()
             self.slider_theta.setValue(itheta)
             #time.sleep(0.2)
             xshifts = self.ApplyApproximationFunction(self.xregion)
@@ -13527,6 +13576,7 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
     # ----------------------------------------------------------------------
     def OnAutoCrop(self):
         if self.aligned:
+            self.button_align.setEnabled(True)
             self.button_ok.setEnabled(True)
             self.cb_autocrop.blockSignals(True)
             self.CropStack4D()
@@ -13585,11 +13635,12 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
             errors = self.stack.shiftsdict[self.itheta]["errors"]
             if not errorthreshold:
                 errorthreshold = round(np.mean(errors), 4)
+            self.restoreParams(self.itheta)
             self.MaskScatterDotsAboveErrorThreshold((errors, errorthreshold, self.itheta))
-            if self.cb_autoerror.isChecked():
-                self.spinBoxError.blockSignals(True)
-                self.spinBoxError.setValue(errorthreshold)
-                self.spinBoxError.blockSignals(False)
+            # if self.cb_autoerror.isChecked():
+            #     self.spinBoxError.blockSignals(True)
+            #     self.spinBoxError.setValue(errorthreshold)
+            #     self.spinBoxError.blockSignals(False)
             xdots = self.stack.shiftsdict[self.itheta]["xdots"]
             ydots = self.stack.shiftsdict[self.itheta]["ydots"]
             maskedx = self.MaskedScatterDotsArray(self.xregion)
@@ -13601,11 +13652,8 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
 
             #min_idx, max_idx, min_ev, max_ev = self.getDataClosestToRegion(self.xregion, self.xscatter, True)
             #min_idx, max_idx, min_ev, max_ev = self.getDataClosestToRegion(self.yregion, self.yscatter, True)
-            limitsx = self.stack.shiftsdict[self.itheta]["regionlimitx"]
-            limitsy = self.stack.shiftsdict[self.itheta]["regionlimity"]
+
             #self.fit_x.show()
-            self.restoreRegion(self.xregion, limitsx)
-            self.restoreRegion(self.yregion, limitsy)
             self.OnLinRegion(self.xregion, update=False)
             self.OnLinRegion(self.yregion, update=False)
 
@@ -13787,6 +13835,321 @@ class ImageRegistration2(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.close()
 
 #----------------------------------------------------------------------
+class SpectralImageMap(QtWidgets.QDialog, QtGui.QGraphicsScene):
+    #evlistchanged = pyqtSignal([object])
+    #thetalistchanged = pyqtSignal([object])
+    def __init__(self, parent, common, stack):
+        QtWidgets.QWidget.__init__(self, parent)
+        uic.loadUi(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'showspectralroi.ui'), self)
+        self.parent = parent
+        self.stack = stack
+        self.com = common
+        self.iev = 0
+        self.itheta = 0
+        # self.stack.absdata_shifted_cropped = self.stack.absdata_shifted.copy()
+
+        # self.poolthread = QtCore.QThread()
+        # self.aligned = False
+        self.button_ok.setEnabled(True)
+
+        self.setWindowTitle('Spectral Image Map')
+        #self.pglayout = pg.GraphicsLayout(border=None)
+        #self.canvas.setBackground("w")  # canvas is a pg.GraphicsView widget
+        #self.canvas.setCentralWidget(self.pglayout)
+        #self.vb = self.pglayout.addViewBox()
+        #self.vb.setAspectLocked()
+        #self.i_item = pg.ImageItem(border="k", parent=self)
+
+        #self.vb.setMouseEnabled(x=False, y=False)
+        #self.vb.addItem(self.i_item, ignoreBounds=False)
+
+        self.button_ok.clicked.connect(self.OnAccept)
+        self.button_cancel.clicked.connect(self.OnCancel)
+
+        if self.com.stack_loaded == 1:
+        #     self.label_theta_range.setVisible(False)
+        #     self.slider_theta.setVisible(False)
+        #     self.cb_remove_theta.setVisible(False)
+        #     self.groupBox_theta.setVisible(False)
+        #     if self.com.stack_4d == 1:
+        #         self.label_theta_range.setVisible(True)
+        #         self.slider_theta.setVisible(True)
+        #         self.cb_remove_theta.setVisible(True)
+        #         self.groupBox_theta.setVisible(True)
+        #         self.slider_theta.setRange(0, self.stack.n_theta - 1)
+        #         self.slider_theta.valueChanged[int].connect(self.OnScrollTheta)
+        #         self.SetupListTheta()
+        #     # self.maskedvals = [True] * int(self.stack.n_ev)
+        #     # self.spinBoxError.setEnabled(False)
+        #     self.slider_eng.sliderPressed.connect(self.ShowImage)
+        #     self.slider_eng.sliderReleased.connect(self.ShowImage)
+        #     self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
+        #     self.slider_eng.setRange(0, self.stack.n_ev - 1)
+        #     self.pb_selectall.clicked.connect(self.OnSelectAll)
+        #     self.pb_clearall.clicked.connect(self.OnClearAll)
+        #     self.evlistchanged.connect(lambda row: self.qListChangeHandler(row, "energy"))
+        #     self.thetalistchanged.connect(lambda row: self.qListChangeHandler(row, "theta"))
+        #     # self.ev_widget.itemClicked.connect(lambda item: self.OnItemClicked(item))
+        #     self.ev_widget.mousePressEvent = self.mouseEventOnEVList
+        #     self.ev_widget.mouseMoveEvent = self.mouseEventOnEVList
+        #     self.theta_widget.mousePressEvent = self.mouseEventOnThetaList
+        #     self.theta_widget.mouseMoveEvent = self.mouseEventOnThetaList
+            # self.ev_widget.itemSelectionChanged.connect(lambda item: self.OnItemClicked(item))
+            #self.SetupListEV()
+            #self.OnScrollEng(0)
+            #self.SetupROI()
+            self.SetupPlot()
+
+    def OnSelectionChanged(self):
+        #self.RedrawNewPlot()
+        # self.UpdateIndices()
+        self.region_i0.blockSignals(True)
+        if self.idx_selected:
+            self.region_i0.setRegion([self.stack.ev[min(self.idx_selected)], self.stack.ev[max(self.idx_selected)]])
+            self.region_i0.blockSignals(False)
+            #self.spectrum_plotwidget.setXRange(*self.region_i0.getRegion())
+            #self.spectrum_plotwidget.setYRange(np.min(self.plotitem_new.yData), np.max(self.plotitem_new.yData))
+        return
+
+    def GenerateSpectrum(self, evselection):
+        #left,right,top,bottom = self.GetRegion()
+        if self.com.i0_loaded == 1:
+            if self.com.stack_4d == 1:
+                total = self.stack.od4d[:, :, :, int(self.itheta)].copy()
+            else:
+                total = self.stack.od3d[:, :, :].copy()
+
+        else:
+            if self.com.stack_4d == 1:
+                # t = [self.stack.theta[i] for i in self.thetaidx_selected]
+                # self.label_theta_range.setText(
+                #     "Theta range: [ " + str(min(t, default=0)) + "° .. " + str(
+                #         max(t, default=0)) + "° ], # values: " + str(
+                #         len(t)))
+                total = self.stack.stack4D[:, :, :, int(self.itheta)].copy()
+            else:
+                total = self.stack.absdata[:, :, :].copy()
+        total = total.sum(axis=(0,1)) #/ (int(self.box.size().x()) * int(self.box.size().y()))
+        x = self.stack.ev
+        y = total
+        #self.label_spatial_range.setText("Stack size: [ "+str(int(self.box.size().x()))+" x "+str(int(self.box.size().y()))+" ] px²")
+        #self.label_ev_range.setText(
+        #    "Energy range: [ " + str(min(x, default=0)) + " .. " + str(max(x, default=0)) + " ] eV, # values: "+ str(len(x)))
+        return (x, y)
+    # def UpdateIndices(self):
+    #     self.idx_selected = sorted([self.ev_widget.row(i) for i in self.ev_selected])
+    #     if self.com.stack_4d:
+    #         self.thetaidx_selected = sorted([self.theta_widget.row(i) for i in self.theta_selected])
+    #
+    # def RedrawPlots(self):
+    #     x, y = self.GenerateSpectrum(list(range(self.stack.n_ev)))
+    #     self.plotitem.setData(x, y)
+    #     self.OnSelectionChanged()
+    #
+    # def RedrawNewPlot(self):
+    #     #self.UpdateIndices()
+    #     x, y = self.GenerateSpectrum(self.idx_selected)
+    #     self.plotitem_new.setData(x, y)
+    #     if self.idx_selected:
+    #         self.region_i0.show()
+    #
+    # def qListChangeHandler(self, row, dimension):
+    #     if dimension == "theta":
+    #         selection = self.theta_selected
+    #         widget = self.theta_widget
+    #     elif dimension == "energy":
+    #         selection = self.ev_selected
+    #         widget = self.ev_widget
+    #
+    #     if row in selection:
+    #         selection.remove(row)
+    #         row.setBackground(QtGui.QColor(0, 0, 0, 0))
+    #     else:
+    #         selection.append(row)
+    #         row.setBackground(QtGui.QColor('#beaed4'))
+    #     if dimension == "theta":
+    #         self.OnScrollTheta(widget.row(row))
+    #     elif dimension == "energy":
+    #         self.OnScrollEng(widget.row(row))
+    #     self.OnSelectionChanged()
+
+    def SetupPlot(self):
+        x, y = self.GenerateSpectrum(list(range(self.stack.n_ev)))
+        self.spectrum_plotwidget.setBackground("w")
+
+        self.region_i0 = pg.LinearRegionItem(brush=QtGui.QColor('#88beaed4'),hoverBrush=QtGui.QColor('#ccbeaed4'), bounds=[np.min(x), np.max(x)])
+        self.region_i0.setZValue(10)
+        self.region_i = pg.LinearRegionItem(brush=QtGui.QColor('#887fc97f'),hoverBrush=QtGui.QColor('#cc7fc97f'), bounds=[np.min(x), np.max(x)])
+        self.region_i.setZValue(10)
+
+        plot = self.spectrum_plotwidget
+        plot.setBackground("w")
+        plot.addItem(self.region_i0, ignoreBounds=False)
+        plot.addItem(self.region_i, ignoreBounds=False)
+        plot.setMouseEnabled(x=False, y=False)
+        plot.showGrid(y=True)
+
+        plot.showAxis("top", show=True)
+        plot.showAxis("right", show=True)
+        by = plot.getAxis("right")
+        bx = plot.getAxis("top")
+        by.setStyle(showValues=False, tickLength=0)
+        bx.setStyle(showValues=False, tickLength=0)
+        ay = plot.getAxis("left")
+        ax = plot.getAxis("bottom")
+
+        ax.setLabel(text="Photon energy [eV]")
+        if self.com.i0_loaded:
+            ay.setLabel(text="Optical density")
+        else:
+            ay.setLabel(text="Photon flux [cps]")
+
+        self.plotitem = plot.plot(x, y, pen=pg.mkPen(color="b", width=2))
+        self.plotitem.setZValue(100)
+        # self.plotitem_new = plot.plot(x, y, pen=pg.mkPen(color="b", width=2))
+        # self.refmarker = pg.InfiniteLine(angle=90, movable=False,
+        #                                  pen=pg.mkPen(color="b", width=2, style=QtCore.Qt.DashLine))
+        #plot.addItem(self.refmarker, ignoreBounds=True)
+        self.region_i0.setRegion((min(x), min(x)+0.25*(max(x)-min(x))))
+        self.region_i.setRegion(((max(x)-0.25*(max(x)-min(x))), max(x)))
+        #self.region_i0.sigRegionChange.connect(self.UpdateSelection)
+        #self.region_i.sigRegionChange.connect(self.UpdateSelection)
+        self.region_i0.sigRegionChangeFinished.connect(self.UpdateSelection)
+        self.region_i.sigRegionChangeFinished.connect(self.UpdateSelection)
+    # ----------------------------------------------------------------------
+    def getDataClosestToRegion(self, region, plotitem, snapregion=True):
+        #otherregion = {self.region_i : self.region_i0, self.region_i0: self.region_i}
+        minidx, maxidx = region.getRegion()
+        data = plotitem.getData()[0]
+        index = lambda x: np.argmin(np.abs(data - x))
+        minidx = index(minidx)
+        maxidx = index(maxidx)
+        if minidx == maxidx:
+            minidx = 0
+            maxidx = np.argmax(data)
+        mindata = data[minidx]
+        maxdata = data[maxidx]
+        if region == self.region_i:
+            self.region_i0.setBounds((min(data), data[minidx]))
+        elif region == self.region_i0:
+            self.region_i.setBounds((data[maxidx], max(data)))
+        if snapregion:
+            region.blockSignals(True)
+            region.setRegion([mindata, maxdata])  # snap region to data points
+            region.blockSignals(False)
+            #self.parent.OnSelectionChanged()
+        return minidx, maxidx, mindata, maxdata
+
+    def UpdateSelection(self):
+        mini0, maxi0, mindi0, maxdi0 = self.getDataClosestToRegion(self.region_i0,self.plotitem)
+        mini, maxi, mindi, maxdi = self.getDataClosestToRegion(self.region_i,self.plotitem)
+        #self.region_i0.blockSignals(True)
+        #self.region_i.blockSignals(True)
+        #self.region_i0.setBounds((min(self.plotitem.getData()[0]),mindi))
+        #self.region_i.setBounds((maxdi0,max(self.plotitem.getData()[0])))
+        #self.region_i0.blockSignals(False)
+        #self.region_i.blockSignals(False)
+
+        qlist = self.parent.MapSelectWidget1
+        for row in range(qlist.count()):
+            if row in range(mini0, maxi0):
+                self.stack.shifts[row][1]= -1
+                qlist.item(row).setBackground(QtGui.QColor('#beaed4'))
+            elif row in range(mini, maxi):
+                self.stack.shifts[row][1]= 1
+                qlist.item(row).setBackground(QtGui.QColor('#7fc97f'))
+            else:
+                self.stack.shifts[row][1]= 0
+                qlist.item(row).setBackground(QtGui.QColor(0, 0, 0, 0))
+        self.parent.OnSelectionChanged()
+    # ----------------------------------------------------------------------
+    def OnCancel(self, evt):
+        self.close()
+
+    # # ----------------------------------------------------------------------
+    def OnAccept(self, evt):
+        pass
+    #     if self.cb_croptoroi.isChecked():
+    #         left, right, top, bottom = self.GetRegion()
+    #     else:
+    #         left, right, top, bottom = (None, None, None, None)
+    #
+    #     if self.cb_remove_evs.isChecked():
+    #         selection = self.idx_selected
+    #         if len(selection) == 0:
+    #             QtWidgets.QMessageBox.warning(self, 'Error', 'Please select at least one energy value!')
+    #             return
+    #         self.stack.n_ev = np.array(len(selection))
+    #         self.stack.ev = self.stack.ev[selection]
+    #         self.stack.data_dwell = self.stack.data_dwell[selection]
+    #     else:
+    #         selection = list(range(self.stack.n_ev))
+    #
+    #     self.stack.absdata = self.stack.absdata[left:right, bottom:top, selection]
+    #     self.stack.n_cols = self.stack.absdata.shape[0]
+    #     self.stack.n_rows = self.stack.absdata.shape[1]
+    #     self.parent.page1.ix = int(self.stack.n_cols / 2)
+    #     self.parent.page1.iy = int(self.stack.n_rows / 2)
+    #
+    #     if self.com.stack_4d:
+    #         if self.cb_remove_theta.isChecked():
+    #             thetas = self.thetaidx_selected
+    #             if len(thetas) == 0:
+    #                 QtWidgets.QMessageBox.warning(self, 'Error', 'Please select at least one theta value!')
+    #                 return
+    #             self.stack.n_theta = len(thetas)
+    #             self.stack.theta = self.stack.theta[thetas]
+    #
+    #         else:
+    #             thetas = list(range(self.stack.n_theta))
+    #         self.stack.stack4D = self.stack.stack4D[left:right, bottom:top, selection, :]
+    #         self.stack.stack4D = self.stack.stack4D[:, :, :, thetas]
+    #     if self.com.i0_loaded:
+    #         if self.com.stack_4d:
+    #             self.stack.od4D = self.stack.od4D[left:right, bottom:top, selection, thetas]
+    #         else:
+    #             self.stack.od3d = self.stack.od3d[left:right, bottom:top, selection]
+    #             self.stack.od = self.stack.od3d.copy()
+    #             self.stack.od = np.reshape(self.stack.od, (self.stack.n_rows * self.stack.n_cols, self.stack.n_ev),
+    #                                        order='F')
+    #
+    #     self.stack.fill_h5_struct_from_stk()
+    #     if self.com.i0_loaded == 1:
+    #         self.stack.fill_h5_struct_normalization()
+    #
+    #     # Fix the slider on Page 1!
+    #     if self.com.stack_4d:
+    #         self.parent.page1.slider_theta.setRange(0, self.stack.n_theta - 1)
+    #         self.parent.page1.itheta = 0
+    #         self.parent.page1.slider_theta.blockSignals(True)
+    #         self.parent.page1.slider_theta.setValue(int(self.parent.page1.itheta))
+    #         self.parent.page1.slider_theta.blockSignals(False)
+    #
+    #         self.parent.page0.slider_theta.setRange(0, self.stack.n_theta - 1)
+    #         self.parent.page0.itheta = 0
+    #         self.parent.page0.slider_theta.blockSignals(True)
+    #         self.parent.page0.slider_theta.setValue(int(self.parent.page1.itheta))
+    #         self.parent.page0.slider_theta.blockSignals(False)
+    #
+    #     self.parent.page1.slider_eng.setRange(0, self.stack.n_ev - 1)
+    #     self.parent.page1.iev = 0
+    #     self.parent.page1.slider_eng.setValue(int(self.parent.page1.iev))
+    #
+    #     self.parent.page0.slider_eng.setRange(0, self.stack.n_ev - 1)
+    #     self.parent.page0.iev = 0
+    #     self.parent.page0.slider_eng.setValue(int(self.parent.page1.iev))
+    #
+    #     self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
+    #     self.parent.page1.loadImage()
+    #     self.parent.page0.Clear()
+    #     self.parent.page0.LoadEntries()
+    #
+    #     if showmaptab:
+    #         self.parent.page9.Clear()
+    #         self.parent.page9.LoadEntries()
+    #
+    #     self.close()
+
 class SpectralROI(QtWidgets.QDialog):
 
     def __init__(self, parent,  common, stack):
@@ -15121,7 +15484,7 @@ class PageMap(QtWidgets.QWidget):
     def OnSelectionChanged(self):
         self.prelst = [index for index, value in enumerate([x[1] for x in  self.stk.shifts]) if value == -1]
         self.postlst = [index for index, value in enumerate([x[1] for x in  self.stk.shifts]) if value == 1]
-        #print(prelst,postlst)
+        #print(self.prelst,self.postlst)
         self.OnScrollEng(self.MapSelectWidget1.currentRow())
         if len(self.prelst) == 0 or len(self.postlst) == 0:
             if len(self.prelst + self.postlst) == 0:
@@ -15426,6 +15789,8 @@ class PageMap(QtWidgets.QWidget):
         self.qlistchanged.connect(self.qListChangeHandler)
         self.OnScrollEng(0) # Plot first image & set Scrollbar
         self.OnMetricScale(self.MetricCheckBox.isChecked(), True, False)
+        self.pbSelfromSpec.setEnabled(True)
+        self.pbSelfromSpec.clicked.connect(self.OnSelfromSpec)
     def UpdateEntry(self,row):
         self.MapSelectWidget1.item(row).setText(str(int(row)).zfill(3)+"     at     " + format(self.stk.ev[row], '.2f') + " eV     "+format(self.stk.shifts[row][2][0], '+.1f')+"    "+format(self.stk.shifts[row][2][1], '+.1f'))
         #self.MapSelectWidget1.addItem(self.MapSelectWidget1.item(row))
@@ -15501,6 +15866,10 @@ class PageMap(QtWidgets.QWidget):
             self.MapSelectWidget1.item(row).setBackground(QtGui.QColor(0, 0, 0, 0))
             self.stk.shifts[row][1] = 0
             self.OnSelectionChanged()
+
+    def OnSelfromSpec(self,evt):
+        spectralimgmap = SpectralImageMap(self, self.com, self.stk)
+        spectralimgmap.show()
 
     def OnClrShifts(self):
         for row in [index for index, value in enumerate([x[2] for x in  self.stk.shifts]) if value != (0.0,0.0)]:

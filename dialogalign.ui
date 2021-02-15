@@ -29,28 +29,9 @@
       </font>
      </property>
      <property name="title">
-      <string>Choose an image registration algorithm:</string>
+      <string>Choose an image registration tool:</string>
      </property>
      <layout class="QHBoxLayout" name="horizontalLayout_3">
-      <item>
-       <widget class="QPushButton" name="bt_align">
-        <property name="minimumSize">
-         <size>
-          <width>0</width>
-          <height>40</height>
-         </size>
-        </property>
-        <property name="font">
-         <font>
-          <family>Ubuntu</family>
-          <pointsize>8</pointsize>
-         </font>
-        </property>
-        <property name="text">
-         <string>Cross-correlation</string>
-        </property>
-       </widget>
-      </item>
       <item>
        <widget class="QPushButton" name="bt_align2">
         <property name="minimumSize">
@@ -67,6 +48,25 @@
         </property>
         <property name="text">
          <string>FFT cross-correlation</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="bt_align">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>40</height>
+         </size>
+        </property>
+        <property name="font">
+         <font>
+          <family>Ubuntu</family>
+          <pointsize>8</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Manual alignment</string>
         </property>
        </widget>
       </item>
