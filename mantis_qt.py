@@ -15144,8 +15144,8 @@ class PageLoadData(QtWidgets.QWidget):
     def calcBinSize(self,i,N):
         return int(round(256*(i+1)/N) - round(256*i/N))
     def OnCopy(self):
-        exp = pg.exporters.ImageExporter(self.pglayout)
-        exp.export(copy=True)
+        self.exp = pg.exporters.ImageExporter(self.pglayout)
+        self.exp.export(copy=True)
         return
     def OnMirror(self):
         if self.com.stack_loaded == 1:
@@ -15538,8 +15538,8 @@ class PageMap(QtWidgets.QWidget):
         if ext == 'txt':
             np.savetxt(fileName, np.rot90(self.OD), delimiter='\t', newline='\n',fmt='%.5f')
     def OnCopy(self):
-        exp = pg.exporters.ImageExporter(self.pglayout)
-        exp.export(copy=True)
+        self.exp = pg.exporters.ImageExporter(self.pglayout)
+        self.exp.export(copy=True)
         return
     def OnSaveImage(self, event):
         # Save Image
