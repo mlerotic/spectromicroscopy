@@ -31,6 +31,9 @@ import getopt
 from PyQt5 import QtCore, QtGui, QtWidgets, uic
 from PyQt5.QtCore import Qt, QCoreApplication, pyqtSignal, pyqtSlot, QMutex
 
+QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
+QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps, True)
+
 from PIL import Image
 from scipy import ndimage
 from scipy.stats import linregress
@@ -17242,7 +17245,7 @@ class MainFrame(QtWidgets.QMainWindow):
 def main():
 
     app = QtWidgets.QApplication(sys.argv)
-    print('main', threading.get_ident())
+    #print('main', threading.get_ident())
     with open(qsspath, "r") as stylesheet:
         app.setStyleSheet(stylesheet.read())
     frame = MainFrame()
