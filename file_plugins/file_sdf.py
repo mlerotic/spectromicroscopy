@@ -277,7 +277,7 @@ def read(filename, self, selection=None, JSONstatus=None):
         self.fill_h5_struct_from_stk()
 
     else:
-        print("Only Image Stack files are supported.") # ToDo: Urgent need to add support for multi-region image stacks and single images
+        print("Unknown Format. The current type is not supported.")
 
     return
 

@@ -181,7 +181,7 @@ def read(filename, self, selection=None, *args, **kwargs):
         self.fill_h5_struct_from_stk()
 
     else:
-        print("Unknown Format")
+        print("Unknown Format. The current type is not supported.")
 
     return
 
