@@ -187,12 +187,21 @@ class HDR_FileParser:
       for num_Ch in range(self.num_channels):
         DataNames2.append([self.file_path+'_'+Alphabet[num_Ch]+'.xim'])
       DataNames.append(DataNames2)
-    elif DataFlag in ['Multi-Region Image', 'Multi-Region Image Stack']:
+    elif DataFlag in ['Multi-Region Image']:
       for num_R in range(self.num_regions):
         DataNames2 = []
         for num_Ch in range(self.num_channels):
           DataNames2.append([self.file_path+'_'+Alphabet[num_Ch]+str(num_R)+'.xim'])
         DataNames.append(DataNames2)
+    elif DataFlag in ['Multi-Region Image Stack']:
+      for num_Ch in range(self.num_channels):
+        DataNames2 = []
+        for num_R in range(self.num_regions):
+            DataNames3 = []
+            for num_E in range(self.data_size[0][2]):
+                DataNames3.append(self.file_path + '_' + Alphabet[num_Ch] + str(num_E).zfill(3)+str(num_R)+ '.xim')
+            DataNames2.append(DataNames3)
+        DataNames = [DataNames2]
     elif DataFlag == 'Image Stack':
       DataNames2 = []
       for num_Ch in range(self.num_channels):
@@ -237,7 +246,8 @@ def read(filename, self, selection=None, JSONstatus=None):
         with open(splitext(filename)[0] + '.json', 'w') as outfile:
             json.dump(HDR.hdr, outfile, indent=4, sort_keys=True, ensure_ascii=True)
             print("JSON-file written at "+ splitext(filename)[0] + '.json')
-    if HDR.hdr['ScanDefinition']['Flags'] == 'Image Stack' or HDR.hdr['ScanDefinition']['Flags'] == 'Image':
+    allowed =['Image Stack','Image','Multi-Region Image Stack']
+    if HDR.hdr['ScanDefinition']['Flags'] in allowed:
 
         self.x_dist = numpy.array([float(i) for i in HDR.hdr['ScanDefinition']['Regions'][selection[0]+1]['PAxis']['Points'][1:] ])
         self.y_dist = numpy.array([float(i) for i in HDR.hdr['ScanDefinition']['Regions'][selection[0]+1]['QAxis']['Points'][1:] ])
@@ -251,9 +261,9 @@ def read(filename, self, selection=None, JSONstatus=None):
         self.data_dwell = numpy.ones((self.n_ev))*msec
 
         imagestack = numpy.empty((self.n_cols,self.n_rows,self.n_ev), numpy.int32)
-        for i in range(len(HDR.data_names[selection[0]][selection[1]])):
+        for i in range(len(HDR.data_names[selection[1]][selection[0]])):
             try:
-                imagestack[:,:,i] = numpy.loadtxt(HDR.data_names[selection[0]][selection[1]][i], numpy.int32).T
+                imagestack[:,:,i] = numpy.loadtxt(HDR.data_names[selection[1]][selection[0]][i], numpy.int32).T
             except ValueError:
                 print("Aborted stack or XIMs with inconsistent dimensions.")
                 imagestack[:,:,i] = numpy.nan
