@@ -106,14 +106,14 @@ def GetFileStructure(FileName):
             if len(D[entry].norm_data) == 0:
                 D[entry].norm_data = None
             if 'definition' in list(F[entry]):
-                D[entry].definition = F[entry]['definition'][0]
+                D[entry].definition = F[entry]['definition'][0].decode("utf-8")
             if len(D[entry].keys()) > 0:
                 channel_zero = list(D[entry].keys())[0]
                 if 'stxm_scan_type' in list(F[entry][channel_zero]):
-                    D[entry].scan_type = F[entry][channel_zero]['stxm_scan_type'][0]
+                    D[entry].scan_type = F[entry][channel_zero]['stxm_scan_type'][0].decode("utf-8")
                 signal_name = 'data'
                 if 'signal' in list(F[entry][channel_zero].attrs):
-                    signal_name = F[entry][channel_zero].attrs['signal']
+                    signal_name = F[entry][channel_zero].attrs['signal'].decode("utf-8")
                 if signal_name in list(F[entry][channel_zero]):
                     D[entry].data_shape = F[entry][channel_zero][signal_name].shape
                 if 'axes' in list(F[entry][channel_zero].attrs):
