@@ -1,11 +1,15 @@
 # -*- mode: python -*-
 
+from PyInstaller.utils.hooks import collect_submodules
+
+hidden_imports = collect_submodules('h5py')
+
 block_cipher = None
 
 
 a = Analysis(['mantis.py'],
-             pathex=['/home/mantis/projects/mantis'],
-             hiddenimports=[],
+             pathex=['/home/watts/dev/mantis/spectromicroscopy'],
+             hiddenimports=hidden_imports,
              hookspath=None,
              runtime_hooks=None,
              cipher=block_cipher)
@@ -40,7 +44,7 @@ exe = EXE(pyz,
           a.binaries,
           a.zipfiles,
           a.datas,
-          name='mantis-linux-2.0.x-x86_64',
+          name='mantis-linux-3.0.02-x86_64',
           debug=False,
           strip=None,
           upx=True,
