@@ -417,7 +417,7 @@
       </layout>
      </item>
      <item row="1" column="0">
-      <layout class="QGridLayout" name="gridLayout_5" rowstretch="0,0,0">
+      <layout class="QGridLayout" name="gridLayout_5" rowstretch="0,0" rowminimumheight="0,0">
        <property name="bottomMargin">
         <number>0</number>
        </property>
@@ -474,6 +474,41 @@
             <property name="verticalSpacing">
              <number>0</number>
             </property>
+            <item row="1" column="0">
+             <widget class="QLabel" name="label_2">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Correlation anchor:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QRadioButton" name="rB_referenced">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>reference image</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
             <item row="0" column="0">
              <widget class="QLabel" name="label">
               <property name="minimumSize">
@@ -490,6 +525,19 @@
               </property>
               <property name="text">
                <string>Noise ruggedness:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="2">
+             <widget class="QRadioButton" name="rB_consecutive">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="text">
+               <string>neighbor</string>
+              </property>
+              <property name="checked">
+               <bool>false</bool>
               </property>
              </widget>
             </item>
@@ -549,7 +597,7 @@
          </layout>
         </widget>
        </item>
-       <item row="2" column="0">
+       <item row="1" column="0">
         <layout class="QHBoxLayout" name="horizontalLayout_2">
          <property name="spacing">
           <number>6</number>
@@ -584,22 +632,6 @@
           </widget>
          </item>
         </layout>
-       </item>
-       <item row="1" column="0">
-        <spacer name="verticalSpacer">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeType">
-          <enum>QSizePolicy::Minimum</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>25</height>
-          </size>
-         </property>
-        </spacer>
        </item>
       </layout>
      </item>

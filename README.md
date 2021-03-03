@@ -13,7 +13,7 @@ Mantis package and binaries can be downloaded from
 [spectromicroscopy.com](http://spectromicroscopy.com).
 
 ## User Guide ##
-Mantis User Guide can be found on https://docs.spectromicroscopy.com/.
+Mantis User Guide can be found on the project Wiki pages [Home](https://github.com/mlerotic/spectromicroscopy/wiki).
 
 ## References ##
 
