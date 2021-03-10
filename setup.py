@@ -16,6 +16,7 @@ setuptools.setup(
         "Code": "https://github.com/mlerotic/spectromicroscopy",
         "Documentation": "https://docs.spectromicroscopy.com",
     },
+    install_requires=['PyQt5','numpy', 'scipy','matplotlib','h5py','Pillow','lxml','pyqtgraph'],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
@@ -23,5 +24,5 @@ setuptools.setup(
         "Topic :: Scientific/Engineering",
     ],
     packages=setuptools.find_packages(),
-    python_requires=">=3.0",
+    python_requires=">=3",
 )
