@@ -19,8 +19,10 @@ setuptools.setup(
     install_requires=['PyQt5','numpy', 'scipy','matplotlib','h5py','Pillow','lxml','pyqtgraph'],
     extras_require={
         "netCDF":  "netcdf4-python",
-        "SIRT": "scikit-image"
-    }
+        "SIRT":    "scikit-image"
+    },
+    entry_points={
+        "console_scripts": ["mantis-xray = mantis-xray.mantis_qt:main"]},
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
