@@ -22,7 +22,7 @@ setuptools.setup(
         "SIRT":    "scikit-image"
     },
     entry_points={
-        "console_scripts": ["mantis-xray = mantis-xray.mantis_qt:main"]},
+        "console_scripts": "mantis-xray = mantis_xray.mantis_qt:main"},
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
