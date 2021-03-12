@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="mantis-xray", 
-    version="3.0.06",
+    version="3.0.07",
     author="Mirna Lerotic",
     author_email="mirna@2ndlookconsulting.com",
     description="MANTiS is a Multivariate ANalysis Tool for x-ray Spectromicroscopy",
@@ -30,5 +30,6 @@ setuptools.setup(
         "Topic :: Scientific/Engineering",
     ],
     packages=setuptools.find_packages(),
+    include_package_data=True,
     python_requires=">=3",
 )
