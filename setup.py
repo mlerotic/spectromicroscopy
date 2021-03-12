@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="mantis-xray", 
-    version="3.0.05",
+    version="3.0.06",
     author="Mirna Lerotic",
     author_email="mirna@2ndlookconsulting.com",
     description="MANTiS is a Multivariate ANalysis Tool for x-ray Spectromicroscopy",
@@ -22,7 +22,7 @@ setuptools.setup(
         "SIRT":    "scikit-image"
     },
     entry_points={
-        "console_scripts": "mantis-xray = mantis_xray.mantis_qt:main"},
+        "gui_scripts": "mantis-xray = mantis_xray.mantis_qt:main"},
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",

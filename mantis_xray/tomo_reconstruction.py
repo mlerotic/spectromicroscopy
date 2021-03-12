@@ -34,13 +34,13 @@ except:
 import warnings
 warnings.simplefilter('ignore', DeprecationWarning)
 
-from TomoCS.forward_backward_tv import fista_tv,gfb_tv, gfb_tv_weng
-from TomoCS.projections import build_projection_operator
-from TomoCS.util import generate_synthetic_data
+from .TomoCS.forward_backward_tv import fista_tv,gfb_tv, gfb_tv_weng
+from .TomoCS.projections import build_projection_operator
+from .TomoCS.util import generate_synthetic_data
 
-import TomoCS.sirt as st
+from .TomoCS import sirt as st
 
-import Mrc
+from . import Mrc
         
 #----------------------------------------------------------------------
 def write_mrc(stack, mrcfn):

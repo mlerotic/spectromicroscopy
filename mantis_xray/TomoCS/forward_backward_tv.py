@@ -21,9 +21,10 @@
 from __future__ import absolute_import
 
 import numpy as np
-from TomoCS.tv_denoising import tv_denoise_fista
-from TomoCS.projections import back_projection, projection
 from scipy import sparse
+
+from .tv_denoising import tv_denoise_fista
+from .projections import back_projection, projection
 
 # ------------------ Computing energies ---------------------------
 

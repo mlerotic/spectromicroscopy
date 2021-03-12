@@ -37,7 +37,10 @@ read(filename,stack_object,..)  : Loads data from the URL 'filename' into the ob
 """
 from __future__ import print_function
 
-import pkgutil, imp, os, data_stack, numpy, sys
+import pkgutil, imp, os, sys
+import numpy
+from .. import data_stack
+
 verbose = True
 
 # These variables declare the options that each plugin can claim the ability to handle

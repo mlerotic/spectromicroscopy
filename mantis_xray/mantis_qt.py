@@ -46,23 +46,25 @@ from matplotlib import cm
 import pyqtgraph as pg
 import pyqtgraph.exporters
 from lxml import etree
-import data_struct
-import data_stack
-import analyze
-import nnma
-import henke
-import tomo_reconstruction
 
-from helpers import resource_path
-import file_plugins
-from file_plugins import file_xrm
-from file_plugins import file_bim
-from file_plugins import file_dataexch_hdf5
-from file_plugins import file_ncb
-from file_plugins import file_json
-from file_plugins import file_tif
-from file_plugins import file_stk
-from file_plugins import file_csv
+#Internal imports
+from . import data_struct
+from . import data_stack
+from . import analyze
+from . import nnma
+from . import henke
+from . import tomo_reconstruction
+
+from .helpers import resource_path
+from . import file_plugins
+from .file_plugins import file_xrm
+from .file_plugins import file_bim
+from .file_plugins import file_dataexch_hdf5
+from .file_plugins import file_ncb
+from .file_plugins import file_json
+from .file_plugins import file_tif
+from .file_plugins import file_stk
+from .file_plugins import file_csv
 
 
 version = '3.0.03'
@@ -10523,7 +10525,8 @@ class SaveWinP1(QtWidgets.QDialog):
 class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
     def __init__(self, parent, stack):
         QtWidgets.QWidget.__init__(self, parent)
-        uic.loadUi('showhistogram.ui', self)
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        uic.loadUi(os.path.join(dir_path,'showhistogram.ui'), self)
 
         self.HistoWidget.setBackground("w")
         self.I0Widget.setBackground("w")
@@ -13796,7 +13799,8 @@ class PageMap(QtWidgets.QWidget):
     qlistchanged = pyqtSignal([tuple])
     def __init__(self, common, data_struct, stack):
         super(PageMap, self).__init__()
-        uic.loadUi('pagemap.ui', self)
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        uic.loadUi(os.path.join(dir_path,'pagemap.ui'), self)
         self.show()
         # self.setStyleSheet(""" QListWidget:item:selected:active {
         #                                      color:rgb(255, 255, 255);

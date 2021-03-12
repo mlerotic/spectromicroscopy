@@ -22,7 +22,7 @@ import numpy as np
 import scipy as scy
 import netCDF4 
 
-import data_struct
+from mantis_xray import data_struct
 
 
 #----------------------------------------------------------------------    

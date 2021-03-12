@@ -3,7 +3,7 @@ import scipy as sp
 from scipy.integrate import trapz
 import sys, time
 
-import analyze
+from . import analyze
 
 class nnma():
 
