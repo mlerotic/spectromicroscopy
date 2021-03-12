@@ -1,11 +1,12 @@
 import setuptools
+import mantis_xray
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name="mantis-xray", 
-    version="3.0.07",
+    version=mantis_xray.__version__,
     author="Mirna Lerotic",
     author_email="mirna@2ndlookconsulting.com",
     description="MANTiS is a Multivariate ANalysis Tool for x-ray Spectromicroscopy",

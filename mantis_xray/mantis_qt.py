@@ -66,8 +66,7 @@ from .file_plugins import file_tif
 from .file_plugins import file_stk
 from .file_plugins import file_csv
 
-
-version = '3.0.03'
+from .__init__ import __version__ as version
 
 if sys.platform == 'win32':
     Winsizex = 1000
