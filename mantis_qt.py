@@ -29,7 +29,10 @@ import numpy as np
 import getopt
 
 from PyQt5 import QtCore, QtGui, QtWidgets, uic
-from PyQt5.QtCore import Qt, QCoreApplication, pyqtSignal, pyqtSlot, QMutex
+from PyQt5.QtCore import Qt, QCoreApplication, pyqtSignal, pyqtSlot
+
+QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
+QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps, True)
 
 from PIL import Image
 from scipy import ndimage
@@ -37,7 +40,7 @@ from scipy.stats import linregress
 from scipy.interpolate import interp1d
 # from skimage.feature import register_translation ## deprecated
 from skimage.registration import phase_cross_correlation
-from queue import Queue, Empty
+from queue import SimpleQueue, Empty
 import threading
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import (
@@ -12967,30 +12970,19 @@ class GeneralPurposeProcessor(QtCore.QRunnable):
             #print(QtCore.QThreadPool.activeThreadCount())
             try:
                 workerfunc, *args = self.queue.get(False)
-                #print("row: ",type(args[0][0]))
-                #print("queue size3: "+ str(self.queue.qsize()))
-                #itheta = args[0][-1]
-                # args = rest[0][0]
-                #kwargs = rest[1]
                 self.funcdict[workerfunc](*args[0])
                 #print("busy with task {}".format(workerfunc))
             except Empty: # if queue empty
-                #self.running = False
-                #self.signals.blockSignals(True)
-                #self.signals.finished.emit()
                 break
 
     def AlignReferenced(self, data, itheta):
-        #print("align ",data, itheta)
         if self.current_itheta != itheta:
             self.current_itheta = itheta
-            #print("next theta: " + str(itheta))
             self.signals.ithetaprogress.emit(itheta)
         drift_x = [0,0]
         drift_y = [0,0]
         drift, error, _ = phase_cross_correlation(self.Gauss(self.parent.stack.absdata_cropped[:, :, data[0],itheta]),
                                                   self.Gauss(self.parent.stack.absdata_cropped[:, :, data[1],itheta]),upsample_factor=20) ## 20 means 0.05 px precision
-        #self.parent.errorlst[data[0]] = round(error,4)
         self.parent.stack.shiftsdict[itheta]["errors"][data[0]] = round(error,4)
         if data[0] - data[1] > 0:
             drift_x[1] = round(drift[0],2)
@@ -13002,16 +12994,6 @@ class GeneralPurposeProcessor(QtCore.QRunnable):
             drift_y[0] = round(drift[1],2)
             self.parent.stack.shiftsdict[itheta]["xdots"][data[0]]= drift_x[0]
             self.parent.stack.shiftsdict[itheta]["ydots"][data[0]]= drift_y[0]
-        #print(self.parent.stack.shiftsdict)
-        #print(self.parent.xpts, self.parent.ypts)
-        #self.mutex.unlock()
-        #self.signals.newdriftvalue.emit()
-        #self.newdriftvalue.emit()
-
-        # if self.queue.empty():
-        #     print("done")
-            #self.signals.newdriftvalue.emit()
-            #self.signals.driftcalcfinished.emit((errorlst, round(np.mean(errorlst),4)))
 
     def ShiftImg(self, row,x,y,itheta):
         shifted = ndimage.fourier_shift(np.fft.fft2(self.parent.stack.absdata4d[:, :, row,itheta]), [float(-x),float(-y)])
@@ -13024,8 +13006,6 @@ class GeneralPurposeProcessor(QtCore.QRunnable):
         return gaussed
 
 class TaskDispatcher(QtCore.QObject):
-    # finished = pyqtSignal()
-    # progress = pyqtSignal(int)
     def __init__(self,parent):
         print("0 - dispatcher called, pool initiated")
         super(TaskDispatcher, self).__init__()
@@ -13040,7 +13020,7 @@ class TaskDispatcher(QtCore.QObject):
         except:
             cpus = os.cpu_count()
         self.pool.setMaxThreadCount(cpus)
-        self.queue = Queue()
+        self.queue = SimpleQueue()
         self.parent = parent
 
     @pyqtSlot()
@@ -13055,8 +13035,6 @@ class TaskDispatcher(QtCore.QObject):
         while int(self.queue.qsize()) and self.pool.activeThreadCount() < preferred_thread_number: #start as many threads as needed.
             #print("active threads"+str(self.pool.activeThreadCount())+" qsize "+str(int(self.queue.qsize())))
             worker = GeneralPurposeProcessor(self.parent,self.queue)
-            #worker.signals.ithetaprogress.disconnect()
-            #worker.signals.finished.disconnect()
             worker.signals.ithetaprogress.connect(self.parent.IThetaProgress)
             self.pool.start(worker)
             time.sleep(0.02) # artifical delay to start threads with a little time separation. Otherwise ShiftImgs freezes in Win10 and MacOS for small stacks!
@@ -13064,8 +13042,6 @@ class TaskDispatcher(QtCore.QObject):
         print("2 - all threads dead")
         worker.signals.finished.connect(self.parent.ThreadPoolComplete)
         worker.signals.finished.emit()
-        #worker.signals.ithetaprogress.disconnect()
-        #worker.signals.finished.disconnect()
     #add a task to the queue
     def enqueuetask(self, func, *args, **kargs):
         self.queue.put((func, args, kargs))
@@ -13236,13 +13212,9 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtGui.QGraphicsScene):
         if min_idx <= idx <= max_idx :
             mask1[idx] = not np.logical_or(mask1[idx],mask2[idx])
             mask2[idx] = mask1[idx]
-            #if self.aligned:
-            #    self.OnPostFiltering()
-            #self.CropStack4D()
             self.ColorizeScatterDots()
             self.OnScrollEng(points[0].index())
             if self.aligned:
-                #print("ComposeShiftQueue" + selectscatter[obj][0])
                 self.ComposeShiftQueue()
     def OnAligned(self):
         self.aligned = True
@@ -13266,10 +13238,6 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtGui.QGraphicsScene):
         print("makenewscatte")
         errorthreshold = self.stack.shiftsdict[self.itheta]["threshold"]
         errors = self.stack.shiftsdict[self.itheta]["errors"]
-        # if not errorthreshold:
-        #     errorthreshold = round(np.mean(errors), 4)
-        #     self.stack.shiftsdict[self.itheta]["threshold"] = errorthreshold
-        #     self.errormean = errorthreshold.copy()
         self.MaskScatterDotsAboveErrorThreshold((errors,errorthreshold,self.itheta))
         maskedx = self.MaskedScatterDotsArray(self.xregion)
         maskedy = self.MaskedScatterDotsArray(self.yregion)
@@ -13328,11 +13296,7 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.yscatter.setBrush(brushesy,update=True)
 
     def MaskScatterDotsAboveErrorThreshold(self, errorvals=None):
-        #print("maskscatterdotsabove")
         errors, errorthreshold, itheta = errorvals
-        # self.spinBoxError.blockSignals(True)
-        # self.spinBoxError.setValue(errorthreshold)
-        # self.spinBoxError.blockSignals(False)
         if self.cb_autoerror.isChecked():
             self.stack.shiftsdict[itheta]["errormaskedx"] = (errors > np.float64(errorthreshold))
             self.stack.shiftsdict[itheta]["errormaskedy"] = (errors > np.float64(errorthreshold))
@@ -13357,12 +13321,7 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.cb_extrapolate.blockSignals(True)
         self.comboBox_approx.blockSignals(True)
         self.spinBoxFiltersize.blockSignals(True)
-        #self.spinBoxError.blockSignals(True)
-        # errors = self.stack.shiftsdict[self.itheta]["errors"]
-        # errorthreshold = self.stack.shiftsdict[itheta]["threshold"]
-        # if not errorthreshold:
-        #     errorthreshold = round(np.mean(errors), 4)
-        #self.spinBoxError.setValue(errorthreshold)
+
         self.xregion.setRegion(self.stack.shiftsdict[itheta]["regionlimitx"])
         self.yregion.setRegion(self.stack.shiftsdict[itheta]["regionlimity"])
         self.cb_autoerror.setChecked(self.stack.shiftsdict[itheta]["autoquality"])
@@ -13436,10 +13395,6 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtGui.QGraphicsScene):
             self.spinBoxFiltersize.setEnabled(False)
             reg = linregress([xdata,ydata])
             approximated = [reg.slope * i + reg.intercept for i in xdata]
-        # elif self.comboBox_approx.currentIndex() == 2: # deprecated because moving average with bin size = 1 is equivalent.
-        #     self.spinBoxFiltersize.setEnabled(False)
-        #     fit.setData(x=[], y=[])
-        #     return
 
         if self.cb_extrapolate.isChecked():
             fillval= "extrapolate"
@@ -13462,9 +13417,6 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.pool = TaskDispatcher(self)
         self.pool.moveToThread(self.poolthread) # GUI is not blocking during calculation due to this
         self.poolthread.started.connect(self.pool.run)
-        #self.pool.pool.signals.finished.connect(self.OnAligned)
-        #self.pool.worker.signals.finished.connect(self.parent.ThreadPoolComplete)
-        #self.pool.worker.signals.finished.connect(self.OnAutoCrop)
 
     def IThetaProgress(self,itheta):
         #print("ithetaprogress")
@@ -13479,63 +13431,41 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtGui.QGraphicsScene):
         #print(str(self.pool.pool.activeThreadCount())+" THREADS REMAINING FROM POOL.")
         #self.slider_theta.setValue(0)
         if not self.aligned and self.pool.pool.activeThreadCount() == 0:
-            #print("onaligned")
             self.OnAligned()
 
         elif self.aligned and self.pool.pool.activeThreadCount() == 0:
-            #print("onautocrop")
             self.OnAutoCrop()
 
     def ComposeAlignQueue(self):
         self.button_align.setEnabled(False)
         ref_idx = self.iev
-        #self.InitShiftsDict()
         # Reset reference img:
         self.resetPoolThread()
 
-        if self.rB_referenced.isChecked(): # Make queue with pairs relative to reference image
-            itheta = 0
-            ntheta = max(self.stack.n_theta,1) # necessary work around for 3d stacks and if 4d stack is loaded with LoadStack()
-            while itheta < ntheta:
-                idx = copy.copy(self.stack.n_ev)
-                while idx: # Generate pairs of indices starting at reference image index.
-                    running = 2
-                    if (ref_idx + (self.stack.n_ev-idx)) < self.stack.n_ev-1:
-                        self.pool.enqueuetask("AlignReferenced", (ref_idx + (self.stack.n_ev-idx) + 1, ref_idx), itheta)
-                        #q.put((ref_idx + (self.stack.n_ev-idx) + 1, ref_idx))
-                    else:
-                        running -= 1
-                    if ref_idx - (self.stack.n_ev-idx) > 0:
-                        self.pool.enqueuetask("AlignReferenced", (ref_idx - (self.stack.n_ev-idx) - 1, ref_idx), itheta)
-                        #q.put(((ref_idx - (self.stack.n_ev-idx) - 1),ref_idx))
-                    else:
-                        running -= 1
-                    if running:
-                        idx -= 1
-                    else:
-                        break
-                itheta = itheta + 1
+        itheta = 0
+        ntheta = max(self.stack.n_theta,1) # necessary work around for 3d stacks and if 4d stack is loaded with LoadStack()
+        while itheta < ntheta:
+            idx = copy.copy(self.stack.n_ev)
+            while idx: # Generate pairs of indices starting at reference image index.
+                running = 2
+                if (ref_idx + (self.stack.n_ev-idx)) < self.stack.n_ev-1:
+                    self.pool.enqueuetask("AlignReferenced", (ref_idx + (self.stack.n_ev-idx) + 1, ref_idx), itheta)
+                    #q.put((ref_idx + (self.stack.n_ev-idx) + 1, ref_idx))
+                else:
+                    running -= 1
+                if ref_idx - (self.stack.n_ev-idx) > 0:
+                    self.pool.enqueuetask("AlignReferenced", (ref_idx - (self.stack.n_ev-idx) - 1, ref_idx), itheta)
+                    #q.put(((ref_idx - (self.stack.n_ev-idx) - 1),ref_idx))
+                else:
+                    running -= 1
+                if running:
+                    idx -= 1
+                else:
+                    break
+            itheta = itheta + 1
         if not self.pool.queue.empty():
             print("total alignqueue composed. starting poolthread")
             self.poolthread.start()
-        # Compose consecutive image queue. Currently disabled, probably no use case.
-        # # if self.rB_consecutive.isChecked(): 
-        # #     while idx: # Generate pairs of indices starting at reference image index.
-        # #         running = 2
-        # #         if (ref_idx + (self.stack.n_ev-idx)) < self.stack.n_ev-1:
-        # #             q.put((ref_idx + (self.stack.n_ev-idx) + 1, ref_idx + (self.stack.n_ev-idx)))
-        # #         else:
-        # #             running -= 1
-        # #         if ref_idx - (self.stack.n_ev-idx) > 0:
-        # #             q.put(((ref_idx - (self.stack.n_ev-idx) - 1),(ref_idx - (self.stack.n_ev-idx))))
-        # #         else:
-        # #             running -= 1
-        # #         if running:
-        # #             idx -= 1
-        # #         else:
-        # #             break
-        # #     self.thread.started.connect(self.worker.runConsecutive)
-        # #     self.thread.start()
         
     def ComposeShiftQueue(self, init=False):
         print("composeshift initial?",str(init))
@@ -13576,12 +13506,12 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtGui.QGraphicsScene):
     # ----------------------------------------------------------------------
     def OnAutoCrop(self):
         if self.aligned:
-            self.button_align.setEnabled(True)
-            self.button_ok.setEnabled(True)
             self.cb_autocrop.blockSignals(True)
             self.CropStack4D()
             self.cb_autocrop.blockSignals(False)
             self.OnScrollEng(self.iev)
+            self.button_align.setEnabled(True)
+            self.button_ok.setEnabled(True)
 
     def CropStack4D(self):
         self.stack.absdata4d_shifted_cropped = self.stack.absdata4d_shifted.copy()
@@ -13679,11 +13609,10 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtGui.QGraphicsScene):
     def ClearShifts(self):
         self.aligned = False
         self.cb_autoerror.stateChanged.disconnect()
-        self.button_align.setEnabled(True)
-        # self.stack.shifts =[]
         self.fit_x.hide()
         self.fit_y.hide()
         self.InitShiftsDict()
+        self.button_align.setEnabled(True)
         self.MakeNewScatterPlots()
     def OnResetROI(self):
         self.ClearShifts()
@@ -15025,6 +14954,7 @@ class PageLoadData(QtWidgets.QWidget):
 
         self.pb_rotate.clicked.connect(self.OnRotate)
         self.pb_mirror.clicked.connect(self.OnMirror)
+        self.pb_copy.clicked.connect(self.OnCopy)
         self.pglayout = pg.GraphicsLayout(border=None)
         self.canvas.setBackground("w") # canvas is a pg.GraphicsView widget
         self.canvas.setCentralWidget(self.pglayout)
@@ -15086,16 +15016,19 @@ class PageLoadData(QtWidgets.QWidget):
         self.tc_file.setText('File name')
 
         self.tc_path.setText('D:/')
-        #todo: repair 4D stack
         self.slider_theta.setVisible(False)
-        # self.tc_imagetheta.setText("4D Data Angle: ")
 
     def Clear(self):
         self.p1.clear()
+
     def LoadEntries(self): # Called when fresh data are loaded.
         self.p1.addItem(self.i_item)
         self.OnScrollEng(0) # Plot first image & set Scrollbar
         self.OnMetricScale(self.MetricCheckBox.isChecked(), True, False)
+
+    def keyPressEvent(self, e):
+        if e.key() == 67 and (e.modifiers() & QtCore.Qt.ControlModifier):
+            self.OnCopy()
 
     def OnMetricScale(self, setmetric= True, zeroorigin= True, square= False):
         if self.com.stack_loaded == 1:
@@ -15140,6 +15073,12 @@ class PageLoadData(QtWidgets.QWidget):
 
     def calcBinSize(self,i,N):
         return int(round(256*(i+1)/N) - round(256*i/N))
+
+    def OnCopy(self):
+        self.exp = pg.exporters.ImageExporter(self.pglayout)
+        self.exp.export(copy=True)
+        return
+
     def OnMirror(self):
         if self.com.stack_loaded == 1:
             if self.com.stack_4d == 1:
@@ -15311,6 +15250,7 @@ class PageMap(QtWidgets.QWidget):
 
         self.pbExpData.clicked.connect(self.OnSaveData)
         self.pbExpImg.clicked.connect(self.OnSaveImage)
+        self.pbCopy.clicked.connect(self.OnCopy)
 
         self.MetricCheckBox.toggled.connect(lambda: self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
         self.ZeroOriginCheckBox.toggled.connect(lambda: self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
@@ -15496,7 +15436,7 @@ class PageMap(QtWidgets.QWidget):
 
         else:
             self.pbClrSel.setEnabled(True)
-            self.InfWarning = False
+            #self.InfWarning = False
             self.ShowMap(self.prelst,self.postlst)
             # self.OnScrollEng(self.MapSelectWidget1.currentRow())
             self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),
@@ -15529,6 +15469,10 @@ class PageMap(QtWidgets.QWidget):
             img1.save(fileName)
         if ext == 'txt':
             np.savetxt(fileName, np.rot90(self.OD), delimiter='\t', newline='\n',fmt='%.5f')
+    def OnCopy(self):
+        self.exp = pg.exporters.ImageExporter(self.pglayout)
+        self.exp.export(copy=True)
+        return
     def OnSaveImage(self, event):
         # Save Image
         wildcard = "TIFF (*.tif);;PNG (*.png);;JPG (*.jpg);;SVG (*.svg);;"
@@ -15699,6 +15643,8 @@ class PageMap(QtWidgets.QWidget):
             noshift = False
         else:
             noshift = True
+        if e.key() == 67 and (e.modifiers() & QtCore.Qt.ControlModifier):
+            self.OnCopy()
         if e.key() == Qt.Key_Up or (e.key() == QtCore.Qt.Key_8):
             if noshift:
                 self.pbUU.click()
@@ -15939,9 +15885,9 @@ class PageMap(QtWidgets.QWidget):
         inf_idx = np.where(np.isinf(OD))
         nan_idx = np.where(np.isnan(OD))
         if np.any(inf_idx) or np.any(nan_idx):
-            if not self.InfWarning:
-                self.InfWarning = True
-                QtGui.QMessageBox.warning(self, 'Warning!', "The OD map contained infinite or nan values. Please note that they have been zeroed.")
+            #if not self.InfWarning:
+            #    self.InfWarning = True
+            #    QtGui.QMessageBox.warning(self, 'Warning!', "The OD map contained infinite or nan values. Please note that they have been zeroed.")
             OD[inf_idx] = 0 #infinite values get replaced by zero. This is an ugly work around, but with nans the image is not displayed correctly.
             OD[nan_idx] = 0
         return OD
@@ -17228,7 +17174,7 @@ class MainFrame(QtWidgets.QMainWindow):
 def main():
 
     app = QtWidgets.QApplication(sys.argv)
-    print('main', threading.get_ident())
+    #print('main', threading.get_ident())
     with open(qsspath, "r") as stylesheet:
         app.setStyleSheet(stylesheet.read())
     frame = MainFrame()
