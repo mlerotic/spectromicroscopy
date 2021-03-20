@@ -74,7 +74,7 @@ from file_plugins import file_stk
 from file_plugins import file_csv
 
 
-version = '3.0.03'
+version = '3.0.12'
 ## Global Stylesheet
 qsspath = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'stylesheet_global.qss')
 
@@ -1651,6 +1651,7 @@ class File_GUI():
         self.last_filter = dict([a,dict([t,0] for t in file_plugins.data_types)] for a in file_plugins.actions)
         self.supported_filters = file_plugins.supported_filters
         self.filter_list = file_plugins.filter_list
+        self.option_write_json = True
         #print(self.filter_list)
 
     def SelectFile(self,action,data_type):
@@ -1685,7 +1686,7 @@ class File_GUI():
 #----------------------------------------------------------------------
     class DataChoiceDialog(QtWidgets.QDialog):
 
-        def __init__(self,filepath=None,filestruct=None):
+        def __init__(self,filepath=None,filestruct=None,plugin=None):
             super(File_GUI.DataChoiceDialog, self).__init__()
             self.filepath = filepath
             self.selection = None
@@ -1721,7 +1722,9 @@ class File_GUI():
             self.jsoncheck = QtWidgets.QCheckBox("Write Data Structure to JSON-file (for .HDR only!)")
             self.jsoncheck.clicked.connect(self.setChecked)
             hbox4.addWidget(self.jsoncheck)
-            self.jsoncheck.setChecked(True)
+            self.jsoncheck.setChecked(File_GUI.option_write_json)
+            if plugin.title not in ['SDF']:
+                self.jsoncheck.hide()
             hbox4.addStretch(1)
             self.button_ok = QtWidgets.QPushButton('Accept')
             self.button_ok.clicked.connect(self.OnAccept)
@@ -1749,6 +1752,7 @@ class File_GUI():
                 self.Entry_info.UpdateInfo(self.contents)
 
         def setChecked(self,value=True):
+            File_GUI.option_write_json = value
             self.jsoncheck.setChecked(value)
 
         def OnAccept(self):
@@ -16560,7 +16564,7 @@ class MainFrame(QtWidgets.QMainWindow):
             FileStruct = file_plugins.GetFileStructure(filepath, plugin=plugin)
             FileInternalSelection = [(0,0)]
             if FileStruct is not None:
-                dlg = File_GUI.DataChoiceDialog(filepath=filepath, filestruct=FileStruct)
+                dlg = File_GUI.DataChoiceDialog(filepath=filepath, filestruct=FileStruct, plugin=plugin)
                 if not dlg.exec_():
                     return # do nothing if GUI is cancelled
                 FileInternalSelection = dlg.selection

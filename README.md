@@ -11,7 +11,10 @@ not only reduce the time needed but also can uncover hidden trends in the data.
 ## Download ##
 Mantis package and binaries can be downloaded from 
 [spectromicroscopy.com](http://spectromicroscopy.com).
+Alternatively, you can install [Python](https://www.python.org/downloads/) and then run the command: `python3 -m pip install mantis-xray`
 
+## Run ##
+Installation via pip provides the `mantis-xray` command to start the Mantis GUI.
 ## User Guide ##
 Mantis User Guide can be found on the project Wiki pages [Home](https://github.com/mlerotic/spectromicroscopy/wiki).
 
