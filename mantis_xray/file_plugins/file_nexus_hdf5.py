@@ -61,7 +61,10 @@ def read(FileName,stack_object,selection=(0,0), *args, **kwargs):
     stack_object.n_ev = len(stack_object.ev)
     if 'axes' in list(F[entry][detector].attrs): # Specification correct
         axes_list = [item.decode('UTF-8') for item in F[entry][detector].attrs['axes']]
-        axes_order = [axes_list.index('sample_x'),axes_list.index('sample_y'),axes_list.index('energy')]
+        if 'line_position' in axes_list:
+            axes_order = [axes_list.index('line_position'),axes_list.index('line_position'),axes_list.index('energy')] #linescan
+        else:
+            axes_order = [axes_list.index('sample_x'),axes_list.index('sample_y'),axes_list.index('energy')] #stack or image
     else: # Old version from before the specification was finalised
         if 'energy' in list(F[entry][detector]):
             try:
@@ -73,11 +76,14 @@ def read(FileName,stack_object,selection=(0,0), *args, **kwargs):
         else:
             print("Can't find photon energy!")
         axes_order = [F[entry][detector]['sample_x'].attrs['axis']-1,F[entry][detector]['sample_y'].attrs['axis']-1,energy_axis-1]
+    signal_name = 'data'
     if 'signal' in list(F[entry][detector].attrs):
-        signal_name = F[entry][detector].attrs['signal']
-        stack_object.absdata = numpy.transpose(numpy.array(F[entry][detector][signal_name]),axes=axes_order)
+        signal_name = F[entry][detector].attrs['signal'].decode("utf-8")
+    if axes_order[0] == axes_order[1]: #i.e. if linescan
+        temp = numpy.transpose(numpy.array(F[entry][detector][signal_name]),axes=axes_order[1:])
+        stack_object.absdata = numpy.tile(temp,(temp.shape[0],1,1))
     else:
-        stack_object.absdata = numpy.transpose(numpy.array(F[entry][detector]['data']),axes=axes_order)
+        stack_object.absdata = numpy.transpose(numpy.array(F[entry][detector][signal_name]),axes=axes_order)
 
 
     F.close()
@@ -106,14 +112,14 @@ def GetFileStructure(FileName):
             if len(D[entry].norm_data) == 0:
                 D[entry].norm_data = None
             if 'definition' in list(F[entry]):
-                D[entry].definition = F[entry]['definition'][0]
+                D[entry].definition = F[entry]['definition'][0].decode("utf-8")
             if len(D[entry].keys()) > 0:
                 channel_zero = list(D[entry].keys())[0]
                 if 'stxm_scan_type' in list(F[entry][channel_zero]):
-                    D[entry].scan_type = F[entry][channel_zero]['stxm_scan_type'][0]
+                    D[entry].scan_type = F[entry][channel_zero]['stxm_scan_type'][0].decode("utf-8")
                 signal_name = 'data'
                 if 'signal' in list(F[entry][channel_zero].attrs):
-                    signal_name = F[entry][channel_zero].attrs['signal']
+                    signal_name = F[entry][channel_zero].attrs['signal'].decode("utf-8")
                 if signal_name in list(F[entry][channel_zero]):
                     D[entry].data_shape = F[entry][channel_zero][signal_name].shape
                 if 'axes' in list(F[entry][channel_zero].attrs):

@@ -24,7 +24,7 @@ import numpy as np
 from scipy import sparse
 from scipy import ndimage
 from scipy import fftpack
-from TomoCS._rank_order import rank_order
+from ._rank_order import rank_order
 
 # --------------- Tomo projection operator  --------------------
 

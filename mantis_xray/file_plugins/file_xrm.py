@@ -22,7 +22,7 @@ import scipy as scy
 import struct
 import os
             
-import data_struct as ds
+from mantis_xray import data_struct as ds
 
 title = 'XRM'
 extension = ['*.xrm','*.txrm']

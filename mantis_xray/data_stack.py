@@ -27,13 +27,13 @@ import h5py
 import datetime
 import os
 
-from file_plugins import file_stk
-from file_plugins import file_sdf
-from file_plugins import file_xrm
-from file_plugins import file_ncb
-from file_plugins import file_dataexch_hdf5
+from .file_plugins import file_stk
+from .file_plugins import file_sdf
+from .file_plugins import file_xrm
+from .file_plugins import file_ncb
+from .file_plugins import file_dataexch_hdf5
 
-import data_struct
+from . import data_struct
 
 
 # ----------------------------------------------------------------------

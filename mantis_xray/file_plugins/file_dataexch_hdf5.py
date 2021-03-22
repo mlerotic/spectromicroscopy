@@ -27,8 +27,7 @@ import os
 import numpy as np
 import h5py
 
-import data_struct
-import data_stack
+from mantis_xray import data_struct
 verbose = 0
 
 title = 'Exchange'
@@ -61,7 +60,7 @@ def GetFileStructure(FileName):
 
 
 #----------------------------------------------------------------------
-def read(filename, self, selection=None, *args, **kwargs):
+def read(filename, stack_object, selection=None, *args, **kwargs):
     """ToDo: .attrs returns a list in py2 and a set in py3! .attrs and .keys() need to be wrapped in list()"""
     have4d = 0
 
@@ -76,7 +75,7 @@ def read(filename, self, selection=None, *args, **kwargs):
     ds = f['version']
     data_struct.version = ds[...]
 
-    self.have_dimscale = 0
+    stack_object.have_dimscale = 0
 
     #Information HDF5 group
     if 'information' in f:
@@ -320,7 +319,7 @@ def read(filename, self, selection=None, *args, **kwargs):
                 if 'x' in exchangeGrp:
                     dsx = exchangeGrp['x']
                     data_struct.exchange.x = dsx[...]
-                    self.have_dimscale = 1
+                    data_struct.have_dimscale = 1
                 if 'y' in exchangeGrp:
                     dsy = exchangeGrp['y']
                     data_struct.exchange.y = dsy[...]
@@ -328,7 +327,7 @@ def read(filename, self, selection=None, *args, **kwargs):
 #                 if 'x' in detectorGrp:
 #                     dsx = detectorGrp['x']
 #                     data_struct.exchange.x = dsx[...]
-#                     self.have_dimscale = 1
+#                     stack_object.have_dimscale = 1
 #
 #                 if 'y' in detectorGrp:
 #                     dsy = detectorGrp['y']
@@ -363,7 +362,7 @@ def read(filename, self, selection=None, *args, **kwargs):
                         data_struct.exchange.x = ax[...]
                         if 'units' in ax.attrs:
                             data_struct.exchange.x_units = ax.attrs['units']
-                        self.have_dimscale = 1
+                        stack_object.have_dimscale = 1
                     if i == 'y':
                         data_struct.exchange.y = ax[...]
                         if 'units' in ax.attrs:
@@ -409,7 +408,7 @@ def read(filename, self, selection=None, *args, **kwargs):
 
 #         if 'optical_density' in spectromicroscopyGrp:
 #             od = spectromicroscopyGrp['optical_density']
-#             self.data_struct.spectromicroscopy.optical_density = od[...]
+#             stack_object.data_struct.spectromicroscopy.optical_density = od[...]
 
 
 
@@ -433,76 +432,77 @@ def read(filename, self, selection=None, *args, **kwargs):
     f.close()
 
     if have4d == 0:
-        self.absdata = data_struct.exchange.data
+        stack_object.absdata = data_struct.exchange.data
 
 
     else:
-        self.stack4D = data_struct.exchange.data
-        self.theta = data_struct.exchange.theta
-        self.n_theta = len(self.theta)
-        self.absdata = self.stack4D[:,:,:,0]
+        stack_object.stack4D = data_struct.exchange.data
+        stack_object.theta = data_struct.exchange.theta
+        stack_object.n_theta = len(stack_object.theta)
+        stack_object.absdata = stack_object.stack4D[:,:,:,0]
 
 
-    datadim = np.int32(self.absdata.shape)
+    datadim = np.int32(stack_object.absdata.shape)
 
 
-    self.n_cols = datadim[0].copy()
-    self.n_rows =  datadim[1].copy()
-    self.ev = data_struct.exchange.energy
+    stack_object.n_cols = datadim[0].copy()
+    stack_object.n_rows =  datadim[1].copy()
+    stack_object.ev = data_struct.exchange.energy
 
-    self.n_ev = np.int32(self.ev.shape[0]).copy()
+    stack_object.n_ev = np.int32(stack_object.ev.shape[0]).copy()
 
-    npixels = self.n_cols*self.n_rows*self.n_ev
+    npixels = stack_object.n_cols*stack_object.n_rows*stack_object.n_ev
 
 
     #Check if the energies are consecutive, if they are not sort the data
     consec = 0
-    for i in range(self.n_ev - 1):
-        if self.ev[i] > self.ev[i+1]:
+    for i in range(stack_object.n_ev - 1):
+        if stack_object.ev[i] > stack_object.ev[i+1]:
             consec = 1
             break
     if (consec == 1) and (have4d == 0):
         if verbose == 1: print("sort the energy data")
-        sortind = np.argsort(self.ev)
-        self.ev = self.ev[sortind]
-        self.absdata = self.absdata[:,:,sortind]
+        sortind = np.argsort(stack_object.ev)
+        stack_object.ev = stack_object.ev[sortind]
+        stack_object.absdata = stack_object.absdata[:,:,sortind]
         #Save sorted energies:
-        self.data_struct.exchange.data = self.absdata
-        self.data_struct.exchange.energy = self.ev
+        stack_object.data_struct.exchange.data = stack_object.absdata
+        stack_object.data_struct.exchange.energy = stack_object.ev
 
 
-    if self.have_dimscale == 1:
-        self.x_dist = data_struct.exchange.x
-        self.y_dist = data_struct.exchange.y
+    if stack_object.have_dimscale == 1:
+        stack_object.x_dist = data_struct.exchange.x
+        stack_object.y_dist = data_struct.exchange.y
     else:
-        self.x_dist = [*range(self.n_cols)]
-        self.y_dist = [*range(self.n_rows)]
-
-    self.i0data = data_struct.spectromicroscopy.normalization.white_spectrum
-    self.evi0 = data_struct.spectromicroscopy.normalization.white_spectrum_energy
-
-    self.data_dwell = np.ones((self.n_ev))
-    self.i0_dwell = np.ones((self.n_ev))
+        stack_object.x_dist = range(stack_object.n_cols)
+        stack_object.y_dist = range(stack_object.n_rows)
 
 
-    if self.data_struct.spectromicroscopy.normalization.white_spectrum is not None:
-        self.calculate_optical_density()
-        self.fill_h5_struct_normalization()
+    stack_object.i0data = data_struct.spectromicroscopy.normalization.white_spectrum
+    stack_object.evi0 = data_struct.spectromicroscopy.normalization.white_spectrum_energy
+
+    stack_object.data_dwell = np.ones((stack_object.n_ev))
+    stack_object.i0_dwell = np.ones((stack_object.n_ev))
+
+
+    if stack_object.data_struct.spectromicroscopy.normalization.white_spectrum is not None:
+        stack_object.calculate_optical_density()
+        stack_object.fill_h5_struct_normalization()
 
 
     if verbose == 1:
         print('filename ', filename)
         #print 'File creation date ', data_struct.file_creation_datetime
-        print('Data array shape: ', self.absdata.shape)
-        print('n columns ', self.n_cols)
-        print('n_rows ', self.n_rows)
-        print('n_ev ', self.n_ev)
-        print('ev array ', self.ev)
-        print('x dist ', self.x_dist)
-        print('y_dist ', self.y_dist)
+        print('Data array shape: ', stack_object.absdata.shape)
+        print('n columns ', stack_object.n_cols)
+        print('n_rows ', stack_object.n_rows)
+        print('n_ev ', stack_object.n_ev)
+        print('ev array ', stack_object.ev)
+        print('x dist ', stack_object.x_dist)
+        print('y_dist ', stack_object.y_dist)
         #print 'type ', type
-        #print 'i0 data ', self.i0data
-        #print 'evi0 ', self.evi0
+        #print 'i0 data ', stack_object.i0data
+        #print 'evi0 ', stack_object.evi0
 
 
     return
