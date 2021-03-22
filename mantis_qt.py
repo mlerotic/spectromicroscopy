@@ -15086,10 +15086,24 @@ class PageLoadData(QtWidgets.QWidget):
     def OnMirror(self):
         if self.com.stack_loaded == 1:
             if self.com.stack_4d == 1:
-                self.stk.stack4D = np.flip(self.stk.stack4D,axis=0)
+                self.stk.stack4D = np.flip(self.stk.stack4D, axis=0)
                 self.stk.absdata = self.stk.stack4D[:, :, :, self.itheta].copy()
             else:
                 self.stk.absdata = np.flip(self.stk.absdata, axis=0)
+
+            if self.com.i0_loaded:
+                if self.com.stack_4d:
+                    self.stk.od4D = np.flip(self.stk.od4D, axis=0)
+                else:
+                    self.stk.od3d = np.flip(self.stk.od3d, axis=0)
+                    self.stk.od = self.stk.od3d.copy()
+                    self.stk.od = np.reshape(self.stk.od, (self.stk.n_rows * self.stk.n_cols, self.stk.n_ev),
+                                           order='F')
+
+            self.stk.fill_h5_struct_from_stk()
+            if self.com.i0_loaded == 1:
+                self.stk.fill_h5_struct_normalization()
+
             self.OnScrollEng(self.iev)
             # Update/Refresh widgets:
             if showmaptab:
@@ -15101,15 +15115,30 @@ class PageLoadData(QtWidgets.QWidget):
     def OnRotate(self):
         if self.com.stack_loaded == 1:
             if self.com.stack_4d == 1:
-                self.stk.stack4D = np.rot90(self.stk.stack4D,3)
+                self.stk.stack4D = np.rot90(self.stk.stack4D, 3)
                 self.stk.absdata = self.stk.stack4D[:, :, :, self.itheta].copy()
             else:
-                self.stk.absdata = np.rot90(self.stk.absdata,3)
+                self.stk.absdata = np.rot90(self.stk.absdata, 3)
+
             # Swap x/y constants:
             self.stk.n_cols, self.stk.n_rows = self.stk.n_rows, self.stk.n_cols
             self.stk.x_pxsize, self.stk.y_pxsize = self.stk.y_pxsize, self.stk.x_pxsize
             self.stk.x_start, self.stk.y_start = self.stk.y_start, self.stk.x_start
             self.stk.x_dist, self.stk.y_dist = self.stk.y_dist, self.stk.x_dist
+
+            if self.com.i0_loaded:
+                if self.com.stack_4d:
+                    self.stk.od4D = np.rot90(self.stk.od4D, 3)
+                else:
+                    self.stk.od3d =  np.rot90(self.stk.od3d, 3)
+                    self.stk.od = self.stk.od3d.copy()
+                    self.stk.od = np.reshape(self.stk.od, (self.stk.n_rows * self.stk.n_cols, self.stk.n_ev),
+                                           order='F')
+
+            self.stk.fill_h5_struct_from_stk()
+            if self.com.i0_loaded == 1:
+                self.stk.fill_h5_struct_normalization()
+
             # Update/Refresh widgets:
             self.OnScrollEng(self.iev)
             self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked())
