@@ -16,7 +16,15 @@ MANTiS presents the user with a sequence of panels to guide the analysis workflo
 ----
 
 ## Installation
-Mantis python source code can be downloaded from http://spectromicroscopy.com/. Alternatively, a local copy of the spectromicroscopy Git repository can be made with this command:
+Mantis is available via PyPi as [mantis-xray](https://pypi.org/project/mantis-xray/)! To install (with Python 3) run from a terminal:
+```
+pip install mantis-xray
+```
+Then to start Mantis run
+```
+python3 -m mantis-xray
+```
+Alternatively, a local copy of the spectromicroscopy Git repository can be made with this command:
 ```
 git clone https://github.com/mlerotic/spectromicroscopy.git
 ```
@@ -37,7 +45,7 @@ Python 2.7 with PyQt4 version of Mantis is still available on Github as a separa
 We recommend using pip [Python Packaging](https://packaging.python.org/tutorials/installing-packages/) to install required libraries. Alternatively, [Anaconda Python](http://docs.continuum.io/anaconda/)  includes all the required libraries in compatible versions. Enthought Python Distribution [EPD](http://www.enthought.com/products/epd.php) is another option.
 
 ## Download
-Alternatively, Mantis executables can be downloaded at http://spectromicroscopy.com/. Executables can be used without Python installation and are available for many operating systems. 
+Alternatively, old versions of Mantis executables can be downloaded at http://spectromicroscopy.com/. Executables can be used without Python installation and are available for many operating systems. 
 
 
 ## Processing your data
