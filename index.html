@@ -24,6 +24,10 @@
         <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
             <div class="container">
                 <a class="navbar-brand" href=".">Mantis Docs</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
 
                 <!-- Expanded navigation -->
                 <div id="navbar-collapse" class="navbar-collapse collapse">
@@ -34,6 +38,9 @@
                                 <i class="fa fa-search"></i> Search
                             </a>
                         </li>
+                            <li class="nav-item">
+                                <a href="https://github.com/mlerotic/spectromicroscopy/edit/master/docs/index.md" class="nav-link"><i class="fa fa-github"></i> Edit on GitHub</a>
+                            </li>
                     </ul>
                 </div>
             </div>
@@ -115,7 +122,13 @@
 <p><strong>Figure 0</strong> Workflow Schematic</p>
 <hr />
 <h2 id="installation">Installation</h2>
-<p>Mantis python source code can be downloaded from http://spectromicroscopy.com/. Alternatively, a local copy of the spectromicroscopy Git repository can be made with this command:</p>
+<p>Mantis is available via PyPi as <a href="https://pypi.org/project/mantis-xray/">mantis-xray</a>! To install (with Python 3) run from a terminal:</p>
+<pre><code>pip install mantis-xray
+</code></pre>
+<p>Then to start Mantis run</p>
+<pre><code>python3 -m mantis-xray
+</code></pre>
+<p>Alternatively, a local copy of the spectromicroscopy Git repository can be made with this command:</p>
 <pre><code>git clone https://github.com/mlerotic/spectromicroscopy.git
 </code></pre>
 <p>The program requires Python 3 and following dependencies:</p>
@@ -132,7 +145,7 @@
 <p>Python 2.7 with PyQt4 version of Mantis is still available on Github as a separate branch and <a href="https://github.com/mlerotic/spectromicroscopy/releases/tag/2.3.02">binaries</a> but it will not be updated with new features. The user guide for 2.3. Mantis version can be dowloaded <a href="https://github.com/mlerotic/spectromicroscopy/files/5944025/UserGuide_2.3.02.pdf">here</a>.</p>
 <p>We recommend using pip <a href="https://packaging.python.org/tutorials/installing-packages/">Python Packaging</a> to install required libraries. Alternatively, <a href="http://docs.continuum.io/anaconda/">Anaconda Python</a>  includes all the required libraries in compatible versions. Enthought Python Distribution <a href="http://www.enthought.com/products/epd.php">EPD</a> is another option.</p>
 <h2 id="download">Download</h2>
-<p>Alternatively, Mantis executables can be downloaded at http://spectromicroscopy.com/. Executables can be used without Python installation and are available for many operating systems. </p>
+<p>Alternatively, old versions of Mantis executables can be downloaded at http://spectromicroscopy.com/. Executables can be used without Python installation and are available for many operating systems. </p>
 <h2 id="processing-your-data">Processing your data</h2>
 <p>To carry out your analysis via PCA and clustering (see the above figure), you need to go through the following steps:</p>
 <ol>
@@ -402,5 +415,5 @@ You can adjust the contrast of the image by playing with Minimum, Maximum, and G
 
 <!--
 MkDocs version : 1.1.2
-Build Date UTC : 2021-02-08 14:21:59.456915+00:00
+Build Date UTC : 2021-04-02 13:59:17.976988+00:00
 -->
