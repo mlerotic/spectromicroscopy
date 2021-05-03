@@ -13771,7 +13771,7 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.close()
 
 #----------------------------------------------------------------------
-class SpectralImageMap(QtWidgets.QDialog, QtGui.QGraphicsScene):
+class SpectralImageMap(QtWidgets.QDialog):
     #evlistchanged = pyqtSignal([object])
     #thetalistchanged = pyqtSignal([object])
     def __init__(self, parent, common, stack):
@@ -13916,7 +13916,7 @@ class SpectralImageMap(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.region_i0 = pg.LinearRegionItem(brush=QtGui.QColor('#88beaed4'),hoverBrush=QtGui.QColor('#ccbeaed4'), bounds=[np.min(x), np.max(x)])
         self.region_i0.setZValue(10)
         self.region_i = pg.LinearRegionItem(brush=QtGui.QColor('#887fc97f'),hoverBrush=QtGui.QColor('#cc7fc97f'), bounds=[np.min(x), np.max(x)])
-        self.region_i.setZValue(10)
+        self.region_i.setZValue(11)
 
         plot = self.spectrum_plotwidget
         plot.setBackground("w")
@@ -13946,39 +13946,60 @@ class SpectralImageMap(QtWidgets.QDialog, QtGui.QGraphicsScene):
         # self.refmarker = pg.InfiniteLine(angle=90, movable=False,
         #                                  pen=pg.mkPen(color="b", width=2, style=QtCore.Qt.DashLine))
         #plot.addItem(self.refmarker, ignoreBounds=True)
-        self.region_i0.setRegion((min(x), min(x)+0.25*(max(x)-min(x))))
-        self.region_i.setRegion(((max(x)-0.25*(max(x)-min(x))), max(x)))
-        #self.region_i0.sigRegionChange.connect(self.UpdateSelection)
-        #self.region_i.sigRegionChange.connect(self.UpdateSelection)
-        self.region_i0.sigRegionChangeFinished.connect(self.UpdateSelection)
-        self.region_i.sigRegionChangeFinished.connect(self.UpdateSelection)
+        self.region_i0.setRegion((min(x), min(x)))
+        self.region_i.setRegion((max(x), max(x)))
+        self.label_i0 = pg.InfLineLabel(self.region_i0.lines[0], text="I0 / pre-edge", movable=False,angle=90, position=0.05, anchors=(0,0),color=(0, 0, 0))
+        self.label_i =  pg.InfLineLabel(self.region_i.lines[1], text="I / on-edge", movable=False,angle=90, position=0.75, anchors=(0,0),color=(0, 0, 0))
+        self.region_i0.sigRegionChanged.connect(lambda region: self.UpdateZvalue(region))
+        self.region_i.sigRegionChanged.connect(lambda region: self.UpdateZvalue(region))
+        self.region_i0.sigRegionChangeFinished.connect(lambda region: self.UpdateSelection(region))
+        self.region_i.sigRegionChangeFinished.connect(lambda region: self.UpdateSelection(region))
+    # ----------------------------------------------------------------------
+    # Bring active region to front
+    def UpdateZvalue(self,region):
+        otherregion = {self.region_i: self.region_i0, self.region_i0: self.region_i}
+        region.setZValue(11)
+        otherregion[region].setZValue(10)
     # ----------------------------------------------------------------------
     def getDataClosestToRegion(self, region, plotitem, snapregion=True):
-        #otherregion = {self.region_i : self.region_i0, self.region_i0: self.region_i}
+        otherregion = {self.region_i : self.region_i0, self.region_i0: self.region_i}
+        otherregion = otherregion[region]
         minidx, maxidx = region.getRegion()
         data = plotitem.getData()[0]
         index = lambda x: np.argmin(np.abs(data - x))
-        minidx = index(minidx)
-        maxidx = index(maxidx)
-        if minidx == maxidx:
-            minidx = 0
-            maxidx = np.argmax(data)
-        mindata = data[minidx]
-        maxdata = data[maxidx]
-        if region == self.region_i:
-            self.region_i0.setBounds((min(data), data[minidx]))
-        elif region == self.region_i0:
-            self.region_i.setBounds((data[maxidx], max(data)))
+        minidx = index(minidx)+1 if minidx > data[index(minidx)] else index(minidx)
+        maxidx = index(maxidx)-1 if maxidx < data[index(maxidx)] else index(maxidx)
+        mindata = (data[minidx] + data[max((minidx-1,0))])/2
+        maxdata = (data[maxidx] + data[min((maxidx+1,np.argmax(data)))])/2
+        #push regions. regions may not overlap!
+        if region.zValue() > otherregion.zValue() : #choose the active/just dragged region
+            othermin, othermax = otherregion.getRegion()
+            if othermin <= mindata <= othermax:
+                otherregion.setBounds((othermin, mindata))
+                #otherregion.setRegion([othermin, mindata])
+            elif othermin <= maxdata <= othermax:
+                otherregion.setBounds((maxdata, othermax))
+                #otherregion.setRegion([maxdata, othermax])
+        #    self.region_i0.setBounds((min(data), data[minidx]))
+        #elif region == self.region_i0:
+        #    self.region_i.setBounds((data[maxidx], max(data)))
         if snapregion:
             region.blockSignals(True)
+            otherregion.setBounds((min(data), max(data)))
             region.setRegion([mindata, maxdata])  # snap region to data points
             region.blockSignals(False)
             #self.parent.OnSelectionChanged()
         return minidx, maxidx, mindata, maxdata
 
-    def UpdateSelection(self):
-        mini0, maxi0, mindi0, maxdi0 = self.getDataClosestToRegion(self.region_i0,self.plotitem)
-        mini, maxi, mindi, maxdi = self.getDataClosestToRegion(self.region_i,self.plotitem)
+    def UpdateSelection(self,region):
+        otherregion = {self.region_i : self.region_i0, self.region_i0: self.region_i}
+        otherregion = otherregion[region]
+        if region == self.region_i0:
+            mini, maxi, mindi, maxdi =      self.getDataClosestToRegion(otherregion,self.plotitem)
+            mini0, maxi0, mindi0, maxdi0 =  self.getDataClosestToRegion(region,self.plotitem)
+        else:
+            mini0, maxi0, mindi0, maxdi0 =  self.getDataClosestToRegion(otherregion,self.plotitem)
+            mini, maxi, mindi, maxdi =      self.getDataClosestToRegion(region,self.plotitem)
         #self.region_i0.blockSignals(True)
         #self.region_i.blockSignals(True)
         #self.region_i0.setBounds((min(self.plotitem.getData()[0]),mindi))
@@ -13988,10 +14009,10 @@ class SpectralImageMap(QtWidgets.QDialog, QtGui.QGraphicsScene):
 
         qlist = self.parent.MapSelectWidget1
         for row in range(qlist.count()):
-            if row in range(mini0, maxi0):
+            if row in range(mini0, maxi0+1):
                 self.stack.shifts[row][1]= -1
                 qlist.item(row).setBackground(QtGui.QColor('#beaed4'))
-            elif row in range(mini, maxi):
+            elif row in range(mini, maxi+1):
                 self.stack.shifts[row][1]= 1
                 qlist.item(row).setBackground(QtGui.QColor('#7fc97f'))
             else:
@@ -15729,6 +15750,7 @@ class PageMap(QtWidgets.QWidget):
         try:
             self.slider_eng.valueChanged.disconnect()
             self.qlistchanged.disconnect()
+            self.pbSelfromSpec.disconnect()
         except:
             pass
         self.prelst = []
@@ -15836,7 +15858,7 @@ class PageMap(QtWidgets.QWidget):
             self.stk.shifts[row][1] = 0
             self.OnSelectionChanged()
 
-    def OnSelfromSpec(self,evt):
+    def OnSelfromSpec(self):
         spectralimgmap = SpectralImageMap(self, self.com, self.stk)
         spectralimgmap.show()
 
