@@ -10935,6 +10935,9 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.button_cancel.clicked.connect(self.OnCancel)
 
         if self.com.stack_loaded == 1:
+            self.cb_od_per_px.setVisible(False)
+            self.cb_od_per_px.setChecked(True)
+            self.cb_od_per_px.stateChanged.connect(self.RedrawPlots)
             self.label_theta_range.setVisible(False)
             self.slider_theta.setVisible(False)
             self.cb_remove_theta.setVisible(False)
@@ -11041,15 +11044,8 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.OnSelectionChanged()
 
     def SetupPlot(self):
-        x,y = self.GenerateSpectrum(list(range(self.stack.n_ev)))
-        self.spectrum_plotwidget.setBackground("w")
-
-        self.region = pg.LinearRegionItem(brush=[255,0,0,45],bounds=[np.min(x),np.max(x)])
-
-        self.region.setZValue(10)
         plot = self.spectrum_plotwidget
         plot.setBackground("w")
-        plot.addItem(self.region, ignoreBounds=False)
         plot.setMouseEnabled(x=False, y=False)
         plot.showGrid(y=True)
 
@@ -11059,14 +11055,16 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
         bx = plot.getAxis("top")
         by.setStyle(showValues=False,tickLength=0)
         bx.setStyle(showValues=False,tickLength=0)
-        ay = plot.getAxis("left")
+        self.ay = plot.getAxis("left")
         ax = plot.getAxis("bottom")
-
         ax.setLabel(text="Photon energy [eV]")
-        if self.com.i0_loaded:
-            ay.setLabel(text="Optical density")
-        else:
-            ay.setLabel(text="Photon flux [cps]")
+        x,y = self.GenerateSpectrum(list(range(self.stack.n_ev)))
+
+        self.region = pg.LinearRegionItem(brush=[255,0,0,45],bounds=[np.min(x),np.max(x)])
+        plot.addItem(self.region, ignoreBounds=False)
+        self.region.setZValue(10)
+
+        self.spectrum_plotwidget.setBackground("w")
 
         self.plotitem = plot.plot(x, y, pen=pg.mkPen(color=0.8, width=2))
         self.plotitem_new = plot.plot(x, y, pen=pg.mkPen(color="b", width=2))
@@ -11235,13 +11233,18 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
 
     def GenerateSpectrum(self, evselection):
         left,right,top,bottom = self.GetRegion()
-        if self.com.i0_loaded == 1:
-            if self.com.stack_4d == 1:
+        if self.com.i0_loaded:
+            self.cb_od_per_px.setVisible(True)
+            if self.cb_od_per_px.isChecked():
+                self.ay.setLabel(text="Optical density per px")
+            else:
+                self.ay.setLabel(text="Sum of optical densities in ROI")
+            if self.com.stack_4d:
                 total = self.stack.od4d[left:right, bottom:top, :, int(self.itheta)].copy()
             else:
                 total = self.stack.od3d[left:right, bottom:top, :].copy()
-
         else:
+            self.ay.setLabel(text="Photon flux per px [cps]")
             if self.com.stack_4d == 1:
                 t = [self.stack.theta[i] for i in self.thetaidx_selected]
                 self.label_theta_range.setText(
@@ -11251,7 +11254,10 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
                 total = self.stack.stack4D[left:right, bottom:top, :, int(self.itheta)].copy()
             else:
                 total = self.stack.absdata[left:right, bottom:top, :].copy()
-        total = total.sum(axis=(0,1)) / (int(self.box.size().x()) * int(self.box.size().y()))
+        if self.cb_od_per_px.isChecked():
+            total = total.sum(axis=(0,1)) / (int(self.box.size().x()) * int(self.box.size().y()))
+        else:
+            total = total.sum(axis=(0,1))
         x = [self.stack.ev[i] for i in evselection]
         y = [total[i] for i in evselection]
         self.label_spatial_range.setText("Stack size: [ "+str(int(self.box.size().x()))+" x "+str(int(self.box.size().y()))+" ] px²")
