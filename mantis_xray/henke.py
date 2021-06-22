@@ -49,7 +49,7 @@ import scipy.interpolate
 from xdrlib import *
 import string
 
-#-----------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 class henke:
     def __init__(self):   
         
@@ -70,7 +70,7 @@ class henke:
 
 
 
-#-----------------------------------------------------------------------------    
+#------------------------------------------------------------------------------    
     def compound(self, compound_string, density): 
         
 #    Type in a chemical formula and the density.  The routine
@@ -89,7 +89,7 @@ class henke:
 
         return z_array, atwt
             
-#-----------------------------------------------------------------------------               
+#------------------------------------------------------------------------------               
     def zcompound(self, compound_string, z_array, paren_multiplier=False):
         
         verbose = False
@@ -278,7 +278,7 @@ class henke:
         return z_array
     
     
-#-----------------------------------------------------------------------------    
+#------------------------------------------------------------------------------    
     def zatwt(self, z_array): 
         
         maxz=z_array.size
@@ -385,7 +385,7 @@ class henke:
         return atwt
 
 
-#-----------------------------------------------------------------------------    
+#------------------------------------------------------------------------------    
     def extra(self, ielement = -1): 
         
         energies, f1, f2, n_extra, energies_extra, f1_extra, f2_extra = self.read(ielement, all = False)
@@ -406,7 +406,7 @@ class henke:
 
         return energies, f1, f2, energies_extra, f1_extra, f2_extra
 
-#-----------------------------------------------------------------------------    
+#------------------------------------------------------------------------------    
     def read(self, ielement = -1, all = True): 
         
         
@@ -537,7 +537,7 @@ class henke:
     
     
     
-#-----------------------------------------------------------------------------    
+#------------------------------------------------------------------------------    
     def array(self, compound_name, density, graze_mrad = 0):
 
         z_array, atwt = self.compound(compound_name,density)
@@ -618,7 +618,7 @@ class henke:
   
 
 
-#-----------------------------------------------------------------------------    
+#------------------------------------------------------------------------------    
     def dose_calc(self, stack, i_composition, od_spectrum, i0_signal, dosecalc_detector_eff):    
     
         pix_nm_squared = 1.e6*(stack.x_dist[1]-stack.x_dist[0])*(stack.y_dist[1]-stack.y_dist[0])

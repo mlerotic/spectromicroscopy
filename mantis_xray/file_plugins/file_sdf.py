@@ -55,7 +55,7 @@ def GetFileStructure(FileName):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 class HDR_FileParser:
   """Parse .hdr file for metadata."""
   hdr = []
@@ -85,7 +85,7 @@ class HDR_FileParser:
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
   def parseStructure(self):
     """.hdr files consist of structures and arrays. This routine sorts through the structure parts."""
     Structure = {}
@@ -132,7 +132,7 @@ class HDR_FileParser:
       raw = self.__file.read(1)
     return Structure
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
   def parseArray(self):
     """.hdr files consist of structures and arrays. This rountine sorts through the array parts."""
     Array = []
@@ -168,7 +168,7 @@ class HDR_FileParser:
       raw = self.__file.read(1)
     return Array
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
   def parseDataNames(self): #ToDo: Assigning Scan types by DataFlags is prone to errors. Better detect automatically via (HDR.hdr['ScanDefinition']['Regions'][0]) etc.
     """Figure out names for the .xsp or .xim files that contain the actual data, then check that the files actually exist, printing warnings if they don't."""
     DataNames = []#Regions
@@ -219,7 +219,7 @@ class HDR_FileParser:
             #print "WARNING! Data file doesn't exist:", DataNames[num_R][num_Ch][num_E]
     return DataNames
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
   def parse_DataSize(self):
     """Calculate data array size. This is useful for making sure all of the lists of data are the correct length."""
     DataSize = []
@@ -238,8 +238,8 @@ class HDR_FileParser:
 
 
 
-#----------------------------------------------------------------------
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def read(filename, self, selection=None, JSONstatus=None):
     HDR = HDR_FileParser(filename)
     if JSONstatus:
@@ -281,7 +281,7 @@ def read(filename, self, selection=None, JSONstatus=None):
 
     return
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def read_sdf_i0(self, filename):
     HDR = HDR_FileParser(filename)
 

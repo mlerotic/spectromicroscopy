@@ -37,9 +37,10 @@ QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps, True)
 from PIL import Image
 from scipy import ndimage
 from scipy.stats import linregress
-from scipy.interpolate import interp1d
+from scipy.interpolate import interp1d, griddata, RegularGridInterpolator
 # from skimage.feature import register_translation ## deprecated
 from skimage.registration import phase_cross_correlation
+#from skimage.segmentation import watershed, mark_boundaries
 from queue import SimpleQueue, Empty
 import threading
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -81,11 +82,11 @@ from .__init__ import __version__ as version
 qsspath = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'stylesheet_global.qss')
 
 if sys.platform == 'win32':
-    Winsizex = 1000
-    Winsizey = 800
+    Winsizex = 1920
+    Winsizey = 1080
 else:
-    Winsizex = 1250
-    Winsizey = 900
+    Winsizex = 1920
+    Winsizey = 1080
 
 PlotH = 4.0
 PlotW = PlotH*1.61803
@@ -95,14 +96,14 @@ ImgDpi = 40
 verbose = False
 
 showtomotab = 1
-showmaptab = 1
+#showmaptab = 1
 
 
 def rebin(a, shape):
     sh = shape[0],a.shape[0]//shape[0],shape[1],a.shape[1]//shape[1]
     return a.reshape(sh).mean(-1).mean(1)
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 class common:
     def __init__(self):
 
@@ -132,7 +133,7 @@ class PageTomo(QtWidgets.QWidget):
 
         self.initUI(common, data_struct, stack, anlz)
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def initUI(self, common, data_struct, stack, anlz):
 
         self.data_struct = data_struct
@@ -521,7 +522,7 @@ class PageTomo(QtWidgets.QWidget):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnLoadTomoEng(self, event):
 
         self.fulltomorecdata = []
@@ -560,7 +561,7 @@ class PageTomo(QtWidgets.QWidget):
         self.button_expdata.setEnabled(True)
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnLoadTomoComponents(self, event):
 
         self.fulltomorecdata = []
@@ -607,7 +608,7 @@ class PageTomo(QtWidgets.QWidget):
 
         self.button_expdata.setEnabled(True)
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnLoadSingleMrc(self, event):
 
 
@@ -721,7 +722,7 @@ class PageTomo(QtWidgets.QWidget):
         self.button_expdata.setEnabled(True)
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnCalcTomoFull(self, event):
 
         QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
@@ -866,7 +867,7 @@ class PageTomo(QtWidgets.QWidget):
 
         QtWidgets.QApplication.restoreOverrideCursor()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnCalcTomo1(self, event):
 
         QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
@@ -934,13 +935,13 @@ class PageTomo(QtWidgets.QWidget):
         QtWidgets.QApplication.restoreOverrideCursor()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSelect1Comp(self, value):
         item = value
         self.select1 = item
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSelectAlgo(self, value):
         item = value
         self.algo = item
@@ -958,7 +959,7 @@ class PageTomo(QtWidgets.QWidget):
             self.ntc_ereg.setEnabled(False)
 
 
- #----------------------------------------------------------------------
+ #-----------------------------------------------------------------------
     def OnCBEngReg(self, state):
 
         if state == QtCore.Qt.Checked:
@@ -968,7 +969,7 @@ class PageTomo(QtWidgets.QWidget):
             self.useengreg = 0
             self.ntc_ereg.setEnabled(False)
 
- #----------------------------------------------------------------------
+ #-----------------------------------------------------------------------
     def OnNonNegConst(self, state):
 
         if state == QtCore.Qt.Checked:
@@ -977,14 +978,14 @@ class PageTomo(QtWidgets.QWidget):
             self.nonnegconst = 0
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnScrollSlice(self, value):
         self.islice = value
 
         self.ShowImage()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnScrollComp(self, value):
         self.icomp = value
 
@@ -998,7 +999,7 @@ class PageTomo(QtWidgets.QWidget):
         self.ShowImage()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnPointImage(self, evt):
 
 
@@ -1035,7 +1036,7 @@ class PageTomo(QtWidgets.QWidget):
         plot = PlotFrame(self, self.stack.ev, spectrum, title=title)
         plot.show()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnExportData(self, event):
 
 
@@ -1067,7 +1068,7 @@ class PageTomo(QtWidgets.QWidget):
         f.close()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSave(self, event):
 
 
@@ -1085,7 +1086,7 @@ class PageTomo(QtWidgets.QWidget):
         self.tr.save_mrc(SaveFileName, data.T)
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSaveAll(self, event):
 
 
@@ -1108,7 +1109,7 @@ class PageTomo(QtWidgets.QWidget):
             self.tr.save_mrc(savefn, data.T)
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSaveROI(self, event):
 
 
@@ -1126,7 +1127,7 @@ class PageTomo(QtWidgets.QWidget):
         self.tr.save_mrc(SaveFileName, data)
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnLoadROI(self, event):
 
 
@@ -1160,7 +1161,7 @@ class PageTomo(QtWidgets.QWidget):
 
         self.ShowImage()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 
     def OnSelectLasso(self,verts):
 #         self.lasso.disconnect_events()
@@ -1203,7 +1204,7 @@ class PageTomo(QtWidgets.QWidget):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSelectROI(self, event):
 
         self.AbsImagePanel.mpl_disconnect(self.cid1)
@@ -1219,14 +1220,14 @@ class PageTomo(QtWidgets.QWidget):
 
         self.lasso = LassoSelector(self.axes, onselect=self.OnSelectLasso, useblit=False, lineprops=lineprops)
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnROIHistogram(self, event):
         #self.window().Hide()
         image = self.tr.tomorec[:,:,self.islice].copy()
         histogram = ROIHistogram(self, image, self.n_cols, self.n_rows)
         histogram.show()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnResetROI(self, event):
 
         self.button_roispec.setEnabled(False)
@@ -1243,7 +1244,7 @@ class PageTomo(QtWidgets.QWidget):
 
         self.ShowImage()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def CalcROISpectrum(self):
 
         ROIspectrum = np.zeros((self.stack.n_ev))
@@ -1258,7 +1259,7 @@ class PageTomo(QtWidgets.QWidget):
         return ROIspectrum
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnShowROISpec(self):
 
         spectrum = self.CalcROISpectrum()
@@ -1268,7 +1269,7 @@ class PageTomo(QtWidgets.QWidget):
         plot = PlotFrame(self, self.stack.ev, spectrum, title=title)
         plot.show()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def ShowImage(self):
 
         if self.tomo_calculated == 0:
@@ -1343,7 +1344,7 @@ class PageTomo(QtWidgets.QWidget):
         self.AbsImagePanel3.draw()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def MakeHistogramROI(self, histmin, histmax):
 
         for i in range(self.nslices):
@@ -1373,7 +1374,7 @@ class PageTomo(QtWidgets.QWidget):
         self.ShowImage()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def NewStackClear(self):
 
         self.tr = tomo_reconstruction.Ctomo(self.stack)
@@ -1427,7 +1428,7 @@ class PageTomo(QtWidgets.QWidget):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 class ROIHistogram(QtWidgets.QDialog):
 
     def __init__(self, parent, image, n_cols, n_rows):
@@ -1518,7 +1519,7 @@ class ROIHistogram(QtWidgets.QDialog):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def draw_histogram(self):
 
 
@@ -1542,7 +1543,7 @@ class ROIHistogram(QtWidgets.QDialog):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def draw_image(self):
 
 
@@ -1576,7 +1577,7 @@ class ROIHistogram(QtWidgets.QDialog):
         axes.axis("off")
         self.AbsImagePanel.draw()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSelection1(self, evt):
 
         x1 = evt.xdata
@@ -1592,7 +1593,7 @@ class ROIHistogram(QtWidgets.QDialog):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSelection2(self, evt):
 
         x2 = evt.xdata
@@ -1613,7 +1614,7 @@ class ROIHistogram(QtWidgets.QDialog):
         self.draw_image()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSelectionMotion(self, event):
 
         x2 = event.xdata
@@ -1633,7 +1634,7 @@ class ROIHistogram(QtWidgets.QDialog):
         self.HistogramPanel.draw()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnAccept(self, evt):
 
         self.parent.MakeHistogramROI(self.histmin, self.histmax)
@@ -1643,7 +1644,7 @@ class ROIHistogram(QtWidgets.QDialog):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 class File_GUI():
     """
     Ask user to choose file and then use an appropriate plugin to read and return a data structure.
@@ -1685,7 +1686,7 @@ class File_GUI():
             return (None,None)
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     class DataChoiceDialog(QtWidgets.QDialog):
 
         def __init__(self,filepath=None,filestruct=None,plugin=None):
@@ -1876,7 +1877,7 @@ class PageNNMA(QtWidgets.QWidget):
 
         self.initUI(common, data_struct, stack, anlz, nnma)
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def initUI(self, common, data_struct, stack, anlz, nnma):
 
 
@@ -2203,7 +2204,7 @@ class PageNNMA(QtWidgets.QWidget):
         self.setLayout(vboxtop)
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnLoadClusterSpectra(self, event):
 
         self.nnma.setClusterSpectra(self.anlz.clusterspectra)
@@ -2214,7 +2215,7 @@ class PageNNMA(QtWidgets.QWidget):
 
         self.tc_initspectra.setText('Initial Spectra: ' + self.initMatrices)
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnLoadRandomSpectra(self, event):
 
         self.initMatrices = 'Random'
@@ -2224,7 +2225,7 @@ class PageNNMA(QtWidgets.QWidget):
 
         self.tc_initspectra.setText('Initial Spectra: ' + self.initMatrices)
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnLoadStandardSpectra(self, event):
 
         if True:
@@ -2277,7 +2278,7 @@ class PageNNMA(QtWidgets.QWidget):
 
         self.window().refresh_widgets()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnCalcNNMA(self, event):
 
         QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
@@ -2320,26 +2321,26 @@ class PageNNMA(QtWidgets.QWidget):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnNNMAspin(self, value):
         num = value
         self.nComponents = num
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnScroll(self, value):
         self.i_map = value
         if self.nnmacalculated == 1:
             self.ShowMaps()
             self.ShowSpectrum()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSave(self, event):
 
         savewin = SaveWinP5(self.window())
         savewin.show()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def Save(self, filename, path, spec_png = True, spec_pdf = False, spec_svg = False, spec_csv = False,
              map_png = True, map_pdf = False, map_svg = False, map_tif = False,
              costf_png = True, costf_pdf = False, costf_svg = False):
@@ -2590,7 +2591,7 @@ class PageNNMA(QtWidgets.QWidget):
 #
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def ShowMaps(self):
 
 
@@ -2636,7 +2637,7 @@ class PageNNMA(QtWidgets.QWidget):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def ShowSpectrum(self):
 
         if self.nnmacalculated == 0:
@@ -2680,7 +2681,7 @@ class PageNNMA(QtWidgets.QWidget):
         self.tc_nnmaspec.setText("NNMA spectrum " + str(self.i_map+1))
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def ShowCostFunction(self):
 
         if self.nnmacalculated == 0:
@@ -2722,7 +2723,7 @@ class PageNNMA(QtWidgets.QWidget):
         self.CostFPan.draw()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def updatewidgets(self):
 
         if self.nnmacalculated == 0:
@@ -2732,7 +2733,7 @@ class PageNNMA(QtWidgets.QWidget):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 class SaveWinP5(QtWidgets.QDialog):
 
     def __init__(self, parent):
@@ -2888,7 +2889,7 @@ class SaveWinP5(QtWidgets.QDialog):
 
         self.setLayout(vboxtop)
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnBrowseDir(self, evt):
 
         directory = QtWidgets.QFileDialog.getExistingDirectory(self, "Choose a directory", self.path, QtWidgets.QFileDialog.ShowDirsOnly|QtWidgets.QFileDialog.ReadOnly)
@@ -2907,7 +2908,7 @@ class SaveWinP5(QtWidgets.QDialog):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSave(self, evt):
 
         self.filename = str(self.tc_savefn.text())
@@ -2947,7 +2948,7 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
 
         self.initUI(common, data_struct, stack, anlz)
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def initUI(self, common, data_struct, stack, anlz):
 
 
@@ -3525,7 +3526,7 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
         self.setLayout(hboxT)
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSpecFromFile(self, event):
 
         try:
@@ -3576,7 +3577,7 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
         self.window().refresh_widgets()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnAddClusterSpectra(self, event):
 
         try:
@@ -3618,7 +3619,7 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
         self.window().refresh_widgets()
         self.updatewidgets()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSScroll(self, value):
 
 
@@ -3633,7 +3634,7 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
             self.ShowFitParams()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSpectraListClick(self):
         item = self.tc_speclist.currentRow()
 
@@ -3645,7 +3646,7 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
             self.slider_spec.setValue(self.i_spec)
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnFitSpectrum(self, event):
 
         QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
@@ -3666,7 +3667,7 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSave(self, event):
 
 
@@ -3755,7 +3756,7 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
 
         return
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnShowFitParams(self, event):
 
         fitparams = [self.anlz.xfitpars[self.i_spec-1].base,
@@ -3767,18 +3768,18 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
         fitparswin = FitParams(self.window(), 'Fit Parameters', fitparams, True, False)
         fitparswin.show()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnNstepsspin(self, value):
         num = value
         self.nsteps[self.i_spec-1] = num
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnNgaussspin(self, value):
         num = value
         self.npeaks[self.i_spec-1] = num
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnShowEngs(self, state):
 
         if state == QtCore.Qt.Checked:
@@ -3789,7 +3790,7 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
             self.loadSpectrum()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def updatewidgets(self):
 
 
@@ -3827,7 +3828,7 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
         self.ShowFitParams()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def loadSpectrum(self):
 
 
@@ -3889,7 +3890,7 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
         self.updatewidgets()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def ShowSpectraList(self):
 
         self.tc_speclist.clear()
@@ -3900,7 +3901,7 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def SetFitParams(self):
 
         self.base = float(self.le_base.text())
@@ -3925,7 +3926,7 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def ShowFitParams(self):
 
         fp = self.anlz.xfitpars[self.i_spec-1]
@@ -3947,7 +3948,7 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 class FitParams(QtWidgets.QDialog):
 
     def __init__(self, parent, title, fitparams, readonly, initialization):
@@ -4310,7 +4311,7 @@ class FitParams(QtWidgets.QDialog):
         self.setLayout(vboxtop)
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnClose(self, event):
 
 
@@ -4346,7 +4347,7 @@ class PagePeakID(QtWidgets.QWidget):
 
         self.initUI(common, data_struct, stack, anlz)
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def initUI(self, common, data_struct, stack, anlz):
 
 
@@ -4506,7 +4507,7 @@ class PagePeakID(QtWidgets.QWidget):
         self.ShowPeakEngs()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSpecFromFile(self, event):
 
 
@@ -4567,7 +4568,7 @@ class PagePeakID(QtWidgets.QWidget):
         self.ShowODPlot()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnAddClusterSpectra(self, event):
 
         try:
@@ -4618,7 +4619,7 @@ class PagePeakID(QtWidgets.QWidget):
         self.ShowODPlot()
         self.ShowImage()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSScroll(self, value):
 
 
@@ -4629,7 +4630,7 @@ class PagePeakID(QtWidgets.QWidget):
         self.ShowODPlot()
         self.ShowImage()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnScrollEng(self, value):
         self.i_eng = value
 
@@ -4639,7 +4640,7 @@ class PagePeakID(QtWidgets.QWidget):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnPointSpectrum(self, evt):
         x = evt.xdata
 
@@ -4660,7 +4661,7 @@ class PagePeakID(QtWidgets.QWidget):
 
             self.slider_eng.setValue(self.i_eng)
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def ShowODPlot(self):
 
         if (self.spectrum_loaded == 0) and (self.com.i0_loaded == 0):
@@ -4702,7 +4703,7 @@ class PagePeakID(QtWidgets.QWidget):
 
         self.KESpecPan.draw()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnEngListClick(self):
         item = self.lc_1.currentRow()
 
@@ -4712,7 +4713,7 @@ class PagePeakID(QtWidgets.QWidget):
         self.ShowImage()
         self.ShowODPlot()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def ShowPeakEngs(self):
 
         self.lc_1.clear()
@@ -4721,7 +4722,7 @@ class PagePeakID(QtWidgets.QWidget):
             self.lc_1.addItem('{0:8.2f}'.format(self.peak_engs[i])+'\t'+self.peak_names[i])
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def ShowImage(self):
 
         if self.com.i0_loaded == 0:
@@ -4758,7 +4759,7 @@ class PagePeakID(QtWidgets.QWidget):
 
         self.lc_1.setCurrentRow(self.i_eng)
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def updatewidgets(self):
 
         if self.spectrum_loaded:
@@ -4778,7 +4779,7 @@ class PagePeakID(QtWidgets.QWidget):
         self.ShowImage()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSave(self, event):
 
 
@@ -4836,7 +4837,7 @@ class PageSpectral(QtWidgets.QWidget):
 
         self.initUI(common, data_struct, stack, anlz)
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def initUI(self, common, data_struct, stack, anlz):
 
         self.data_struct = data_struct
@@ -5081,7 +5082,7 @@ class PageSpectral(QtWidgets.QWidget):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnTSpecFromFile(self, event):
 
 
@@ -5129,7 +5130,7 @@ class PageSpectral(QtWidgets.QWidget):
         self.window().refresh_widgets()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnFlatTSpec(self, event):
 
         try:
@@ -5157,7 +5158,7 @@ class PageSpectral(QtWidgets.QWidget):
 
         self.window().refresh_widgets()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnAddClusterSpectra(self, event):
 
         try:
@@ -5185,26 +5186,26 @@ class PageSpectral(QtWidgets.QWidget):
 
         self.window().refresh_widgets()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnCompositeRGB(self, event):
 
         compimgwin = ShowCompositeRBGmap(self.window(), self.com, self.anlz)
         compimgwin.show()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnHistogram(self, event):
 
         hwin = ShowMapHistogram(self.window(), self.com, self.anlz)
         hwin.show()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSave(self, event):
 
 
         savewin = SaveWinP4(self.window())
         savewin.show()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnCalc4D(self, event):
 
 
@@ -5255,7 +5256,7 @@ class PageSpectral(QtWidgets.QWidget):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def Save(self, filename, path, spec_png = True, spec_pdf = False, spec_svg = False, spec_csv = False,
              img_png = True, img_pdf = False, img_svg = False, img_tif = False):
 
@@ -5290,7 +5291,7 @@ class PageSpectral(QtWidgets.QWidget):
             QtGui.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % err)
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def SaveSpectra(self, imgformat=1, savecsv = False):
 
 
@@ -5388,7 +5389,7 @@ class PageSpectral(QtWidgets.QWidget):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def SaveMaps(self, imgformat=1, savetif = False):
 
 
@@ -5467,14 +5468,14 @@ class PageSpectral(QtWidgets.QWidget):
                 img1.save(fileName_img)
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnEditSpectraListClick(self):
         item = self.tc_speclist.currentItem()
         self.tc_speclist.editItem(item)
         self.anlz.tspec_names[self.i_tspec-1] = item.data()
         self.loadTSpectrum()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSpectraListClick(self):
         item = self.tc_speclist.currentRow()
 
@@ -5486,7 +5487,7 @@ class PageSpectral(QtWidgets.QWidget):
             self.loadTargetMap()
             self.slider_tspec.setValue(self.i_tspec)
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnTSScroll(self, value):
 
         sel = value
@@ -5500,7 +5501,7 @@ class PageSpectral(QtWidgets.QWidget):
             self.loadTargetMap()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnScrollTheta(self, value):
 
         if self.com.spec_anl4D_calculated == 0:
@@ -5532,7 +5533,7 @@ class PageSpectral(QtWidgets.QWidget):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnRBRawFit(self, enabled):
         state = enabled
 
@@ -5545,7 +5546,7 @@ class PageSpectral(QtWidgets.QWidget):
             self.loadTSpectrum()
             self.loadTargetMap()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnShowScale(self, state):
 
         if state == QtCore.Qt.Checked:
@@ -5556,7 +5557,7 @@ class PageSpectral(QtWidgets.QWidget):
             self.loadTSpectrum()
             self.loadTargetMap()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnRemoveSpectrum(self, event):
         QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
         self.anlz.remove_spectrum(self.i_tspec-1)
@@ -5582,7 +5583,7 @@ class PageSpectral(QtWidgets.QWidget):
 
         QtWidgets.QApplication.restoreOverrideCursor()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnMoveSpectrumDown(self, event):
 
         if self.i_tspec < self.anlz.n_target_spectra:
@@ -5599,7 +5600,7 @@ class PageSpectral(QtWidgets.QWidget):
             self.ShowSpectraList()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnMoveSpectrumUp(self, event):
 
         if self.i_tspec > 1:
@@ -5614,7 +5615,7 @@ class PageSpectral(QtWidgets.QWidget):
             self.loadTargetMap()
             self.ShowSpectraList()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def ClearWidgets(self):
 
         fig = self.mapfig
@@ -5649,7 +5650,7 @@ class PageSpectral(QtWidgets.QWidget):
 
         self.window().refresh_widgets()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def ShowFitWeights(self):
 
         self.tc_spfitlist.clear()
@@ -5664,7 +5665,7 @@ class PageSpectral(QtWidgets.QWidget):
             self.tc_spfitlist.addItem(textitem)
         self.tc_spfitlist.setCurrentRow(0)
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def ShowSpectraList(self):
 
         self.tc_speclist.clear()
@@ -5673,7 +5674,7 @@ class PageSpectral(QtWidgets.QWidget):
             self.tc_speclist.addItem(self.anlz.tspec_names[i])
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def loadTargetMap(self):
 
         if self.showraw == True:
@@ -5721,7 +5722,7 @@ class PageSpectral(QtWidgets.QWidget):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def loadTSpectrum(self):
 
 
@@ -5770,7 +5771,7 @@ class PageSpectral(QtWidgets.QWidget):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 class ShowCompositeRBGmap(QtWidgets.QDialog):
 
     def __init__(self, parent, common, analz):
@@ -6027,7 +6028,7 @@ class ShowCompositeRBGmap(QtWidgets.QDialog):
         self.draw_image()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSelectR(self, value):
         item = value
         self.r_spec = item
@@ -6035,7 +6036,7 @@ class ShowCompositeRBGmap(QtWidgets.QDialog):
         self.CalcR()
         self.draw_image()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def CalcR(self):
 
         if self.parent.page4.showraw == True:
@@ -6064,7 +6065,7 @@ class ShowCompositeRBGmap(QtWidgets.QDialog):
 
         self.rgbimage[:,:,0] = tsmap*float(self.weightr)/100.
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnLimitMinR(self, value):
 
         self.minr = value
@@ -6072,7 +6073,7 @@ class ShowCompositeRBGmap(QtWidgets.QDialog):
         self.CalcR()
         self.draw_image()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnLimitMaxR(self, value):
 
         self.maxr = value
@@ -6081,7 +6082,7 @@ class ShowCompositeRBGmap(QtWidgets.QDialog):
         self.draw_image()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnWeightR(self, value):
 
         self.weightr = value
@@ -6089,7 +6090,7 @@ class ShowCompositeRBGmap(QtWidgets.QDialog):
         self.CalcR()
         self.draw_image()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSelectG(self, value):
         item = value
         self.g_spec = item
@@ -6097,7 +6098,7 @@ class ShowCompositeRBGmap(QtWidgets.QDialog):
         self.CalcG()
         self.draw_image()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def CalcG(self):
 
         if self.parent.page4.showraw == True:
@@ -6126,7 +6127,7 @@ class ShowCompositeRBGmap(QtWidgets.QDialog):
 
         self.rgbimage[:,:,1] = tsmap*float(self.weightg)/100.
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnLimitMinG(self, value):
 
         self.ming = value
@@ -6134,7 +6135,7 @@ class ShowCompositeRBGmap(QtWidgets.QDialog):
         self.CalcG()
         self.draw_image()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnLimitMaxG(self, value):
 
         self.maxg = value
@@ -6142,7 +6143,7 @@ class ShowCompositeRBGmap(QtWidgets.QDialog):
         self.CalcG()
         self.draw_image()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnWeightG(self, value):
 
         self.weightg = value
@@ -6150,7 +6151,7 @@ class ShowCompositeRBGmap(QtWidgets.QDialog):
         self.CalcG()
         self.draw_image()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSelectB(self, value):
         item = value
         self.b_spec = item
@@ -6158,7 +6159,7 @@ class ShowCompositeRBGmap(QtWidgets.QDialog):
         self.CalcB()
         self.draw_image()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def CalcB(self):
 
         if self.parent.page4.showraw == True:
@@ -6185,7 +6186,7 @@ class ShowCompositeRBGmap(QtWidgets.QDialog):
 
         self.rgbimage[:,:,2] = tsmap*float(self.weightb)/100.
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnLimitMinB(self, value):
 
         self.minb = value
@@ -6193,7 +6194,7 @@ class ShowCompositeRBGmap(QtWidgets.QDialog):
         self.CalcB()
         self.draw_image()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnLimitMaxB(self, value):
 
         self.maxb = value
@@ -6201,7 +6202,7 @@ class ShowCompositeRBGmap(QtWidgets.QDialog):
         self.CalcB()
         self.draw_image()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnWeightB(self, value):
 
         self.weightb = value
@@ -6209,7 +6210,7 @@ class ShowCompositeRBGmap(QtWidgets.QDialog):
         self.CalcB()
         self.draw_image()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnShowInfo(self, state):
 
         if state == QtCore.Qt.Checked:
@@ -6219,7 +6220,7 @@ class ShowCompositeRBGmap(QtWidgets.QDialog):
 
         self.draw_image()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def draw_image(self):
 
 
@@ -6247,7 +6248,7 @@ class ShowCompositeRBGmap(QtWidgets.QDialog):
 
         self.RGBImagePanel.draw()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSave(self, evt):
 
         wildcard = "Portable Network Graphics (*.png);;Adobe PDF Files (*.pdf);;"
@@ -6276,10 +6277,7 @@ class ShowCompositeRBGmap(QtWidgets.QDialog):
 
         fig = self.RGBImagefig
         fig.savefig(SaveFileName, pad_inches = 0.0)
-
-
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 class ShowMapHistogram(QtWidgets.QDialog):
 
     def __init__(self, parent, common, analz):
@@ -6374,7 +6372,7 @@ class ShowMapHistogram(QtWidgets.QDialog):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def draw_histogram(self):
 
 
@@ -6400,7 +6398,7 @@ class ShowMapHistogram(QtWidgets.QDialog):
         self.HistogramPanel.draw()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def draw_histogram4D(self):
 
 
@@ -6425,7 +6423,7 @@ class ShowMapHistogram(QtWidgets.QDialog):
 
         self.HistogramPanel.draw()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnClick(self, evt):
 
         x1 = evt.xdata
@@ -6446,7 +6444,7 @@ class ShowMapHistogram(QtWidgets.QDialog):
         self.button_ok.setEnabled(True)
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnRb_limit(self, enabled):
 
         state = enabled
@@ -6457,7 +6455,7 @@ class ShowMapHistogram(QtWidgets.QDialog):
             self.limit = 2
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnAccept(self, evt):
 
         if self.parent.page4.showraw == True:
@@ -6466,9 +6464,7 @@ class ShowMapHistogram(QtWidgets.QDialog):
             self.anlz.svd_map_threshold(self.histmin, self.histmax, pca=True)
         self.parent.page4.loadTargetMap()
         self.close()
-
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 class SaveWinP4(QtWidgets.QDialog):
 
     def __init__(self, parent):
@@ -6616,7 +6612,7 @@ class SaveWinP4(QtWidgets.QDialog):
 
         self.setLayout(vboxtop)
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnBrowseDir(self, evt):
 
         directory = QtWidgets.QFileDialog.getExistingDirectory(self, "Choose a directory", self.path, QtWidgets.QFileDialog.ShowDirsOnly|QtWidgets.QFileDialog.ReadOnly)
@@ -6635,7 +6631,7 @@ class SaveWinP4(QtWidgets.QDialog):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSave(self, evt):
 
         self.filename = str(self.tc_savefn.text())
@@ -6660,18 +6656,14 @@ class SaveWinP4(QtWidgets.QDialog):
                                          img_pdf = im_pdf,
                                          img_svg = im_svg,
                                          img_tif = im_tif)
-
-
-
-
-""" ------------------------------------------------------------------------------------------------"""
+# ----------------------------------------------------------------------
 class PageCluster(QtWidgets.QWidget):
     def __init__(self, common, data_struct, stack, anlz):
         super(PageCluster, self).__init__()
 
         self.initUI(common, data_struct, stack, anlz)
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def initUI(self, common, data_struct, stack, anlz):
 
         self.data_struct = data_struct
@@ -6902,7 +6894,7 @@ class PageCluster(QtWidgets.QWidget):
         self.setLayout(vboxtop)
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def MakeColorTable(self):
         self.maxclcolors = 11
         colors_i = np.linspace(0,self.maxclcolors,self.maxclcolors+1)
@@ -6948,7 +6940,7 @@ class PageCluster(QtWidgets.QWidget):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnCalcClusters(self, event):
 
         QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
@@ -6986,13 +6978,13 @@ class PageCluster(QtWidgets.QWidget):
 
         self.window().refresh_widgets()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnNClusterspin(self, value):
         num = value
         self.init_nclusters = num
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnClusterScroll(self, value):
         sel = value
         self.selcluster = sel
@@ -7000,7 +6992,7 @@ class PageCluster(QtWidgets.QWidget):
             self.showClusterSpectrum()
             self.showIndvClusterImage()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnClusterSpinUp(self, event):
         if (self.com.cluster_calculated == 1) and (self.selcluster > 1):
             self.selcluster = self.selcluster - 1
@@ -7009,7 +7001,7 @@ class PageCluster(QtWidgets.QWidget):
             self.showClusterSpectrum()
             self.showIndvClusterImage()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnClusterSpinDown(self, event):
         if (self.com.cluster_calculated == 1) and (self.selcluster < self.numclusters):
             self.selcluster = self.selcluster + 1
@@ -7018,7 +7010,7 @@ class PageCluster(QtWidgets.QWidget):
             self.showClusterSpectrum()
             self.showIndvClusterImage()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnPointClusterImage(self, evt):
 
 
@@ -7053,7 +7045,7 @@ class PageCluster(QtWidgets.QWidget):
                 pass
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def CalcClusters(self):
 
         nclusters = self.anlz.calculate_clusters(self.init_nclusters,
@@ -7067,7 +7059,7 @@ class PageCluster(QtWidgets.QWidget):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 #Show composite cluster image
     def showClusterImage(self):
 
@@ -7089,7 +7081,7 @@ class PageCluster(QtWidgets.QWidget):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 #Show composite cluster image
     def showIndvClusterImage(self):
 
@@ -7112,7 +7104,7 @@ class PageCluster(QtWidgets.QWidget):
         self.tc_cluster.setText("Cluster " + str(self.selcluster))
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def showClusterSpectrum(self):
 
 
@@ -7155,7 +7147,7 @@ class PageCluster(QtWidgets.QWidget):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def showClusterDistanceMap(self):
 
         mapimage = self.anlz.cluster_distances
@@ -7182,19 +7174,19 @@ class PageCluster(QtWidgets.QWidget):
 
         self.ClusterDistMapPan.draw()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnRemove1stpca(self, state):
         if state == QtCore.Qt.Checked:
             self.wo_1st_pca = 1
         else: self.wo_1st_pca = 0
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSplitClusters(self, state):
         if state == QtCore.Qt.Checked:
             self.sigma_split = 1
         else: self.sigma_split = 0
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnShowallspectra(self, state):
         if state == QtCore.Qt.Checked:
             self.showallspectra = 1
@@ -7203,14 +7195,14 @@ class PageCluster(QtWidgets.QWidget):
         if self.com.cluster_calculated == 1:
             self.showClusterSpectrum()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSave(self, event):
 
         savewin = SaveWinP3(self.window())
         savewin.show()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def Save(self, filename, path, spec_png = True, spec_pdf = False, spec_svg = False, spec_csv = False,
              img_png = True, img_pdf = False, img_svg = False, img_tif = False,
              indimgs_png = True, indimgs_pdf = False, indimgs_svg = False, indimgs_tif = False,
@@ -7513,7 +7505,7 @@ class PageCluster(QtWidgets.QWidget):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 #If png_pdg = 1 save png, if =2 save pdf, if =3 save svg
     def SaveScatt(self, png_pdf = 1):
 
@@ -7603,14 +7595,12 @@ class PageCluster(QtWidgets.QWidget):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnShowScatterplots(self, evt):
 
         scattplwin = Scatterplots(self.window(), self.com, self.anlz)
         scattplwin.show()
-
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 class Scatterplots(QtWidgets.QDialog):
 
     def __init__(self, parent,  common, analz):
@@ -7700,20 +7690,20 @@ class Scatterplots(QtWidgets.QDialog):
         self.draw_scatterplot()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSliderScroll_x(self, value):
         self.pca_x = value
 
         self.draw_scatterplot()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSliderScroll_y(self, value):
         self.pca_y = value
 
         self.draw_scatterplot()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def draw_scatterplot(self):
 
         x_comp = self.od_reduced[:,self.pca_x-1]
@@ -7732,10 +7722,7 @@ class Scatterplots(QtWidgets.QDialog):
         axes.set_ylabel('Component '+str(self.pca_y))
 
         self.ScatterPPanel.draw()
-
-
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 class SaveWinP3(QtWidgets.QDialog):
 
     def __init__(self, parent):
@@ -7909,7 +7896,7 @@ class SaveWinP3(QtWidgets.QDialog):
 
         self.setLayout(vboxtop)
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnBrowseDir(self, evt):
 
         directory = QtWidgets.QFileDialog.getExistingDirectory(self, "Choose a directory", self.path, QtWidgets.QFileDialog.ShowDirsOnly|QtWidgets.QFileDialog.ReadOnly)
@@ -7928,7 +7915,7 @@ class SaveWinP3(QtWidgets.QDialog):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSave(self, evt):
 
         self.filename = str(self.tc_savefn.text())
@@ -7966,17 +7953,14 @@ class SaveWinP3(QtWidgets.QDialog):
                                          scatt_png = scatt_png,
                                          scatt_pdf = scatt_pdf,
                                          scatt_svg = scatt_svg)
-
-
-
-""" ------------------------------------------------------------------------------------------------"""
+#-----------------------------------------------------------------------
 class PagePCA(QtWidgets.QWidget):
     def __init__(self, common, data_struct, stack, anlz):
         super(PagePCA, self).__init__()
 
         self.initUI(common, data_struct, stack, anlz)
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def initUI(self, common, data_struct, stack, anlz):
 
         self.com = common
@@ -8160,7 +8144,7 @@ class PagePCA(QtWidgets.QWidget):
         self.setLayout(vboxtop)
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnCalcPCA(self, event):
 
         QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
@@ -8188,7 +8172,7 @@ class PagePCA(QtWidgets.QWidget):
         self.window().refresh_widgets()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnCalcPCA4D(self, event):
 
         QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
@@ -8234,7 +8218,7 @@ class PagePCA(QtWidgets.QWidget):
 
         self.window().refresh_widgets()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnNPCAspin(self, value):
         num = value
         self.numsigpca = num
@@ -8247,7 +8231,7 @@ class PagePCA(QtWidgets.QWidget):
             self.vartc.setText(str(var.round(decimals=2)*100)+'%')
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnMovePCUP(self):
 
         thiscomponent = self.selpca-1
@@ -8265,7 +8249,7 @@ class PagePCA(QtWidgets.QWidget):
         self.slidershow.setValue(self.selpca)
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def CalcPCA(self):
 
         self.anlz.calculate_pca()
@@ -8283,7 +8267,7 @@ class PagePCA(QtWidgets.QWidget):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def CalcPCA4D(self):
 
         if self.com.stack_4d == 1:
@@ -8304,7 +8288,7 @@ class PagePCA(QtWidgets.QWidget):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnPCAScroll(self, value):
         self.sel = value
         self.selpca = self.sel
@@ -8313,7 +8297,7 @@ class PagePCA(QtWidgets.QWidget):
             self.loadPCASpectrum()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnScrollTheta(self, value):
 
         if self.com.pca4D_calculated == 0:
@@ -8343,7 +8327,7 @@ class PagePCA(QtWidgets.QWidget):
         self.window().page1.itheta = self.itheta
         self.window().page1.slider_theta.setValue(self.itheta)
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnPointEvalsImage(self, evt):
         x = evt.xdata
         y = evt.ydata
@@ -8360,7 +8344,7 @@ class PagePCA(QtWidgets.QWidget):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSave(self, event):
 
         savewin = SaveWinP2(self.window())
@@ -8368,7 +8352,7 @@ class PagePCA(QtWidgets.QWidget):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def Save(self, filename, path, spec_png = True, spec_pdf = False, spec_svg = False, spec_csv = False,
              img_png = True, img_pdf = False, img_svg = False, img_tif = False,
              evals_png = True, evals_pdf = False, evals_svg = False):
@@ -8553,7 +8537,7 @@ class PagePCA(QtWidgets.QWidget):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def showEvals(self):
 
         evalmax = np.min([self.stk.n_ev, 40])
@@ -8575,7 +8559,7 @@ class PagePCA(QtWidgets.QWidget):
         self.PCAEvalsPan.draw()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def loadPCAImage(self):
 
         self.tc_PCAcomp.setText("PCA component " + str(self.selpca))
@@ -8607,7 +8591,7 @@ class PagePCA(QtWidgets.QWidget):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def loadPCASpectrum(self):
 
         self.pcaspectrum = self.anlz.eigenvecs[:,self.selpca-1]
@@ -8625,9 +8609,7 @@ class PagePCA(QtWidgets.QWidget):
         axes.set_ylabel('Optical Density')
 
         self.PCASpecPan.draw()
-
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 class SaveWinP2(QtWidgets.QDialog):
 
     def __init__(self, parent):
@@ -8784,7 +8766,7 @@ class SaveWinP2(QtWidgets.QDialog):
 
         self.setLayout(vboxtop)
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnBrowseDir(self, evt):
 
         directory = QtWidgets.QFileDialog.getExistingDirectory(self, "Choose a directory", self.path, QtWidgets.QFileDialog.ShowDirsOnly|QtWidgets.QFileDialog.ReadOnly)
@@ -8803,7 +8785,7 @@ class SaveWinP2(QtWidgets.QDialog):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSave(self, evt):
 
         self.filename = str(self.tc_savefn.text())
@@ -8833,17 +8815,48 @@ class SaveWinP2(QtWidgets.QDialog):
                                evals_png = ev_png,
                                evals_pdf = ev_pdf,
                                evals_svg = ev_svg)
-
-
-""" ------------------------------------------------------------------------------------------------"""
+#-----------------------------------------------------------------------
 class PageStack(QtWidgets.QWidget):
     def __init__(self, common, data_struct, stack):
         super(PageStack, self).__init__()
+        uic.loadUi(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pagestack.ui'), self)
+        self.show()
+        self.cmaps = [('Perceptually Uniform Sequential', [
+            'viridis', 'plasma', 'inferno', 'magma']),
+                      ('Sequential', [
+                          'Greys', 'Purples', 'Blues', 'Greens', 'Oranges', 'Reds',
+                          'YlOrBr', 'YlOrRd', 'OrRd', 'PuRd', 'RdPu', 'BuPu',
+                          'GnBu', 'PuBu', 'YlGnBu', 'PuBuGn', 'BuGn', 'YlGn']),
+                      ('Sequential (2)', [
+                          'binary', 'gist_yarg', 'gist_gray', 'gray', 'bone', 'pink',
+                          'spring', 'summer', 'autumn', 'winter', 'cool', 'Wistia',
+                          'hot', 'afmhot', 'gist_heat', 'copper']),
+                      ('Diverging', [
+                          'PiYG', 'PRGn', 'BrBG', 'PuOr', 'RdGy', 'RdBu',
+                          'RdYlBu', 'RdYlGn', 'Spectral', 'coolwarm', 'bwr', 'seismic']),
+                      ('Qualitative', [
+                          'Pastel1', 'Pastel2', 'Paired', 'Accent',
+                          'Dark2', 'Set1', 'Set2', 'Set3',
+                          'tab10', 'tab20', 'tab20b', 'tab20c']),
+                      ('Miscellaneous', [
+                          'flag', 'prism', 'ocean', 'gist_earth', 'terrain', 'gist_stern',
+                          'gnuplot', 'gnuplot2', 'CMRmap', 'cubehelix', 'brg', 'hsv',
+                          'gist_rainbow', 'rainbow', 'jet', 'nipy_spectral', 'gist_ncar'])]
 
         self.initUI(common, data_struct, stack)
 
-#----------------------------------------------------------------------
+
+#    def __init__(self, common, data_struct, stack):
+#        super(PageStack, self).__init__()
+#        self.initUI(common, data_struct, stack)
+
+#-----------------------------------------------------------------------
     def initUI(self, common, data_struct, stack):
+
+        self.pglayout = pg.GraphicsLayout(border=None)
+        self.canvas.setBackground("w") # canvas is a pg.GraphicsView widget
+        self.canvas.setCentralWidget(self.pglayout)
+        self.spectrum_plotwidget.setBackground("w")
 
         self.data_struct = data_struct
         self.stk = stack
@@ -8885,20 +8898,20 @@ class PageStack(QtWidgets.QWidget):
         vbox1 = QtWidgets.QVBoxLayout()
         vbox1.setSpacing(0)
 
-        self.button_align = QtWidgets.QPushButton('Align stack...')
+        #self.button_align = QtWidgets.QPushButton('Align stack...')
         self.button_align.clicked.connect(self.OnAlignImgsDialog)
         self.button_align.setEnabled(False)
-        vbox1.addWidget(self.button_align)
+        #vbox1.addWidget(self.button_align)
 
         # self.button_align2 = QtWidgets.QPushButton('Align stack v2...')
         # self.button_align2.clicked.connect( self.OnAlignImgs2)
         # self.button_align2.setEnabled(False)
         # vbox1.addWidget(self.button_align2)
 
-        self.button_multicrop = QtWidgets.QPushButton('Crop stack 3D/4D...')
+        #self.button_multicrop = QtWidgets.QPushButton('Crop stack 3D/4D...')
         self.button_multicrop.clicked.connect( self.OnMultiCrop)
         self.button_multicrop.setEnabled(False)
-        vbox1.addWidget(self.button_multicrop)
+        #vbox1.addWidget(self.button_multicrop)
 
 
         # self.button_limitev = QtWidgets.QPushButton('Limit energy range...')
@@ -8911,212 +8924,214 @@ class PageStack(QtWidgets.QWidget):
         # self.button_subregion.setEnabled(False)
         # vbox1.addWidget(self.button_subregion)
 
-        self.button_artefacts = QtWidgets.QPushButton('Artefacts && Leveling')
+        #self.button_artefacts = QtWidgets.QPushButton('Artefacts && Leveling')
         self.button_artefacts.clicked.connect( self.OnArtefacts)
         self.button_artefacts.setEnabled(False)
-        vbox1.addWidget(self.button_artefacts)
+        #vbox1.addWidget(self.button_artefacts)
 
-        self.button_darksig = QtWidgets.QPushButton('Dark signal subtraction...')
+        #self.button_darksig = QtWidgets.QPushButton('Dark signal subtraction...')
         self.button_darksig.clicked.connect(self.OnDarkSignal)
         self.button_darksig.setEnabled(False)
-        vbox1.addWidget(self.button_darksig)
+        #vbox1.addWidget(self.button_darksig)
 
 
-        self.button_savestack = QtWidgets.QPushButton('Save processed stack')
+        #self.button_savestack = QtWidgets.QPushButton('Save processed stack')
         self.button_savestack.clicked.connect(self.OnSaveStack)
         self.button_savestack.setEnabled(False)
-        vbox1.addWidget(self.button_savestack)
+        #vbox1.addWidget(self.button_savestack)
 
         #self.cb_normthick = QtWidgets.QCheckBox('Prenormalize thickness and make OD', self)
         #self.cb_normthick.setChecked(False)
         #vbox1.addWidget(self.cb_normthick)
 
-        sizer1.setLayout(vbox1)
+        #sizer1.setLayout(vbox1)
 
         #panel 1B
-        sizer1b = QtWidgets.QGroupBox('Normalize')
-        vbox1b = QtWidgets.QVBoxLayout()
-        vbox1b.setSpacing(0)
+        #sizer1b = QtWidgets.QGroupBox('Normalize')
+        #vbox1b = QtWidgets.QVBoxLayout()
+        #vbox1b.setSpacing(0)
 
-        self.button_i0histogram = QtWidgets.QPushButton('Select I0...')
+        #self.button_i0histogram = QtWidgets.QPushButton('Select I0...')
         self.button_i0histogram.clicked.connect( self.OnI0histogram)
         self.button_i0histogram.setEnabled(False)
-        vbox1b.addWidget(self.button_i0histogram)
+        #vbox1b.addWidget(self.button_i0histogram)
 
-        self.button_i0ffile = QtWidgets.QPushButton('I0 from file...')
+        #self.button_i0ffile = QtWidgets.QPushButton('I0 from file...')
         self.button_i0ffile.clicked.connect(self.OnI0FFile)
         self.button_i0ffile.setEnabled(False)
-        vbox1b.addWidget(self.button_i0ffile)
+        #vbox1b.addWidget(self.button_i0ffile)
 
-        self.button_showi0 = QtWidgets.QPushButton('Show I0...')
+        #self.button_showi0 = QtWidgets.QPushButton('Show I0...')
         self.button_showi0.clicked.connect( self.OnShowI0)
         self.button_showi0.setEnabled(False)
-        vbox1b.addWidget(self.button_showi0)
+        #vbox1b.addWidget(self.button_showi0)
 
-        self.button_prenorm = QtWidgets.QPushButton('Use pre-normalized data')
+        #self.button_prenorm = QtWidgets.QPushButton('Use pre-normalized data')
         self.button_prenorm.clicked.connect(self.OnPreNormalizedData)
         self.button_prenorm.setEnabled(False)
-        vbox1b.addWidget(self.button_prenorm)
+        #vbox1b.addWidget(self.button_prenorm)
 
-        self.button_refimgs = QtWidgets.QPushButton('Load Reference Images')
+        #self.button_refimgs = QtWidgets.QPushButton('Load Reference Images')
         self.button_refimgs.clicked.connect(self.OnRefImgs)
         self.button_refimgs.setEnabled(False)
-        vbox1b.addWidget(self.button_refimgs)
+        #vbox1b.addWidget(self.button_refimgs)
 
-        self.button_reseti0 = QtWidgets.QPushButton('Reset I0')
+        #self.button_reseti0 = QtWidgets.QPushButton('Reset I0')
         self.button_reseti0.clicked.connect(self.OnResetI0)
         self.button_reseti0.setEnabled(False)
-        vbox1b.addWidget(self.button_reseti0)
+        #vbox1b.addWidget(self.button_reseti0)
 
-        self.button_saveod = QtWidgets.QPushButton('Save OD data')
+        #self.button_saveod = QtWidgets.QPushButton('Save OD data')
         self.button_saveod.clicked.connect(self.OnSaveOD)
         self.button_saveod.setEnabled(False)
-        vbox1b.addWidget(self.button_saveod)
+        #vbox1b.addWidget(self.button_saveod)
 
-        sizer1b.setLayout(vbox1b)
+        #sizer1b.setLayout(vbox1b)
 
 
         #panel 2
-        sizer2 = QtWidgets.QGroupBox('Display')
-        vbox2 = QtWidgets.QVBoxLayout()
-        vbox2.setSpacing(0)
+        #sizer2 = QtWidgets.QGroupBox('Display')
+        #vbox2 = QtWidgets.QVBoxLayout()
+        #vbox2.setSpacing(0)
 
-        hbox20 = QtWidgets.QHBoxLayout()
+        #hbox20 = QtWidgets.QHBoxLayout()
 
-        sizer21 = QtWidgets.QGroupBox('File')
-        vbox21 = QtWidgets.QVBoxLayout()
+        #sizer21 = QtWidgets.QGroupBox('File')
+        #vbox21 = QtWidgets.QVBoxLayout()
 
-        self.textctrl = QtWidgets.QLabel(self)
-        vbox21.addWidget(self.textctrl)
+        #self.textctrl = QtWidgets.QLabel(self)
+        #vbox21.addWidget(self.textctrl)
         self.textctrl.setText('File name')
 
-        sizer21.setLayout(vbox21)
+        #sizer21.setLayout(vbox21)
 
-        hbox20.addWidget(sizer21)
-        hbox20.addSpacing(15)
+        #hbox20.addWidget(sizer21)
+        #hbox20.addSpacing(15)
 
-        vbox22 = QtWidgets.QVBoxLayout()
-        self.button_slideshow = QtWidgets.QPushButton('Play stack movie')
-        self.button_slideshow.setMaximumSize (150 , 150)
+        #vbox22 = QtWidgets.QVBoxLayout()
+        #self.button_slideshow = QtWidgets.QPushButton('Play stack movie')
+        #self.button_slideshow.setMaximumSize (150 , 150)
         self.button_slideshow.clicked.connect( self.OnSlideshow)
         self.button_slideshow.setEnabled(False)
-        vbox22.addWidget(self.button_slideshow)
+        #vbox22.addWidget(self.button_slideshow)
 
-        self.button_save = QtWidgets.QPushButton( 'Save images...')
-        self.button_save.setMaximumSize (150 , 150)
+        #self.button_save = QtWidgets.QPushButton( 'Save images...')
+        #self.button_save.setMaximumSize (150 , 150)
         self.button_save.clicked.connect( self.OnSave)
         self.button_save.setEnabled(False)
-        vbox22.addWidget(self.button_save)
+        #vbox22.addWidget(self.button_save)
 
-        hbox20.addLayout(vbox22)
-        vbox2.addLayout(hbox20)
-        vbox2.addSpacing(5)
+        #hbox20.addLayout(vbox22)
 
-
-        hbox21 = QtWidgets.QHBoxLayout()
-
-        sizer22 = QtWidgets.QGroupBox('Image')
-        vbox23 = QtWidgets.QVBoxLayout()
-
-        self.rb_flux = QtWidgets.QRadioButton( 'Flux', self)
-        self.rb_od = QtWidgets.QRadioButton('Optical Density',self)
-        self.rb_flux.setChecked(True)
-        self.rb_flux.toggled.connect(self.OnRb_fluxod)
+        #vbox2.addLayout(hbox20)
+        #vbox2.addSpacing(5)
 
 
-        vbox23.addWidget(self.rb_flux)
-        vbox23.addWidget(self.rb_od)
-        vbox23.addStretch (1)
+        #hbox21 = QtWidgets.QHBoxLayout()
 
-        self.rb_flux.setEnabled(False)
-        self.rb_od.setEnabled(False)
+        #sizer22 = QtWidgets.QGroupBox('Image')
+        #vbox23 = QtWidgets.QVBoxLayout()
 
-        self.add_scale_cb = QtWidgets.QCheckBox('Scalebar', self)
-        self.add_scale_cb.setChecked(True)
-        self.add_scale_cb.stateChanged.connect(self.OnShowScale)
-        vbox23.addWidget(self.add_scale_cb)
-
-        hbox211 = QtWidgets.QHBoxLayout()
-        hbox211.addSpacing(20)
-        self.cb_white_scale_bar = QtWidgets.QCheckBox('White', self)
-        self.cb_white_scale_bar.setChecked(False)
-        self.cb_white_scale_bar.stateChanged.connect(self.OnWhiteScale)
-        hbox211.addWidget(self.cb_white_scale_bar)
-        vbox23.addLayout(hbox211)
-
-        self.add_colbar_cb = QtWidgets.QCheckBox('Colorbar', self)
-        self.add_colbar_cb.stateChanged.connect(self.OnShowColBar)
-        vbox23.addWidget(self.add_colbar_cb)
-        sizer22.setLayout(vbox23)
-
-        hbox21.addWidget(sizer22)
-        hbox21.addSpacing(5)
-        vbox2.addLayout(hbox21)
-
-        sizer23 = QtWidgets.QGroupBox('Display settings')
-        hbox23 = QtWidgets.QHBoxLayout()
-
-        fgs21 = QtWidgets.QGridLayout()
-
-        self.tc_min = QtWidgets.QLabel(self)
-        self.tc_min.setText('Minimum: \t{0:5d}%'.format(int(100*self.brightness_min)))
-
-        self.tc_max = QtWidgets.QLabel(self)
-        self.tc_max.setText('Maximum:{0:5d}%'.format(int(100*self.brightness_max)))
-
-        self.slider_brightness_min = QtWidgets.QSlider(QtCore.Qt.Horizontal, self)
-        self.slider_brightness_min.setRange(0,49)
-        self.slider_brightness_min.setValue(self.dispbrightness_min)
-        self.slider_brightness_min.setFocusPolicy(QtCore.Qt.StrongFocus)
-        self.slider_brightness_min.valueChanged[int].connect(self.OnScrollBrightnessMin)
+        #self.rb_flux = QtWidgets.QRadioButton( 'Flux', self)
+        #self.rb_od = QtWidgets.QRadioButton('Optical Density',self)
+        #self.rb_flux.setChecked(True)
+        #self.rb_flux.toggled.connect(self.OnRb_fluxod)
 
 
-        self.slider_brightness_max = QtWidgets.QSlider(QtCore.Qt.Horizontal, self)
-        self.slider_brightness_max.setRange(50,120)
-        self.slider_brightness_max.setValue(self.dispbrightness_max)
-        self.slider_brightness_max.setFocusPolicy(QtCore.Qt.StrongFocus)
-        self.slider_brightness_max.valueChanged[int].connect(self.OnScrollBrightnessMax)
+        #vbox23.addWidget(self.rb_flux)
+        #vbox23.addWidget(self.rb_od)
+        #vbox23.addStretch (1)
 
-        self.tc_gamma = QtWidgets.QLabel(self)
-        self.tc_gamma.setText('Gamma:  \t{0:5.2f}'.format(self.gamma))
+        #self.rb_flux.setEnabled(False)
+        #self.rb_od.setEnabled(False)
 
-        self.slider_gamma = QtWidgets.QSlider(QtCore.Qt.Horizontal, self)
-        self.slider_gamma.setRange(1,20)
-        self.slider_gamma.setValue(self.displaygamma)
-        self.slider_gamma.setFocusPolicy(QtCore.Qt.StrongFocus)
-        self.slider_gamma.valueChanged[int].connect(self.OnScrollGamma)
+        #ToDo: Restore Scalebar option
+        #self.add_scale_cb = QtWidgets.QCheckBox('Scalebar', self)
+        #self.add_scale_cb.setChecked(True)
+        #self.add_scale_cb.stateChanged.connect(self.OnShowScale)
+        #vbox23.addWidget(self.add_scale_cb)
+
+        #hbox211 = QtWidgets.QHBoxLayout()
+        #hbox211.addSpacing(20)
+        #self.cb_white_scale_bar = QtWidgets.QCheckBox('White', self)
+        #self.cb_white_scale_bar.setChecked(False)
+        #self.cb_white_scale_bar.stateChanged.connect(self.OnWhiteScale)
+        #hbox211.addWidget(self.cb_white_scale_bar)
+        #vbox23.addLayout(hbox211)
+
+        #self.add_colbar_cb = QtWidgets.QCheckBox('Colorbar', self)
+        #self.add_colbar_cb.stateChanged.connect(self.OnShowColBar)
+        #vbox23.addWidget(self.add_colbar_cb)
+        #sizer22.setLayout(vbox23)
+
+        #hbox21.addWidget(sizer22)
+        #hbox21.addSpacing(5)
+        #vbox2.addLayout(hbox21)
+
+        #sizer23 = QtWidgets.QGroupBox('Display settings')
+        #hbox23 = QtWidgets.QHBoxLayout()
+
+        #fgs21 = QtWidgets.QGridLayout()
+
+        #self.tc_min = QtWidgets.QLabel(self)
+        #self.tc_min.setText('Minimum: \t{0:5d}%'.format(int(100*self.brightness_min)))
+
+        #self.tc_max = QtWidgets.QLabel(self)
+        #self.tc_max.setText('Maximum:{0:5d}%'.format(int(100*self.brightness_max)))
+
+        #self.slider_brightness_min = QtWidgets.QSlider(QtCore.Qt.Horizontal, self)
+        #self.slider_brightness_min.setRange(0,49)
+        #self.slider_brightness_min.setValue(self.dispbrightness_min)
+        #self.slider_brightness_min.setFocusPolicy(QtCore.Qt.StrongFocus)
+        #self.slider_brightness_min.valueChanged[int].connect(self.OnScrollBrightnessMin)
 
 
-        fgs21.addWidget(self.tc_min, 0, 0)
-        fgs21.addWidget(self.slider_brightness_min, 0, 1)
-        fgs21.addWidget(self.tc_max, 1, 0)
-        fgs21.addWidget(self.slider_brightness_max, 1, 1)
-        fgs21.addWidget(self.tc_gamma, 2, 0)
-        fgs21.addWidget(self.slider_gamma, 2, 1)
+        #self.slider_brightness_max = QtWidgets.QSlider(QtCore.Qt.Horizontal, self)
+        #self.slider_brightness_max.setRange(50,120)
+        #self.slider_brightness_max.setValue(self.dispbrightness_max)
+        #self.slider_brightness_max.setFocusPolicy(QtCore.Qt.StrongFocus)
+        #self.slider_brightness_max.valueChanged[int].connect(self.OnScrollBrightnessMax)
 
-        hbox23.addLayout(fgs21)
+        #self.tc_gamma = QtWidgets.QLabel(self)
+        #self.tc_gamma.setText('Gamma:  \t{0:5.2f}'.format(self.gamma))
+
+        #self.slider_gamma = QtWidgets.QSlider(QtCore.Qt.Horizontal, self)
+        #self.slider_gamma.setRange(1,20)
+        #self.slider_gamma.setValue(self.displaygamma)
+        #self.slider_gamma.setFocusPolicy(QtCore.Qt.StrongFocus)
+        #self.slider_gamma.valueChanged[int].connect(self.OnScrollGamma)
 
 
-        vbox24 = QtWidgets.QVBoxLayout()
-        self.button_despike = QtWidgets.QPushButton('Despike')
-        self.button_despike.clicked.connect( self.OnDespike)
-        self.button_despike.setEnabled(False)
-        vbox24.addWidget(self.button_despike)
-        self.button_resetdisplay = QtWidgets.QPushButton( 'Reset')
-        self.button_resetdisplay.clicked.connect( self.OnResetDisplaySettings)
-        self.button_resetdisplay.setEnabled(False)
-        vbox24.addWidget(self.button_resetdisplay)
-        self.button_displaycolor = QtWidgets.QPushButton('Color Table...   ')
-        self.button_displaycolor.clicked.connect( self.OnSetColorTable)
-        self.button_displaycolor.setEnabled(False)
-        vbox24.addWidget(self.button_displaycolor)
+        #fgs21.addWidget(self.tc_min, 0, 0)
+        #fgs21.addWidget(self.slider_brightness_min, 0, 1)
+        #fgs21.addWidget(self.tc_max, 1, 0)
+        #fgs21.addWidget(self.slider_brightness_max, 1, 1)
+        #fgs21.addWidget(self.tc_gamma, 2, 0)
+        #fgs21.addWidget(self.slider_gamma, 2, 1)
 
-        hbox23.addSpacing(20)
-        hbox23.addLayout(vbox24)
+        #hbox23.addLayout(fgs21)
 
-        sizer23.setLayout(hbox23)
-        hbox21.addWidget(sizer23)
-        sizer2.setLayout(vbox2)
+# ToDo: Restore Despike (if needed)
+        #vbox24 = QtWidgets.QVBoxLayout()
+        #self.button_despike = QtWidgets.QPushButton('Despike')
+        #self.button_despike.clicked.connect( self.OnDespike)
+        #self.button_despike.setEnabled(False)
+        #vbox24.addWidget(self.button_despike)
+        #self.button_resetdisplay = QtWidgets.QPushButton( 'Reset')
+        #self.button_resetdisplay.clicked.connect( self.OnResetDisplaySettings)
+        #self.button_resetdisplay.setEnabled(False)
+        #vbox24.addWidget(self.button_resetdisplay)
+        #self.button_displaycolor = QtWidgets.QPushButton('Color Table...   ')
+        #self.button_displaycolor.clicked.connect( self.OnSetColorTable)
+        #self.button_displaycolor.setEnabled(False)
+        #vbox24.addWidget(self.button_displaycolor)
+
+        #hbox23.addSpacing(20)
+        #hbox23.addLayout(vbox24)
+
+        #sizer23.setLayout(hbox23)
+        #hbox21.addWidget(sizer23)
+        #sizer2.setLayout(vbox2)
 
 
 
@@ -9126,43 +9141,43 @@ class PageStack(QtWidgets.QWidget):
         vbox3.setSpacing(0)
 
 
-        self.button_addROI = QtWidgets.QPushButton('Select ROI (Lasso)')
+        #self.button_addROI = QtWidgets.QPushButton('Select ROI (Lasso)')
         self.button_addROI.clicked.connect( self.OnAddROI)
         self.button_addROI.setEnabled(False)
-        vbox3.addWidget(self.button_addROI)
+        #vbox3.addWidget(self.button_addROI)
 
-        self.button_acceptROI = QtWidgets.QPushButton('Accept ROI')
-        self.button_acceptROI.clicked.connect( self.OnAcceptROI)
-        self.button_acceptROI.setEnabled(False)
-        self.button_acceptROI.setVisible(False)
-        vbox3.addWidget(self.button_acceptROI)
+        #self.button_acceptROI = QtWidgets.QPushButton('Accept ROI')
+        #self.button_acceptROI.clicked.connect( self.OnAcceptROI)
+        #self.button_acceptROI.setEnabled(False)
+        #self.button_acceptROI.setVisible(False)
+        #vbox3.addWidget(self.button_acceptROI)
 
-        self.button_resetROI = QtWidgets.QPushButton('Reset ROI')
+        #self.button_resetROI = QtWidgets.QPushButton('Reset ROI')
         self.button_resetROI.clicked.connect( self.OnResetROI)
         self.button_resetROI.setEnabled(False)
-        vbox3.addWidget(self.button_resetROI)
+        #vbox3.addWidget(self.button_resetROI)
 
-        self.button_setROII0 = QtWidgets.QPushButton('Set ROI As I0')
-        self.button_setROII0.clicked.connect( self.OnSetROII0)
-        self.button_setROII0.setHidden(True)
-        self.button_setROII0.setEnabled(False)
-        vbox3.addWidget(self.button_setROII0)
+        #self.button_setROII0 = QtWidgets.QPushButton('Set ROI As I0')
+        #self.button_setROII0.clicked.connect( self.OnSetROII0)
+        #self.button_setROII0.setHidden(True)
+        #self.button_setROII0.setEnabled(False)
+        #vbox3.addWidget(self.button_setROII0)
 
-        self.button_saveROIspectr = QtWidgets.QPushButton( 'Save ROI Spectrum...')
+        #self.button_saveROIspectr = QtWidgets.QPushButton( 'Save ROI Spectrum...')
         self.button_saveROIspectr.clicked.connect( self.OnSaveROISpectrum)
         self.button_saveROIspectr.setEnabled(False)
-        vbox3.addWidget(self.button_saveROIspectr)
+        #vbox3.addWidget(self.button_saveROIspectr)
 
-        self.button_ROIdosecalc = QtWidgets.QPushButton('ROI Dose Calculation...')
+        #self.button_ROIdosecalc = QtWidgets.QPushButton('ROI Dose Calculation...')
         self.button_ROIdosecalc.clicked.connect( self.OnROI_DoseCalc)
         self.button_ROIdosecalc.setEnabled(False)
-        vbox3.addWidget(self.button_ROIdosecalc)
+        #vbox3.addWidget(self.button_ROIdosecalc)
 
-        self.button_spectralROI = QtWidgets.QPushButton('Spectral ROI...')
+        #self.button_spectralROI = QtWidgets.QPushButton('Spectral ROI...')
         self.button_spectralROI.clicked.connect( self.OnSpectralROI)
         self.button_spectralROI.setEnabled(False)
-        vbox3.addWidget(self.button_spectralROI)
-        sizer3.setLayout(vbox3)
+        #vbox3.addWidget(self.button_spectralROI)
+        #sizer3.setLayout(vbox3)
 
 
 
@@ -9210,49 +9225,49 @@ class PageStack(QtWidgets.QWidget):
 
 
         #panel 5
-        self.tc_spec = QtWidgets.QLabel(self)
-        self.tc_spec.setText("Spectrum ")
-        gridsizer4.addWidget(self.tc_spec, 0, 2, QtCore.Qt.AlignLeft)
+        #self.tc_spec = QtWidgets.QLabel(self)
+        #self.tc_spec.setText("Spectrum ")
+        #gridsizer4.addWidget(self.tc_spec, 0, 2, QtCore.Qt.AlignLeft)
 
-        frame = QtWidgets.QFrame()
-        frame.setFrameStyle(QtWidgets.QFrame.StyledPanel|QtWidgets.QFrame.Sunken)
-        fbox = QtWidgets.QHBoxLayout()
+        #frame = QtWidgets.QFrame()
+        #frame.setFrameStyle(QtWidgets.QFrame.StyledPanel|QtWidgets.QFrame.Sunken)
+        #fbox = QtWidgets.QHBoxLayout()
 
-        self.specfig = Figure((PlotW, PlotH))
-        self.SpectrumPanel = FigureCanvas(self.specfig)
-        self.SpectrumPanel.setParent(self)
-        self.SpectrumPanel.mpl_connect('button_press_event', self.OnPointSpectrum)
+        #self.specfig = Figure((PlotW, PlotH))
+        #self.SpectrumPanel = FigureCanvas(self.specfig)
+        #self.SpectrumPanel.setParent(self)
+        #self.SpectrumPanel.mpl_connect('button_press_event', self.OnPointSpectrum)
 
-        fbox.addWidget(self.SpectrumPanel)
-        frame.setLayout(fbox)
-        gridsizer4.addWidget(frame, 1, 2,  QtCore.Qt.AlignLeft)
-
-
-        vboxtop = QtWidgets.QVBoxLayout()
-
-        hboxtop = QtWidgets.QHBoxLayout()
-        hboxtop.addWidget(sizer1)
-        hboxtop.addWidget(sizer1b)
-        hboxtop.addWidget(sizer2)
-        hboxtop.addWidget(sizer3)
-
-        hboxbott = QtWidgets.QHBoxLayout()
-        hboxbott2 = QtWidgets.QHBoxLayout()
-        hboxbott2.addLayout(gridsizer4)
-        hboxbott.addLayout(hboxbott2)
-
-        vboxtop.addStretch (1)
-        vboxtop.addLayout(hboxtop)
-        vboxtop.addStretch (1)
-        vboxtop.addLayout(hboxbott)
-        vboxtop.addStretch (1)
+        #fbox.addWidget(self.SpectrumPanel)
+        #frame.setLayout(fbox)
+        #gridsizer4.addWidget(frame, 1, 2,  QtCore.Qt.AlignLeft)
 
 
-        vboxtop.setContentsMargins(20,20,20,20)
-        self.setLayout(vboxtop)
+        #vboxtop = QtWidgets.QVBoxLayout()
+
+        #hboxtop = QtWidgets.QHBoxLayout()
+        #hboxtop.addWidget(sizer1)
+        #hboxtop.addWidget(sizer1b)
+        #hboxtop.addWidget(sizer2)
+        #hboxtop.addWidget(sizer3)
+
+        #hboxbott = QtWidgets.QHBoxLayout()
+        #hboxbott2 = QtWidgets.QHBoxLayout()
+        #hboxbott2.addLayout(gridsizer4)
+        #hboxbott.addLayout(hboxbott2)
+
+        #vboxtop.addStretch (1)
+        #vboxtop.addLayout(hboxtop)
+        #vboxtop.addStretch (1)
+        #vboxtop.addLayout(hboxbott)
+        #vboxtop.addStretch (1)
 
 
-#----------------------------------------------------------------------
+        #vboxtop.setContentsMargins(20,20,20,20)
+        #self.setLayout(vboxtop)
+
+
+#-----------------------------------------------------------------------
 
     def OnI0FFile(self, event):
 
@@ -9335,14 +9350,14 @@ class PageStack(QtWidgets.QWidget):
         self.window().refresh_widgets()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnI0histogram(self, event):
         #self.window().Hide()
         histogram = ShowHistogram(self, self.stk)
         histogram.show()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def I0histogramCalculated(self):
 
         plot = PlotFrame(self, self.stk.evi0hist,self.stk.i0datahist)
@@ -9355,18 +9370,18 @@ class PageStack(QtWidgets.QWidget):
             self.stk.od = self.stk.od3d.copy()
             self.stk.od = np.reshape(self.stk.od, (self.stk.n_cols*self.stk.n_rows, self.stk.n_ev), order='F')
 
-        self.loadSpectrum(self.ix, self.iy)
-        self.loadImage()
+        #self.loadSpectrum(self.ix, self.iy)
+        #self.loadImage()
 
         self.window().refresh_widgets()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnShowI0(self, event):
 
         plot = PlotFrame(self, self.stk.evi0,self.stk.i0data)
         plot.show()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnArtefacts(self, event):
         # self.window().Hide()
         artefacts = ShowArtefacts(self.window(), self.com, self.stk)
@@ -9383,7 +9398,7 @@ class PageStack(QtWidgets.QWidget):
 
         self.window().refresh_widgets()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnRefImgs(self, event):
 
         #Load .xrm reference images
@@ -9426,7 +9441,7 @@ class PageStack(QtWidgets.QWidget):
         self.window().refresh_widgets()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnResetI0(self, event):
 
         self.stk.reset_i0()
@@ -9434,19 +9449,19 @@ class PageStack(QtWidgets.QWidget):
         self.com.i0_loaded = 0
 
         self.showflux = True
-        self.rb_flux.setChecked(True)
+        #self.rb_flux.setChecked(True)
 
         self.loadSpectrum(self.ix, self.iy)
         self.loadImage()
         self.window().refresh_widgets()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSaveStack(self, event):
 
         self.window().SaveProcessedStack()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSave(self, event):
 
         savewin = SaveWinP1(self.window())
@@ -9456,18 +9471,18 @@ class PageStack(QtWidgets.QWidget):
     def OnMultiCrop(self, evt):
         multicropwin = MultiCrop(self.window(), self.com, self.stk)
         multicropwin.show()
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 #     def OnLimitEv(self, evt):
 #
 #         limitevwin = LimitEv(self.window(), self.com, self.stk)
 #         limitevwin.show()
 #
-# #----------------------------------------------------------------------
+# #-----------------------------------------------------------------------
 #     def OnCliptoSubregion(self, evt):
 #         clipwin = CliptoSubregion(self.window(), self.com, self.stk)
 #         clipwin.show()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def Save(self, filename, path, spec_png = True, spec_pdf = False, spec_svg = False, sp_csv = False,
              img_png = True, img_pdf = False, img_svg = False, img_tif = False, img_all = False, img_all_tif = False):
 
@@ -9584,7 +9599,7 @@ class PageStack(QtWidgets.QWidget):
             QtWidgets.QMessageBox.warning(self,'Error','Could not save file: %s' % err)
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSaveOD(self, event):
 
         """
@@ -9629,27 +9644,24 @@ class PageStack(QtWidgets.QWidget):
         # self.window().Hide()
         imgregwin = ImageRegistrationDialog(self.window(),self.com)
         imgregwin.show()
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnAlignImgs(self, event):
 
         #self.window().Hide()
         imgregwin = ImageRegistrationManual(self.window(), self.com, self.stk)
         imgregwin.show()
-
 # ----------------------------------------------------------------------
     def OnAlignImgs2(self, event):
 
         imgreg2 = ImageRegistrationFFT(self.window(), self.com, self.stk)
         imgreg2.show()
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnDarkSignal(self, event):
 
 
         dswin = DarkSignal(self.window(), self.com, self.stk)
         dswin.show()
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSlideshow(self, event):
 
         if (self.com.stack_loaded == 1) and (self.addroi == 0):
@@ -9678,10 +9690,7 @@ class PageStack(QtWidgets.QWidget):
             self.loadSpectrum(self.ix, self.iy)
             self.button_slideshow.setText("Play stack movie")
             self.movie_playing = 0
-
-
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnScrollEng(self, value):
         self.iev = value
 
@@ -9689,8 +9698,7 @@ class PageStack(QtWidgets.QWidget):
         if self.com.stack_loaded == 1:
             self.loadImage()
             self.loadSpectrum(self.ix, self.iy)
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnScrollTheta(self, value):
         self.itheta = value
 
@@ -9715,8 +9723,7 @@ class PageStack(QtWidgets.QWidget):
 
         self.window().page2.itheta = self.itheta
         self.window().page2.slider_theta.setValue(self.itheta)
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnPointSpectrum(self, evt):
         x = evt.xdata
         y = evt.ydata
@@ -9736,9 +9743,7 @@ class PageStack(QtWidgets.QWidget):
             self.loadImage()
 
             self.slider_eng.setValue(self.iev)
-
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnPointAbsimage(self, evt):
 
 
@@ -9784,8 +9789,7 @@ class PageStack(QtWidgets.QWidget):
                 if len(self.roixdata) == 3:
                     self.button_acceptROI.setEnabled(True)
                 self.loadImage()
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnRb_fluxod(self, enabled):
 
         state = enabled
@@ -9797,8 +9801,7 @@ class PageStack(QtWidgets.QWidget):
 
         self.ResetDisplaySettings()
         self.loadImage()
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnShowScale(self,state):
 
         if state == QtCore.Qt.Checked:
@@ -9809,8 +9812,7 @@ class PageStack(QtWidgets.QWidget):
 
         if self.com.stack_loaded == 1:
             self.loadImage()
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnWhiteScale(self,state):
 
 
@@ -9824,8 +9826,7 @@ class PageStack(QtWidgets.QWidget):
         if self.com.stack_loaded == 1:
             self.loadImage()
             #self.window().page0.ShowImage()
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnShowColBar(self, state):
 
         if state == QtCore.Qt.Checked:
@@ -9835,14 +9836,12 @@ class PageStack(QtWidgets.QWidget):
 
         if self.com.stack_loaded == 1:
             self.loadImage()
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnResetDisplaySettings(self, event):
 
         self.ResetDisplaySettings()
         self.loadImage()
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnScrollBrightnessMin(self, value):
 
         self.dispbrightness_min = value
@@ -9855,8 +9854,7 @@ class PageStack(QtWidgets.QWidget):
 
         if self.com.stack_loaded == 1:
             self.loadImage()
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnScrollBrightnessMax(self, value):
 
         self.dispbrightness_max = value
@@ -9869,8 +9867,7 @@ class PageStack(QtWidgets.QWidget):
 
         if self.com.stack_loaded == 1:
             self.loadImage()
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnScrollGamma(self, value):
 
         self.displaygamma = value
@@ -9883,7 +9880,7 @@ class PageStack(QtWidgets.QWidget):
 
         if self.com.stack_loaded == 1:
             self.loadImage()
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnDespike(self, evt):
 
         image = self.stk.absdata[:,:,self.iev]
@@ -9897,14 +9894,12 @@ class PageStack(QtWidgets.QWidget):
             self.stk.calculate_optical_density()
 
         self.loadImage()
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSetColorTable(self, event):
 
         colorwin = ColorTableFrame(self.window())
         colorwin.show()
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def loadImage(self):
 
 
@@ -9995,16 +9990,14 @@ class PageStack(QtWidgets.QWidget):
         self.AbsImagePanel.draw()
 
         self.tc_imageeng.setText("Image at energy: {0:5.2f} eV".format(float(self.stk.ev[self.iev])))
-
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def loadSpectrum(self, xpos, ypos):
 
 
-        fig = self.specfig
-        fig.clf()
-        fig.add_axes((0.15,0.15,0.75,0.75))
-        axes = fig.gca()
+#        fig = self.specfig
+#        fig.clf()
+#        fig.add_axes((0.15,0.15,0.75,0.75))
+#        axes = fig.gca()
 
 
         if self.com.i0_loaded == 1:
@@ -10028,8 +10021,7 @@ class PageStack(QtWidgets.QWidget):
 
 
         self.tc_spec.setText('Spectrum at pixel [{0}, {1}] or position [{2:5.2f}, {3:5.2f}]'.format(str(xpos),  str(ypos), np.float(self.stk.x_dist[int(xpos)]), np.float(self.stk.y_dist[int(ypos)])))
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def ResetDisplaySettings(self):
 
 
@@ -10051,10 +10043,7 @@ class PageStack(QtWidgets.QWidget):
         self.tc_min.setText('Minimum: \t{0:5d}%'.format(int(100*self.brightness_min)))
         self.tc_max.setText('Maximum:{0:5d}%'.format(int(100*self.brightness_max)))
         self.tc_gamma.setText('Gamma:  \t{0:5.2f}'.format(self.gamma))
-
-
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 # Determine if a point is inside a given polygon or not. The algorithm is called
 # "Ray Casting Method".
     def point_in_poly(self, x, y, polyx, polyy):
@@ -10077,9 +10066,10 @@ class PageStack(QtWidgets.QWidget):
             p1x,p1y = p2x,p2y
 
         return inside
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnAddROI(self, evt):
+        #ToDo: restore ROI functionality
+
 #         self.addroi = 1
 #         self.previous_point = []
 #         self.start_point = []
@@ -10111,9 +10101,7 @@ class PageStack(QtWidgets.QWidget):
         self.window().refresh_widgets()
 
         return
-
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def CalcROISpectrum(self):
 
         self.ROIspectrum = np.zeros((self.stk.n_ev))
@@ -10128,8 +10116,7 @@ class PageStack(QtWidgets.QWidget):
         for ie in range(self.stk.n_ev):
             thiseng_od = self.stk.od3d[:,:,ie]
             self.ROIspectrum[ie] = np.sum(thiseng_od[indices])/numroipix
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def ShowROISpectrum(self):
 
         self.CalcROISpectrum()
@@ -10148,8 +10135,7 @@ class PageStack(QtWidgets.QWidget):
         self.SpectrumPanel.draw()
 
         self.tc_spec.setText("Average ROI Spectrum: ")
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnAcceptROI(self, evt):
         QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
         self.roixdata.append(self.start_point[0])
@@ -10196,11 +10182,7 @@ class PageStack(QtWidgets.QWidget):
             self.ShowROISpectrum()
 
         QtWidgets.QApplication.restoreOverrideCursor()
-
-
-
-#----------------------------------------------------------------------
-
+#-----------------------------------------------------------------------
     def OnSelectLasso(self,verts):
 
 
@@ -10242,14 +10224,11 @@ class PageStack(QtWidgets.QWidget):
             self.ShowROISpectrum()
 
         QtWidgets.QApplication.restoreOverrideCursor()
-
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnResetROI(self, evt):
 
         self.ResetROI()
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def ResetROI(self):
 
         self.addroi = 0
@@ -10267,8 +10246,7 @@ class PageStack(QtWidgets.QWidget):
             self.loadImage()
             self.loadSpectrum(self.ix, self.iy)
         pass
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def CalcROI_I0Spectrum(self):
 
         self.ROIspectrum = np.zeros((self.stk.n_ev))
@@ -10280,8 +10258,7 @@ class PageStack(QtWidgets.QWidget):
         for ie in range(self.stk.n_ev):
             thiseng_abs = self.stk.absdata[:,:,ie]
             self.ROIspectrum[ie] = np.sum(thiseng_abs[indices])/numroipix
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSetROII0(self, evt):
         self.CalcROI_I0Spectrum()
 
@@ -10312,17 +10289,14 @@ class PageStack(QtWidgets.QWidget):
         self.button_ROIdosecalc.setEnabled(False)
 
         self.window().refresh_widgets()
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnROI_DoseCalc(self, event):
 
         self.CalcROISpectrum()
 
         dosewin = DoseCalculation(self, self.stk, self.ROIspectrum)
         dosewin.show()
-
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSaveROISpectrum(self, event):
 
 
@@ -10354,14 +10328,11 @@ class PageStack(QtWidgets.QWidget):
                 err = e
 
             QtGui.QMessageBox.warning(self,'Error','Could not save file: %s' % err)
-
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSpectralROI(self, evt):
-        specroiwin = SpectralROI(self, self.com, self.stk)
+        specroiwin = ShowODMap(self.window(), self.com, self.data_struct, self.stk)
         specroiwin.show()
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 class SaveWinP1(QtWidgets.QDialog):
 
     def __init__(self, parent):
@@ -10524,7 +10495,7 @@ class SaveWinP1(QtWidgets.QDialog):
 
         self.setLayout(vboxtop)
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnBrowseDir(self, evt):
 
         directory = QtWidgets.QFileDialog.getExistingDirectory(self, "Choose a directory", self.path, QtWidgets.QFileDialog.ShowDirsOnly|QtWidgets.QFileDialog.ReadOnly)
@@ -10543,7 +10514,7 @@ class SaveWinP1(QtWidgets.QDialog):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSave(self, evt):
 
         self.filename = str(self.tc_savefn.text())
@@ -10571,8 +10542,7 @@ class SaveWinP1(QtWidgets.QDialog):
                                          img_tif = im_tif,
                                          img_all = im_all,
                                          img_all_tif = im_all_tif)
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
     def __init__(self, parent, stack):
         QtWidgets.QWidget.__init__(self, parent)
@@ -10635,7 +10605,7 @@ class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
         except:
             pass
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def draw_histogram(self):
         histogram_data =  np.reshape(self.stack.histogram, (self.stack.n_cols*self.stack.n_rows), order='F')
 
@@ -10677,7 +10647,7 @@ class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
 
         self.region.setRegion((self.histmin,self.histmax))
         self.region.sigRegionChanged.connect(lambda: update(self.region.getRegion()))
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnRelease(self):
         if not self.vb.scene().clickEvents:
             self.proxy.block = True
@@ -10764,7 +10734,7 @@ class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.AbsImage.setImage(self.stack.histogram)
         self.MaskImage.setImage(self.redpix, opacity = 0.3)
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnAccept(self, evt):
         if self.MaskImage.zValue() > 0 and np.any(self.i0_indices[0]):
             try:
@@ -10780,8 +10750,7 @@ class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
         else:
             self.i0_indices = []
             QtWidgets.QMessageBox.warning(self, 'Error', 'I0 region is empty!')
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 class ShowArtefacts(QtWidgets.QDialog):
     def __init__(self, parent, common, stack):
         QtWidgets.QWidget.__init__(self, parent)
@@ -10802,10 +10771,13 @@ class ShowArtefacts(QtWidgets.QDialog):
 
         self.button_ok.clicked.connect(self.OnAccept)
         self.button_cancel.clicked.connect(self.close)
+        self.bg_level.toggled.connect(self.ShowImage)
+        self.remove_outliers.toggled.connect(self.ShowImage)
         self.cb_h.stateChanged.connect(self.ShowImage)
         self.cb_v.stateChanged.connect(self.ShowImage)
         #ToDo: I initially wanted to use Qt.QueuedConnection to create a non-blocking Slider.
         self.weight_slider.valueChanged.connect(self.ShowCalcImage)
+        self.weight_slider_2.valueChanged.connect(self.ShowCalcImage)
         self.slider_eng.sliderPressed.connect(self.ShowImage)
         self.slider_eng.sliderReleased.connect(self.ShowImage)
         self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
@@ -10827,12 +10799,16 @@ class ShowArtefacts(QtWidgets.QDialog):
         self.OnScrollEng(0)
 
     def ShowCalcImage(self):
-        if any([self.cb_h.isChecked(),self.cb_v.isChecked()]):
-            a = self.stack.absdata[:, :, self.slider_eng.value()].astype('float64')
-            a, wf = self.LevelCalc(a)
-            if self.rb_median_i0.isChecked():
-                self.label_3.setText(str('{:d}').format(int(wf))+' %')
-            self.i_item.setImage(a)
+        a = self.stack.absdata[:, :, self.slider_eng.value()].astype('float64')
+        if self.bg_level.isChecked():
+            if any([self.cb_h.isChecked(),self.cb_v.isChecked()]):
+                a, wf = self.LevelCalc(a)
+                if self.rb_median_i0.isChecked():
+                    self.label_3.setText(str('{:d}').format(int(wf))+' %')
+        if self.remove_outliers.isChecked():
+            a, wf = self.OutlierCalc(a)
+            self.label_7.setText(str('<p>exceeding background level &plusmn; {:d} * &sigma;</p>').format(int(wf)))
+        self.i_item.setImage(a)
 
     def CorrectionArray(self,array,axis,wf,mask = None,):
         # calculate median along given axis, ignoring nans if present
@@ -10872,6 +10848,41 @@ class ShowArtefacts(QtWidgets.QDialog):
             diff_v = self.CorrectionArray(a, 1, float(wf), mask)[: ,None]
         a = a + diff_v + diff_h
         return(a,int(wf*100))
+
+    def CorrectOutliers(self,array,wf,mask = None,):
+        # calculate median ignoring nans if present
+        if mask is not None:
+            array_nan = np.where(mask, array, np.nan) # replace masked pixels by nans
+            std = np.nanstd(array_nan, keepdims=False)
+            bg_median = np.nanmedian(array_nan, keepdims=False)
+        else:
+            std = np.nanstd(array, keepdims=False)
+            bg_median = np.nanmedian(array, keepdims=False)
+        array[(array < (bg_median-wf*int(std))) | (array > (bg_median+wf*int(std)))] = np.nan
+        x_idx, y_idx = np.meshgrid(np.arange(0, array.shape[1]),np.arange(0, array.shape[0]))
+        array = np.ma.masked_invalid(array) # mask nans
+        x = x_idx[~array.mask]
+        y = y_idx[~array.mask]
+        z = array[~array.mask]
+        array = griddata((x, y), z.ravel(),(x_idx, y_idx), method='nearest') #interpolate array of counts
+        return (array)
+
+
+    def OutlierCalc(self,a,final=False):
+        wf = self.weight_slider_2.value()
+        mask = None
+        #diff_v = 0
+        #diff_h = 0
+        if self.com.i0_loaded:
+            mask = self.stack.i0_mask[:, :, 0]
+            #if final:
+            #    mask = mask[:, :, None]
+        if final:
+            for ev in range(a.shape[-1]):
+                a[:, :, ev] = self.CorrectOutliers(a[:,:,ev], wf, mask)
+        else:
+            a = self.CorrectOutliers(a, wf, mask)
+        return(a,wf)
 # ----------------------------------------------------------------------
     def OnScrollEng(self, value):
         self.slider_eng.setValue(value)
@@ -10881,28 +10892,30 @@ class ShowArtefacts(QtWidgets.QDialog):
     def ShowImage(self):
         if (self.slider_eng.isSliderDown()):
             self.i_item.setImage(self.stack.absdata[:, :, int(self.iev)])
-        elif any([self.cb_h.isChecked(), self.cb_v.isChecked()]):
+        elif any([self.remove_outliers.isChecked(), self.bg_level.isChecked()]):
             self.ShowCalcImage()
         else:
             self.i_item.setImage(self.stack.absdata[:, :, int(self.iev)])
 
             self.label_3.setText(str(''))
         self.groupBox.setTitle(str('Stack Browser | Image at {0:5.2f} eV').format(float(self.stack.ev[self.iev])))
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnAccept(self, evt):
         a, wf = self.LevelCalc(self.stack.absdata.astype('float64'),final=True)
+        if self.remove_outliers.isChecked():
+            a, wf = self.OutlierCalc(a,final=True)
         self.stack.absdata = a
-        self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
-        self.parent.page1.loadImage()
+        #self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
+        #self.parent.page1.loadImage()
         self.parent.page0.Clear()
         self.parent.page0.LoadEntries()
 
-        if showmaptab:
-            self.parent.page9.Clear()
-            self.parent.page9.LoadEntries()
+        #if showmaptab:
+        #    self.parent.page9.Clear()
+        #    self.parent.page9.LoadEntries()
 
         self.close()
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
     evlistchanged = pyqtSignal([object])
     thetalistchanged = pyqtSignal([object])
@@ -11364,12 +11377,12 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.parent.page0.Clear()
         self.parent.page0.LoadEntries()
 
-        if showmaptab:
-            self.parent.page9.Clear()
-            self.parent.page9.LoadEntries()
+        #if showmaptab:
+        #    self.parent.page9.Clear()
+        #    self.parent.page9.LoadEntries()
 
         self.close()
-
+#-----------------------------------------------------------------------
 class ImageRegistrationDialog(QtWidgets.QDialog):
 
     def __init__(self, parent, common):
@@ -11386,7 +11399,7 @@ class ImageRegistrationDialog(QtWidgets.QDialog):
         self.bt_align2.clicked.connect(self.parent.page1.OnAlignImgs2)
         self.bt_align.clicked.connect(self.done)
         self.bt_align2.clicked.connect(self.done)
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 class ImageRegistrationManual(QtWidgets.QDialog):
 
     def __init__(self, parent,  common, stack):
@@ -11819,7 +11832,7 @@ class ImageRegistrationManual(QtWidgets.QDialog):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def ShowImage(self):
 
         if self.com.stack_4d == 0:
@@ -11872,13 +11885,13 @@ class ImageRegistrationManual(QtWidgets.QDialog):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnScrollEng(self, value):
         self.iev = value
 
         self.ShowImage()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnScrollTheta(self, value):
         self.itheta = value
 
@@ -11886,7 +11899,7 @@ class ImageRegistrationManual(QtWidgets.QDialog):
 
         self.ShowImage()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def SetRefImage(self):
 
         self.ref_image_index = self.iev
@@ -11904,7 +11917,7 @@ class ImageRegistrationManual(QtWidgets.QDialog):
         self.UpdateWidgets()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def SaveRefImage(self):
 
         wildcard = "TIFF File (*.tif);;"
@@ -11920,7 +11933,7 @@ class ImageRegistrationManual(QtWidgets.QDialog):
         img1.save(fileName)
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def LoadRefImage(self):
 
         wildcard = "TIFF File (*.tif);;"
@@ -11941,7 +11954,7 @@ class ImageRegistrationManual(QtWidgets.QDialog):
 
         self.UpdateWidgets()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def ShowRefImage(self):
 
         fig = self.refimgfig
@@ -11989,7 +12002,7 @@ class ImageRegistrationManual(QtWidgets.QDialog):
         self.RefImagePanel.draw()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def Onrb_automanual(self, enabled):
 
         state = enabled
@@ -12032,7 +12045,7 @@ class ImageRegistrationManual(QtWidgets.QDialog):
 
         self.UpdateWidgets()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def ShowCrossCorrelation(self, ccorr, xshift, yshift):
 
         fig = self.cscorrfig
@@ -12071,7 +12084,7 @@ class ImageRegistrationManual(QtWidgets.QDialog):
 
         self.CscorrPanel.draw()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnShowCCorr(self, state):
 
         if state == QtCore.Qt.Checked:
@@ -12080,7 +12093,7 @@ class ImageRegistrationManual(QtWidgets.QDialog):
             self.showccorr = 0
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnEdgeE(self, state):
 
         if state == QtCore.Qt.Checked:
@@ -12092,12 +12105,12 @@ class ImageRegistrationManual(QtWidgets.QDialog):
             self.rb_sobel.setEnabled(False)
             self.rb_prewitt.setEnabled(False)
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSetMaxShift(self, value):
 
         self.maxshift = value
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnRemoveImage(self, event):
 
 
@@ -12145,7 +12158,7 @@ class ImageRegistrationManual(QtWidgets.QDialog):
 
         self.ShowImage()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnCalcRegistration(self, event):
 
         if self.com.stack_4d == 1:
@@ -12241,7 +12254,7 @@ class ImageRegistrationManual(QtWidgets.QDialog):
 
         QtWidgets.QApplication.restoreOverrideCursor()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def CalcRegistration4D(self):
 
         QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
@@ -12339,7 +12352,7 @@ class ImageRegistrationManual(QtWidgets.QDialog):
 
         QtWidgets.QApplication.restoreOverrideCursor()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnCropShifts(self, event):
 
         QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
@@ -12355,12 +12368,12 @@ class ImageRegistrationManual(QtWidgets.QDialog):
         QtWidgets.QApplication.restoreOverrideCursor()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnPickRefPoint(self, event):
         self.man_align = 1
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnPointRefimage(self, evt):
 
 
@@ -12399,12 +12412,12 @@ class ImageRegistrationManual(QtWidgets.QDialog):
             self.ShowRefImage()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnPickCorrPoint(self):
 
         self.man_align = 2
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnPointCorrimage(self, evt):
 
         x = evt.xdata
@@ -12449,7 +12462,7 @@ class ImageRegistrationManual(QtWidgets.QDialog):
             self.ShowImage()
             self.UpdateWidgets()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnApplyManShifts(self):
 
 
@@ -12522,7 +12535,7 @@ class ImageRegistrationManual(QtWidgets.QDialog):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnAccept(self):
 
         if self.com.stack_4d == 0:
@@ -12601,7 +12614,7 @@ class ImageRegistrationManual(QtWidgets.QDialog):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def PlotShifts(self, ):
 
         fig = self.shiftsfig
@@ -12625,7 +12638,7 @@ class ImageRegistrationManual(QtWidgets.QDialog):
 
         self.ShiftsPanel.draw()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnPlotShifts(self, evt):
         x = evt.xdata
         y = evt.ydata
@@ -12645,7 +12658,7 @@ class ImageRegistrationManual(QtWidgets.QDialog):
 
             self.slider_eng.setValue(self.iev)
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSaveShiftsPlot(self, evt):
 
 
@@ -12678,7 +12691,7 @@ class ImageRegistrationManual(QtWidgets.QDialog):
         except:
             pass
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSelectSubregion(self, event):
 
         self.subregion = 1
@@ -12690,7 +12703,7 @@ class ImageRegistrationManual(QtWidgets.QDialog):
         self.button_delsubregion.setEnabled(True)
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnDeleteSubregion(self, event):
 
         self.subregion = 0
@@ -12706,7 +12719,7 @@ class ImageRegistrationManual(QtWidgets.QDialog):
         self.ShowRefImage()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSelection(self, evt):
 
         if (self.man_align > 0) and (self.subregion == 0):
@@ -12740,7 +12753,7 @@ class ImageRegistrationManual(QtWidgets.QDialog):
 
         self.ShowRefImage()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSelectionMotion(self, event):
 
         x2, y2 = event.xdata, event.ydata
@@ -12791,7 +12804,7 @@ class ImageRegistrationManual(QtWidgets.QDialog):
 
         self.RefImagePanel.draw()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSaveShifts(self, evt):
 
 
@@ -12825,7 +12838,7 @@ class ImageRegistrationManual(QtWidgets.QDialog):
 
         f.close()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnLoadShifts(self, evt):
 
 
@@ -12907,7 +12920,7 @@ class ImageRegistrationManual(QtWidgets.QDialog):
         if max_yshift > self.maxys : self.maxys = max_yshift
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def UpdateWidgets(self):
 
         if self.auto:
@@ -12961,7 +12974,7 @@ class ImageRegistrationManual(QtWidgets.QDialog):
                 self.button_pick2ndpoint.setEnabled(True)
             elif self.man_align == 2:
                 self.button_applyman.setEnabled(True)
-
+# ----------------------------------------------------------------------
 class GeneralPurposeSignals(QtCore.QObject):
     finished = pyqtSignal()
     ithetaprogress = pyqtSignal(int)
@@ -13017,7 +13030,7 @@ class GeneralPurposeProcessor(QtCore.QRunnable):
     def Gauss(self, im):
         gaussed = ndimage.gaussian_filter(im, self.parent.spinBoxGauss.value())
         return gaussed
-
+# ----------------------------------------------------------------------
 class TaskDispatcher(QtCore.QObject):
     def __init__(self,parent):
         print("0 - dispatcher called, pool initiated")
@@ -13058,7 +13071,7 @@ class TaskDispatcher(QtCore.QObject):
     #add a task to the queue
     def enqueuetask(self, func, *args, **kargs):
         self.queue.put((func, args, kargs))
-
+# ----------------------------------------------------------------------
 class ImageRegistrationFFT(QtWidgets.QDialog, QtGui.QGraphicsScene):
     def __init__(self, parent, common, stack):
         QtWidgets.QWidget.__init__(self, parent)
@@ -13696,9 +13709,9 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.stack.absdata_shifted_cropped = self.stack.absdata
         self.parent.page1.loadImage()
 
-        if showmaptab:
-            self.parent.page9.Clear()
-            self.parent.page9.LoadEntries()
+        #if showmaptab:
+        #    self.parent.page9.Clear()
+        #    self.parent.page9.LoadEntries()
 
         self.close()
     # ----------------------------------------------------------------------
@@ -13767,16 +13780,15 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.parent.page1.ix = int(self.stack.n_cols/2)
         self.parent.page1.iy = int(self.stack.n_rows/2)
 
-        self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
-        self.parent.page1.loadImage()
+        #self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
+        #self.parent.page1.loadImage()
 
-        if showmaptab:
-            self.parent.page9.Clear()
-            self.parent.page9.LoadEntries()
+        #if showmaptab:
+        #    self.parent.page9.Clear()
+        #    self.parent.page9.LoadEntries()
 
         self.close()
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 class SpectralImageMap(QtWidgets.QDialog):
     def __init__(self, parent, common, stack):
         QtWidgets.QWidget.__init__(self, parent)
@@ -13938,7 +13950,7 @@ class SpectralImageMap(QtWidgets.QDialog):
     def closeEvent(self, event):
         self.close()
         self.parent.pbSelfromSpec.setEnabled(True)
-
+# ----------------------------------------------------------------------
 class SpectralROI(QtWidgets.QDialog):
 
     def __init__(self, parent,  common, stack):
@@ -14057,7 +14069,7 @@ class SpectralROI(QtWidgets.QDialog):
         self.draw_spectrum()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def draw_spectrum(self):
 
 
@@ -14083,7 +14095,7 @@ class SpectralROI(QtWidgets.QDialog):
         self.SpectrumPanel.draw()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def draw_image(self):
 
 
@@ -14121,7 +14133,7 @@ class SpectralROI(QtWidgets.QDialog):
         self.ODMImagePanel.draw()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSelection1(self, evt):
 
         x1 = evt.xdata
@@ -14135,7 +14147,7 @@ class SpectralROI(QtWidgets.QDialog):
 
         self.x1 = x1
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSelection2(self, evt):
 
         x2 = evt.xdata
@@ -14182,7 +14194,7 @@ class SpectralROI(QtWidgets.QDialog):
         self.draw_spectrum()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSelectionMotion(self, event):
 
         x2 = event.xdata
@@ -14204,7 +14216,7 @@ class SpectralROI(QtWidgets.QDialog):
         self.SpectrumPanel.draw()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSave(self, evt):
         #Save images
 
@@ -14249,11 +14261,7 @@ class SpectralROI(QtWidgets.QDialog):
                     err = e
 
                 QtGui.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % err)
-
-
-
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 class DoseCalculation(QtWidgets.QDialog):
 
     def __init__(self, parent,  stack, ROIspectrum):
@@ -14333,7 +14341,7 @@ class DoseCalculation(QtWidgets.QDialog):
         self.setLayout(vboxtop)
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def CalcDose(self):
 
 
@@ -14369,15 +14377,13 @@ class DoseCalculation(QtWidgets.QDialog):
         return
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnCalcDose(self, evt):
 
         QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
         self.CalcDose()
         QtWidgets.QApplication.restoreOverrideCursor()
-
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 class DarkSignal(QtWidgets.QDialog):
 
     def __init__(self, parent, common, stack):
@@ -14437,7 +14443,7 @@ class DarkSignal(QtWidgets.QDialog):
         self.setLayout(vboxtop)
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnDSCalc(self):
 
         QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
@@ -14473,13 +14479,8 @@ class DarkSignal(QtWidgets.QDialog):
         self.close()
 
         return
-
-
-
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 class PlotFrame(QtWidgets.QDialog):
-
     def __init__(self, parent, datax, datay, title = "I0 data"):
         QtWidgets.QWidget.__init__(self, parent)
 
@@ -14531,9 +14532,7 @@ class PlotFrame(QtWidgets.QDialog):
 
 
         self.draw_plot(datax,datay)
-
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def draw_plot(self, datax, datay):
 
 
@@ -14552,7 +14551,7 @@ class PlotFrame(QtWidgets.QDialog):
 
         self.PlotPanel.draw()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSave(self, event):
 
 
@@ -14580,7 +14579,7 @@ class PlotFrame(QtWidgets.QDialog):
 
         return
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def Save(self, filename):
 
         f = open(filename, 'w')
@@ -14616,10 +14615,7 @@ class PlotFrame(QtWidgets.QDialog):
             print('{0:06.2f}, {1:06f}'.format(self.datax[ie], self.datay[ie]), file=f)
 
         f.close()
-
-
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 class ColorTableFrame(QtWidgets.QDialog):
 
     def __init__(self, parent):
@@ -14729,7 +14725,7 @@ class ColorTableFrame(QtWidgets.QDialog):
         self.ct_dict[self.parent.page1.colortable].setChecked(True)
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnColorTable(self, event):
 
         for radioButton in self.findChildren(QtWidgets.QRadioButton):
@@ -14741,11 +14737,7 @@ class ColorTableFrame(QtWidgets.QDialog):
         self.parent.page1.colortable = str(radioButtonText)
 
         self.parent.page1.loadImage()
-
-
-
-""" ------------------------------------------------------------------------------------------------"""
-
+#-----------------------------------------------------------------------
 class PageLoadData(QtWidgets.QWidget):
     def __init__(self, common, data_struct, stack):
         super(PageLoadData, self).__init__()
@@ -14775,7 +14767,7 @@ class PageLoadData(QtWidgets.QWidget):
 
         self.initUI(common, data_struct, stack)
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def initUI(self, common, data_struct, stack):
         self.scale = 0.000001
         self.data_struct = data_struct
@@ -14962,9 +14954,9 @@ class PageLoadData(QtWidgets.QWidget):
 
             self.OnScrollEng(self.iev)
             # Update/Refresh widgets:
-            if showmaptab:
-                self.window().page9.Clear()
-                self.window().page9.LoadEntries()
+            #if showmaptab:
+            #    self.window().page9.Clear()
+            #    self.window().page9.LoadEntries()
             self.window().page1.loadImage()
         return
 
@@ -14998,9 +14990,9 @@ class PageLoadData(QtWidgets.QWidget):
             # Update/Refresh widgets:
             self.OnScrollEng(self.iev)
             self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked())
-            if showmaptab:
-                self.window().page9.Clear()
-                self.window().page9.LoadEntries()
+            #if showmaptab:
+            #    self.window().page9.Clear()
+            #    self.window().page9.LoadEntries()
             self.window().page1.ix = int(self.stk.n_cols / 2)
             self.window().page1.iy = int(self.stk.n_rows / 2)
             self.window().page1.loadSpectrum(self.window().page1.ix, self.window().page1.iy)
@@ -15024,23 +15016,23 @@ class PageLoadData(QtWidgets.QWidget):
     def setODbar(self,min=None,max=None):
         self.cm.setRange(xRange=[0,1], yRange=[min,max], update=False, disableAutoRange=True,padding=0)
         self.cmimg.setRect(QtCore.QRectF(0,min,1,max-min))
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnLoadMulti(self, event):
 
         self.window().LoadStack()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnLoad4D(self, event):
 
         self.window().LoadStack4D()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnBuildStack(self, event):
 
         self.window().BuildStack()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnScrollEng(self, value):
         self.slider_eng.setValue(value)
         #self.MapSelectWidget1.setCurrentRow(value)
@@ -15056,7 +15048,7 @@ class PageLoadData(QtWidgets.QWidget):
             self.ODmax = np.max(image)
             self.i_item.setImage(image)
             self.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value())
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnScrollTheta(self, value):
         self.slider_theta.setValue(value)
         self.itheta = value
@@ -15078,19 +15070,18 @@ class PageLoadData(QtWidgets.QWidget):
         #self.window().page2.itheta = self.itheta
         #self.window().page2.slider_theta.setValue(self.itheta)
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def ShowInfo(self, filename, filepath):
 
         self.tc_file.setText(filename)
         self.tc_path.setText(filepath)
-
-""" ------------------------------------------------------------------------------------------------"""
-class PageMap(QtWidgets.QWidget):
+# ----------------------------------------------------------------------
+class ShowODMap(QtWidgets.QWidget):
     qlistchanged = pyqtSignal([tuple])
-    def __init__(self, common, data_struct, stack):
-        super(PageMap, self).__init__()
+    def __init__(self, parent, common, data_struct, stack):
+        super(ShowODMap, self).__init__()
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        uic.loadUi(os.path.join(dir_path,'pagemap.ui'), self)
+        uic.loadUi(os.path.join(dir_path,'showodmap.ui'), self)
         self.show()
         self.cmaps = [('Perceptually Uniform Sequential', [
             'viridis', 'plasma', 'inferno', 'magma']),
@@ -15113,10 +15104,12 @@ class PageMap(QtWidgets.QWidget):
                           'flag', 'prism', 'ocean', 'gist_earth', 'terrain', 'gist_stern',
                           'gnuplot', 'gnuplot2', 'CMRmap', 'cubehelix', 'brg', 'hsv',
                           'gist_rainbow', 'rainbow', 'jet', 'nipy_spectral', 'gist_ncar'])]
-        self.initUI(common, data_struct, stack)
+        self.initUI(parent, common, data_struct, stack)
+        #    self.Clear()
+        self.LoadEntries()
 
-#----------------------------------------------------------------------
-    def initUI(self, common, data_struct, stack):
+#-----------------------------------------------------------------------
+    def initUI(self, parent, common, data_struct, stack):
         self.xoffset = 0
         self.yoffset = 0
         self.scale = 0.000001
@@ -15169,8 +15162,10 @@ class PageMap(QtWidgets.QWidget):
         self.data_struct = data_struct
         self.stk = stack
         self.com = common
+        self.parent = parent
         self.iev = 0
         self.latest_row = -1
+        self.parent.page1.button_spectralROI.setEnabled(False)
 
         self.pglayout = pg.GraphicsLayout(border=None)
         self.canvas.setBackground("w") # canvas is a pg.GraphicsView widget
@@ -15595,6 +15590,7 @@ class PageMap(QtWidgets.QWidget):
         self.MapSelectWidget1.clear()
 
     def LoadEntries(self): # Called when fresh data are loaded.
+        self.slider_eng.setRange(0, self.stk.n_ev - 1)
         self.ODHighSpinBox.setEnabled(False)
         self.ODLowSpinBox.setEnabled(False)
         self.pbRSTOD.setEnabled(False)
@@ -15691,6 +15687,7 @@ class PageMap(QtWidgets.QWidget):
         self.OnSelectionChanged()
 
     def OnSelfromSpec(self):
+        #print(len(self.stk.shifts)) #ToDo: Allow multiple map windows. Task: prevent that stk.shifts is appended each time the window is opened.
         spectralimgmap = SpectralImageMap(self, self.com, self.stk)
         spectralimgmap.show()
 
@@ -15852,7 +15849,11 @@ class PageMap(QtWidgets.QWidget):
             #self.p2.setTitle("Please select a second image!")
             #print("Select a second image!")
 
-#----------------------------------------------------------------------
+    def closeEvent(self, event):
+        self.Clear()
+        self.close()
+        self.parent.page1.button_spectralROI.setEnabled(True)
+#-----------------------------------------------------------------------
 class StackListFrame(QtWidgets.QDialog):
 
     def __init__(self, parent, filepath, com, stack, data_struct):
@@ -15943,7 +15944,7 @@ class StackListFrame(QtWidgets.QDialog):
 
         self.ShowFileList()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnFileList(self, row, column):
 
 
@@ -15968,7 +15969,7 @@ class StackListFrame(QtWidgets.QDialog):
             #self.button_accept.setEnabled(True)
             self.havelast = 1
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def ShowFileList(self):
 
         filepath = str(self.filepath)
@@ -16078,7 +16079,7 @@ class StackListFrame(QtWidgets.QDialog):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnAccept(self, evt):
 
         QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
@@ -16154,9 +16155,7 @@ class StackListFrame(QtWidgets.QDialog):
 
         QtWidgets.QApplication.restoreOverrideCursor()
         self.close()
-
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 class InputRegionDialog(QtWidgets.QDialog):
 
     def __init__(self, parent, nregions, title='Multi Region Stack'):
@@ -16195,15 +16194,12 @@ class InputRegionDialog(QtWidgets.QDialog):
         self.resize(250, 60)
         self.setWindowTitle(title)
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSelectRegion(self, value):
         item = value
         selregion = item
         self.parent.loadregion = selregion
-
-
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 class AboutFrame(QtWidgets.QDialog):
 
     def __init__(self, parent = None, title='About'):
@@ -16286,8 +16282,7 @@ http://www.gnu.org/licenses/.''')
 
 
         self.setLayout(vbox)
-
-""" ------------------------------------------------------------------------------------------------"""
+# ----------------------------------------------------------------------
 class MainFrame(QtWidgets.QMainWindow):
 
     def __init__(self):
@@ -16297,7 +16292,7 @@ class MainFrame(QtWidgets.QMainWindow):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def initUI(self):
 
         self.data_struct = data_struct.h5()
@@ -16343,9 +16338,9 @@ class MainFrame(QtWidgets.QMainWindow):
             self.page8 = PageTomo(self.common, self.data_struct, self.stk, self.anlz)
             tabs.addTab(self.page8, "Tomography")
 
-        if showmaptab:
-            self.page9 = PageMap(self.common, self.data_struct, self.stk)
-            tabs.addTab(self.page9, "Image Maps")
+#        if showmaptab:
+#            self.page9 = PageMap(self.common, self.data_struct, self.stk)
+#            tabs.addTab(self.page9, "Image Maps")
 
         if sys.platform == 'win32':
             tabs.setMinimumHeight(750)
@@ -16362,8 +16357,8 @@ class MainFrame(QtWidgets.QMainWindow):
         tabs.tabBar().setTabTextColor(7, QtGui.QColor('purple'))
         if showtomotab:
             tabs.tabBar().setTabTextColor(8, QtGui.QColor('darkblue'))
-        if showmaptab:
-            tabs.tabBar().setTabTextColor(9, QtGui.QColor('darkblue'))
+        #if showmaptab:
+        #    tabs.tabBar().setTabTextColor(9, QtGui.QColor('darkblue'))
 
 
 
@@ -16407,7 +16402,7 @@ class MainFrame(QtWidgets.QMainWindow):
             self.raise_()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def initToolbar(self):
 
         self.actionOpen = QtWidgets.QAction(self)
@@ -16436,7 +16431,7 @@ class MainFrame(QtWidgets.QMainWindow):
         self.toolbar.addAction(self.actionInfo)
         self.actionInfo.triggered.connect(self.onAbout)
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def LoadStack(self):
         """
         Browse for a stack file:
@@ -16464,7 +16459,7 @@ class MainFrame(QtWidgets.QMainWindow):
             QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
 
             if self.common.stack_loaded == 1:
-                self.new_stack_refresh()
+                #self.new_stack_refresh()
                 self.stk.new_data()
                 self.anlz.delete_data()
             try:
@@ -16497,9 +16492,9 @@ class MainFrame(QtWidgets.QMainWindow):
             self.page1.slider_eng.setRange(0,self.stk.n_ev-1)
             self.page1.iev = self.iev
             self.page1.slider_eng.setValue(self.iev)
-            if showmaptab:
-                self.page9.Clear()
-                self.page9.slider_eng.setRange(0,self.stk.n_ev-1)
+            #if showmaptab:
+            #    self.page9.Clear()
+            #    self.page9.slider_eng.setRange(0,self.stk.n_ev-1)
             self.stk.scale_bar()
             self.common.stack_loaded = 1
             self.common.path = directory
@@ -16510,11 +16505,12 @@ class MainFrame(QtWidgets.QMainWindow):
                 self.stk.fill_h5_struct_normalization()
 
 
-            self.page1.ResetDisplaySettings()
+            #self.page1.ResetDisplaySettings()
             self.page1.loadImage()
             self.page1.button_multicrop.setText('Crop stack 3D...')
             #print (x,y), (self.ix,self.iy), self.stk.absdata.shape
-            self.page1.loadSpectrum(self.ix, self.iy)
+            #ToDo: Restore Auto Loading Spectrum
+            #self.page1.loadSpectrum(self.ix, self.iy)
             self.page1.textctrl.setText(self.page1.filename)
 
             self.page0.Clear()
@@ -16525,13 +16521,13 @@ class MainFrame(QtWidgets.QMainWindow):
 
             QtWidgets.QApplication.restoreOverrideCursor()
 
-            if showmaptab:
-                self.page9.Clear()
-                self.page9.LoadEntries()
+            #if showmaptab:
+            #    self.page9.Clear()
+            #    self.page9.LoadEntries()
         self.refresh_widgets()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def BuildStack(self):
         """
         Browse for .sm files
@@ -16562,7 +16558,7 @@ class MainFrame(QtWidgets.QMainWindow):
 #             import sys; print sys.exc_info()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def LoadStack4D(self):
 
         try:
@@ -16665,7 +16661,7 @@ class MainFrame(QtWidgets.QMainWindow):
                 self.common.i0_loaded = 1
 
 
-            self.page1.ResetDisplaySettings()
+            #self.page1.ResetDisplaySettings()
             self.page1.loadImage()
             self.page1.loadSpectrum(self.ix, self.iy)
             self.page1.textctrl.setText(self.page1.filename)
@@ -16678,9 +16674,9 @@ class MainFrame(QtWidgets.QMainWindow):
 
             QtWidgets.QApplication.restoreOverrideCursor()
 
-            if showmaptab:
-                self.page9.Clear()
-                self.page9.LoadEntries()
+            #if showmaptab:
+            #    self.page9.Clear()
+            #    self.page9.LoadEntries()
         except:
 
             self.common.stack_loaded = 0
@@ -16696,12 +16692,12 @@ class MainFrame(QtWidgets.QMainWindow):
 
         self.refresh_widgets()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def OnSaveProcessedStack(self, event):
         self.SaveProcessedStack()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def SaveProcessedStack(self):
 
         """
@@ -16723,11 +16719,11 @@ class MainFrame(QtWidgets.QMainWindow):
         return
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def onSaveResultsToH5(self, event):
         self.SaveResultsToH5()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def SaveResultsToH5(self):
 
         """
@@ -16771,7 +16767,7 @@ class MainFrame(QtWidgets.QMainWindow):
 
         return
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def onAbout(self):
 
         self.popup = AboutFrame(self)
@@ -16779,7 +16775,7 @@ class MainFrame(QtWidgets.QMainWindow):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def refresh_widgets(self):
 
 
@@ -16800,9 +16796,9 @@ class MainFrame(QtWidgets.QMainWindow):
             self.page1.button_slideshow.setEnabled(False)
             self.page1.button_addROI.setEnabled(False)
             self.page1.button_spectralROI.setEnabled(False)
-            self.page1.button_resetdisplay.setEnabled(False)
-            self.page1.button_despike.setEnabled(False)
-            self.page1.button_displaycolor.setEnabled(False)
+            #self.page1.button_resetdisplay.setEnabled(False)
+            #self.page1.button_despike.setEnabled(False)
+            #self.page1.button_displaycolor.setEnabled(False)
             self.actionSave.setEnabled(False)
 
         else:
@@ -16826,16 +16822,16 @@ class MainFrame(QtWidgets.QMainWindow):
             self.page1.button_slideshow.setEnabled(True)
             self.page1.button_addROI.setEnabled(True)
             self.page1.button_spectralROI.setEnabled(True)
-            self.page1.button_resetdisplay.setEnabled(True)
-            self.page1.button_despike.setEnabled(True)
-            self.page1.button_displaycolor.setEnabled(True)
+            #self.page1.button_resetdisplay.setEnabled(True)
+            #self.page1.button_despike.setEnabled(True)
+            #self.page1.button_displaycolor.setEnabled(True)
             self.actionSave.setEnabled(True)
 
 
         if self.common.i0_loaded == 0:
             self.page1.button_showi0.setEnabled(False)
-            self.page1.rb_flux.setEnabled(False)
-            self.page1.rb_od.setEnabled(False)
+            #self.page1.rb_flux.setEnabled(False)
+            #self.page1.rb_od.setEnabled(False)
             self.page1.button_reseti0.setEnabled(False)
             self.page1.button_saveod.setEnabled(False)
             self.page2.button_calcpca.setEnabled(False)
@@ -16851,8 +16847,8 @@ class MainFrame(QtWidgets.QMainWindow):
                 self.page8.button_engdata.setEnabled(False)
         else:
             self.page1.button_showi0.setEnabled(True)
-            self.page1.rb_flux.setEnabled(True)
-            self.page1.rb_od.setEnabled(True)
+            #self.page1.rb_flux.setEnabled(True)
+            #self.page1.rb_od.setEnabled(True)
             self.page1.button_reseti0.setEnabled(True)
             self.page1.button_saveod.setEnabled(True)
             self.page2.button_calcpca.setEnabled(True)
@@ -16936,12 +16932,12 @@ class MainFrame(QtWidgets.QMainWindow):
                 self.page6.slider_spec.setEnabled(False)
 
 
+        # ToDo: RestoreResetDisplaysetting functionality
+        #self.page1.ResetDisplaySettings()
 
-        self.page1.ResetDisplaySettings()
 
 
-
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def new_stack_refresh(self):
 
 
@@ -16961,9 +16957,9 @@ class MainFrame(QtWidgets.QMainWindow):
         #self.page0.tc_imagetheta.setVisible(False)
 
         #page 1
-        self.page1.rb_flux.setChecked(True)
-        self.page1.rb_od.setChecked(False)
-        self.page1.showflux = True
+        #self.page1.rb_flux.setChecked(True)
+        #self.page1.rb_od.setChecked(False)
+        #self.page1.showflux = True
 
         fig = self.page1.specfig
         fig.clf()
@@ -17059,9 +17055,7 @@ class MainFrame(QtWidgets.QMainWindow):
         #page8
         if showtomotab:
             self.page8.NewStackClear()
-
-
-""" ------------------------------------------------------------------------------------------------"""
+# ----------------------------------------------------------------------
 def main():
 
     app = QtWidgets.QApplication(sys.argv)
@@ -17070,7 +17064,6 @@ def main():
         app.setStyleSheet(stylesheet.read())
     frame = MainFrame()
     sys.exit(app.exec_())
-
 
 if __name__ == '__main__':
     main()

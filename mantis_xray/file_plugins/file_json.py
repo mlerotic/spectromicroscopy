@@ -55,7 +55,7 @@ def GetFileStructure(FileName):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 class JS_FileLoader:
   """Parse .hdr file for metadata."""
   js = []
@@ -80,7 +80,7 @@ class JS_FileLoader:
       self.num_regions = 0
       self.num_channels = 0
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
   def parseDataNames(self): #ToDo: Assigning Scan types by DataFlags is prone to errors. Better detect automatically via (HDR.hdr['ScanDefinition']['Regions'][0]) etc.
     """Figure out names for the .xsp or .xim files that contain the actual data, then check that the files actually exist, printing warnings if they don't."""
     DataNames = []#Regions
@@ -133,7 +133,7 @@ class JS_FileLoader:
             #print "WARNING! Data file doesn't exist:", DataNames[num_R][num_Ch][num_E]
     return DataNames
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
   def parse_DataSize(self):
     """Calculate data array size. This is useful for making sure all of the lists of data are the correct length."""
     DataSize = []
@@ -149,7 +149,7 @@ class JS_FileLoader:
 #        DataSize[R_num] = [1,DataSize[R_num][1],DataSize[R_num][0]]#also works, but might be problematic for finding number of spatial points
     return DataSize
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def read(filename, self, selection=None, *args, **kwargs):
     JS = JS_FileLoader(filename)
     allowed = ['Image Stack', 'Image', 'Multi-Region Image Stack']
@@ -185,7 +185,7 @@ def read(filename, self, selection=None, *args, **kwargs):
 
     return
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def read_js_i0(self, filename, *args, **kwargs):
     JS = JS_FileLoader(filename)
 

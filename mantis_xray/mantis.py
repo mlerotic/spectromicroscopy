@@ -46,7 +46,7 @@ PlotW = PlotH*1.61803
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def save_keyeng(key_engs, odir, filename, stk, anlz, png, pdf, svg):
 
     SaveFileName = os.path.join(odir,filename)
@@ -97,7 +97,7 @@ def save_keyeng(key_engs, odir, filename, stk, anlz, png, pdf, svg):
     return
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def save_spa(odir, filename, stk, anlz, png, pdf, svg):
 
     SaveFileName = os.path.join(odir,filename)
@@ -196,7 +196,7 @@ def save_spa(odir, filename, stk, anlz, png, pdf, svg):
     return
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def MakeColorTable():
     maxclcolors = 11
     colors_i = np.linspace(0, maxclcolors, maxclcolors+1)
@@ -223,7 +223,7 @@ def MakeColorTable():
     return clusterclrmap1, bnorm1, clusterclrmap2, bnorm2
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 #If png_pdg = 1 save png, if =2 save pdf, if =3 save svg
 def SaveScatt(SaveFileName, stk, anlz, png_pdf = 1):
 
@@ -290,7 +290,7 @@ def SaveScatt(SaveFileName, stk, anlz, png_pdf = 1):
     fig.savefig(fileName_sct)
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def save_ca(odir, filename, stk, anlz, png, pdf, svg):
 
     clusterclrmap1, bnorm1, clusterclrmap2, bnorm2 = MakeColorTable()
@@ -432,7 +432,7 @@ def save_ca(odir, filename, stk, anlz, png, pdf, svg):
     return
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def save_pca(odir, filename, stk, anlz, png, pdf, svg):
 
     SaveFileName = os.path.join(odir,filename)
@@ -528,7 +528,7 @@ def save_pca(odir, filename, stk, anlz, png, pdf, svg):
     return
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def batch_mode():
 
     verbose  = 1

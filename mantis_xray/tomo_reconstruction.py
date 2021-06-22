@@ -42,21 +42,21 @@ from .TomoCS import sirt as st
 
 from . import Mrc
         
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def write_mrc(stack, mrcfn):
     
     #stackf32 = stack.astype(np.float32)
     Mrc.save(stack, mrcfn,ifExists='overwrite',calcMMM=False)
     
     
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def load_mrc( mrcfn):
 
     stack = Mrc.load(mrcfn)
 
     return stack
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def calc_sirt(R, theta, Rmin, Rmax, nonnegconst, maxiter, nrows):
 
     R = (R-Rmin)/(Rmax-Rmin)
@@ -83,7 +83,7 @@ def calc_sirt(R, theta, Rmin, Rmax, nonnegconst, maxiter, nrows):
 
     return xk
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def calc_cs(R, theta, Rmin, Rmax, l, beta, initx0, nonnegconst, maxiter):
 
     R = (R-Rmin)/(Rmax-Rmin)
@@ -95,7 +95,7 @@ def calc_cs(R, theta, Rmin, Rmax, l, beta, initx0, nonnegconst, maxiter):
 
     return res[-1]
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 class Ctomo:
     def __init__(self, stkdata):
 
@@ -104,7 +104,7 @@ class Ctomo:
         self.tomorec = []
 
 
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
 # Calculate tomo  reconstruction
 # Algorithm = 0 : CS reconstruction for 1 dataset 
 # Algorithm = 1 : SIRT reconstruction for 1 dataset 
@@ -128,7 +128,7 @@ class Ctomo:
                                     x0, comp, beta2, nonnegconst = nonnegconst)  
              
         
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
 # Calculate tomo - CS reconstruction for 1 dataset  with multiprocessing
     def calc_tomo_cs_multi(self, tomodata, theta, maxiter, beta, samplethickness, nonnegconst=1, nprocessors=6):
         
@@ -223,7 +223,7 @@ class Ctomo:
         return
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 # Calculate tomo - CS reconstruction for 1 dataset
     def calc_tomo_cs(self, tomodata, theta, maxiter, beta, samplethickness, nonnegconst = 1):
 
@@ -302,7 +302,7 @@ class Ctomo:
         return
 
 
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
 # Calculate tomo - SIRT reconstruction for 1 dataset 
     def calc_tomo_sirt(self, tomodata, theta, maxiter, beta, samplethickness, nonnegconst = 1, nprocessors=6):
         
@@ -382,7 +382,7 @@ class Ctomo:
         
         return
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 # Calculate tomo - SIRT reconstruction for 1 dataset
     def calc_tomo_sirt_singleprocessor(self, tomodata, theta, maxiter, beta, samplethickness, nonnegconst = 1):
 
@@ -475,7 +475,7 @@ class Ctomo:
 
     
 
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
 # Calculate tomo - CS reconstruction for 1 dataset with energy TV regularization
     def calc_tomo_cs_tveng(self, tomodata, theta, maxiter, beta, samplethickness, initrecs, comp, beta2, nonnegconst = 1):
         
@@ -575,7 +575,7 @@ class Ctomo:
         return
     
         
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
 # Save mrc
     def save_mrc(self, path, data):  
         

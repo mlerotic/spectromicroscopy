@@ -59,7 +59,7 @@ def GetFileStructure(FileName):
     return None
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def read(filename, stack_object, selection=None, *args, **kwargs):
     """ToDo: .attrs returns a list in py2 and a set in py3! .attrs and .keys() need to be wrapped in list()"""
     have4d = 0
@@ -507,13 +507,13 @@ def read(filename, stack_object, selection=None, *args, **kwargs):
 
     return
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def write(filename, data_object, data_type):
     """Switchyard for writing different types of data."""
     if data_type in ['stack']:
         write_h5(filename, data_object.data_struct)
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def write_h5(filename, data_struct):
     # Open HDF5 file
     f = h5py.File(filename, 'w')
@@ -856,7 +856,7 @@ def write_h5(filename, data_struct):
     f.close()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def write_results_h5(filename, data_struct, anlz):
 
     test_file = 0
@@ -933,13 +933,13 @@ def write_results_h5(filename, data_struct, anlz):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 class h5:
     def __init__(self):
         pass
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def check_h5_format(self, filename):
 
         aps_format = False
@@ -955,7 +955,7 @@ class h5:
 
         return aps_format
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def read_h5(self, filename):#, data_struct):
 
         have4d = 0
@@ -1390,7 +1390,7 @@ class h5:
 
         return
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def write_h5(self, filename, data_struct):
 
         # Open HDF5 file
@@ -1730,7 +1730,7 @@ class h5:
         f.close()
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def write_results_h5(self, filename, data_struct, anlz):
 
         test_file = 0

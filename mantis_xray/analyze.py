@@ -36,7 +36,7 @@ warnings.simplefilter('ignore', DeprecationWarning)
 
 
 
-#-----------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 def erf(x):
     # save the sign of x
     sign = 1
@@ -120,7 +120,7 @@ def model_error(p, nsteps, npeaks, x, y):
     return err
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 class Cfitparams:
     def __init__(self):
        
@@ -132,7 +132,7 @@ class Cfitparams:
         
         
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 class analyze:
     def __init__(self, stkdata):
 
@@ -169,7 +169,7 @@ class analyze:
 
         
         
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
 # Calculate pca 
     def delete_data(self):
         
@@ -188,7 +188,7 @@ class analyze:
         self.cluster_indices = 0
         self.clusterspectra = 0
                     
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
 # Calculate pca 
     def calculate_pca(self):
         #covariance matrix
@@ -269,7 +269,7 @@ class analyze:
 
         return    
 
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
 # Calculate pca 
     def calculate_pca_4D(self):
         #covariance matrix
@@ -370,7 +370,7 @@ class analyze:
 
         return  
     
-#---------------------------------------------------------------------- 
+#----------------------------------------------------------------------- 
 # Move PC up
     def move_pc_up(self, ipc):
         
@@ -431,7 +431,7 @@ class analyze:
                 self.calculate_targetmaps_4D()
                     
 
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
 # Find clusters 
     def calculate_clusters(self, nclusters, remove1stpca = 0, sigmasplit = 0, pcscalingfactor = 0.0):
         #Reduced data matrix od_reduced(n_pixels,n_significant_components)
@@ -576,7 +576,7 @@ class analyze:
         
         return int(nclusters)
         
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
 # Find clusters 
     def calculate_clusters_4D(self, nclusters, remove1stpca = 0, sigmasplit = 0, pcscalingfactor = 0.0):
         #Reduced data matrix od_reduced(n_pixels,n_significant_components)
@@ -721,7 +721,7 @@ class analyze:
         
         return int(nclusters)
        
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
 # Find clusters 
     def calculate_clusters_kmeansangle(self, nclusters, remove1stpca = 0, sigmasplit = 0, 
                                        cosinemeasure = False):
@@ -1023,7 +1023,7 @@ class analyze:
     
 
 
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
 # Find clusters using EM clustering
     def calculate_clusters_em(self, nclusters):
         #Reduced data matrix od_reduced(n_pixels,n_significant_components)
@@ -1048,7 +1048,7 @@ class analyze:
         self.indx = np.reshape(self.indx, (self.stack.n_cols, self.stack.n_rows), order='F')  
         
         
-#-----------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Spectral analysis
 # This routine reads in a mu spectrum in units of inverse microns.
 # The spectrum is interpolated onto the energy range of the stack,
@@ -1102,7 +1102,7 @@ class analyze:
         
         
             
-#-----------------------------------------------------------------------------          
+#------------------------------------------------------------------------------          
     def add_cluster_target_spectra(self):
         # Load spectrum from a file or cluster spectra 
 
@@ -1123,7 +1123,7 @@ class analyze:
         self.fit_target_spectra()
         self.calc_svd_maps()  
         
-#-----------------------------------------------------------------------------          
+#------------------------------------------------------------------------------          
     def remove_spectrum(self, i_spec):   
         
         if self.n_target_spectra > 1:
@@ -1147,7 +1147,7 @@ class analyze:
             self.target_pcafit_coeffs4D = []
             self.target_pcafit_spectra4D = []
             
-#-----------------------------------------------------------------------------          
+#------------------------------------------------------------------------------          
     def move_spectrum(self, old_position, new_position):   
         
         temp_target_spectra = self.target_spectra.copy()
@@ -1163,7 +1163,7 @@ class analyze:
         self.calc_svd_maps()  
 
         
-#-----------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # This routine calculates:
 #   - the transformation matrix T as target_spectrumfit_coeffs, and
 #     the fits to the target spectra as target_fittedspectra
@@ -1222,7 +1222,7 @@ class analyze:
         return
 
     
-#-----------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # This routine calculates the SVD composition maps
 #   1. The optical density is calculated from the stack, and the
 #      data matrix D of dimensions (pixels,energies) is formed
@@ -1247,7 +1247,7 @@ class analyze:
         
         
         
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
 # Calculate composition maps for 4D data 
     def calculate_targetmaps_4D(self):
         
@@ -1288,7 +1288,7 @@ class analyze:
         self.stack.od = tempod   
             
             
-#-----------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Apply threshold on SVD or PCA maps
     def svd_map_threshold(self, cutoff1, cutoff2 = None, svd = False, pca = False):
         
@@ -1323,7 +1323,7 @@ class analyze:
 
               
 
-#-----------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Find key energies by finding peaks and valleys in significant pca spectra
     def calc_key_engs(self, threshold):
  
@@ -1347,7 +1347,7 @@ class analyze:
 
 
 
-#-----------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 #Peakfinder
     def find_peaks(self, v, delta, x = None):
         """
@@ -1414,7 +1414,7 @@ class analyze:
 
        
 
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
     def load_xraypeakfit_spectrum(self, filename):
 
         # Load spectrum from a file
@@ -1459,7 +1459,7 @@ class analyze:
         #Find peaks:
         self.init_fit_params(self.n_xrayfitsp-1)
 
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
 #Load spectra from cluster analysis
     def load_xraypeakfit_clusterspectrum(self, i_cluster):
 
@@ -1485,7 +1485,7 @@ class analyze:
         self.init_fit_params(self.n_xrayfitsp-1)
         
         
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
     def init_fit_params(self, index):
         
         
@@ -1523,7 +1523,7 @@ class analyze:
         return fp.base, fp.stepfitparams, fp.gauss_fp_a, fp.gauss_fp_m, fp.gauss_fp_s
 
 
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
     def set_init_fit_params(self, index, base, stepfitparams, peak_a, peak_m, peak_s):
         
         
@@ -1541,7 +1541,7 @@ class analyze:
             
         return
 
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
     def fit_spectrum(self, i_spec, nsteps, npeaks):
         
         
@@ -1616,7 +1616,7 @@ class analyze:
         return y, separate_y
 
 
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
 # Calculate Fast Independent Component Analysis; FASTICA uses Hyvarinen's 
 # fixed-point algorithm 
 # A. Hyvarinen. Fast and Robust Fixed-Point Algorithms for Independent 
@@ -1757,12 +1757,12 @@ class analyze:
 
         return icasig
 
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
     def getSamples(self, max, percentage):
         Samples = (np.random.random((max,)) < percentage).nonzero()
         return Samples
         
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
 # Fixed point ICA
 # This function is adapted from Hyvarinen's fixed point algorithm Matlab version
 # [A, W] = fpica(whitesig, whiteningMatrix, dewhiteningMatrix, approach,

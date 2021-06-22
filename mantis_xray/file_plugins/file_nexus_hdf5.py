@@ -64,7 +64,10 @@ def read(FileName,stack_object,selection=(0,0), *args, **kwargs):
         if 'line_position' in axes_list:
             axes_order = [axes_list.index('line_position'),axes_list.index('line_position'),axes_list.index('energy')] #linescan
         else:
-            axes_order = [axes_list.index('sample_x'),axes_list.index('sample_y'),axes_list.index('energy')] #stack or image
+            try:
+                axes_order = [axes_list.index('sample_x'),axes_list.index('sample_y'),axes_list.index('energy')] #stack
+            except ValueError: #The energy axis is missing for single images!
+                axes_order = [axes_list.index('sample_x'),axes_list.index('sample_y')] #image
     else: # Old version from before the specification was finalised
         if 'energy' in list(F[entry][detector]):
             try:
@@ -84,7 +87,8 @@ def read(FileName,stack_object,selection=(0,0), *args, **kwargs):
         stack_object.absdata = numpy.tile(temp,(temp.shape[0],1,1))
     else:
         stack_object.absdata = numpy.transpose(numpy.array(F[entry][detector][signal_name]),axes=axes_order)
-
+        if len(axes_order) < 3: # for single images add one more dimension
+            stack_object.absdata = numpy.expand_dims(stack_object.absdata, axis=2)
 
     F.close()
 

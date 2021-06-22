@@ -38,7 +38,7 @@ def GetFileStructure(FileName):
     return None
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def read(filename, self, selection=None, *args, **kwargs):
 
     f = open(str(filename),'r')
@@ -63,7 +63,7 @@ def read(filename, self, selection=None, *args, **kwargs):
        
     return
     
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def write(filename, data_object, data_type):
     """Switchyard for writing different types of data."""
     if data_type in ['spectrum']:
@@ -71,7 +71,7 @@ def write(filename, data_object, data_type):
     elif data_type in ['stack']:
         write_spectrum(filename, np.average(data_object.absdata,axis=(0,1)), energies=data_object.ev, title='I0 Spectrum')
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def write_spectrum(filename, data, energies, title=None ):
     if title is None:
         title = 'Spectrum'

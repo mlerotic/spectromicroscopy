@@ -39,7 +39,7 @@ def GetFileStructure(FileName):
     return None
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def read(filename, self, selection=None, *args, **kwargs):
 
     img = Image.open(filename)
@@ -109,13 +109,13 @@ def read(filename, self, selection=None, *args, **kwargs):
 
     self.fill_h5_struct_from_stk()
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def write(filename, data_object, data_type):
     """Switchyard for writing different types of data."""
     if data_type in ['stack']:
         write_tif(filename, data_object.absdata, data_object.ev)
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def write_tif(filename, data, energies = []):
 
     dims = data.shape
