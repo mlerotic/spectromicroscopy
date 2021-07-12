@@ -168,10 +168,10 @@
        <item row="1" column="2">
         <widget class="QRadioButton" name="radioPolyROI">
          <property name="enabled">
-          <bool>false</bool>
+          <bool>true</bool>
          </property>
          <property name="text">
-          <string>Polygon ROI</string>
+          <string>Rectangle ROI</string>
          </property>
          <property name="checked">
           <bool>false</bool>
@@ -214,4 +214,7 @@
  </customwidgets>
  <resources/>
  <connections/>
+ <slots>
+  <slot>mouseup()</slot>
+ </slots>
 </ui>

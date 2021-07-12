@@ -111,7 +111,7 @@
            <item>
             <widget class="QPushButton" name="button_artefacts">
              <property name="text">
-              <string>Artefacts &amp;&amp; Leveling</string>
+              <string>Artifacts &amp;&amp; Leveling</string>
              </property>
             </widget>
            </item>

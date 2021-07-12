@@ -8866,7 +8866,7 @@ class PageStack(QtWidgets.QWidget):
 
         self.ix = 0
         self.iy = 0
-        self.iev = 50
+        self.iev = 0
         self.itheta = 0
         self.showflux = True
         self.show_colorbar = 0
@@ -8894,9 +8894,9 @@ class PageStack(QtWidgets.QWidget):
 
 
         #panel 1
-        sizer1 = QtWidgets.QGroupBox('Preprocess')
-        vbox1 = QtWidgets.QVBoxLayout()
-        vbox1.setSpacing(0)
+        #sizer1 = QtWidgets.QGroupBox('Preprocess')
+        #vbox1 = QtWidgets.QVBoxLayout()
+        #vbox1.setSpacing(0)
 
         #self.button_align = QtWidgets.QPushButton('Align stack...')
         self.button_align.clicked.connect(self.OnAlignImgsDialog)
@@ -9195,33 +9195,48 @@ class PageStack(QtWidgets.QWidget):
         frame.setFrameStyle(QtWidgets.QFrame.StyledPanel|QtWidgets.QFrame.Sunken)
         fbox = QtWidgets.QHBoxLayout()
 
-        self.absimgfig = Figure((PlotH, PlotH))
-        self.AbsImagePanel = FigureCanvas(self.absimgfig)
-        self.AbsImagePanel.setParent(self)
-        self.cid1 = self.AbsImagePanel.mpl_connect('button_press_event', self.OnPointAbsimage)
-        fbox.addWidget(self.AbsImagePanel)
-        frame.setLayout(fbox)
-        gridsizer4.addWidget(frame, 1, 0, QtCore .Qt. AlignLeft)
+        #self.absimgfig = Figure((PlotH, PlotH))
+        self.absimgfig = AbsImgFig(self,self.canvas)
+        #self.AbsImagePanel = FigureCanvas(self.absimgfig)
+        #self.AbsImagePanel.setParent(self)
+        #self.cid1 = self.AbsImagePanel.mpl_connect('button_press_event', self.OnPointAbsimage)
+        #fbox.addWidget(self.AbsImagePanel)
+        #frame.setLayout(fbox)
+        #gridsizer4.addWidget(frame, 1, 0, QtCore .Qt. AlignLeft)
 
 
-        self.slider_eng = QtWidgets.QScrollBar(QtCore.Qt.Vertical)
-        self.slider_eng.setFocusPolicy(QtCore.Qt.StrongFocus)
+        #self.slider_eng = QtWidgets.QScrollBar(QtCore.Qt.Vertical)
+        #self.slider_eng.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
-        self.slider_eng.setRange(0, 100)
-        gridsizer4.addWidget(self.slider_eng, 1, 1, QtCore .Qt. AlignLeft)
+        #self.slider_eng.setRange(0, 100)
+        #gridsizer4.addWidget(self.slider_eng, 1, 1, QtCore .Qt. AlignLeft)
 
-        self.slider_theta = QtWidgets.QScrollBar(QtCore.Qt.Horizontal)
-        self.slider_theta.setFocusPolicy(QtCore.Qt.StrongFocus)
+        #self.slider_theta = QtWidgets.QScrollBar(QtCore.Qt.Horizontal)
+        #self.slider_theta.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.slider_theta.valueChanged[int].connect(self.OnScrollTheta)
-        self.slider_theta.setRange(0, 100)
+        #self.slider_theta.setRange(0, 100)
         self.slider_theta.setVisible(False)
-        self.tc_imagetheta = QtWidgets.QLabel(self)
-        self.tc_imagetheta.setText("4D Data Angle: ")
-        self.tc_imagetheta.setVisible(False)
-        hbox41 = QtWidgets.QHBoxLayout()
-        hbox41.addWidget(self.tc_imagetheta)
-        hbox41.addWidget(self.slider_theta)
-        gridsizer4.addLayout(hbox41, 2, 0)
+        #self.tc_imagetheta = QtWidgets.QLabel(self)
+        #self.tc_imagetheta.setText("4D Data Angle: ")
+        #self.tc_imagetheta.setVisible(False)
+        #hbox41 = QtWidgets.QHBoxLayout()
+        #hbox41.addWidget(self.tc_imagetheta)
+        #hbox41.addWidget(self.slider_theta)
+        #gridsizer4.addLayout(hbox41, 2, 0)
+
+        self.MetricCheckBox.toggled.connect(lambda: self.absimgfig.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
+        self.ZeroOriginCheckBox.toggled.connect(lambda: self.absimgfig.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
+        self.SquarePxCheckBox.toggled.connect(lambda: self.absimgfig.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
+        self.SquarePxCheckBox.setVisible(False)
+
+        self.CMCatBox.addItems([self.cmaps[0][0],self.cmaps[1][0],self.cmaps[2][0],self.cmaps[3][0],self.cmaps[4][0],self.cmaps[5][0]])
+        self.CMMapBox.addItems(self.cmaps[2][1])
+        self.CMCatBox.setCurrentIndex(2)
+        self.CMMapBox.setCurrentIndex(3)
+        self.CMCatBox.currentIndexChanged.connect(self.absimgfig.OnCatChanged)
+        self.CMMapBox.currentIndexChanged.connect(lambda: self.absimgfig.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value()))
+        self.StepSpin.valueChanged.connect(lambda: self.absimgfig.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value()))
+
 
 
         #panel 5
@@ -9298,8 +9313,8 @@ class PageStack(QtWidgets.QWidget):
                 self.iy = int(y/2)
                 self.stk.read_sdf_i0(filepath)
                 self.com.i0_loaded = 1
-                self.loadSpectrum(self.ix, self.iy)
-                self.loadImage()
+                #self.loadSpectrum(self.ix, self.iy)
+                self.loadNewImage()
 
                 QtWidgets.QApplication.restoreOverrideCursor()
 
@@ -9317,8 +9332,8 @@ class PageStack(QtWidgets.QWidget):
                 self.stk.read_stk_i0(filepath, extension)
 
                 self.com.i0_loaded = 1
-                self.loadSpectrum(self.ix, self.iy)
-                self.loadImage()
+                #self.loadSpectrum(self.ix, self.iy)
+                self.loadNewImage()
 
                 QtWidgets.QApplication.restoreOverrideCursor()
 
@@ -9335,8 +9350,8 @@ class PageStack(QtWidgets.QWidget):
                 self.stk.read_stk_i0(filepath, extension)
 
                 self.com.i0_loaded = 1
-                self.loadSpectrum(self.ix, self.iy)
-                self.loadImage()
+                #self.loadSpectrum(self.ix, self.iy)
+                self.loadNewImage()
 
                 QtWidgets.QApplication.restoreOverrideCursor()
 
@@ -9371,7 +9386,7 @@ class PageStack(QtWidgets.QWidget):
             self.stk.od = np.reshape(self.stk.od, (self.stk.n_cols*self.stk.n_rows, self.stk.n_ev), order='F')
 
         #self.loadSpectrum(self.ix, self.iy)
-        #self.loadImage()
+        self.absimgfig.loadNewImage()
 
         self.window().refresh_widgets()
 
@@ -9393,8 +9408,8 @@ class PageStack(QtWidgets.QWidget):
         self.stk.UsePreNormalizedData()
 
         self.com.i0_loaded = 1
-        self.loadSpectrum(self.ix, self.iy)
-        self.loadImage()
+        #self.loadSpectrum(self.ix, self.iy)
+        self.absimgfig.loadNewImage()
 
         self.window().refresh_widgets()
 
@@ -9424,8 +9439,8 @@ class PageStack(QtWidgets.QWidget):
             self.ix = int(x/2)
             self.iy = int(y/2)
 
-            self.loadSpectrum(self.ix, self.iy)
-            self.loadImage()
+            #self.loadSpectrum(self.ix, self.iy)
+            self.loadNewImage()
             self.com.i0_loaded = 1
             QtWidgets.QApplication.restoreOverrideCursor()
 
@@ -9451,8 +9466,8 @@ class PageStack(QtWidgets.QWidget):
         self.showflux = True
         #self.rb_flux.setChecked(True)
 
-        self.loadSpectrum(self.ix, self.iy)
-        self.loadImage()
+        #self.loadSpectrum(self.ix, self.iy)
+        self.absimgfig.loadNewImage()
         self.window().refresh_widgets()
 
 
@@ -9671,58 +9686,80 @@ class PageStack(QtWidgets.QWidget):
                 return
 
             self.button_slideshow.setText("Stop stack movie")
-            old_iev =  self.iev
             self.movie_playing = 1
-
-            for i in range(self.stk.n_ev):
+            # #self.loadSpectrum(self.ix, self.iy)
+            self.updateRate = max((2,5000/self.stk.n_ev)) # 5ms min update rate or approximately 5 seconds total duration
+            def displayNextImage():
                 QtWidgets.qApp.processEvents()
                 if self.movie_playing == 0:
-                    break
-                self.iev = i
-                self.loadImage()
-                self.slider_eng.setValue(self.iev)
-                self.loadSpectrum(self.ix, self.iy)
-
-
-            self.iev = old_iev
-            self.loadImage()
-            self.slider_eng.setValue(self.iev)
-            self.loadSpectrum(self.ix, self.iy)
-            self.button_slideshow.setText("Play stack movie")
-            self.movie_playing = 0
+                    self.button_slideshow.setText("Play stack movie")
+                    return
+                self.OnScrollEng(self.iev)
+                # at end of stack, start from scratch
+                if self.iev == self.stk.n_ev-1:
+                    self.iev = 0
+                else:
+                    self.iev = (self.iev + 1)
+                QtCore.QTimer.singleShot(self.updateRate, displayNextImage)
+            displayNextImage()
+                #self.loadSpectrum(self.ix, self.iy)
 #-----------------------------------------------------------------------
     def OnScrollEng(self, value):
         self.iev = value
-
-
         if self.com.stack_loaded == 1:
-            self.loadImage()
-            self.loadSpectrum(self.ix, self.iy)
+            self.slider_eng.setValue(value)
+            if self.defaultdisplay == 1.0:
+                # use a pointer to the data not a copy
+                if self.com.i0_loaded == 0:
+                    # Show flux image
+                    image = self.stk.absdata[:, :, self.iev]  # .copy()
+                else:
+                    # Show OD image
+                    image = self.stk.od3d[:, :, self.iev]  # .copy()
+            else:
+                # Adjustment to the data display setting has been made so make a copy
+                #if self.showflux:
+                if self.com.i0_loaded == 0:
+                    image = self.stk.absdata[:, :, self.iev].copy()
+                else:
+                    image = self.stk.od3d[:, :, self.iev].copy()
+            self.absimgfig.draw(image)
+            #self.loadSpectrum(self.ix, self.iy)
 #-----------------------------------------------------------------------
     def OnScrollTheta(self, value):
         self.itheta = value
-
-
-        self.stk.absdata = self.stk.stack4D[:,:,:,self.itheta]
-        if self.com.i0_loaded:
-            self.stk.od3d = self.stk.od4D[:,:,:,self.itheta]
-            self.stk.od = self.stk.od3d.copy()
-            n_pixels = self.stk.n_cols*self.stk.n_rows
-            self.stk.od = np.reshape(self.stk.od, (n_pixels, self.stk.n_ev), order='F')
-
-        self.tc_imagetheta.setText("4D Data Angle: "+str(self.stk.theta[self.itheta]))
-
-
         if self.com.stack_loaded == 1:
-            self.loadImage()
-            self.loadSpectrum(self.ix, self.iy)
-
-
-        self.window().page0.itheta = self.itheta
-        self.window().page0.slider_theta.setValue(self.itheta)
-
-        self.window().page2.itheta = self.itheta
-        self.window().page2.slider_theta.setValue(self.itheta)
+            self.slider_theta.setValue(value)
+            self.stk.absdata = self.stk.stack4D[:,:,:,self.itheta].copy()
+            image = self.stk.absdata[:, :, int(self.slider_eng.value())].copy()
+            #self.tc_imagetheta.setText("4D Data Angle: "+str(self.stk.theta[self.itheta]))
+            #self.p1.setTitle("<center>Image at {0:5.2f} eV and {1:5.1f}°</center>".format(float(self.stk.ev[self.iev]),
+            #                                                                 float(self.stk.theta[self.itheta])))
+            self.absimgfig.draw(image)
+        # def OnScrollTheta(self, value):
+    #     self.itheta = value
+    #
+    #
+    #     self.stk.absdata = self.stk.stack4D[:,:,:,self.itheta]
+    #     if self.com.i0_loaded:
+    #         self.stk.od3d = self.stk.od4D[:,:,:,self.itheta]
+    #         self.stk.od = self.stk.od3d.copy()
+    #         n_pixels = self.stk.n_cols*self.stk.n_rows
+    #         self.stk.od = np.reshape(self.stk.od, (n_pixels, self.stk.n_ev), order='F')
+    #
+    #     #self.tc_imagetheta.setText("4D Data Angle: "+str(self.stk.theta[self.itheta]))
+    #
+    #
+    #     if self.com.stack_loaded == 1:
+    #         self.loadImage()
+    #         self.loadSpectrum(self.ix, self.iy)
+    #
+    #
+    #     self.window().page0.itheta = self.itheta
+    #     self.window().page0.slider_theta.setValue(self.itheta)
+    #
+    #     self.window().page2.itheta = self.itheta
+    #     self.window().page2.slider_theta.setValue(self.itheta)
 #-----------------------------------------------------------------------
     def OnPointSpectrum(self, evt):
         x = evt.xdata
@@ -9899,97 +9936,122 @@ class PageStack(QtWidgets.QWidget):
 
         colorwin = ColorTableFrame(self.window())
         colorwin.show()
+
+# -----------------------------------------------------------------------
+#     def loadNewImage(self):
+#         fig = self.absimgfig
+#         fig.clear()
+#         # if self.defaultdisplay == 1.0:
+#         #     # use a pointer to the data not a copy
+#         #     if self.showflux:
+#         #         # Show flux image
+#         #         image = self.stk.absdata[:, :, self.iev]  # .copy()
+#         #     else:
+#         #         # Show OD image
+#         #         image = self.stk.od3d[:, :, self.iev]  # .copy()
+#         # else:
+#         #     # Adjustment to the data display setting has been made so make a copy
+#         #     if self.showflux:
+#         #         image = self.stk.absdata[:, :, self.iev].copy()
+#         #     else:
+#         #         image = self.stk.od3d[:, :, self.iev].copy()
+#         fig.loadData()
+#         #print("setimage")
+#         #fig.OnScrollEng(self.iev)
+#         #fig.i_item.setImage(image)
+#         #im = axes.imshow(np.rot90(image), cmap=matplotlib.cm.get_cmap(self.colortable))
+#         # self.tc_imageeng.setText("Image at energy: {0:5.2f} eV".format(float(self.stk.ev[self.iev])))
 #-----------------------------------------------------------------------
-    def loadImage(self):
-
-
-        if self.defaultdisplay == 1.0:
-            #use a pointer to the data not a copy
-            if self.showflux:
-                #Show flux image
-                image = self.stk.absdata[:,:,self.iev]#.copy()
-            else:
-                #Show OD image
-                image = self.stk.od3d[:,:,self.iev]#.copy()
-        else:
-            #Adjustment to the data display setting has been made so make a copy
-            if self.showflux:
-                image = self.stk.absdata[:,:,self.iev].copy()
-            else:
-                image = self.stk.od3d[:,:,self.iev].copy()
-
-
-
-        fig = self.absimgfig
-        fig.clf()
-
-        if self.show_colorbar == 0:
-            fig.add_axes(((0.0,0.0,1.0,1.0)))
-            axes = fig.gca()
-
-        else:
-            axes = fig.gca()
-            divider = make_axes_locatable(axes)
-            axcb = divider.new_horizontal(size="3%", pad=0.03)
-
-            fig.add_axes(axcb)
-
-            axes.set_position([0.03,0.03,0.8,0.94])
-
-        self.axes = axes
-        fig.patch.set_alpha(1.0)
-
-        if (self.line != None) and (self.addroi == 1):
-            axes.add_line(self.line)
-
-
-        if self.defaultdisplay == 1.0:
-            im = axes.imshow(np.rot90(image), cmap=matplotlib.cm.get_cmap(self.colortable))
-        else:
-            imgmax = np.amax(image)
-            imgmin = np.amin(image)
-            if (self.gamma != 1.0) or (imgmin < 0.0):
-                image = (image-imgmin)/(imgmax-imgmin)
-                imgmax = 1.0
-                imgmin = 0.0
-                if (self.gamma != 1.0):
-                    image = np.power(image, self.gamma)
-            vmin=(imgmin+imgmax*self.brightness_min)
-            vmax=imgmax*self.brightness_max
-            if vmin > vmax : vmax = vmin + 0.1
-            im = axes.imshow(np.rot90( image), cmap=matplotlib.cm.get_cmap(self.colortable),
-                             vmin=vmin,vmax=vmax)
-
-
-        if (self.showROImask == 1) and (self.addroi == 1):
-            im_red = axes.imshow(np.rot90( self.ROIpix_masked), cmap=matplotlib.cm.get_cmap("autumn"))
-
-
-
-        axes.axis("off")
-
-        if self.show_colorbar == 1:
-            cbar = axes.figure.colorbar(im, orientation='vertical',cax=axcb)
-
-        if self.show_scale_bar == 1:
-            if self.white_scale_bar == 1:
-                sbcolor = 'white'
-            else:
-                sbcolor = 'black'
-            startx = int(self.stk.n_cols*0.05)
-            starty = self.stk.n_rows-int(self.stk.n_rows*0.05)-self.stk.scale_bar_pixels_y
-            um_string = ' $\mathrm{\mu m}$'
-            microns = '$'+self.stk.scale_bar_string+' $'+um_string
-            axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center',
-                      color = sbcolor, fontsize=14)
-            #Matplotlib has flipped scales so I'm using rows instead of cols!
-            p = matplotlib.patches.Rectangle((startx,starty), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
-                                   color = sbcolor, fill = True)
-            axes.add_patch(p)
-
-        self.AbsImagePanel.draw()
-
-        self.tc_imageeng.setText("Image at energy: {0:5.2f} eV".format(float(self.stk.ev[self.iev])))
+    # def loadImage(self):
+    #
+    #
+    #     if self.defaultdisplay == 1.0:
+    #         #use a pointer to the data not a copy
+    #         if self.showflux:
+    #             #Show flux image
+    #             image = self.stk.absdata[:,:,self.iev]#.copy()
+    #         else:
+    #             #Show OD image
+    #             image = self.stk.od3d[:,:,self.iev]#.copy()
+    #     else:
+    #         #Adjustment to the data display setting has been made so make a copy
+    #         if self.showflux:
+    #             image = self.stk.absdata[:,:,self.iev].copy()
+    #         else:
+    #             image = self.stk.od3d[:,:,self.iev].copy()
+    #
+    #
+    #
+    #     fig = self.absimgfig
+    #     fig.clf()
+    #
+    #     if self.show_colorbar == 0:
+    #         fig.add_axes(((0.0,0.0,1.0,1.0)))
+    #         axes = fig.gca()
+    #
+    #     else:
+    #         axes = fig.gca()
+    #         divider = make_axes_locatable(axes)
+    #         axcb = divider.new_horizontal(size="3%", pad=0.03)
+    #
+    #         fig.add_axes(axcb)
+    #
+    #         axes.set_position([0.03,0.03,0.8,0.94])
+    #
+    #     self.axes = axes
+    #     fig.patch.set_alpha(1.0)
+    #
+    #     if (self.line != None) and (self.addroi == 1):
+    #         axes.add_line(self.line)
+    #
+    #
+    #     if self.defaultdisplay == 1.0:
+    #         im = axes.imshow(np.rot90(image), cmap=matplotlib.cm.get_cmap(self.colortable))
+    #     else:
+    #         imgmax = np.amax(image)
+    #         imgmin = np.amin(image)
+    #         if (self.gamma != 1.0) or (imgmin < 0.0):
+    #             image = (image-imgmin)/(imgmax-imgmin)
+    #             imgmax = 1.0
+    #             imgmin = 0.0
+    #             if (self.gamma != 1.0):
+    #                 image = np.power(image, self.gamma)
+    #         vmin=(imgmin+imgmax*self.brightness_min)
+    #         vmax=imgmax*self.brightness_max
+    #         if vmin > vmax : vmax = vmin + 0.1
+    #         im = axes.imshow(np.rot90( image), cmap=matplotlib.cm.get_cmap(self.colortable),
+    #                          vmin=vmin,vmax=vmax)
+    #
+    #
+    #     if (self.showROImask == 1) and (self.addroi == 1):
+    #         im_red = axes.imshow(np.rot90( self.ROIpix_masked), cmap=matplotlib.cm.get_cmap("autumn"))
+    #
+    #
+    #
+    #     axes.axis("off")
+    #
+    #     if self.show_colorbar == 1:
+    #         cbar = axes.figure.colorbar(im, orientation='vertical',cax=axcb)
+    #
+    #     if self.show_scale_bar == 1:
+    #         if self.white_scale_bar == 1:
+    #             sbcolor = 'white'
+    #         else:
+    #             sbcolor = 'black'
+    #         startx = int(self.stk.n_cols*0.05)
+    #         starty = self.stk.n_rows-int(self.stk.n_rows*0.05)-self.stk.scale_bar_pixels_y
+    #         um_string = ' $\mathrm{\mu m}$'
+    #         microns = '$'+self.stk.scale_bar_string+' $'+um_string
+    #         axes.text(self.stk.scale_bar_pixels_x+startx+1,starty+1, microns, horizontalalignment='left', verticalalignment='center',
+    #                   color = sbcolor, fontsize=14)
+    #         #Matplotlib has flipped scales so I'm using rows instead of cols!
+    #         p = matplotlib.patches.Rectangle((startx,starty), self.stk.scale_bar_pixels_x, self.stk.scale_bar_pixels_y,
+    #                                color = sbcolor, fill = True)
+    #         axes.add_patch(p)
+    #
+    #     self.AbsImagePanel.draw()
+    #
+    #     self.tc_imageeng.setText("Image at energy: {0:5.2f} eV".format(float(self.stk.ev[self.iev])))
 #-----------------------------------------------------------------------
     def loadSpectrum(self, xpos, ypos):
 
@@ -10036,13 +10098,13 @@ class PageStack(QtWidgets.QWidget):
         self.brightness_max = 1.0
         self.gamma = 1.0
 
-        self.slider_brightness_max.setValue(self.dispbrightness_max)
-        self.slider_brightness_min.setValue(self.dispbrightness_min)
-        self.slider_gamma.setValue(self.displaygamma)
+        #self.slider_brightness_max.setValue(self.dispbrightness_max)
+        #self.slider_brightness_min.setValue(self.dispbrightness_min)
+        #self.slider_gamma.setValue(self.displaygamma)
 
-        self.tc_min.setText('Minimum: \t{0:5d}%'.format(int(100*self.brightness_min)))
-        self.tc_max.setText('Maximum:{0:5d}%'.format(int(100*self.brightness_max)))
-        self.tc_gamma.setText('Gamma:  \t{0:5.2f}'.format(self.gamma))
+        #self.tc_min.setText('Minimum: \t{0:5d}%'.format(int(100*self.brightness_min)))
+        #self.tc_max.setText('Maximum:{0:5d}%'.format(int(100*self.brightness_max)))
+        #self.tc_gamma.setText('Gamma:  \t{0:5.2f}'.format(self.gamma))
 #-----------------------------------------------------------------------
 # Determine if a point is inside a given polygon or not. The algorithm is called
 # "Ray Casting Method".
@@ -10078,27 +10140,27 @@ class PageStack(QtWidgets.QWidget):
 #         self.roixdata = []
 #         self.roiydata = []
 
-        self.addroi = 1
+        #self.addroi = 1
 
-        self.AbsImagePanel.mpl_disconnect(self.cid1)
-
-
-
-        lineprops = dict(color='red', linestyle='-', linewidth = 1, alpha=1)
+        #self.AbsImagePanel.mpl_disconnect(self.cid1)
 
 
-        self.lasso = LassoSelector(self.axes, onselect=self.OnSelectLasso, useblit=False, lineprops=lineprops)
+
+        #lineprops = dict(color='red', linestyle='-', linewidth = 1, alpha=1)
 
 
-        fig = self.specfig
-        fig.clf()
-        self.SpectrumPanel.draw()
-        self.tc_spec.setText("Average ROI Spectrum: ")
+        #self.lasso = LassoSelector(self.axes, onselect=self.OnSelectLasso, useblit=False, lineprops=lineprops)
 
-        self.button_acceptROI.setEnabled(False)
-        self.button_resetROI.setEnabled(True)
-        self.button_ROIdosecalc.setEnabled(False)
-        self.window().refresh_widgets()
+
+        #fig = self.specfig
+        #fig.clf()
+        #self.SpectrumPanel.draw()
+        #self.tc_spec.setText("Average ROI Spectrum: ")
+
+        #self.button_acceptROI.setEnabled(False)
+        #self.button_resetROI.setEnabled(True)
+        #self.button_ROIdosecalc.setEnabled(False)
+        #self.window().refresh_widgets()
 
         return
 #-----------------------------------------------------------------------
@@ -10235,11 +10297,11 @@ class PageStack(QtWidgets.QWidget):
         self.showROImask = 0
         self.ROIpix = None
 
-        self.button_acceptROI.setEnabled(False)
-        self.button_setROII0.setEnabled(False)
-        self.button_resetROI.setEnabled(False)
-        self.button_saveROIspectr.setEnabled(False)
-        self.button_ROIdosecalc.setEnabled(False)
+        #self.button_acceptROI.setEnabled(False)
+        #self.button_setROII0.setEnabled(False)
+        #self.button_resetROI.setEnabled(False)
+        #self.button_saveROIspectr.setEnabled(False)
+        #self.button_ROIdosecalc.setEnabled(False)
         self.window().refresh_widgets()
 
         if (self.com.i0_loaded == 1):
@@ -10548,7 +10610,6 @@ class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
         QtWidgets.QWidget.__init__(self, parent)
         dir_path = os.path.dirname(os.path.realpath(__file__))
         uic.loadUi(os.path.join(dir_path,'showhistogram.ui'), self)
-
         self.HistoWidget.setBackground("w")
         self.I0Widget.setBackground("w")
 
@@ -10577,33 +10638,34 @@ class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.draw_histogram()
         self.draw_image(self.histmin,self.histmax)
 
-        self.I0box = pg.PolyLineROI([[1, 1], [0, 1], [0, 0], [1, 0]], pen=(5, 8), closed=True)
+        self.I0box = pg.PolyLineROI([[1, 1], [0, 1], [0, 0], [1, 0]], pen=(5, 8), closed=True, movable=False, resizable=True)
         self.vb.addItem(self.I0box, ignoreBounds=False)
         self.I0box.clearPoints()
 
-        self.clickdetector = QtCore.QTimer()
-        self.clickdetector.timeout.connect(self.OnRelease)
         self.radioLassoROI.toggled.connect(self.SetupROI)
         self.SetupROI()
 
     def SetupROI(self):
+        try:
+            self.proxy.disconnect()
+        except:
+            pass
         self.I0instructions.setText("Select I0 by dragging the histogram lines or by drawing a ROI.")
         self.lassopoints = []
         self.I0box.setZValue(-10)
         self.MaskImage.setZValue(-10)
         if self.radioLassoROI.isChecked():
-            self.proxy = pg.SignalProxy(self.vb.scene().sigMouseMoved, rateLimit=15, slot=self.OnMouseHover) # rate limit to avoid too many handles
+            self.proxy = pg.SignalProxy(self.vb.scene().sigMouseMoved, rateLimit=15, slot=self.onMouseHover) # rate limit to avoid too many handles
             self.I0box.handlePen = QtGui.QPen(QtGui.QColor(255, 0, 128, 0))
-        ##Polygon is currently broken
-        # elif self.radioPolyROI.isChecked():
-        #     self.proxy = pg.SignalProxy(self.vb.scene().sigMouseMoved, rateLimit=30, slot=self.OnMouseHover)
-        #     self.I0box.handlePen = QtGui.QPen(QtGui.QColor(255, 0, 128, 255))
-        try:
-            self.I0box.sigRegionChangeFinished.disconnect()
-            self.I0box.clearPoints()
-            self.proxy.block = False
-        except:
-            pass
+        #ToDo:Polygon ROI was deprecated in pyqtgraph. It is currently replaced by a rectangle.
+        elif self.radioPolyROI.isChecked():
+            self.proxy = pg.SignalProxy(self.vb.scene().sigMouseMoved, rateLimit=30, slot=self.onMouseHover)
+            #self.I0box.handlePen = QtGui.QPen(QtGui.QColor(255, 0, 128, 255)) # visible handles
+            self.I0box.handlePen = QtGui.QPen(QtGui.QColor(255, 0, 128, 0)) # invisible handles
+            #self.I0box.sigRegionChangeFinished.connect(self.test)
+        self.I0Widget.mouseReleaseEvent = self.onMouseUp
+        self.I0Widget.mousePressEvent = self.onMouseDown
+        self.proxy.block = True
 
 #-----------------------------------------------------------------------
     def draw_histogram(self):
@@ -10648,20 +10710,6 @@ class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.region.setRegion((self.histmin,self.histmax))
         self.region.sigRegionChanged.connect(lambda: update(self.region.getRegion()))
 #-----------------------------------------------------------------------
-    def OnRelease(self):
-        if not self.vb.scene().clickEvents:
-            self.proxy.block = True
-            self.DrawROI()
-            #self.I0instructions.setText("Drag the polygon or the handles. Add handles by clicking on a line segment.")
-            if self.radioLassoROI.isChecked():
-                self.lassopoints= []
-                self.I0instructions.setText("")
-                while len(self.I0box.getHandles()) > 0:
-                    self.I0box.removeHandle(self.I0box.getHandles()[0], updateSegments=True)
-            self.I0box.sigRegionChangeFinished.connect(self.DrawROI)
-            self.clickdetector.stop()
-
-
     def DrawROI(self):
         left = int(round(self.vb.itemBoundingRect(self.I0box).left(),0))
         right = int(round(self.vb.itemBoundingRect(self.I0box).right(),0))
@@ -10694,36 +10742,62 @@ class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.MaskImage.setImage(self.redpix, opacity=0.3)
         self.MaskImage.setZValue(10)
 
-    def OnMouseHover(self,ev):
-        pos = self.vb.mapSceneToView(ev[0])
+    def onMouseDown(self,e):
+        self.MaskImage.setZValue(-10)
+        self.I0box.setZValue(10)
+        if self.radioLassoROI.isChecked():
+            self.proxy.block = False
+                #self.clickdetector.start(10)
+        elif self.radioPolyROI.isChecked():
+            #self.I0box.sigRegionChangeFinished.connect(self.test)
+            self.proxy.block = False
+            self.origin = self.vb.mapSceneToView(e.pos())
+
+    def onMouseUp(self,e):
+        #self.clickdetector.stop()
+        self.proxy.block = True
+        self.DrawROI()
+        # self.I0instructions.setText("Drag the polygon or the handles. Add handles by clicking on a line segment.")
+        if self.radioLassoROI.isChecked():
+            self.proxy.block = True
+            self.lassopoints = []
+            #self.I0instructions.setText("")
+            self.I0box.clearPoints()
+            #print("clearpoints")
+        elif self.radioPolyROI.isChecked():
+            self.proxy.block = True
+            self.lassopoints = []
+            #self.I0instructions.setText("")
+            #self.I0Widget.mousePressEvent = None
+            self.I0box.clearPoints()
+            #self.proxy.disconnect()
+            return
+
+    def onMouseHover(self,e):
+        pos = self.vb.mapSceneToView(e[0])
         roipos = pos-self.vb.mapFromViewToItem(self.I0box,pos)
         if self.vb.itemBoundingRect(self.AbsImage).contains(pos):
-            if self.vb.scene().clickEvents:
-                self.MaskImage.setZValue(-10)
-                self.I0box.setZValue(10)
-                self.clickdetector.start(10)
-                if self.radioLassoROI.isChecked():
-                    handle = self.I0box.addFreeHandle((np.round(pos.x()-roipos.x(),0),np.round(pos.y()-roipos.y(),0)))
-                    self.lassopoints.append(handle)
-                    if len(self.lassopoints) > 1:
-                        self.I0box.addSegment(self.lassopoints[0], self.lassopoints[1])
-                        self.lassopoints.pop(0)
-                ## Polygon ROI is currently broken in recent pyqtgraph version
-                # elif self.radioPolyROI.isChecked():
-                #     origin = self.vb.mapSceneToView(self.vb.scene().clickEvents[0].scenePos())
-                #     if origin.x() < 0:
-                #         x0 = 0-roipos.x()
-                #     elif origin.x() > self.stack.n_cols:
-                #         x0 = self.stack.n_cols - roipos.x()
-                #     else:
-                #         x0 = np.round(origin.x()-roipos.x(),0)
-                #     if origin.y() < 0:
-                #         y0 = 0-roipos.y()
-                #     elif origin.y() > self.stack.n_rows:
-                #         y0 = self.stack.n_rows - roipos.y()
-                #     else:
-                #         y0 = np.round(origin.y()-roipos.y(),0)
-                #     self.I0box.setPoints([(np.round(pos.x()-roipos.x(),0),np.round(pos.y()-roipos.y(),0)), (x0,np.round(pos.y()-roipos.y(),0)),(x0,y0),(np.round(pos.x()-roipos.x(),0),y0)], closed=True)
+            if self.radioLassoROI.isChecked():
+                handle = self.I0box.addFreeHandle((np.round(pos.x()-roipos.x(),0),np.round(pos.y()-roipos.y(),0)))
+                self.lassopoints.append(handle)
+                if len(self.lassopoints) > 1:
+                    self.I0box.addSegment(self.lassopoints[0], self.lassopoints[1])
+                    self.lassopoints.pop(0)
+            # Polygon ROI is currently broken in recent pyqtgraph version
+            elif self.radioPolyROI.isChecked():
+                if self.origin.x() < 0:
+                    x0 = 0-roipos.x()
+                elif self.origin.x() > self.stack.n_cols:
+                    x0 = self.stack.n_cols - roipos.x()
+                else:
+                    x0 = np.round(self.origin.x()-roipos.x(),0)
+                if self.origin.y() < 0:
+                    y0 = 0-roipos.y()
+                elif self.origin.y() > self.stack.n_rows:
+                    y0 = self.stack.n_rows - roipos.y()
+                else:
+                    y0 = np.round(self.origin.y()-roipos.y(),0)
+                self.I0box.setPoints([(np.round(pos.x()-roipos.x(),0),np.round(pos.y()-roipos.y(),0)), (x0,np.round(pos.y()-roipos.y(),0)),(x0,y0),(np.round(pos.x()-roipos.x(),0),y0)], closed=True)
 
     def draw_image(self,fluxmin, fluxmax):
         self.I0instructions.setText(
@@ -10906,13 +10980,14 @@ class ShowArtefacts(QtWidgets.QDialog):
             a, wf = self.OutlierCalc(a,final=True)
         self.stack.absdata = a
         #self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
-        #self.parent.page1.loadImage()
-        self.parent.page0.Clear()
-        self.parent.page0.LoadEntries()
+        self.parent.page1.absimgfig.loadNewImage()
+        self.parent.page0.absimgfig.loadNewImage()
+        #self.parent.page0.Clear()
+        #self.parent.page0.loadData()
 
         #if showmaptab:
         #    self.parent.page9.Clear()
-        #    self.parent.page9.LoadEntries()
+        #    self.parent.page9.loadData()
 
         self.close()
 #-----------------------------------------------------------------------
@@ -11364,22 +11439,22 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
             self.parent.page0.slider_theta.setValue(int(self.parent.page1.itheta))
             self.parent.page0.slider_theta.blockSignals(False)
 
-        self.parent.page1.slider_eng.setRange(0, self.stack.n_ev - 1)
-        self.parent.page1.iev = 0
-        self.parent.page1.slider_eng.setValue(int(self.parent.page1.iev))
+        #self.parent.page1.slider_eng.setRange(0, self.stack.n_ev - 1)
+        #self.parent.page1.iev = 0
+        #self.parent.page1.slider_eng.setValue(int(self.parent.page1.iev))
 
-        self.parent.page0.slider_eng.setRange(0, self.stack.n_ev - 1)
-        self.parent.page0.iev = 0
-        self.parent.page0.slider_eng.setValue(int(self.parent.page1.iev))
+        #self.parent.page0.slider_eng.setRange(0, self.stack.n_ev - 1)
+        #self.parent.page0.iev = 0
+        #self.parent.page0.slider_eng.setValue(int(self.parent.page1.iev))
 
-        self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
-        self.parent.page1.loadImage()
-        self.parent.page0.Clear()
-        self.parent.page0.LoadEntries()
+#        self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
+        #self.parent.page1.Clear()
+        self.parent.page1.absimgfig.loadNewImage()
+        self.parent.page0.absimgfig.loadNewImage()
 
         #if showmaptab:
         #    self.parent.page9.Clear()
-        #    self.parent.page9.LoadEntries()
+        #    self.parent.page9.loadData()
 
         self.close()
 #-----------------------------------------------------------------------
@@ -13707,11 +13782,12 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtGui.QGraphicsScene):
 # ----------------------------------------------------------------------
     def OnCancel(self, evt):
         self.stack.absdata_shifted_cropped = self.stack.absdata
-        self.parent.page1.loadImage()
+        self.parent.page1.absimgfig.loadNewImage()
+        self.parent.page0.absimgfig.loadNewImage()
 
         #if showmaptab:
         #    self.parent.page9.Clear()
-        #    self.parent.page9.LoadEntries()
+        #    self.parent.page9.loadData()
 
         self.close()
     # ----------------------------------------------------------------------
@@ -13773,19 +13849,20 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtGui.QGraphicsScene):
         #self.stack.data_struct.spectromicroscopy.xshifts = self.x_shiftstemp
         #self.stack.data_struct.spectromicroscopy.yshifts = self.y_shiftstemp
 
-        self.parent.page1.slider_eng.setRange(0,self.stack.n_ev-1)
-        self.parent.page1.iev = int(self.stack.n_ev/2)
-        self.parent.page1.slider_eng.setValue(self.parent.page1.iev)
-
-        self.parent.page1.ix = int(self.stack.n_cols/2)
-        self.parent.page1.iy = int(self.stack.n_rows/2)
+        #self.parent.page1.slider_eng.setRange(0,self.stack.n_ev-1)
+        #self.parent.page1.iev = int(self.stack.n_ev/2)
+        #self.parent.page1.slider_eng.setValue(self.parent.page1.iev)
+        self.parent.page1.absimgfig.loadNewImage()
+        self.parent.page0.absimgfig.loadNewImage()
+        #self.parent.page1.ix = int(self.stack.n_cols/2)
+        #self.parent.page1.iy = int(self.stack.n_rows/2)
 
         #self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
         #self.parent.page1.loadImage()
 
         #if showmaptab:
         #    self.parent.page9.Clear()
-        #    self.parent.page9.LoadEntries()
+        #    self.parent.page9.loadData()
 
         self.close()
 #-----------------------------------------------------------------------
@@ -14769,7 +14846,7 @@ class PageLoadData(QtWidgets.QWidget):
 
 #-----------------------------------------------------------------------
     def initUI(self, common, data_struct, stack):
-        self.scale = 0.000001
+        #self.scale = 0.000001
         self.data_struct = data_struct
         self.stk = stack
         self.com = common
@@ -14779,6 +14856,12 @@ class PageLoadData(QtWidgets.QWidget):
         self.slider_theta.valueChanged[int].connect(self.OnScrollTheta)
         self.iev = 0
         self.itheta = 0
+
+        self.pglayout = pg.GraphicsLayout(border=None)
+        self.canvas.setBackground("w")  # canvas is a pg.GraphicsView widget
+        self.canvas.setCentralWidget(self.pglayout)
+
+        self.absimgfig = AbsImgFig(self, self.canvas)
 
         self.button_multiload.clicked.connect( self.OnLoadMulti)
         self.button_multiload.setToolTip('Supported Formats .hdf .hdf5 .ncb .nxs .hdr .stk .tif .tiff .txrm')
@@ -14791,141 +14874,33 @@ class PageLoadData(QtWidgets.QWidget):
         self.button_sm.setToolTip('Supported Formats .sm, .xrm')
         self.button_sm.clicked.connect( self.OnBuildStack)
 
-        self.MetricCheckBox.toggled.connect(lambda: self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
-        self.ZeroOriginCheckBox.toggled.connect(lambda: self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
-        self.SquarePxCheckBox.toggled.connect(lambda: self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
+        self.MetricCheckBox.toggled.connect(lambda: self.absimgfig.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
+        self.ZeroOriginCheckBox.toggled.connect(lambda: self.absimgfig.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
+        self.SquarePxCheckBox.toggled.connect(lambda: self.absimgfig.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
         self.SquarePxCheckBox.setVisible(False)
 
         self.CMCatBox.addItems([self.cmaps[0][0],self.cmaps[1][0],self.cmaps[2][0],self.cmaps[3][0],self.cmaps[4][0],self.cmaps[5][0]])
         self.CMMapBox.addItems(self.cmaps[2][1])
         self.CMCatBox.setCurrentIndex(2)
         self.CMMapBox.setCurrentIndex(3)
-        self.CMCatBox.currentIndexChanged.connect(self.OnCatChanged)
-        self.CMMapBox.currentIndexChanged.connect(lambda: self.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value()))
-        self.StepSpin.valueChanged.connect(lambda: self.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value()))
+        self.CMCatBox.currentIndexChanged.connect(self.absimgfig.OnCatChanged)
+        self.CMMapBox.currentIndexChanged.connect(lambda: self.absimgfig.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value()))
+        self.StepSpin.valueChanged.connect(lambda: self.absimgfig.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value()))
 
         self.pb_rotate.clicked.connect(self.OnRotate)
         self.pb_mirror.clicked.connect(self.OnMirror)
         self.pb_copy.clicked.connect(self.OnCopy)
-        self.pglayout = pg.GraphicsLayout(border=None)
-        self.canvas.setBackground("w") # canvas is a pg.GraphicsView widget
-        self.canvas.setCentralWidget(self.pglayout)
-
-        self.p1 = self.pglayout.addPlot(row=0, col=0, rowspan=1, colspan=1)
-        self.p1.setMouseEnabled(x=False, y=False)
-        self.i_item = pg.ImageItem(border="k")
-        self.p1.setAspectLocked(lock=True, ratio=1)
-        self.p1.showAxis("top", show=True)
-        self.p1.showAxis("bottom", show=True)
-        self.p1.showAxis("left", show=True)
-        self.p1.showAxis("right", show=True)
-        self.ay1 = self.p1.getAxis("left")
-        by1 = self.p1.getAxis("right")
-        self.ax1 = self.p1.getAxis("bottom")
-        bx1 = self.p1.getAxis("top")
-        self.ay1.setLabel(text="y",units="px")
-        self.ay1.enableAutoSIPrefix(enable=True)
-        self.ax1.setLabel(text="x",units="px")
-        self.ax1.enableAutoSIPrefix(enable=True)
-        self.ay1.setStyle(tickLength=8)
-        self.ax1.setStyle(tickLength=8)
-        by1.setStyle(showValues=False,tickLength=0)
-        bx1.setStyle(showValues=False,tickLength=0)
-        self.p1.setTitle("No data loaded")
-
-        self.cmimg = pg.ImageItem(border=None)
-        self.cm = self.pglayout.addPlot(row=0, col=1, rowspan=1, colspan=1)
-        self.cm.addItem(self.cmimg)
-        self.cm.setMouseEnabled(x=False, y=False)
-        self.cm.getViewBox().autoRange(padding=0)
-        self.cm.showAxis("top", show=True)
-        self.cm.showAxis("bottom", show=True)
-        self.cm.showAxis("left", show=True)
-        self.cm.showAxis("right", show=True)
-        self.cm.setTitle("")
-        ay3 = self.cm.getAxis("left")
-        ay3.setZValue(1000)
-        by3 = self.cm.getAxis("right")
-        by3.setZValue(1000)
-        bx3 = self.cm.getAxis("top")
-        bx3.setZValue(1000)
-        ax3 = self.cm.getAxis("bottom")
-        ax3.setHeight(h=46.2) #workaround for overly long colorbar in linux
-        by3.setWidth(w=60)
-        ax3.setZValue(1000)
-        ax3.setTicks([])
-        ax3.setLabel(text="", units="")
-        by3 = self.cm.getAxis("right")
-        by3.setLabel(text="counts", units="")
-        by3.setStyle(tickLength=8)
-        ay3.setStyle(showValues=False,tickLength=0)
-        bx3.setStyle(showValues=False,tickLength=0)
-
-
-        self.pglayout.layout.setColumnMinimumWidth(1, 80)
-        self.pglayout.layout.setColumnMaximumWidth(1, 80)
 
         self.tc_file.setText('File name')
 
         self.tc_path.setText('D:/')
         self.slider_theta.setVisible(False)
 
-    def Clear(self):
-        self.p1.clear()
-
-    def LoadEntries(self): # Called when fresh data are loaded.
-        self.p1.addItem(self.i_item)
-        self.OnScrollEng(0) # Plot first image & set Scrollbar
-        self.OnMetricScale(self.MetricCheckBox.isChecked(), True, False)
-
     def keyPressEvent(self, e):
         if e.key() == 67 and (e.modifiers() & QtCore.Qt.ControlModifier):
             self.OnCopy()
 
-    def OnMetricScale(self, setmetric= True, zeroorigin= True, square= False):
-        if self.com.stack_loaded == 1:
-            if setmetric==True:
-                self.SquarePxCheckBox.setVisible(False)
-                self.ZeroOriginCheckBox.setVisible(True)
-                self.p1.setAspectLocked(lock=True, ratio=1)
-                #self.p2.setAspectLocked(lock=True, ratio=1)
-                if not zeroorigin:
-                    x_start = self.stk.x_start*self.scale
-                    y_start = self.stk.y_start*self.scale
-                else:
-                    x_start = 0
-                    y_start = 0
-                self.ay1.setLabel(text="y", units="m")
-                self.ax1.setLabel(text="x", units="m")
-                #self.ay2.setLabel(text="y", units="m")
-                #self.ax2.setLabel(text="x", units="m")
-
-                self.i_item.setRect(QtCore.QRectF(x_start, y_start, self.scale*self.stk.n_cols*self.stk.x_pxsize, self.scale*self.stk.n_rows*self.stk.y_pxsize))
-                #if hasattr(self, "OD"):
-                #    self.m_item.setRect(QtCore.QRectF(x_start, y_start, self.scale*np.shape(self.OD)[0]*self.stk.x_pxsize, self.scale*np.shape(self.OD)[1]*self.stk.y_pxsize))
-                #    self.setCrosshair()
-            else:
-                self.ZeroOriginCheckBox.setVisible(False)
-                self.SquarePxCheckBox.setVisible(True)
-                if square == True:
-                    aspect = 1
-                else:
-                    aspect = self.stk.x_pxsize/self.stk.y_pxsize
-                    #print(aspect)
-                self.p1.setAspectLocked(lock=True, ratio=aspect)
-                self.ay1.setLabel(text="y", units="px")
-                self.ax1.setLabel(text="x", units="px")
-                self.i_item.setRect(QtCore.QRectF(0, 0, self.stk.n_cols, self.stk.n_rows))
 # ----------------------------------------------------------------------
-    def OnCatChanged(self):
-        self.CMMapBox.blockSignals(True)
-        self.CMMapBox.clear()
-        self.CMMapBox.blockSignals(False)
-        self.CMMapBox.addItems(self.cmaps[self.CMCatBox.currentIndex()][1])
-
-    def calcBinSize(self,i,N):
-        return int(round(256*(i+1)/N) - round(256*i/N))
-
     def OnCopy(self):
         self.exp = pg.exporters.ImageExporter(self.pglayout)
         self.exp.export(copy=True)
@@ -14956,8 +14931,8 @@ class PageLoadData(QtWidgets.QWidget):
             # Update/Refresh widgets:
             #if showmaptab:
             #    self.window().page9.Clear()
-            #    self.window().page9.LoadEntries()
-            self.window().page1.loadImage()
+            #    self.window().page9.loadData()
+            self.window().page1.absimgfig.loadNewImage()
         return
 
     def OnRotate(self):
@@ -14989,33 +14964,16 @@ class PageLoadData(QtWidgets.QWidget):
 
             # Update/Refresh widgets:
             self.OnScrollEng(self.iev)
-            self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked())
+            self.absimgfig.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked())
             #if showmaptab:
             #    self.window().page9.Clear()
-            #    self.window().page9.LoadEntries()
+            #    self.window().page9.loadData()
             self.window().page1.ix = int(self.stk.n_cols / 2)
             self.window().page1.iy = int(self.stk.n_rows / 2)
-            self.window().page1.loadSpectrum(self.window().page1.ix, self.window().page1.iy)
-            self.window().page1.loadImage()
+            #self.window().page1.loadSpectrum(self.window().page1.ix, self.window().page1.iy)
+            self.window().page1.absimgfig.loadNewImage()
         return
 
-    def OnColormap(self,map="gray", colors=256):
-        if self.com.stack_loaded == 1:
-            colormap = cm.get_cmap(map, colors)
-            colormap = colormap(np.arange(colors))
-            cm_lst = [[colormap[idx][0], colormap[idx][1], colormap[idx][2], colormap[idx][3]] for idx in range(np.shape(colormap)[0])] #convert to r,g,b,a list
-            cm_lst = [item for sub in [[cm_lst[i]]*self.calcBinSize(i,colors) for i in range(colors)] for item in sub] #fills 256 bins as equal as possible with n colors
-            cm_array = np.array([np.asarray(cm_lst)]) #vertical colorbar
-            cm_lst.extend((cm_lst[-1],cm_lst[-1],cm_lst[-1]))
-            lut = np.asarray(cm_lst)
-            lut = (lut * 255).view(np.ndarray)
-            self.cmimg.setImage(cm_array)
-            self.i_item.setLookupTable(lut)
-            self.setODbar(self.ODmin, self.ODmax)
-
-    def setODbar(self,min=None,max=None):
-        self.cm.setRange(xRange=[0,1], yRange=[min,max], update=False, disableAutoRange=True,padding=0)
-        self.cmimg.setRect(QtCore.QRectF(0,min,1,max-min))
 #-----------------------------------------------------------------------
     def OnLoadMulti(self, event):
 
@@ -15034,20 +14992,23 @@ class PageLoadData(QtWidgets.QWidget):
 
 #-----------------------------------------------------------------------
     def OnScrollEng(self, value):
-        self.slider_eng.setValue(value)
-        #self.MapSelectWidget1.setCurrentRow(value)
         self.iev = value
         if self.com.stack_loaded == 1:
-            image = self.stk.absdata[:, :, int(self.iev)].copy()
-            if self.com.stack_4d == 1:
-                self.p1.setTitle("<center>Image at {0:5.2f} eV and {1:5.1f}°</center>".format(float(self.stk.ev[self.iev]),
-                                                                             float(self.stk.theta[self.itheta])))
-            else:
-                self.p1.setTitle("<center>Image at energy {0:5.2f} eV</center>".format(float(self.stk.ev[self.iev])))
-            self.ODmin = np.min(image)
-            self.ODmax = np.max(image)
-            self.i_item.setImage(image)
-            self.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value())
+            self.slider_eng.setValue(value)
+            image = self.stk.absdata[:, :, int(self.iev)]
+            self.absimgfig.draw(image)
+
+        # if self.com.stack_loaded == 1:
+        #     image = self.stk.absdata[:, :, int(self.iev)].copy()
+        #     if self.com.stack_4d == 1:
+        #         self.p1.setTitle("<center>Image at {0:5.2f} eV and {1:5.1f}°</center>".format(float(self.stk.ev[self.iev]),
+        #                                                                      float(self.stk.theta[self.itheta])))
+        #     else:
+        #         self.p1.setTitle("<center>Image at energy {0:5.2f} eV</center>".format(float(self.stk.ev[self.iev])))
+        #     self.ODmin = np.min(image)
+        #     self.ODmax = np.max(image)
+        #     self.i_item.setImage(image)
+        #     self.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value())
 #-----------------------------------------------------------------------
     def OnScrollTheta(self, value):
         self.slider_theta.setValue(value)
@@ -15057,13 +15018,15 @@ class PageLoadData(QtWidgets.QWidget):
         image = self.stk.absdata[:, :, int(self.slider_eng.value())].copy()
         #self.tc_imagetheta.setText("4D Data Angle: "+str(self.stk.theta[self.itheta]))
 
-        if self.com.stack_loaded == 1:
-            self.p1.setTitle("<center>Image at {0:5.2f} eV and {1:5.1f}°</center>".format(float(self.stk.ev[self.iev]),
-                                                                         float(self.stk.theta[self.itheta])))
-            self.ODmin = np.min(image)
-            self.ODmax = np.max(image)
-            self.i_item.setImage(image)
-            self.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value())
+        #if self.com.stack_loaded == 1:
+        #    self.p1.setTitle("<center>Image at {0:5.2f} eV and {1:5.1f}°</center>".format(float(self.stk.ev[self.iev]),
+        #                                                                 float(self.stk.theta[self.itheta])))
+        #    self.ODmin = np.min(image)
+        #    self.ODmax = np.max(image)
+        #    self.i_item.setImage(image)
+        #    self.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value())
+
+        self.absimgfig.draw(image)
         #self.window().page1.itheta = self.itheta
         #self.window().page1.slider_theta.setValue(self.itheta)
 
@@ -15106,7 +15069,7 @@ class ShowODMap(QtWidgets.QWidget):
                           'gist_rainbow', 'rainbow', 'jet', 'nipy_spectral', 'gist_ncar'])]
         self.initUI(parent, common, data_struct, stack)
         #    self.Clear()
-        self.LoadEntries()
+        self.loadData()
 
 #-----------------------------------------------------------------------
     def initUI(self, parent, common, data_struct, stack):
@@ -15589,7 +15552,7 @@ class ShowODMap(QtWidgets.QWidget):
         self.cm.clear()
         self.MapSelectWidget1.clear()
 
-    def LoadEntries(self): # Called when fresh data are loaded.
+    def loadData(self): # Called when fresh data are loaded.
         self.slider_eng.setRange(0, self.stk.n_ev - 1)
         self.ODHighSpinBox.setEnabled(False)
         self.ODLowSpinBox.setEnabled(False)
@@ -16141,15 +16104,15 @@ class StackListFrame(QtWidgets.QDialog):
         self.parent.page1.textctrl.setText(filelist[0])
 
         self.parent.page0.slider_eng.setRange(0,self.stk.n_ev-1)
-        self.parent.page0.iev = int(self.stk.n_ev/2)
+        #self.parent.page0.iev = int(self.stk.n_ev/2)
         self.parent.page0.slider_eng.setValue(self.parent.page1.iev)
 
         self.parent.page1.slider_eng.setRange(0,self.stk.n_ev-1)
-        self.parent.page1.iev = self.stk.n_ev/2
+        #self.parent.page1.iev = self.stk.n_ev/2
         self.parent.page1.slider_eng.setValue(self.parent.page1.iev)
 
-        self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
-        self.parent.page1.loadImage()
+        #self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
+        self.parent.page1.loadNewImage()
 
         self.parent.page0.ShowInfo(filelist[0], self.filepath)
 
@@ -16283,6 +16246,181 @@ http://www.gnu.org/licenses/.''')
 
         self.setLayout(vbox)
 # ----------------------------------------------------------------------
+class AbsImgFig():
+    def __init__(self,parent,canvas):
+        self.scale = 0.000001
+        self.parent = parent
+        self.canvas = canvas
+        self.pglayout = pg.GraphicsLayout(border=None)
+        self.canvas.setBackground("w") # canvas is a pg.GraphicsView widget
+        self.canvas.setCentralWidget(self.pglayout)
+        self.p1 = self.pglayout.addPlot(row=0, col=0, rowspan=1, colspan=1)
+        self.p1.setMouseEnabled(x=False, y=False)
+        self.i_item = pg.ImageItem(border="k")
+        self.p1.setAspectLocked(lock=True, ratio=1)
+        self.p1.showAxis("top", show=True)
+        self.p1.showAxis("bottom", show=True)
+        self.p1.showAxis("left", show=True)
+        self.p1.showAxis("right", show=True)
+        self.ay1 = self.p1.getAxis("left")
+        by1 = self.p1.getAxis("right")
+        self.ax1 = self.p1.getAxis("bottom")
+        bx1 = self.p1.getAxis("top")
+        self.ay1.setLabel(text="y",units="px")
+        self.ay1.enableAutoSIPrefix(enable=True)
+        self.ax1.setLabel(text="x",units="px")
+        self.ax1.enableAutoSIPrefix(enable=True)
+        self.ay1.setStyle(tickLength=8)
+        self.ax1.setStyle(tickLength=8)
+        by1.setStyle(showValues=False,tickLength=0)
+        bx1.setStyle(showValues=False,tickLength=0)
+        self.p1.setTitle("No data loaded")
+
+        self.cmimg = pg.ImageItem(border=None)
+        self.cm = self.pglayout.addPlot(row=0, col=1, rowspan=1, colspan=1)
+        self.cm.addItem(self.cmimg)
+        self.cm.setMouseEnabled(x=False, y=False)
+        self.cm.getViewBox().autoRange(padding=0)
+        self.cm.showAxis("top", show=True)
+        self.cm.showAxis("bottom", show=True)
+        self.cm.showAxis("left", show=True)
+        self.cm.showAxis("right", show=True)
+        self.cm.setTitle("")
+        ay3 = self.cm.getAxis("left")
+        ay3.setZValue(1000)
+        by3 = self.cm.getAxis("right")
+        by3.setZValue(1000)
+        bx3 = self.cm.getAxis("top")
+        bx3.setZValue(1000)
+        ax3 = self.cm.getAxis("bottom")
+        ax3.setHeight(h=46.2) #workaround for overly long colorbar in linux
+        by3.setWidth(w=60)
+        ax3.setZValue(1000)
+        ax3.setTicks([])
+        ax3.setLabel(text="", units="")
+        self.by3 = self.cm.getAxis("right")
+        #self.by3.setLabel(text="counts", units="")
+        self.by3.setStyle(tickLength=8)
+        ay3.setStyle(showValues=False,tickLength=0)
+        bx3.setStyle(showValues=False,tickLength=0)
+
+
+        self.pglayout.layout.setColumnMinimumWidth(1, 80)
+        self.pglayout.layout.setColumnMaximumWidth(1, 80)
+
+    def loadNewImage(self):
+        self.clear()
+        # if self.defaultdisplay == 1.0:
+        #     # use a pointer to the data not a copy
+        #     if self.showflux:
+        #         # Show flux image
+        #         image = self.stk.absdata[:, :, self.iev]  # .copy()
+        #     else:
+        #         # Show OD image
+        #         image = self.stk.od3d[:, :, self.iev]  # .copy()
+        # else:
+        #     # Adjustment to the data display setting has been made so make a copy
+        #     if self.showflux:
+        #         image = self.stk.absdata[:, :, self.iev].copy()
+        #     else:
+        #         image = self.stk.od3d[:, :, self.iev].copy()
+        self.loadData()
+
+
+    def clear(self):
+        self.parent.iev = 0
+        self.p1.clear()
+
+    def loadData(self): # Called when fresh data are loaded.
+        self.p1.addItem(self.i_item)
+        if self.parent.com.i0_loaded:
+            self.by3.setLabel(text="OD", units="")
+        else:
+            self.by3.setLabel(text="counts", units="")
+        self.parent.slider_eng.blockSignals(True)
+        self.parent.slider_eng.setRange(0, self.parent.stk.n_ev - 1)
+        self.parent.OnScrollEng(self.parent.iev) # Plot image & set Scrollbar
+        self.parent.slider_eng.blockSignals(False)
+        #self.draw(self.parent.image)
+        self.OnMetricScale(self.parent.MetricCheckBox.isChecked(), True, False)
+
+    def draw(self,image):
+        self.i_item.setImage(image)
+        if self.parent.com.stack_4d == 1:
+            self.p1.setTitle("<center>Image at {0:5.2f} eV and {1:5.1f}°</center>".format(float(self.parent.stk.ev[self.parent.iev]),
+                                                                                          float(self.parent.stk.theta[
+                                                                                                    self.parent.itheta])))
+        else:
+            self.p1.setTitle("<center>Image at energy {0:5.2f} eV</center>".format(float(self.parent.stk.ev[self.parent.iev])))
+        self.min = np.min(image)
+        self.max = np.max(image)
+        #self.i_item.setImage(image)
+        self.OnColormap(map=self.parent.CMMapBox.currentText(),colors=self.parent.StepSpin.value())
+    def OnMetricScale(self, setmetric= True, zeroorigin= True, square= False):
+        if self.parent.com.stack_loaded == 1:
+            if setmetric==True:
+                self.parent.SquarePxCheckBox.setVisible(False)
+                self.parent.ZeroOriginCheckBox.setVisible(True)
+                self.p1.setAspectLocked(lock=True, ratio=1)
+                #self.p2.setAspectLocked(lock=True, ratio=1)
+                if not zeroorigin:
+                    x_start = self.parent.stk.x_start*self.scale
+                    y_start = self.parent.stk.y_start*self.scale
+                else:
+                    x_start = 0
+                    y_start = 0
+                self.ay1.setLabel(text="y", units="m")
+                self.ax1.setLabel(text="x", units="m")
+                #self.ay2.setLabel(text="y", units="m")
+                #self.ax2.setLabel(text="x", units="m")
+
+                self.i_item.setRect(QtCore.QRectF(x_start, y_start, self.scale*self.parent.stk.n_cols*self.parent.stk.x_pxsize, self.scale*self.parent.stk.n_rows*self.parent.stk.y_pxsize))
+                #if hasattr(self, "OD"):
+                #    self.m_item.setRect(QtCore.QRectF(x_start, y_start, self.scale*np.shape(self.OD)[0]*self.stk.x_pxsize, self.scale*np.shape(self.OD)[1]*self.stk.y_pxsize))
+                #    self.setCrosshair()
+            else:
+                self.parent.ZeroOriginCheckBox.setVisible(False)
+                self.parent.SquarePxCheckBox.setVisible(True)
+                if square == True:
+                    aspect = 1
+                else:
+                    aspect = self.parent.stk.x_pxsize/self.parent.stk.y_pxsize
+                    #print(aspect)
+                self.p1.setAspectLocked(lock=True, ratio=aspect)
+                self.ay1.setLabel(text="y", units="px")
+                self.ax1.setLabel(text="x", units="px")
+                self.i_item.setRect(QtCore.QRectF(0, 0, self.parent.stk.n_cols, self.parent.stk.n_rows))
+
+    def OnCatChanged(self):
+        self.parent.CMMapBox.blockSignals(True)
+        self.parent.CMMapBox.clear()
+        self.parent.CMMapBox.blockSignals(False)
+        self.parent.CMMapBox.addItems(self.parent.cmaps[self.parent.CMCatBox.currentIndex()][1])
+
+    def OnColormap(self, map="gray", colors=256):
+        if self.parent.com.stack_loaded == 1:
+            colormap = cm.get_cmap(map, colors)
+            colormap = colormap(np.arange(colors))
+            cm_lst = [[colormap[idx][0], colormap[idx][1], colormap[idx][2], colormap[idx][3]] for idx in
+                      range(np.shape(colormap)[0])]  # convert to r,g,b,a list
+            cm_lst = [item for sub in [[cm_lst[i]] * self.calcBinSize(i, colors) for i in range(colors)] for item in
+                      sub]  # fills 256 bins as equal as possible with n colors
+            cm_array = np.array([np.asarray(cm_lst)])  # vertical colorbar
+            cm_lst.extend((cm_lst[-1], cm_lst[-1], cm_lst[-1]))
+            lut = np.asarray(cm_lst)
+            lut = (lut * 255).view(np.ndarray)
+            self.cmimg.setImage(cm_array)
+            self.i_item.setLookupTable(lut)
+            self.setODbar(self.min, self.max)
+
+    def setODbar(self, min=None, max=None):
+        self.cm.setRange(xRange=[0, 1], yRange=[min, max], update=False, disableAutoRange=True, padding=0)
+        self.cmimg.setRect(QtCore.QRectF(0, min, 1, max - min))
+
+    def calcBinSize(self,i,N):
+        return int(round(256*(i+1)/N) - round(256*i/N))
+
+#-----------------------------------------------------------------------
 class MainFrame(QtWidgets.QMainWindow):
 
     def __init__(self):
@@ -16290,9 +16428,6 @@ class MainFrame(QtWidgets.QMainWindow):
 
         self.initUI()
 
-
-
-#-----------------------------------------------------------------------
     def initUI(self):
 
         self.data_struct = data_struct.h5()
@@ -16459,7 +16594,7 @@ class MainFrame(QtWidgets.QMainWindow):
             QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
 
             if self.common.stack_loaded == 1:
-                #self.new_stack_refresh()
+                self.new_stack_refresh()
                 self.stk.new_data()
                 self.anlz.delete_data()
             try:
@@ -16484,14 +16619,14 @@ class MainFrame(QtWidgets.QMainWindow):
             self.page1.ix = self.ix
             self.page1.iy = self.iy
 
-            self.iev = int(self.stk.n_ev/2)
-            self.page0.slider_eng.setRange(0,self.stk.n_ev-1)
-            self.page0.iev = self.iev
-            self.page0.slider_eng.setValue(self.iev)
+            #self.iev = 0
+            #self.page0.slider_eng.setRange(0,self.stk.n_ev-1)
+            #self.page0.iev = self.iev
+            #self.page0.slider_eng.setValue(self.iev)
 
-            self.page1.slider_eng.setRange(0,self.stk.n_ev-1)
-            self.page1.iev = self.iev
-            self.page1.slider_eng.setValue(self.iev)
+            #self.page1.slider_eng.setRange(0,self.stk.n_ev-1)
+            #self.page1.iev = self.iev
+            #self.page1.slider_eng.setValue(self.iev)
             #if showmaptab:
             #    self.page9.Clear()
             #    self.page9.slider_eng.setRange(0,self.stk.n_ev-1)
@@ -16504,18 +16639,16 @@ class MainFrame(QtWidgets.QMainWindow):
                 self.stk.calculate_optical_density()
                 self.stk.fill_h5_struct_normalization()
 
-
+            #self.page0.Clear()
+            self.page0.absimgfig.loadNewImage()
+            self.page0.ShowInfo(self.page1.filename, directory)
             #self.page1.ResetDisplaySettings()
-            self.page1.loadImage()
+            self.page1.absimgfig.loadNewImage()
             self.page1.button_multicrop.setText('Crop stack 3D...')
             #print (x,y), (self.ix,self.iy), self.stk.absdata.shape
             #ToDo: Restore Auto Loading Spectrum
             #self.page1.loadSpectrum(self.ix, self.iy)
             self.page1.textctrl.setText(self.page1.filename)
-
-            self.page0.Clear()
-            self.page0.LoadEntries()
-            self.page0.ShowInfo(self.page1.filename, directory)
 
             self.page5.updatewidgets()
 
@@ -16523,9 +16656,8 @@ class MainFrame(QtWidgets.QMainWindow):
 
             #if showmaptab:
             #    self.page9.Clear()
-            #    self.page9.LoadEntries()
+            #    self.page9.loadData()
         self.refresh_widgets()
-
 
 #-----------------------------------------------------------------------
     def BuildStack(self):
@@ -16626,13 +16758,13 @@ class MainFrame(QtWidgets.QMainWindow):
             self.page1.iy = self.iy
 
             self.iev = int(self.stk.n_ev/2)
-            self.page0.slider_eng.setRange(0,self.stk.n_ev-1)
+            #self.page0.slider_eng.setRange(0,self.stk.n_ev-1)
             self.page0.iev = self.iev
-            self.page0.slider_eng.setValue(self.iev)
+            #self.page0.slider_eng.setValue(self.iev)
 
-            self.page1.slider_eng.setRange(0,self.stk.n_ev-1)
+            #self.page1.slider_eng.setRange(0,self.stk.n_ev-1)
             self.page1.iev = self.iev
-            self.page1.slider_eng.setValue(self.iev)
+            #self.page1.slider_eng.setValue(self.iev)
 
             self.page0.slider_theta.setVisible(True)
             #self.page0.tc_imagetheta.setVisible(True)
@@ -16644,12 +16776,12 @@ class MainFrame(QtWidgets.QMainWindow):
 
 
             self.page1.slider_theta.setVisible(True)
-            self.page1.tc_imagetheta.setVisible(True)
+            #self.page1.tc_imagetheta.setVisible(True)
             self.page1.slider_theta.setRange(0,self.stk.n_theta-1)
             self.page1.itheta = self.itheta
             self.page1.slider_theta.setValue(self.itheta)
             self.page1.button_multicrop.setText('Crop stack 4D...')
-            self.page1.tc_imagetheta.setText("4D Data Angle: "+str(self.stk.theta[self.itheta]))
+            #self.page1.tc_imagetheta.setText("4D Data Angle: "+str(self.stk.theta[self.itheta]))
 
             self.page2.button_calcpca4D.setVisible(True)
             self.page4.button_calc4d.setVisible(True)
@@ -16662,12 +16794,11 @@ class MainFrame(QtWidgets.QMainWindow):
 
 
             #self.page1.ResetDisplaySettings()
-            self.page1.loadImage()
-            self.page1.loadSpectrum(self.ix, self.iy)
+            self.page1.absimgfig.loadNewImage()
+            #self.page1.loadSpectrum(self.ix, self.iy)
             self.page1.textctrl.setText(self.page1.filename)
 
-            self.page0.Clear()
-            self.page0.LoadEntries()
+            self.page0.absimgfig.loadNewImage()
             self.page0.ShowInfo(self.page1.filename, directory)
 
             self.page5.updatewidgets()
@@ -16676,7 +16807,7 @@ class MainFrame(QtWidgets.QMainWindow):
 
             #if showmaptab:
             #    self.page9.Clear()
-            #    self.page9.LoadEntries()
+            #    self.page9.loadData()
         except:
 
             self.common.stack_loaded = 0
@@ -16820,7 +16951,7 @@ class MainFrame(QtWidgets.QMainWindow):
             self.page1.button_savestack.setEnabled(True)
             self.page1.button_align.setEnabled(True)
             self.page1.button_slideshow.setEnabled(True)
-            self.page1.button_addROI.setEnabled(True)
+            #self.page1.button_addROI.setEnabled(True)
             self.page1.button_spectralROI.setEnabled(True)
             #self.page1.button_resetdisplay.setEnabled(True)
             #self.page1.button_despike.setEnabled(True)
@@ -16961,14 +17092,14 @@ class MainFrame(QtWidgets.QMainWindow):
         #self.page1.rb_od.setChecked(False)
         #self.page1.showflux = True
 
-        fig = self.page1.specfig
-        fig.clf()
-        self.page1.SpectrumPanel.draw()
-        self.page1.tc_spec.setText("Spectrum at point: ")
+        #fig = self.page1.specfig
+        #fig.clf()
+        #self.page1.SpectrumPanel.draw()
+        #self.page1.tc_spec.setText("Spectrum at point: ")
 
-        fig = self.page1.absimgfig
-        fig.clf()
-        self.page1.AbsImagePanel.draw()
+        #fig = self.page1.absimgfig
+        #fig.clf()
+        #self.page1.AbsImagePanel.draw()
         self.page1.tc_imageeng.setText("Image at energy: ")
 
         self.page1.textctrl.setText(' ')
@@ -16978,7 +17109,7 @@ class MainFrame(QtWidgets.QMainWindow):
         self.page1.ResetDisplaySettings()
         #page 0
         self.page1.slider_theta.setVisible(False)
-        self.page1.tc_imagetheta.setVisible(False)
+        #self.page1.tc_imagetheta.setVisible(False)
 
         #page 2
         fig = self.page2.pcaevalsfig
