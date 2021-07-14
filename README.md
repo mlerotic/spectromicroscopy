@@ -16,8 +16,6 @@ Alternatively, you can install [Python](https://www.python.org/downloads/) and t
 ## Run ##
 Installation via pip provides the `mantis-xray` command to start the Mantis GUI.
 
-## Run ##
-Installation via pip provides the `mantis-xray` command to start the Mantis GUI.
 ## User Guide ##
 Mantis User Guide can be found on the project Wiki pages [Home](https://github.com/mlerotic/spectromicroscopy/wiki).
 
