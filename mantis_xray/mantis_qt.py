@@ -1749,7 +1749,7 @@ class File_GUI():
                 self.File_text.setText(filename)
                 if filestruct is None:
                     self.contents = file_plugins.GetFileStructure(str(self.filepath))
-                    print(self.contents)
+                    #print(self.contents)
                 else:
                     self.contents = filestruct
                 self.Entry_info.UpdateInfo(self.contents)
@@ -16573,10 +16573,9 @@ class MainFrame(QtWidgets.QMainWindow):
         """
 
         filepath, plugin = File_GUI.SelectFile('read','stack')
-        print(filepath, plugin)
         JSONconvert = False
         if filepath is not None:
-            if plugin is None:
+            if plugin is None: # auto-assign appropriate plugin
                 plugin = file_plugins.identify(filepath)
             FileStruct = file_plugins.GetFileStructure(filepath, plugin=plugin)
             FileInternalSelection = [(0,0)]

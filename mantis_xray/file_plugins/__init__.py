@@ -45,8 +45,8 @@ verbose = True
 
 # These variables declare the options that each plugin can claim the ability to handle
 actions = ['read','write']
-data_types = ['spectrum','image','stack','results']
-
+#data_types = ['spectrum','image','stack','results'] # Please refer to the individual file plugins for the supported data types.
+data_types = []
 # Go through the directory and try to load each plugin
 plugins = []
 
@@ -57,6 +57,7 @@ for m in pkgutil.iter_modules(path=__path__):
         # check if there is a read() function in plugin
         if 'read' in dir(imp.load_module(m[1],*details)):
             plugins.append(imp.load_module(m[1],*details))
+            data_types.extend(plugins[-1].read_types) # pull data types from each file plugin
             if verbose: print("("+plugins[-1].title+") Success!")
         else:
             if verbose: print('Not a valid plugin - skipping.')
@@ -87,18 +88,19 @@ for m in pkgutil.iter_modules(path=__path__):
 
 
 # Go through set of plugins and assemble lists of supported file types for each action and data type
-supported_filters = dict([a,dict([t,[]] for t in data_types)] for a in actions)
-supported_plugins = dict([a,dict([t,[]] for t in data_types)] for a in actions)
-filter_list = dict([a,dict([t,[]] for t in data_types)] for a in actions)
+data_types = list(dict.fromkeys(data_types)) # remove any duplicates
+supported_plugins = dict([a,dict([t,[]] for t in data_types)] for a in actions) # dict of supported plugins. Empty!
+supported_filters = dict([a,dict([t,[]] for t in data_types)] for a in actions) # dict of supported file formats. Empty!
+filter_list =       dict([a,dict([t,[]] for t in data_types)] for a in actions) # separate entries for each file format. Empty!
 for P in plugins:
     for action in actions:
         for data_type in data_types:
             if data_type in getattr(P,action+'_types'):
-                filter_list[action][data_type].append(P.title+' ('+' '.join(P.extension)+')')
-                supported_plugins[action][data_type].append(P)
+                filter_list[action][data_type].append(P.title+' ('+' '.join(P.extension)+')') # Fill filter_list with file extensions for each scan/data type
+                supported_plugins[action][data_type].append(P) # Fill supported_plugins with plugin for each scan/data type
                 for ext in P.extension:
                     if ext not in supported_filters[action][data_type]:
-                        supported_filters[action][data_type].append(ext)
+                        supported_filters[action][data_type].append(ext) # Fill supported_filters with file extensions for each scan/data typeif not already present
 for data_type in data_types:
     filter_list['read'][data_type] = ['Supported Formats ('+' '.join(supported_filters['read'][data_type])+')']+filter_list['read'][data_type]
     filter_list['read'][data_type].append('All files (*.*)')

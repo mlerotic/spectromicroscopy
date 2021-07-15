@@ -551,13 +551,17 @@ class data:
     def scale_bar(self):
         self.x_start = np.min(self.x_dist)
         self.x_stop = np.max(self.x_dist)
-        self.x_pxsize = np.round(np.abs(self.x_stop - self.x_start) / (self.n_cols - 1),
-                                 5)  # um per px in y direction, "-1" because stop-start is 1 px shorter than n_rows
+        if self.x_start == self.x_stop: #image with 1 px in x-dimension. line scan?
+            self.x_pxsize = np.round(np.abs(self.y_dist[1] - self.y_dist[0]), 5)  # um per px assuming square pixels
+        else:
+            self.x_pxsize = np.round(np.abs(self.x_stop - self.x_start) / (self.n_cols - 1), 5)  # um per px in y direction, "-1" because stop-start is 1 px shorter than n_rows
 
         self.y_start = np.min(self.y_dist)
         self.y_stop = np.max(self.y_dist)
-        self.y_pxsize = np.round(np.abs(self.y_stop - self.y_start) / (self.n_rows - 1),
-                                 5)  # um per px in y direction, "-1" because stop-start is 1 px shorter than n_rows
+        if self.y_start == self.y_stop: #image with 1 px in x-dimension. line scan?
+            self.y_pxsize = np.round(np.abs(self.x_dist[1] - self.x_dist[0]), 5)  # um per px assuming square pixels
+        else:
+            self.y_pxsize = np.round(np.abs(self.y_stop - self.y_start) / (self.n_cols - 1), 5)  # um per px in y direction, "-1" because stop-start is 1 px shorter than n_rows
 
         if self.x_pxsize == self.y_pxsize:
             self.squarepx = True

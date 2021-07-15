@@ -23,7 +23,7 @@ from collections import OrderedDict
 
 title = 'NXstxm'
 extension = ['*.hdf','*.hdf5','*.nxs']
-read_types = ['spectrum','image','stack']
+read_types = ['spectrum','image','stack','sample line spectrum']
 write_types = []#'spectrum','image','stack']
 
 def identify(filename):
@@ -42,7 +42,6 @@ def identify(filename):
         return False
 
 def read(FileName,stack_object,selection=(0,0), *args, **kwargs):
-    """Todo: Add support for single images!"""
     D = GetFileStructure(FileName)
     entry = list(D.keys())[selection[0]]
     detector = list(D[entry].keys())[selection[1]] #[counter0, ...]
@@ -55,14 +54,20 @@ def read(FileName,stack_object,selection=(0,0), *args, **kwargs):
         print("Can't find photon energy!")
     stack_object.x_dist = numpy.array(F[entry][detector]['sample_x'])
     stack_object.y_dist = numpy.array(F[entry][detector]['sample_y'])
+    # if line scan, 1 dimenson has only one pixel/position!
+    if numpy.all(stack_object.x_dist == stack_object.x_dist[0]):
+        stack_object.x_dist = numpy.array([stack_object.x_dist[0]])
+    if numpy.all(stack_object.y_dist == stack_object.y_dist[0]):
+        stack_object.y_dist = numpy.array([stack_object.y_dist[0]])
     stack_object.data_dwell = numpy.array(F[entry][detector]['count_time'])
-    stack_object.n_cols = len(stack_object.x_dist)
+    stack_object.n_cols = len(stack_object.x_dist) #OOPS! Lenght is 2 px???
     stack_object.n_rows = len(stack_object.y_dist)
     stack_object.n_ev = len(stack_object.ev)
     if 'axes' in list(F[entry][detector].attrs): # Specification correct
         axes_list = [item.decode('UTF-8') for item in F[entry][detector].attrs['axes']]
         if 'line_position' in axes_list:
             axes_order = [axes_list.index('line_position'),axes_list.index('line_position'),axes_list.index('energy')] #linescan
+            #axes_order = [axes_list.index('sample_x'), axes_list.index('sample_y'), axes_list.index('energy')]  # stack
         else:
             try:
                 axes_order = [axes_list.index('sample_x'),axes_list.index('sample_y'),axes_list.index('energy')] #stack
@@ -84,7 +89,9 @@ def read(FileName,stack_object,selection=(0,0), *args, **kwargs):
         signal_name = F[entry][detector].attrs['signal'].decode("utf-8")
     if axes_order[0] == axes_order[1]: #i.e. if linescan
         temp = numpy.transpose(numpy.array(F[entry][detector][signal_name]),axes=axes_order[1:])
-        stack_object.absdata = numpy.tile(temp,(temp.shape[0],1,1))
+        temp = numpy.expand_dims(temp, axis=0)
+        if stack_object.n_rows == 1: # if horizontal line scan
+            stack_object.absdata = numpy.transpose(temp,axes=[1,0,2])
     else:
         stack_object.absdata = numpy.transpose(numpy.array(F[entry][detector][signal_name]),axes=axes_order)
         if len(axes_order) < 3: # for single images add one more dimension
