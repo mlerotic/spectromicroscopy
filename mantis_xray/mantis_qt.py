@@ -9196,7 +9196,8 @@ class PageStack(QtWidgets.QWidget):
         fbox = QtWidgets.QHBoxLayout()
 
         #self.absimgfig = Figure((PlotH, PlotH))
-        self.absimgfig = AbsImgFig(self,self.canvas)
+        self.absimgfig = ImgFig(self,self.canvas)
+        self.specfig = SpecFig(self, self.spectrum_plotwidget)
         #self.AbsImagePanel = FigureCanvas(self.absimgfig)
         #self.AbsImagePanel.setParent(self)
         #self.cid1 = self.AbsImagePanel.mpl_connect('button_press_event', self.OnPointAbsimage)
@@ -14861,7 +14862,7 @@ class PageLoadData(QtWidgets.QWidget):
         self.canvas.setBackground("w")  # canvas is a pg.GraphicsView widget
         self.canvas.setCentralWidget(self.pglayout)
 
-        self.absimgfig = AbsImgFig(self, self.canvas)
+        self.absimgfig = ImgFig(self, self.canvas)
 
         self.button_multiload.clicked.connect( self.OnLoadMulti)
         self.button_multiload.setToolTip('Supported Formats .hdf .hdf5 .ncb .nxs .hdr .stk .tif .tiff .txrm')
@@ -16246,7 +16247,50 @@ http://www.gnu.org/licenses/.''')
 
         self.setLayout(vbox)
 # ----------------------------------------------------------------------
-class AbsImgFig():
+class SpecFig():
+    def __init__(self,parent,plotwidget):
+        self.parent = parent
+        self.plot = plotwidget
+        self.plot.setBackground("w")
+
+        pi = self.plot.getPlotItem()
+        pi.layout.setSpacing(12)
+        pi.layout.setContentsMargins(10,10,40,10)
+        self.plot.setMouseEnabled(x=False, y=False)
+        self.plot.showGrid(y=True)
+
+        self.plot.showAxis("top", show=True)
+        self.plot.showAxis("right", show=True)
+        by = self.plot.getAxis("right")
+        bx = self.plot.getAxis("top")
+        by.setStyle(showValues=False,tickLength=0)
+        bx.setStyle(showValues=False,tickLength=0)
+        self.ay = self.plot.getAxis("left")
+        self.ay.setLabel(text="counts")
+
+        ax = self.plot.getAxis("bottom")
+        ax.setLabel(text="Photon energy [eV]")
+        self.plot.setTitle("")
+
+    # def SetupPlot(self):
+    #     x,y = self.GenerateSpectrum(list(range(self.stack.n_ev)))
+    #
+    #     self.region = pg.LinearRegionItem(brush=[255,0,0,45],bounds=[np.min(x),np.max(x)])
+    #     plot.addItem(self.region, ignoreBounds=False)
+    #     self.region.setZValue(10)
+    #
+    #     self.plotitem = plot.plot(x, y, pen=pg.mkPen(color=0.8, width=2))
+    #     self.plotitem_new = plot.plot(x, y, pen=pg.mkPen(color="b", width=2))
+    #     self.refmarker = pg.InfiniteLine(angle=90, movable=False,
+    #                                      pen=pg.mkPen(color="b", width=2, style=QtCore.Qt.DashLine))
+    #     plot.addItem(self.refmarker, ignoreBounds=True)
+    #     self.region.setRegion((min(x),max(x)))
+    #     self.region.sigRegionChangeFinished.connect(lambda region: self.UpdateEVRegion(region))
+
+
+
+# ----------------------------------------------------------------------
+class ImgFig():
     def __init__(self,parent,canvas):
         self.scale = 0.000001
         self.parent = parent
@@ -16254,6 +16298,8 @@ class AbsImgFig():
         self.pglayout = pg.GraphicsLayout(border=None)
         self.canvas.setBackground("w") # canvas is a pg.GraphicsView widget
         self.canvas.setCentralWidget(self.pglayout)
+        self.pglayout.setSpacing(12)
+        self.pglayout.setContentsMargins(10,10,10,10)
         self.p1 = self.pglayout.addPlot(row=0, col=0, rowspan=1, colspan=1)
         self.p1.setMouseEnabled(x=False, y=False)
         self.i_item = pg.ImageItem(border="k")
