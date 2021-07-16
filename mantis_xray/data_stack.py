@@ -123,7 +123,7 @@ class data:
             self.calculate_optical_density()
             self.fill_h5_struct_normalization()
 
-        self.scale_bar()
+        self.setScale()
 
     # ----------------------------------------------------------------------
     def read_ncb4D(self, filenames):
@@ -147,7 +147,7 @@ class data:
         self.data_struct.exchange.x = self.x_dist
         self.data_struct.exchange.y = self.y_dist
 
-        self.scale_bar()
+        self.setScale()
 
     # ----------------------------------------------------------------------
     def read_ncb4Denergy(self, filename):
@@ -241,7 +241,7 @@ class data:
 
         self.fill_h5_struct_from_stk()
 
-        self.scale_bar()
+        self.setScale()
 
         # Fix the normalization
         self.evi0 = self.ev.copy()
@@ -557,7 +557,7 @@ class data:
             pxsize = np.nan
         return pxsize, start, stop
     # ----------------------------------------------------------------------
-    def scale_bar(self):
+    def setScale(self):
         self.x_pxsize, self.x_start, self.x_stop = self.calc_px_size(self.x_dist,self.n_cols)
         self.y_pxsize, self.y_start, self.y_stop = self.calc_px_size(self.y_dist,self.n_rows)
         if np.isnan(self.x_pxsize) and np.isnan(self.y_pxsize):
@@ -573,30 +573,33 @@ class data:
             self.squarepx = True
         else:
             self.squarepx = False
-        bar_microns = 0.2 * np.abs(self.x_stop - self.x_start)
 
-        if bar_microns >= 10.:
-            bar_microns = 10. * int(0.5 + 0.1 * int(0.5 + bar_microns))
-            bar_string = str(int(0.01 + bar_microns)).strip()
-        elif bar_microns >= 1.:
-            bar_microns = float(int(0.5 + bar_microns))
-            if bar_microns == 1.:
-                bar_string = '1'
-            else:
-                bar_string = str(int(0.01 + bar_microns)).strip()
-        else:
-            bar_microns = np.maximum(0.1 * int(0.5 + 10 * bar_microns), 0.1)
-            bar_string = str(bar_microns).strip()
-
-        self.scale_bar_string = bar_string
-
-        self.scale_bar_pixels_x = int(0.5 + float(self.n_cols) *
-                                      float(bar_microns) / float(abs(self.x_stop - self.x_start)))
-
-        self.scale_bar_pixels_y = int(0.01 * self.n_rows)
-
-        if self.scale_bar_pixels_y < 2:
-            self.scale_bar_pixels_y = 2
+        #ToDo: Restore scale_bar option.
+    # def scale_bar(self):
+        # bar_microns = 0.2 * np.abs(self.x_stop - self.x_start)
+        #
+        # if bar_microns >= 10.:
+        #     bar_microns = 10. * int(0.5 + 0.1 * int(0.5 + bar_microns))
+        #     bar_string = str(int(0.01 + bar_microns)).strip()
+        # elif bar_microns >= 1.:
+        #     bar_microns = float(int(0.5 + bar_microns))
+        #     if bar_microns == 1.:
+        #         bar_string = '1'
+        #     else:
+        #         bar_string = str(int(0.01 + bar_microns)).strip()
+        # else:
+        #     bar_microns = np.maximum(0.1 * int(0.5 + 10 * bar_microns), 0.1)
+        #     bar_string = str(bar_microns).strip()
+        #
+        # self.scale_bar_string = bar_string
+        #
+        # self.scale_bar_pixels_x = int(0.5 + float(self.n_cols) *
+        #                               float(bar_microns) / float(abs(self.x_stop - self.x_start)))
+        #
+        # self.scale_bar_pixels_y = int(0.01 * self.n_rows)
+        #
+        # if self.scale_bar_pixels_y < 2:
+        #     self.scale_bar_pixels_y = 2
 
     # ----------------------------------------------------------------------
     def write_xas(self, filename, evdata, data):

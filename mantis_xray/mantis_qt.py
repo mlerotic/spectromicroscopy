@@ -16089,7 +16089,7 @@ class StackListFrame(QtWidgets.QDialog):
 
         self.stk.fill_h5_struct_from_stk()
 
-        self.stk.scale_bar()
+        self.stk.setScale()
 
 
         self.parent.page1.iev = int(self.stk.n_ev/3) #Is this correct?
@@ -16675,7 +16675,7 @@ class MainFrame(QtWidgets.QMainWindow):
             #if showmaptab:
             #    self.page9.Clear()
             #    self.page9.slider_eng.setRange(0,self.stk.n_ev-1)
-            self.stk.scale_bar()
+            self.stk.setScale()
             self.common.stack_loaded = 1
             self.common.path = directory
 

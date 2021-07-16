@@ -60,7 +60,7 @@ def read(FileName,stack_object,selection=(0,0), *args, **kwargs):
     if numpy.all(stack_object.y_dist == stack_object.y_dist[0]):
         stack_object.y_dist = numpy.array([stack_object.y_dist[0]])
     stack_object.data_dwell = numpy.array(F[entry][detector]['count_time'])
-    stack_object.n_cols = len(stack_object.x_dist) #OOPS! Lenght is 2 px???
+    stack_object.n_cols = len(stack_object.x_dist)
     stack_object.n_rows = len(stack_object.y_dist)
     stack_object.n_ev = len(stack_object.ev)
     if 'axes' in list(F[entry][detector].attrs): # Specification correct
