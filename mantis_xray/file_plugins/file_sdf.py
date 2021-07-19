@@ -254,11 +254,15 @@ def read(filename, self, selection=None, JSONstatus=None):
         print("Unknown Format")
         return
 
+    linescan = False
+    if type in ['NEXAFS Line Scan', 'Line Scan']:
+        linescan = True
+
     p_axis      = HDR.hdr['ScanDefinition']['Regions'][selection[0]+1]['PAxis']
     q_axis      = HDR.hdr['ScanDefinition']['Regions'][selection[0]+1]['QAxis']
     stack_axis  = HDR.hdr['ScanDefinition']['StackAxis']
 
-    if type in ['NEXAFS Line Scan', 'Line Scan']: # if line scan
+    if linescan: # if line scan
         if p_axis['Name'] == "Energy": # vertical
             self.ev = numpy.array([float(i) for i in p_axis['Points'][1:] ])
             self.y_dist = numpy.array([float(i) for i in q_axis['Points'][1:] ])
@@ -267,7 +271,7 @@ def read(filename, self, selection=None, JSONstatus=None):
             self.ev = numpy.array([float(i) for i in q_axis['Points'][1:]])
             self.x_dist = numpy.array([float(i) for i in p_axis['Points'][1:]])
             self.y_dist = numpy.array([0])  # set y-pos to 0
-    else: # if stacks or single images
+    else: # if image stacks or single images
         assert p_axis['Name'] == "Sample X"
         self.x_dist = numpy.array([float(i) for i in p_axis['Points'][1:] ])
         assert q_axis['Name'] == "Sample Y"
@@ -283,15 +287,22 @@ def read(filename, self, selection=None, JSONstatus=None):
     self.data_dwell = numpy.ones((self.n_ev))*msec
 
     imagestack = numpy.empty((self.n_cols,self.n_rows,self.n_ev), numpy.int32)
-    for i in range(len(HDR.data_names[selection[1]][selection[0]])):
-        try:
-            imagestack[:,:,i] = numpy.loadtxt(HDR.data_names[selection[1]][selection[0]][i], numpy.int32).T
-        except ValueError: # ToDo: For native line scans only one image is present
-            print("Aborted stack or XIMs with inconsistent dimensions.")
-            imagestack[:,:,i] = numpy.nan
-        except IOError:
-            print("Image file not found.")
-            imagestack[:,:,i] = numpy.nan
+    if linescan: # if linescan load only first existing image and iterate over each row.
+        line_img = (numpy.loadtxt(HDR.data_names[selection[1]][selection[0]][0], numpy.int32).T)
+        if q_axis['Name'] == "Energy": # if horizontal, transpose matrix
+            line_img = line_img.T
+        for i,row in enumerate(line_img):
+            imagestack[:, :, i] = row
+    else: # no linescan
+        for i in range(len(HDR.data_names[selection[1]][selection[0]])):
+            try:
+                imagestack[:,:,i] = numpy.loadtxt(HDR.data_names[selection[1]][selection[0]][i], numpy.int32).T
+            except ValueError:
+                print("Aborted stack or XIMs with inconsistent dimensions.")
+                imagestack[:,:,i] = numpy.nan
+            except IOError:
+                print("Image file not found.")
+                imagestack[:,:,i] = numpy.nan
     self.absdata = numpy.empty((self.n_cols,self.n_rows, self.n_ev))
 
     self.absdata = numpy.reshape(imagestack, (self.n_cols,self.n_rows, self.n_ev), order='F')
