@@ -458,40 +458,19 @@
         <string>Export</string>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_10">
-        <property name="spacing">
-         <number>0</number>
-        </property>
-        <property name="leftMargin">
-         <number>9</number>
-        </property>
-        <property name="topMargin">
-         <number>0</number>
-        </property>
-        <property name="rightMargin">
-         <number>9</number>
-        </property>
-        <property name="bottomMargin">
-         <number>0</number>
-        </property>
         <item>
-         <layout class="QGridLayout" name="gridLayout_3">
-          <property name="sizeConstraint">
-           <enum>QLayout::SetDefaultConstraint</enum>
+         <widget class="QPushButton" name="pb_rawexp">
+          <property name="text">
+           <string>Raw Data (*.tif, *.txt)</string>
           </property>
-          <property name="topMargin">
-           <number>9</number>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pb_copy">
+          <property name="text">
+           <string>Copy to Clipboard (Ctrl+C)</string>
           </property>
-          <property name="spacing">
-           <number>0</number>
-          </property>
-          <item row="0" column="0">
-           <widget class="QPushButton" name="pb_copy">
-            <property name="text">
-             <string>Copy to Clipboard (Ctrl+C)</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
+         </widget>
         </item>
         <item>
          <spacer name="verticalSpacer_2">

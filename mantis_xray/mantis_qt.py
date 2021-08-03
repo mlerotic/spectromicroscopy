@@ -8853,9 +8853,9 @@ class PageStack(QtWidgets.QWidget):
 #-----------------------------------------------------------------------
     def initUI(self, common, data_struct, stack):
 
-        self.pglayout = pg.GraphicsLayout(border=None)
-        self.canvas.setBackground("w") # canvas is a pg.GraphicsView widget
-        self.canvas.setCentralWidget(self.pglayout)
+        #self.pglayout = pg.GraphicsLayout(border=None)
+        #self.canvas.setBackground("w") # canvas is a pg.GraphicsView widget
+        #self.canvas.setCentralWidget(self.pglayout)
         self.spectrum_plotwidget.setBackground("w")
 
         self.data_struct = data_struct
@@ -14858,9 +14858,9 @@ class PageLoadData(QtWidgets.QWidget):
         self.iev = 0
         self.itheta = 0
 
-        self.pglayout = pg.GraphicsLayout(border=None)
-        self.canvas.setBackground("w")  # canvas is a pg.GraphicsView widget
-        self.canvas.setCentralWidget(self.pglayout)
+        #self.pglayout = pg.GraphicsLayout(border=None)
+        #self.canvas.setBackground("w")  # canvas is a pg.GraphicsView widget
+        #self.canvas.setCentralWidget(self.pglayout)
 
         self.absimgfig = ImgFig(self, self.canvas)
 
@@ -14891,6 +14891,7 @@ class PageLoadData(QtWidgets.QWidget):
         self.pb_rotate.clicked.connect(self.OnRotate)
         self.pb_mirror.clicked.connect(self.OnMirror)
         self.pb_copy.clicked.connect(self.OnCopy)
+        self.pb_rawexp.clicked.connect(self.OnSaveData)
 
         self.tc_file.setText('File name')
 
@@ -14902,8 +14903,35 @@ class PageLoadData(QtWidgets.QWidget):
             self.OnCopy()
 
 # ----------------------------------------------------------------------
+    def OnSaveData(self,event):
+        #Save Data
+        wildcard = "Float32 TIFF File (*.tif);;TextImage (*.txt);;"
+
+        fileName, _filter = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Raw Data', '', wildcard)
+
+        fileName = str(fileName)
+        if fileName == '':
+            return
+
+        path, ext = os.path.splitext(fileName)
+        ext = ext[1:].lower()
+
+        if ext != 'tif' and ext != 'txt':
+            error_message = (
+                  'Only the TIF and TXT data formats are supported.\n'
+                 'A file extension of `tif\' or `txt\' must be used.')
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Error - Could not save file.')
+            return
+
+        if ext == 'tif':
+            from PIL import Image
+            img1 = Image.fromarray(np.rot90(self.absimgfig.i_item.image))
+            img1.save(fileName)
+        if ext == 'txt':
+            np.savetxt(fileName, np.rot90(self.absimgfig.i_item.image), delimiter='\t', newline='\n',fmt='%.5f')
+# ----------------------------------------------------------------------
     def OnCopy(self):
-        self.exp = pg.exporters.ImageExporter(self.pglayout)
+        self.exp = pg.exporters.ImageExporter(self.absimgfig.pglayout)
         self.exp.export(copy=True)
         return
 
