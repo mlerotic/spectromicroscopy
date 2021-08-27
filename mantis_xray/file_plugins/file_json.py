@@ -81,56 +81,38 @@ class JS_FileLoader:
       self.num_channels = 0
 
 #-----------------------------------------------------------------------
-  def parseDataNames(self): #ToDo: Assigning Scan types by DataFlags is prone to errors. Better detect automatically via (HDR.hdr['ScanDefinition']['Regions'][0]) etc.
+  def parseDataNames(self):
     """Figure out names for the .xsp or .xim files that contain the actual data, then check that the files actually exist, printing warnings if they don't."""
-    DataNames = []#Regions
-    DataNames2 = []#Channels
-    DataNames3 = []#Energies
-    Alphabet = 'abcdefghijklmnopqrstuvwxyz'
+    DataNames = []
     DataFlag = self.js['ScanDefinition']['Flags']
+    # Only for spectra:
     if DataFlag in ['Spectra','Multi-Region Spectra']:
-      for num_R in range(self.num_regions):
-        DataNames2 = []
-        for num_Ch in range(self.num_channels):
-          DataNames2.append([self.file_path+'_'+str(num_R)+'.xsp'])
-        DataNames.append(DataNames2)
-    elif DataFlag == 'Image':
-      DataNames2 = []
-      for num_Ch in range(self.num_channels):
-        DataNames2.append([self.file_path+'_'+Alphabet[num_Ch]+'.xim'])
-      DataNames.append(DataNames2)
-    elif DataFlag in ['Multi-Region Image']:
-      for num_R in range(self.num_regions):
-          DataNames2 = []
-          for num_Ch in range(self.num_channels):
-              DataNames2.append([self.file_path + '_' + Alphabet[num_Ch] + str(num_R) + '.xim'])
-          DataNames.append(DataNames2)
-    elif DataFlag in ['Multi-Region Image Stack']:
-        for num_Ch in range(self.num_channels):
+        for num_R in range(self.num_regions):
             DataNames2 = []
-            for num_R in range(self.num_regions):
-                DataNames3 = []
-                for num_E in range(self.data_size[0][2]):
-                    DataNames3.append(
-                        self.file_path + '_' + Alphabet[num_Ch] + str(num_E).zfill(3) + str(num_R) + '.xim')
-                DataNames2.append(DataNames3)
-            DataNames = [DataNames2]
-            # print(DataNames[0])
-    elif DataFlag == 'Image Stack':
-      DataNames2 = []
-      for num_Ch in range(self.num_channels):
-        DataNames3 = []
-        for num_E in range(self.data_size[0][2]):
-          DataNames3.append(self.file_path+'_'+Alphabet[num_Ch]+str(num_E).zfill(3)+'.xim')
-        DataNames2.append(DataNames3)
-      DataNames = [DataNames2]
-    else:
-      print("WARNING! Unknown flag:", DataFlag)
-    #for num_R in range(len(DataNames)):#Check that names correspond to existing files
-      #for num_Ch in range(len(DataNames[num_R])):
-        #for num_E in range(len(DataNames[num_R][num_Ch])):
-          #if exists(DataNames[num_R][num_Ch][num_E]) == False:
-            #print "WARNING! Data file doesn't exist:", DataNames[num_R][num_Ch][num_E]
+            for num_Ch in range(self.num_channels):
+                DataNames2.append([self.file_path+'_'+str(num_R)+'.xsp'])
+        DataNames.append(DataNames2)
+        return DataNames
+
+    Alphabet = 'abcdefghijklmnopqrstuvwxyz'
+    boollst = [self.data_size[0][2] > 1,self.num_regions > 1]
+    bitfield = sum(val << bool for bool, val in enumerate(boollst[::-1]))
+
+    # Different detection channels can occur
+    # Four cases have to be distinguished.
+    if bitfield == 3: # multi region stack
+        DataNames = [[[self.file_path + '_' + Alphabet[num_Ch] + str(num_E).zfill(3) + str(num_R) + '.xim' for num_E in
+                       range(self.data_size[0][2])] for num_Ch in range(self.num_channels)] for num_R in
+                     range(self.num_regions)]
+    elif bitfield == 2 and not DataFlag in ['Image']:  # single region stack excluding line scans!
+        DataNames = [[[self.file_path + '_' + Alphabet[num_Ch] + str(num_E).zfill(3) + '.xim' for num_E in
+                       range(self.data_size[0][2])] for num_Ch in range(self.num_channels)]]
+    elif bitfield == 1: # multi region image
+        DataNames = [[[self.file_path + '_' + Alphabet[num_Ch] + str(num_R) + '.xim'] for num_Ch in range(self.num_channels)] for
+            num_R in range(self.num_regions)]
+    else:               # single region image
+        DataNames = [[[self.file_path + '_' + Alphabet[num_Ch] + '.xim'] for num_Ch in range(self.num_channels)]]
+
     return DataNames
 
 #-----------------------------------------------------------------------
@@ -165,9 +147,9 @@ def read(filename, self, selection=None, *args, **kwargs):
         self.data_dwell = numpy.ones((self.n_ev))*msec
 
         imagestack = numpy.empty((self.n_cols,self.n_rows,self.n_ev), numpy.int32)
-        for i in range(len(JS.data_names[selection[1]][selection[0]])):
+        for i in range(len(JS.data_names[selection[0]][selection[1]])):
             try:
-                imagestack[:,:,i] = numpy.loadtxt(JS.data_names[selection[1]][selection[0]][i], numpy.int32).T
+                imagestack[:,:,i] = numpy.loadtxt(JS.data_names[selection[0]][selection[1]][i], numpy.int32).T
             except ValueError:
                 print("Aborted stack or XIMs with inconsistent dimensions.")
                 imagestack[:,:,i] = numpy.nan

@@ -169,54 +169,38 @@ class HDR_FileParser:
     return Array
 
 #-----------------------------------------------------------------------
-  def parseDataNames(self): #ToDo: Assigning Scan types by DataFlags is prone to errors. Better detect automatically via (HDR.hdr['ScanDefinition']['Regions'][0]) etc.
+  def parseDataNames(self):
     """Figure out names for the .xsp or .xim files that contain the actual data, then check that the files actually exist, printing warnings if they don't."""
-    DataNames = []#Regions
-    DataNames2 = []#Channels
-    DataNames3 = []#Energies
-    Alphabet = 'abcdefghijklmnopqrstuvwxyz'
+    DataNames = []
     DataFlag = self.hdr['ScanDefinition']['Flags']
+    # Only for spectra:
     if DataFlag in ['Spectra','Multi-Region Spectra']:
-      for num_R in range(self.num_regions):
-        DataNames2 = []
-        for num_Ch in range(self.num_channels):
-          DataNames2.append([self.file_path+'_'+str(num_R)+'.xsp'])
-        DataNames.append(DataNames2)
-    elif DataFlag == 'Image':
-      DataNames2 = []
-      for num_Ch in range(self.num_channels):
-        DataNames2.append([self.file_path+'_'+Alphabet[num_Ch]+'.xim'])
-      DataNames.append(DataNames2)
-    elif DataFlag in ['Multi-Region Image']:
-      for num_R in range(self.num_regions):
-        DataNames2 = []
-        for num_Ch in range(self.num_channels):
-          DataNames2.append([self.file_path+'_'+Alphabet[num_Ch]+str(num_R)+'.xim'])
-        DataNames.append(DataNames2)
-    elif DataFlag in ['Multi-Region Image Stack']:
-      for num_Ch in range(self.num_channels):
-        DataNames2 = []
         for num_R in range(self.num_regions):
-            DataNames3 = []
-            for num_E in range(self.data_size[0][2]):
-                DataNames3.append(self.file_path + '_' + Alphabet[num_Ch] + str(num_E).zfill(3)+str(num_R)+ '.xim')
-            DataNames2.append(DataNames3)
-        DataNames = [DataNames2]
-    elif DataFlag == 'Image Stack':
-      DataNames2 = []
-      for num_Ch in range(self.num_channels):
-        DataNames3 = []
-        for num_E in range(self.data_size[0][2]):
-          DataNames3.append(self.file_path+'_'+Alphabet[num_Ch]+str(num_E).zfill(3)+'.xim')
-        DataNames2.append(DataNames3)
-      DataNames = [DataNames2]
-    else:
-      print("WARNING! Unknown flag:", DataFlag)
-    #for num_R in range(len(DataNames)):#Check that names correspond to existing files
-      #for num_Ch in range(len(DataNames[num_R])):
-        #for num_E in range(len(DataNames[num_R][num_Ch])):
-          #if exists(DataNames[num_R][num_Ch][num_E]) == False:
-            #print "WARNING! Data file doesn't exist:", DataNames[num_R][num_Ch][num_E]
+            DataNames2 = []
+            for num_Ch in range(self.num_channels):
+                DataNames2.append([self.file_path+'_'+str(num_R)+'.xsp'])
+        DataNames.append(DataNames2)
+        return DataNames
+
+    Alphabet = 'abcdefghijklmnopqrstuvwxyz'
+    boollst = [self.data_size[0][2] > 1,self.num_regions > 1]
+    bitfield = sum(val << bool for bool, val in enumerate(boollst[::-1]))
+
+    # Different detection channels can occur
+    # Four cases have to be distinguished.
+    if bitfield == 3: # multi region stack
+        DataNames = [[[self.file_path + '_' + Alphabet[num_Ch] + str(num_E).zfill(3) + str(num_R) + '.xim' for num_E in
+                       range(self.data_size[0][2])] for num_Ch in range(self.num_channels)] for num_R in
+                     range(self.num_regions)]
+    elif bitfield == 2 and not DataFlag in ['Image']: # single region stack excluding line scans!
+        DataNames = [[[self.file_path + '_' + Alphabet[num_Ch] + str(num_E).zfill(3) + '.xim' for num_E in
+                       range(self.data_size[0][2])] for num_Ch in range(self.num_channels)]]
+    elif bitfield == 1: # multi region image
+        DataNames = [[[self.file_path + '_' + Alphabet[num_Ch] + str(num_R) + '.xim'] for num_Ch in range(self.num_channels)] for
+            num_R in range(self.num_regions)]
+    else:               # single region image
+        DataNames = [[[self.file_path + '_' + Alphabet[num_Ch] + '.xim'] for num_Ch in range(self.num_channels)]]
+    #ToDo: File exist check
     return DataNames
 
 #-----------------------------------------------------------------------
@@ -249,7 +233,7 @@ def read(filename, self, selection=None, JSONstatus=None):
     allowed_type =['NEXAFS Image Scan','NEXAFS Line Scan','Image Scan', 'Line Scan']
     flag = HDR.hdr['ScanDefinition']['Flags']
     type = HDR.hdr['ScanDefinition']['Type']
-
+    region, channel = selection
     if not (flag in allowed_flag and type in allowed_type):
         print("Unknown Format")
         return
@@ -258,8 +242,8 @@ def read(filename, self, selection=None, JSONstatus=None):
     if type in ['NEXAFS Line Scan', 'Line Scan']:
         linescan = True
 
-    p_axis      = HDR.hdr['ScanDefinition']['Regions'][selection[0]+1]['PAxis']
-    q_axis      = HDR.hdr['ScanDefinition']['Regions'][selection[0]+1]['QAxis']
+    p_axis      = HDR.hdr['ScanDefinition']['Regions'][region+1]['PAxis']
+    q_axis      = HDR.hdr['ScanDefinition']['Regions'][region+1]['QAxis']
     stack_axis  = HDR.hdr['ScanDefinition']['StackAxis']
 
     if linescan: # if line scan
@@ -288,15 +272,15 @@ def read(filename, self, selection=None, JSONstatus=None):
 
     imagestack = numpy.empty((self.n_cols,self.n_rows,self.n_ev), numpy.int32)
     if linescan: # if linescan load only first existing image and iterate over each row.
-        line_img = (numpy.loadtxt(HDR.data_names[selection[1]][selection[0]][0], numpy.int32).T)
+        line_img = (numpy.loadtxt(HDR.data_names[region][channel][0], numpy.int32).T)
         if q_axis['Name'] == "Energy": # if horizontal, transpose matrix
             line_img = line_img.T
         for i,row in enumerate(line_img):
             imagestack[:, :, i] = row
     else: # no linescan
-        for i in range(len(HDR.data_names[selection[1]][selection[0]])):
+        for i in range(len(HDR.data_names[region][channel])):
             try:
-                imagestack[:,:,i] = numpy.loadtxt(HDR.data_names[selection[1]][selection[0]][i], numpy.int32).T
+                imagestack[:,:,i] = numpy.loadtxt(HDR.data_names[region][channel][i], numpy.int32).T
             except ValueError:
                 print("Aborted stack or XIMs with inconsistent dimensions.")
                 imagestack[:,:,i] = numpy.nan

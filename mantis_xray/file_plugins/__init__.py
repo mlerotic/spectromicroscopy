@@ -109,6 +109,7 @@ for data_type in data_types:
 def load(filename, stack_object=None, plugin=None, selection=None, json=None):
     """
     Pass the load command over to the appropriate plugin so that it can import data from the named file.
+    selection defines a list of tuples as [(region, channel),(region+1,channel),...]
     """
     if plugin is None:
         plugin = identify(filename)
@@ -118,9 +119,9 @@ def load(filename, stack_object=None, plugin=None, selection=None, json=None):
         print("load", filename, "with the", plugin.title, "plugin.")
         if selection is None:
             plugin.read(filename, stack_object, selection, json)
-        elif len(selection) == 1:
+        elif len(selection) == 1: # one region only
             plugin.read(filename, stack_object, selection[0], json)
-        else:
+        else: # multiple regions selected at once. collating absdata
             plugin.read(filename,stack_object,selection[0],json)
             temp_stack = data_stack.data(stack_object.data_struct)
             full_stack = stack_object.absdata.copy()
