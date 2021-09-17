@@ -82,7 +82,7 @@ class data:
         self.stack4D = None
         self.n_theta = 0
         self.theta = 0
-        self.od4D = 0
+        self.od4d = 0
 
         self.data_struct.spectromicroscopy.normalization.white_spectrum = None
         self.data_struct.spectromicroscopy.normalization.white_spectrum_energy = None
@@ -288,7 +288,7 @@ class data:
         if self.stack4D is None:
             self.data_struct.spectromicroscopy.optical_density = self.od
         else:
-            self.data_struct.spectromicroscopy.optical_density = self.od4D
+            self.data_struct.spectromicroscopy.optical_density = self.od4d
 
     # ----------------------------------------------------------------------
     def calc_histogram(self):
@@ -323,7 +323,7 @@ class data:
         else:
             self.i0datahist = np.zeros((self.n_ev, self.n_theta))
             self.i0data = self.i0datahist
-            self.od4D = np.zeros((self.n_cols, self.n_rows, self.n_ev, self.n_theta))
+            self.od4d = np.zeros((self.n_cols, self.n_rows, self.n_ev, self.n_theta))
 
             if np.any(i0_indices):
                 invnumel = 1. / self.averageflux[i0_indices].shape[0]
@@ -358,9 +358,8 @@ class data:
         n_pixels = self.n_cols * self.n_rows
         # Optical density matrix is rearranged into n_pixelsxn_ev
         self.od = np.reshape(self.od, (n_pixels, self.n_ev), order='F')
-
         if self.stack4D is not None:
-            self.od4D = self.stack4D.copy()
+            self.od4d = self.stack4D.copy()
 
         self.fill_h5_struct_normalization()
 
@@ -447,7 +446,7 @@ class data:
     def calculate_optical_density_4D(self):
 
         n_pixels = self.n_cols * self.n_rows
-        self.od4D = np.zeros((self.n_cols, self.n_rows, self.n_ev, self.n_theta))
+        self.od4d = np.zeros((self.n_cols, self.n_rows, self.n_ev, self.n_theta))
 
         # little hack to deal with rounding errors
         self.evi0[self.evi0.size - 1] += 0.001
@@ -484,7 +483,7 @@ class data:
             if nan_indices:
                 self.od[nan_indices] = 0
 
-            self.od4D[:, :, :, ith] = self.od[:, :, :]
+            self.od4d[:, :, :, ith] = self.od[:, :, :]
 
         self.od3d = self.od.copy()
 

@@ -536,7 +536,7 @@ class PageTomo(QtWidgets.QWidget):
         self.slider_comp.setEnabled(False)
 
 
-        self.tomodata = self.stack.od4D
+        self.tomodata = self.stack.od4d
 
         self.theta = self.stack.theta
         self.n_cols = self.stack.n_cols
@@ -9375,27 +9375,24 @@ class PageStack(QtWidgets.QWidget):
 
 #-----------------------------------------------------------------------
     def I0histogramCalculated(self):
-
-        plot = PlotFrame(self, self.stk.evi0hist,self.stk.i0datahist)
-        plot.show()
-
         self.com.i0_loaded = 1
 
         if self.com.stack_4d == 1:
-            self.stk.od3d = self.stk.od4D[:,:,:,self.itheta]
+            self.stk.od3d = self.stk.od4d[:,:,:,self.itheta]
             self.stk.od = self.stk.od3d.copy()
             self.stk.od = np.reshape(self.stk.od, (self.stk.n_cols*self.stk.n_rows, self.stk.n_ev), order='F')
 
-        #self.loadSpectrum(self.ix, self.iy)
         self.absimgfig.loadNewImage()
+        self.specfig.loadNewSpectrum()
 
         self.window().refresh_widgets()
 
 #-----------------------------------------------------------------------
     def OnShowI0(self, event):
 
-        plot = PlotFrame(self, self.stk.evi0,self.stk.i0data)
-        plot.show()
+        self.specfig.toggleI0Spectrum()
+        #plot = PlotFrame(self, self.stk.evi0,self.stk.i0data)
+        #plot.show()
 
 #-----------------------------------------------------------------------
     def OnArtefacts(self, event):
@@ -9411,6 +9408,7 @@ class PageStack(QtWidgets.QWidget):
         self.com.i0_loaded = 1
         #self.loadSpectrum(self.ix, self.iy)
         self.absimgfig.loadNewImage()
+        self.specfig.loadNewSpectrum()
 
         self.window().refresh_widgets()
 
@@ -9469,6 +9467,7 @@ class PageStack(QtWidgets.QWidget):
 
         #self.loadSpectrum(self.ix, self.iy)
         self.absimgfig.loadNewImage()
+        self.specfig.loadNewSpectrum()
         self.window().refresh_widgets()
 
 
@@ -9737,13 +9736,14 @@ class PageStack(QtWidgets.QWidget):
             #self.p1.setTitle("<center>Image at {0:5.2f} eV and {1:5.1f}°</center>".format(float(self.stk.ev[self.iev]),
             #                                                                 float(self.stk.theta[self.itheta])))
             self.absimgfig.draw(image)
+            self.specfig.loadNewSpectrum()
         # def OnScrollTheta(self, value):
     #     self.itheta = value
     #
     #
     #     self.stk.absdata = self.stk.stack4D[:,:,:,self.itheta]
     #     if self.com.i0_loaded:
-    #         self.stk.od3d = self.stk.od4D[:,:,:,self.itheta]
+    #         self.stk.od3d = self.stk.od4d[:,:,:,self.itheta]
     #         self.stk.od = self.stk.od3d.copy()
     #         n_pixels = self.stk.n_cols*self.stk.n_rows
     #         self.stk.od = np.reshape(self.stk.od, (n_pixels, self.stk.n_ev), order='F')
@@ -10983,6 +10983,7 @@ class ShowArtefacts(QtWidgets.QDialog):
         #self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
         self.parent.page1.absimgfig.loadNewImage()
         self.parent.page0.absimgfig.loadNewImage()
+        self.parent.page1.specfig.loadNewSpectrum()
         #self.parent.page0.Clear()
         #self.parent.page0.loadData()
 
@@ -11415,7 +11416,7 @@ class MultiCrop(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
             self.stack.stack4D = self.stack.stack4D[:,:, :, thetas]
         if self.com.i0_loaded:
             if self.com.stack_4d:
-                self.stack.od4D = self.stack.od4D[left:right,bottom:top,selection, thetas]
+                self.stack.od4d = self.stack.od4d[left:right,bottom:top,selection, thetas]
             else:
                 self.stack.od3d =  self.stack.od3d[left:right,bottom:top,selection]
                 self.stack.od = self.stack.od3d.copy()
@@ -11452,7 +11453,7 @@ class MultiCrop(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
         #self.parent.page1.Clear()
         self.parent.page1.absimgfig.loadNewImage()
         self.parent.page0.absimgfig.loadNewImage()
-
+        #self.parent.page1.specfig.loadNewSpectrum()
         #if showmaptab:
         #    self.parent.page9.Clear()
         #    self.parent.page9.loadData()
@@ -12651,13 +12652,13 @@ class ImageRegistrationManual(QtWidgets.QDialog):
 
                 for i in range(self.stack.n_ev):
                     for j in range(self.stack.n_theta):
-                        img = self.stack.od4D[:,:,i,j]
+                        img = self.stack.od4d[:,:,i,j]
                         shifted_img = self.stack.apply_image_registration(img, self.xshifts[i,j], self.yshifts[i,j])
-                        self.stack.od4D[:,:,i,j] = shifted_img
+                        self.stack.od4d[:,:,i,j] = shifted_img
 
-                self.stack.od4D = self.stack.od4D[self.xleft:self.xright, self.ybottom:self.ytop, :, :]
+                self.stack.od4d = self.stack.od4d[self.xleft:self.xright, self.ybottom:self.ytop, :, :]
 
-                self.stack.od3d = self.stack.od4D[:,:,:,self.itheta]
+                self.stack.od3d = self.stack.od4d[:,:,:,self.itheta]
                 self.stack.od = self.stack.od3d.copy()
                 n_pixels = self.stack.n_cols*self.stack.n_rows
                 self.stack.od = np.reshape(self.stack.od, (n_pixels, self.stack.n_ev), order='F')
@@ -13832,13 +13833,13 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
         #
         #         for i in range(self.stack.n_ev):
         #             for j in range(self.stack.n_theta):
-        #                 img = self.stack.od4D[:,:,i,j]
+        #                 img = self.stack.od4d[:,:,i,j]
         #                 shifted_img = self.stack.apply_image_registration(img, self.xshifts[i,j], self.yshifts[i,j])
-        #                 self.stack.od4D[:,:,i,j] = shifted_img
+        #                 self.stack.od4d[:,:,i,j] = shifted_img
         #
-        #         self.stack.od4D = self.stack.od4D[self.xleft:self.xright, self.ybottom:self.ytop, :, :]
+        #         self.stack.od4d = self.stack.od4d[self.xleft:self.xright, self.ybottom:self.ytop, :, :]
         #
-        #         self.stack.od3d = self.stack.od4D[:,:,:,self.itheta]
+        #         self.stack.od3d = self.stack.od4d[:,:,:,self.itheta]
         #         self.stack.od = self.stack.od3d.copy()
         #         n_pixels = self.stack.n_cols*self.stack.n_rows
         #         self.stack.od = np.reshape(self.stack.od, (n_pixels, self.stack.n_ev), order='F')
@@ -13857,7 +13858,7 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
         self.parent.page0.absimgfig.loadNewImage()
         #self.parent.page1.ix = int(self.stack.n_cols/2)
         #self.parent.page1.iy = int(self.stack.n_rows/2)
-
+        self.parent.page1.specfig.loadNewSpectrum()
         #self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
         #self.parent.page1.loadImage()
 
@@ -14945,7 +14946,7 @@ class PageLoadData(QtWidgets.QWidget):
 
             if self.com.i0_loaded:
                 if self.com.stack_4d:
-                    self.stk.od4D = np.flip(self.stk.od4D, axis=0)
+                    self.stk.od4d = np.flip(self.stk.od4d, axis=0)
                 else:
                     self.stk.od3d = np.flip(self.stk.od3d, axis=0)
                     self.stk.od = self.stk.od3d.copy()
@@ -14980,7 +14981,7 @@ class PageLoadData(QtWidgets.QWidget):
 
             if self.com.i0_loaded:
                 if self.com.stack_4d:
-                    self.stk.od4D = np.rot90(self.stk.od4D, 3)
+                    self.stk.od4d = np.rot90(self.stk.od4d, 3)
                 else:
                     self.stk.od3d =  np.rot90(self.stk.od3d, 3)
                     self.stk.od = self.stk.od3d.copy()
@@ -15001,6 +15002,7 @@ class PageLoadData(QtWidgets.QWidget):
             self.window().page1.iy = int(self.stk.n_rows / 2)
             #self.window().page1.loadSpectrum(self.window().page1.ix, self.window().page1.iy)
             self.window().page1.absimgfig.loadNewImage()
+            self.window().page1.specfig.loadNewSpectrum()
         return
 
 #-----------------------------------------------------------------------
@@ -16284,7 +16286,7 @@ class SpecFig():
         pi = self.plot.getPlotItem()
         pi.layout.setSpacing(12)
         pi.layout.setContentsMargins(10,10,40,10)
-        self.plot.setMouseEnabled(x=False, y=False)
+        self.plot.setMouseEnabled(x=True, y=True)
         self.plot.showGrid(y=True)
 
         self.plot.showAxis("top", show=True)
@@ -16299,22 +16301,78 @@ class SpecFig():
         ax = self.plot.getAxis("bottom")
         ax.setLabel(text="Photon energy [eV]")
         self.plot.setTitle("")
+        #if self.parent.com.stack_loaded == 1:
+        #    self.SetupPlot()
 
-    # def SetupPlot(self):
-    #     x,y = self.GenerateSpectrum(list(range(self.stack.n_ev)))
-    #
+    def clear(self):
+        self.plot.clear()
+    def toggleI0Spectrum(self):
+        self.clear()
+        if self.parent.button_showi0.isChecked():
+            self.loadData(showi0=True)
+        else:
+            self.loadData()
+    def loadNewSpectrum(self):
+        self.parent.button_showi0.blockSignals(True)
+        self.parent.button_showi0.setChecked(False)
+        self.parent.button_showi0.blockSignals(False)
+        self.clear()
+        self.loadData()
+
+    def loadData(self, showi0=False):
+        if showi0:
+            x,y = (self.parent.stk.evi0, self.parent.stk.i0data)
+            self.ay.setLabel(text="Flux in selected I0 area [counts]")
+            self.plotitem_new = self.plot.plot(x, y, pen=pg.mkPen(color="r", width=2))
+        else:
+            x,y = self.GenerateSpectrum(list(range(self.parent.stk.n_ev)))
+            self.plotitem_new = self.plot.plot(x, y, pen=pg.mkPen(color="b", width=2))
+
     #     self.region = pg.LinearRegionItem(brush=[255,0,0,45],bounds=[np.min(x),np.max(x)])
     #     plot.addItem(self.region, ignoreBounds=False)
     #     self.region.setZValue(10)
     #
     #     self.plotitem = plot.plot(x, y, pen=pg.mkPen(color=0.8, width=2))
-    #     self.plotitem_new = plot.plot(x, y, pen=pg.mkPen(color="b", width=2))
     #     self.refmarker = pg.InfiniteLine(angle=90, movable=False,
     #                                      pen=pg.mkPen(color="b", width=2, style=QtCore.Qt.DashLine))
     #     plot.addItem(self.refmarker, ignoreBounds=True)
     #     self.region.setRegion((min(x),max(x)))
     #     self.region.sigRegionChangeFinished.connect(lambda region: self.UpdateEVRegion(region))
 
+    def GenerateSpectrum(self, evselection):
+
+        left,right,bottom,top = (0,self.parent.ix,0,self.parent.iy)#self.GetRegion()
+        if self.parent.com.i0_loaded:
+            #self.cb_od_per_px.setVisible(True)
+            #if self.cb_od_per_px.isChecked():
+                #self.ay.setLabel(text="Optical density per px")
+            #else:
+            self.ay.setLabel(text="Sum of optical densities in FOV")
+            if self.parent.com.stack_4d:
+                total = self.parent.stk.od4d[left:right, bottom:top, :, int(self.parent.itheta)].copy()
+            else:
+                total = self.parent.stk.od3d[left:right, bottom:top, :].copy()
+        else:
+            self.ay.setLabel(text="Flux in image area [counts]")
+            if self.parent.com.stack_4d == 1:
+                #t = [self.parent.stk.theta[i] for i in self.parent.itheta]
+                #self.label_theta_range.setText(
+                #    "Theta range: [ " + str(min(t, default=0)) + "° .. " + str(
+                #        max(t, default=0)) + "° ], # values: " + str(
+                #        len(t)))
+                total = self.parent.stk.stack4D[left:right, bottom:top, :, int(self.parent.itheta)].copy()
+            else:
+                total = self.parent.stk.absdata[left:right, bottom:top, :].copy()
+        #if self.cb_od_per_px.isChecked():
+        #    total = total.sum(axis=(0,1)) / (int(self.box.size().x()) * int(self.box.size().y()))
+        #else:
+        total = total.sum(axis=(0,1))
+        x = [self.parent.stk.ev[i] for i in evselection]
+        y = [total[i] for i in evselection]
+        # self.label_spatial_range.setText("Stack size: [ "+str(int(self.box.size().x()))+" x "+str(int(self.box.size().y()))+" ] px²")
+        # self.label_ev_range.setText(
+        #     "Energy range: [ " + str(min(x, default=0)) + " .. " + str(max(x, default=0)) + " ] eV, # values: "+ str(len(x)))
+        return (x, y)
 
 
 # ----------------------------------------------------------------------
@@ -16719,8 +16777,7 @@ class MainFrame(QtWidgets.QMainWindow):
             self.page1.absimgfig.loadNewImage()
             self.page1.button_multicrop.setText('Crop stack 3D...')
             #print (x,y), (self.ix,self.iy), self.stk.absdata.shape
-            #ToDo: Restore Auto Loading Spectrum
-            #self.page1.loadSpectrum(self.ix, self.iy)
+            self.page1.specfig.loadNewSpectrum()
             self.page1.textctrl.setText(self.page1.filename)
 
             self.page5.updatewidgets()
@@ -16868,6 +16925,7 @@ class MainFrame(QtWidgets.QMainWindow):
 
             #self.page1.ResetDisplaySettings()
             self.page1.absimgfig.loadNewImage()
+            self.page1.specfig.loadNewSpectrum()
             #self.page1.loadSpectrum(self.ix, self.iy)
             self.page1.textctrl.setText(self.page1.filename)
 
