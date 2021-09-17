@@ -2270,7 +2270,7 @@ class PageNNMA(QtWidgets.QWidget):
 
 #         except:
 #             QtWidgets.QApplication.restoreOverrideCursor()
-#             QtGui.QMessageBox.warning(self, 'Error', 'Spectra files not loaded.')
+#             QtWidgets.QMessageBox.warning(self, 'Error', 'Spectra files not loaded.')
 
 
             self.tc_initspectra.setText('Initial Spectra: ' + self.initMatrices)
@@ -2587,7 +2587,7 @@ class PageNNMA(QtWidgets.QWidget):
             else:
                 err = e
 
-            QtGui.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % err)
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % err)
 #
 
 
@@ -3612,7 +3612,7 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
 
         except:
             QtWidgets.QApplication.restoreOverrideCursor()
-            QtGui.QMessageBox.warning(self, 'Error', 'Cluster spectra not loaded.')
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Cluster spectra not loaded.')
 
 
 
@@ -3709,7 +3709,7 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
                 err = e
 
 
-            QtGui.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % err)
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % err)
 
 
         #Save text file with fit info
@@ -4607,7 +4607,7 @@ class PagePeakID(QtWidgets.QWidget):
 
         except:
             QtWidgets.QApplication.restoreOverrideCursor()
-            QtGui.QMessageBox.warning(self, 'Error', 'Cluster spectra not loaded.')
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Cluster spectra not loaded.')
 
 
 
@@ -4821,7 +4821,7 @@ class PagePeakID(QtWidgets.QWidget):
                 err = e
 
 
-            QtGui.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % err)
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % err)
 
 
 
@@ -5124,7 +5124,7 @@ class PageSpectral(QtWidgets.QWidget):
 
         except:
             QtWidgets.QApplication.restoreOverrideCursor()
-            QtGui.QMessageBox.warning(self, 'Error', 'Spectrum file not loaded.')
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Spectrum file not loaded.')
 
 
         self.window().refresh_widgets()
@@ -5153,7 +5153,7 @@ class PageSpectral(QtWidgets.QWidget):
 
         except:
             QtWidgets.QApplication.restoreOverrideCursor()
-            QtGui.QMessageBox.warning(self, 'Error', 'Flat spectrum not loaded.')
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Flat spectrum not loaded.')
 
 
         self.window().refresh_widgets()
@@ -5181,7 +5181,7 @@ class PageSpectral(QtWidgets.QWidget):
 
         except:
             QtWidgets.QApplication.restoreOverrideCursor()
-            QtGui.QMessageBox.warning(self, 'Error', 'Cluster spectra not loaded.')
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Cluster spectra not loaded.')
 
 
         self.window().refresh_widgets()
@@ -5248,7 +5248,7 @@ class PageSpectral(QtWidgets.QWidget):
 
         except:
             QtWidgets.QApplication.restoreOverrideCursor()
-            QtGui.QMessageBox.warning(self, 'Error', 'Could not calculate 4D spectra.')
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Could not calculate 4D spectra.')
 
 
         self.window().refresh_widgets()
@@ -5288,7 +5288,7 @@ class PageSpectral(QtWidgets.QWidget):
                 err = e.strerror
             else:
                 err = e
-            QtGui.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % err)
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % err)
 
 
 #-----------------------------------------------------------------------
@@ -6268,7 +6268,7 @@ class ShowCompositeRBGmap(QtWidgets.QDialog):
                   'Only the PNG and PDF image formats are supported.\n'
                  'A file extension of `png\' or `pdf\' must be used.')
 
-            QtGui.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % error_message)
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % error_message)
             return
 
 
@@ -7501,7 +7501,7 @@ class PageCluster(QtWidgets.QWidget):
             else:
                 err = e
 
-            QtGui.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % err)
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % err)
 
 
 
@@ -7591,7 +7591,7 @@ class PageCluster(QtWidgets.QWidget):
             else:
                 err = e
 
-            QtGui.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % err)
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % err)
 
 
 
@@ -8167,7 +8167,7 @@ class PagePCA(QtWidgets.QWidget):
         except:
             self.com.pca_calculated = 0
             QtWidgets.QApplication.restoreOverrideCursor()
-            QtGui.QMessageBox.warning(self, 'Error', 'PCA not calculated.')
+            QtWidgets.QMessageBox.warning(self, 'Error', 'PCA not calculated.')
 
         self.window().refresh_widgets()
 
@@ -8211,7 +8211,7 @@ class PagePCA(QtWidgets.QWidget):
         except:
             self.com.pca_calculated = 0
             QtWidgets.QApplication.restoreOverrideCursor()
-            QtGui.QMessageBox.warning(self, 'Error', 'PCA not calculated.')
+            QtWidgets.QMessageBox.warning(self, 'Error', 'PCA not calculated.')
 
 
 
@@ -8532,7 +8532,7 @@ class PagePCA(QtWidgets.QWidget):
             else:
                 err = e
 
-            QtGui.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % err)
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % err)
 
 
 
@@ -9360,7 +9360,7 @@ class PageStack(QtWidgets.QWidget):
             QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
             self.com.i0_loaded = 0
             QtWidgets.QApplication.restoreOverrideCursor()
-            QtGui.QMessageBox.warning(self,'Error',"I0 file not loaded.")
+            QtWidgets.QMessageBox.warning(self,'Error',"I0 file not loaded.")
             import sys; print(sys.exc_info())
 
         self.window().refresh_widgets()
@@ -9427,7 +9427,7 @@ class PageStack(QtWidgets.QWidget):
 
             #Check reference files
             if len(filepaths) != self.stk.n_ev:
-                QtGui.QMessageBox.warning(self,'Error',"Wrong number of Reference image files.")
+                QtWidgets.QMessageBox.warning(self,'Error',"Wrong number of Reference image files.")
                 return
 
             QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
@@ -10390,7 +10390,7 @@ class PageStack(QtWidgets.QWidget):
             else:
                 err = e
 
-            QtGui.QMessageBox.warning(self,'Error','Could not save file: %s' % err)
+            QtWidgets.QMessageBox.warning(self,'Error','Could not save file: %s' % err)
 #-----------------------------------------------------------------------
     def OnSpectralROI(self, evt):
         specroiwin = ShowODMap(self.window(), self.com, self.data_struct, self.stk)
@@ -11239,7 +11239,7 @@ class MultiCrop(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
         self.thetaidx_selected = []
         for i,e in enumerate(self.stack.theta): # Fill QList with energies
             #self.stk.shifts.append([1,0,(0.0,0.0)]) #checked [0,1]; pre, post, undefined state for map [-1,1,0],(xshift [float],yshift [float])
-            item = QtGui.QListWidgetItem(str(int(i)).zfill(3)+"     at     " + format(e, '.1f') + "°")
+            item = QtWidgets.QListWidgetItem(str(int(i)).zfill(3)+"     at     " + format(e, '.1f') + "°")
             self.theta_widget.addItem(item)
             self.theta_selected.append(item)
             self.thetaidx_selected.append(i)
@@ -11250,7 +11250,7 @@ class MultiCrop(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
         self.idx_selected = []
         for i,e in enumerate(self.stack.ev): # Fill QList with energies
             #self.stk.shifts.append([1,0,(0.0,0.0)]) #checked [0,1]; pre, post, undefined state for map [-1,1,0],(xshift [float],yshift [float])
-            item = QtGui.QListWidgetItem(str(int(i)).zfill(3)+"     at     " + format(e, '.2f') + " eV")
+            item = QtWidgets.QListWidgetItem(str(int(i)).zfill(3)+"     at     " + format(e, '.2f') + " eV")
             self.ev_widget.addItem(item)
             self.ev_selected.append(item)
             self.idx_selected.append(i)
@@ -14338,7 +14338,7 @@ class SpectralROI(QtWidgets.QDialog):
                 else:
                     err = e
 
-                QtGui.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % err)
+                QtWidgets.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % err)
 #-----------------------------------------------------------------------
 class DoseCalculation(QtWidgets.QDialog):
 
@@ -14426,7 +14426,7 @@ class DoseCalculation(QtWidgets.QDialog):
         try:
             detector_eff = 0.01*float(self.tc_1.text())
         except:
-            QtGui.QMessageBox.warning(self, 'Error', 'Please enter numeric number for detector efficiency.')
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Please enter numeric number for detector efficiency.')
             print('Please enter numeric number for detector efficiency.')
             return
 
@@ -14441,13 +14441,13 @@ class DoseCalculation(QtWidgets.QDialog):
         try:
             z_array, atwt = Chenke.compound(i_composition,1.0)
         except:
-            QtGui.QMessageBox.warning(self, 'Error', "Please enter new compound.")
+            QtWidgets.QMessageBox.warning(self, 'Error', "Please enter new compound.")
             return
 
         try:
             dose = Chenke.dose_calc(self.stack, i_composition, self.ROIspectrum, self.stack.i0data, detector_eff)
         except:
-            QtGui.QMessageBox.warning(self, 'Error', "Could not calculate dose. Please enter new compound.")
+            QtWidgets.QMessageBox.warning(self, 'Error', "Could not calculate dose. Please enter new compound.")
             return
 
         self.tc_4.setText(str(dose))
@@ -14533,7 +14533,7 @@ class DarkSignal(QtWidgets.QDialog):
             darksig = float(value)
         except:
             QtWidgets.QApplication.restoreOverrideCursor()
-            QtGui.QMessageBox.warning(self, 'Error', 'Please enter numeric number for dark signal.')
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Please enter numeric number for dark signal.')
             return
 
 
@@ -14650,7 +14650,7 @@ class PlotFrame(QtWidgets.QDialog):
         except:
 
             QtWidgets.QApplication.restoreOverrideCursor()
-            QtGui.QMessageBox.warning(self, 'Error', "Could not save .csv file.")
+            QtWidgets.QMessageBox.warning(self, 'Error', "Could not save .csv file.")
 
         self.close()
 
@@ -15162,7 +15162,7 @@ class ShowODMap(QtWidgets.QWidget):
         self.pglayout = pg.GraphicsLayout(border=None)
         self.canvas.setBackground("w") # canvas is a pg.GraphicsView widget
         self.canvas.setCentralWidget(self.pglayout)
-        #self.pglayout.addItem(pg.AxisItem('left',vPolicy =QtGui.QSizePolicy.Maximum), row=1, col=0, rowspan=1, colspan=3)
+        #self.pglayout.addItem(pg.AxisItem('left',vPolicy =QtWidgets.QSizePolicy.Maximum), row=1, col=0, rowspan=1, colspan=3)
         self.p1 = self.pglayout.addPlot(row=0, col=0, rowspan=1, colspan=1)
         self.p1.setMouseEnabled(x=False, y=False)
         self.i_item = pg.ImageItem(border="k")
@@ -15251,9 +15251,9 @@ class ShowODMap(QtWidgets.QWidget):
         self.pglayout.layout.setColumnMaximumWidth(2, 80)
         #self.pglayout.layout.setColumnMinimumWidth(1, int((self.p1.width() + self.p2.width()) / 2))
         #self.pglayout.layout.setColumnMinimumWidth(0, int((self.p1.width() + self.p2.width()) / 2))
-        self.p1.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
-        self.p2.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
-        self.cm.setSizePolicy(QtGui.QSizePolicy.Maximum, QtGui.QSizePolicy.Preferred)
+        self.p1.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
+        self.p2.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
+        self.cm.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Preferred)
     def mouseEventOnQList(self, e):
         if e.type() == QtCore.QEvent.MouseMove or e.type() == QtCore.QEvent.MouseButtonPress:
             qlist = self.MapSelectWidget1
@@ -15594,7 +15594,7 @@ class ShowODMap(QtWidgets.QWidget):
         self.p1.addItem(self.i_item)
         for i,e in enumerate(self.stk.ev): # Fill QList with energies
             self.stk.shifts.append([1,0,(0.0,0.0)]) #checked [0,1]; pre, post, undefined state for map [-1,1,0],(xshift [float],yshift [float])
-            item = QtGui.QListWidgetItem(str(int(i)).zfill(3)+"     at     " + format(e, '.2f') + " eV     "+"+0.0"+"    +0.0")
+            item = QtWidgets.QListWidgetItem(str(int(i)).zfill(3)+"     at     " + format(e, '.2f') + " eV     "+"+0.0"+"    +0.0")
             self.MapSelectWidget1.addItem(item)
         self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
         self.qlistchanged.connect(self.qListChangeHandler)
@@ -15767,7 +15767,7 @@ class ShowODMap(QtWidgets.QWidget):
         if np.any(inf_idx) or np.any(nan_idx):
             #if not self.InfWarning:
             #    self.InfWarning = True
-            #    QtGui.QMessageBox.warning(self, 'Warning!', "The OD map contained infinite or nan values. Please note that they have been zeroed.")
+            #    QtWidgets.QMessageBox.warning(self, 'Warning!', "The OD map contained infinite or nan values. Please note that they have been zeroed.")
             OD[inf_idx] = 0 #infinite values get replaced by zero. This is an ugly work around, but with nans the image is not displayed correctly.
             OD[nan_idx] = 0
         return OD
@@ -15883,7 +15883,7 @@ class StackListFrame(QtWidgets.QDialog):
         vbox.addWidget(self.textt)
 
 
-        self.filelist = QtGui.QTableWidget()
+        self.filelist = QtWidgets.QTableWidget()
         self.filelist.setMinimumHeight(450)
         self.filelist.setColumnCount(4)
         self.filelist.setHorizontalHeaderLabels(('File list', 'X', 'Y', 'eV'))
@@ -15976,7 +15976,7 @@ class StackListFrame(QtWidgets.QDialog):
                 from file_plugins import file_sm_netcdf
 
             except:
-                QtGui.QMessageBox.warning(self, 'Error', "Could not import netCDF4 library.")
+                QtWidgets.QMessageBox.warning(self, 'Error', "Could not import netCDF4 library.")
                 return
 
             count = 0
@@ -15992,10 +15992,10 @@ class StackListFrame(QtWidgets.QDialog):
                     self.filelist.insertRow(count)
                     self.filelist.setRowHeight(count,20)
 
-                    self.filelist.setItem(count, 0, QtGui.QTableWidgetItem(filename))
-                    self.filelist.setItem(count, 1, QtGui.QTableWidgetItem(str(ncols)))
-                    self.filelist.setItem(count, 2, QtGui.QTableWidgetItem(str(nrows)))
-                    self.filelist.setItem(count, 3, QtGui.QTableWidgetItem('{0:5.2f}'.format(iev)))
+                    self.filelist.setItem(count, 0, QtWidgets.QTableWidgetItem(filename))
+                    self.filelist.setItem(count, 1, QtWidgets.QTableWidgetItem(str(ncols)))
+                    self.filelist.setItem(count, 2, QtWidgets.QTableWidgetItem(str(nrows)))
+                    self.filelist.setItem(count, 3, QtWidgets.QTableWidgetItem('{0:5.2f}'.format(iev)))
 
                     count += 1
                 else:
@@ -16024,10 +16024,10 @@ class StackListFrame(QtWidgets.QDialog):
                     self.filelist.insertRow(count)
                     self.filelist.setRowHeight(count,20)
 
-                    self.filelist.setItem(count, 0, QtGui.QTableWidgetItem(filename))
-                    self.filelist.setItem(count, 1, QtGui.QTableWidgetItem(str(ncols)))
-                    self.filelist.setItem(count, 2, QtGui.QTableWidgetItem(str(nrows)))
-                    self.filelist.setItem(count, 3, QtGui.QTableWidgetItem('{0:5.2f}'.format(iev)))
+                    self.filelist.setItem(count, 0, QtWidgets.QTableWidgetItem(filename))
+                    self.filelist.setItem(count, 1, QtWidgets.QTableWidgetItem(str(ncols)))
+                    self.filelist.setItem(count, 2, QtWidgets.QTableWidgetItem(str(nrows)))
+                    self.filelist.setItem(count, 3, QtWidgets.QTableWidgetItem('{0:5.2f}'.format(iev)))
 
                     count += 1
 
@@ -16057,10 +16057,10 @@ class StackListFrame(QtWidgets.QDialog):
                     self.filelist.insertRow(count)
                     self.filelist.setRowHeight(count,20)
 
-                    self.filelist.setItem(count, 0, QtGui.QTableWidgetItem(filename))
-                    self.filelist.setItem(count, 1, QtGui.QTableWidgetItem(str(ncols)))
-                    self.filelist.setItem(count, 2, QtGui.QTableWidgetItem(str(nrows)))
-                    self.filelist.setItem(count, 3, QtGui.QTableWidgetItem('{0:5.2f}'.format(iev)))
+                    self.filelist.setItem(count, 0, QtWidgets.QTableWidgetItem(filename))
+                    self.filelist.setItem(count, 1, QtWidgets.QTableWidgetItem(str(ncols)))
+                    self.filelist.setItem(count, 2, QtWidgets.QTableWidgetItem(str(nrows)))
+                    self.filelist.setItem(count, 3, QtWidgets.QTableWidgetItem('{0:5.2f}'.format(iev)))
 
                     count += 1
 
@@ -16473,7 +16473,7 @@ class ImgFig():
 
     def OnColormap(self, map="gray", colors=256):
         if self.parent.com.stack_loaded == 1:
-            colormap = cm.get_cmap(map, colors)
+            colormap = cm.get_cmap(map, colors) #colormap from matplotlib
             colormap = colormap(np.arange(colors))
             cm_lst = [[colormap[idx][0], colormap[idx][1], colormap[idx][2], colormap[idx][3]] for idx in
                       range(np.shape(colormap)[0])]  # convert to r,g,b,a list
@@ -16482,7 +16482,7 @@ class ImgFig():
             cm_array = np.array([np.asarray(cm_lst)])  # vertical colorbar
             cm_lst.extend((cm_lst[-1], cm_lst[-1], cm_lst[-1]))
             lut = np.asarray(cm_lst)
-            lut = (lut * 255).view(np.ndarray)
+            lut = (lut * 255).view(np.ndarray).astype(int)
             self.cmimg.setImage(cm_array)
             self.i_item.setLookupTable(lut)
             self.setODbar(self.min, self.max)
@@ -16759,7 +16759,7 @@ class MainFrame(QtWidgets.QMainWindow):
 #             self.new_stack_refresh()
 #             self.refresh_widgets()
 #
-#             QtGui.QMessageBox.warning(self,'Error',"Error could not build stack list")
+#             QtWidgets.QMessageBox.warning(self,'Error',"Error could not build stack list")
 #             import sys; print sys.exc_info()
 
 
@@ -16888,7 +16888,7 @@ class MainFrame(QtWidgets.QMainWindow):
             self.new_stack_refresh()
             self.page1.button_multicrop.setText('Crop stack 3D/4D...')
             QtWidgets.QApplication.restoreOverrideCursor()
-            QtGui.QMessageBox.warning(self, 'Error', 'Image stack not loaded.')
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Image stack not loaded.')
 
             import sys
             print(sys.exc_info())
@@ -16964,7 +16964,7 @@ class MainFrame(QtWidgets.QMainWindow):
         except:
 
             QtWidgets.QApplication.restoreOverrideCursor()
-            QtGui.QMessageBox.warning(self, 'Error', 'Could not save HDF5 file.')
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Could not save HDF5 file.')
 
 
         self.refresh_widgets()
