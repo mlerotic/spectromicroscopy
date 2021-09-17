@@ -10606,7 +10606,7 @@ class SaveWinP1(QtWidgets.QDialog):
                                          img_all = im_all,
                                          img_all_tif = im_all_tif)
 #-----------------------------------------------------------------------
-class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
+class ShowHistogram(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
     def __init__(self, parent, stack):
         QtWidgets.QWidget.__init__(self, parent)
         dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -10992,7 +10992,7 @@ class ShowArtefacts(QtWidgets.QDialog):
 
         self.close()
 #-----------------------------------------------------------------------
-class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
+class MultiCrop(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
     evlistchanged = pyqtSignal([object])
     thetalistchanged = pyqtSignal([object])
     def __init__(self, parent, common, stack):
@@ -13148,7 +13148,7 @@ class TaskDispatcher(QtCore.QObject):
     def enqueuetask(self, func, *args, **kargs):
         self.queue.put((func, args, kargs))
 # ----------------------------------------------------------------------
-class ImageRegistrationFFT(QtWidgets.QDialog, QtGui.QGraphicsScene):
+class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
     def __init__(self, parent, common, stack):
         QtWidgets.QWidget.__init__(self, parent)
         uic.loadUi(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'showalign2.ui'), self)
