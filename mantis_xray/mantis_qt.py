@@ -14886,8 +14886,8 @@ class PageLoadData(QtWidgets.QWidget):
         self.CMCatBox.setCurrentIndex(2)
         self.CMMapBox.setCurrentIndex(3)
         self.CMCatBox.currentIndexChanged.connect(self.absimgfig.OnCatChanged)
-        self.CMMapBox.currentIndexChanged.connect(lambda: self.absimgfig.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value()))
-        self.StepSpin.valueChanged.connect(lambda: self.absimgfig.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value()))
+        self.CMMapBox.currentIndexChanged.connect(lambda: self.absimgfig.OnColormapChange(map=self.CMMapBox.currentText(),num_colors=self.StepSpin.value()))
+        self.StepSpin.valueChanged.connect(lambda: self.absimgfig.OnColormapChange(map=self.CMMapBox.currentText(),num_colors=self.StepSpin.value()))
 
         self.pb_rotate.clicked.connect(self.OnRotate)
         self.pb_mirror.clicked.connect(self.OnMirror)
@@ -14926,10 +14926,10 @@ class PageLoadData(QtWidgets.QWidget):
 
         if ext == 'tif':
             from PIL import Image
-            img1 = Image.fromarray(np.rot90(self.absimgfig.i_item.image))
+            img1 = Image.fromarray(np.rot90(self.absimgfig.imageitem.image))
             img1.save(fileName)
         if ext == 'txt':
-            np.savetxt(fileName, np.rot90(self.absimgfig.i_item.image), delimiter='\t', newline='\n',fmt='%.5f')
+            np.savetxt(fileName, np.rot90(self.absimgfig.imageitem.image), delimiter='\t', newline='\n',fmt='%.5f')
 # ----------------------------------------------------------------------
     def OnCopy(self):
         self.exp = pg.exporters.ImageExporter(self.absimgfig.pglayout)
@@ -15100,162 +15100,87 @@ class ShowODMap(QtWidgets.QWidget):
                           'gist_rainbow', 'rainbow', 'jet', 'nipy_spectral', 'gist_ncar'])]
         self.initUI(parent, common, data_struct, stack)
         #    self.Clear()
+        self.odimgfig.loadNewImage()
         self.loadData()
 
 #-----------------------------------------------------------------------
     def initUI(self, parent, common, data_struct, stack):
-        self.xoffset = 0
-        self.yoffset = 0
         self.scale = 0.000001
-        self.pbRST.clicked.connect(lambda: self.setShifts(0, 0))
-        self.pbL.clicked.connect(lambda: self.setShifts(-0.2,0))
-        self.pbR.clicked.connect(lambda: self.setShifts(0.2,0))
-        self.pbU.clicked.connect(lambda: self.setShifts(0,0.2))
-        self.pbD.clicked.connect(lambda: self.setShifts(0,-0.2))
-        self.pbRD.clicked.connect(lambda: self.setShifts(0.2,-0.2))
-        self.pbRU.clicked.connect(lambda: self.setShifts(0.2,0.2))
-        self.pbLD.clicked.connect(lambda: self.setShifts(-0.2,-0.2))
-        self.pbLU.clicked.connect(lambda: self.setShifts(-0.2,0.2))
-        self.pbLL.clicked.connect(lambda: self.setShifts(-1,0))
-        self.pbRR.clicked.connect(lambda: self.setShifts(1,0))
-        self.pbUU.clicked.connect(lambda: self.setShifts(0,1))
-        self.pbDD.clicked.connect(lambda: self.setShifts(0,-1))
-        self.pbLLDD.clicked.connect(lambda: self.setShifts(-1,-1))
-        self.pbRRUU.clicked.connect(lambda: self.setShifts(1,1))
-        self.pbLLUU.clicked.connect(lambda: self.setShifts(-1,1))
-        self.pbRRDD.clicked.connect(lambda: self.setShifts(1,-1))
-
-        self.pbExpData.clicked.connect(self.OnSaveData)
-        self.pbExpImg.clicked.connect(self.OnSaveImage)
-        self.pbCopy.clicked.connect(self.OnCopy)
-
-        self.MetricCheckBox.toggled.connect(lambda: self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
-        self.ZeroOriginCheckBox.toggled.connect(lambda: self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
-        self.SquarePxCheckBox.toggled.connect(lambda: self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
-        self.SquarePxCheckBox.setVisible(False)
-        self.CropCheckBox.toggled.connect(lambda: self.OnCropCB(self.CropCheckBox.isChecked()))
-        self.cropflag = True
-        #self.ShiftLabel.setText("x = %0.1f \ny = %0.1f" % (0, 0))
-        self.ODHighSpinBox.valueChanged.connect(lambda: self.setODlimits(self.ODLowSpinBox.value(),self.ODHighSpinBox.value()))
-        self.ODLowSpinBox.valueChanged.connect(lambda: self.setODlimits(self.ODLowSpinBox.value(),self.ODHighSpinBox.value()))
-        self.pbRSTOD.clicked.connect(lambda: self.ShowMap(self.prelst, self.postlst))
-        self.pbClrShifts.clicked.connect(self.OnClrShifts)
-        self.pbClrSel.clicked.connect(self.OnClrSelection)
-
-        self.CMCatBox.addItems([self.cmaps[0][0],self.cmaps[1][0],self.cmaps[2][0],self.cmaps[3][0],self.cmaps[4][0],self.cmaps[5][0]])
-        self.CMMapBox.addItems(self.cmaps[2][1])
-        self.CMCatBox.setCurrentIndex(2)
-        self.CMMapBox.setCurrentIndex(14)
-        self.CMCatBox.currentIndexChanged.connect(self.OnCatChanged)
-        self.CMMapBox.currentIndexChanged.connect(lambda: self.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value()))
-        self.StepSpin.valueChanged.connect(lambda: self.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value()))
-        self.filterSpinBox.valueChanged.connect(lambda: self.ShowMap(self.prelst, self.postlst))
-        self.filterSpinBox.setEnabled(False)
-        self.MapSelectWidget1.mousePressEvent = self.mouseEventOnQList
-        self.MapSelectWidget1.mouseMoveEvent = self.mouseEventOnQList
         self.data_struct = data_struct
         self.stk = stack
         self.com = common
         self.parent = parent
         self.iev = 0
         self.latest_row = -1
+        self.xoffset = 0
+        self.yoffset = 0
+
+        self.slider_eng = self.MapSelectWidget1.verticalScrollBar()
+
+        self.odimgfig = ImgFig(self, self.canvas)
+        # self.pbRST.clicked.connect(lambda: self.setShifts(0, 0))
+        # self.pbL.clicked.connect(lambda: self.setShifts(-0.2,0))
+        # self.pbR.clicked.connect(lambda: self.setShifts(0.2,0))
+        # self.pbU.clicked.connect(lambda: self.setShifts(0,0.2))
+        # self.pbD.clicked.connect(lambda: self.setShifts(0,-0.2))
+        # self.pbRD.clicked.connect(lambda: self.setShifts(0.2,-0.2))
+        # self.pbRU.clicked.connect(lambda: self.setShifts(0.2,0.2))
+        # self.pbLD.clicked.connect(lambda: self.setShifts(-0.2,-0.2))
+        # self.pbLU.clicked.connect(lambda: self.setShifts(-0.2,0.2))
+        # self.pbLL.clicked.connect(lambda: self.setShifts(-1,0))
+        # self.pbRR.clicked.connect(lambda: self.setShifts(1,0))
+        # self.pbUU.clicked.connect(lambda: self.setShifts(0,1))
+        # self.pbDD.clicked.connect(lambda: self.setShifts(0,-1))
+        # self.pbLLDD.clicked.connect(lambda: self.setShifts(-1,-1))
+        # self.pbRRUU.clicked.connect(lambda: self.setShifts(1,1))
+        # self.pbLLUU.clicked.connect(lambda: self.setShifts(-1,1))
+        # self.pbRRDD.clicked.connect(lambda: self.setShifts(1,-1))
+
+        self.pbExpData.clicked.connect(self.OnSaveData)
+        self.pbExpImg.clicked.connect(self.OnSaveImage)
+        self.pbCopy.clicked.connect(self.OnCopy)
+
+        self.MetricCheckBox.toggled.connect(lambda: self.odimgfig.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
+        self.ZeroOriginCheckBox.toggled.connect(lambda: self.odimgfig.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
+        self.SquarePxCheckBox.toggled.connect(lambda: self.odimgfig.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
+        self.SquarePxCheckBox.setVisible(False)
+
+        #self.CropCheckBox.toggled.connect(lambda: self.OnCropCB(self.CropCheckBox.isChecked()))
+        self.cropflag = True
+        #self.ShiftLabel.setText("x = %0.1f \ny = %0.1f" % (0, 0))
+        self.ODHighSpinBox.valueChanged.connect(lambda: self.setODlimits(self.ODLowSpinBox.value(),self.ODHighSpinBox.value()))
+        self.ODLowSpinBox.valueChanged.connect(lambda: self.setODlimits(self.ODLowSpinBox.value(),self.ODHighSpinBox.value()))
+        self.pbRSTOD.clicked.connect(lambda: self.ShowMap(self.prelst, self.postlst))
+        # self.pbClrShifts.clicked.connect(self.OnClrShifts)
+        self.pbClrSel.clicked.connect(self.OnClrSelection)
+
+        self.CMCatBox.addItems([self.cmaps[0][0],self.cmaps[1][0],self.cmaps[2][0],self.cmaps[3][0],self.cmaps[4][0],self.cmaps[5][0]])
+        self.CMMapBox.addItems(self.cmaps[2][1])
+        self.CMCatBox.setCurrentIndex(2)
+        self.CMMapBox.setCurrentIndex(14)
+        self.CMCatBox.currentIndexChanged.connect(self.odimgfig.OnCatChanged)
+        self.CMMapBox.currentIndexChanged.connect(lambda: self.odimgfig.OnColormapChange(map=self.CMMapBox.currentText(),num_colors=self.StepSpin.value()))
+        self.StepSpin.valueChanged.connect(lambda: self.odimgfig.OnColormapChange(map=self.CMMapBox.currentText(),num_colors=self.StepSpin.value()))
+
+        self.filterSpinBox.valueChanged.connect(lambda: self.ShowMap(self.prelst, self.postlst))
+        self.filterSpinBox.setEnabled(False)
+        self.MapSelectWidget1.mousePressEvent = self.mouseEventOnQList
+        self.MapSelectWidget1.mouseMoveEvent = self.mouseEventOnQList
+
         self.parent.page1.button_spectralROI.setEnabled(False)
 
-        self.pglayout = pg.GraphicsLayout(border=None)
-        self.canvas.setBackground("w") # canvas is a pg.GraphicsView widget
-        self.canvas.setCentralWidget(self.pglayout)
-        #self.pglayout.addItem(pg.AxisItem('left',vPolicy =QtWidgets.QSizePolicy.Maximum), row=1, col=0, rowspan=1, colspan=3)
-        self.p1 = self.pglayout.addPlot(row=0, col=0, rowspan=1, colspan=1)
-        self.p1.setMouseEnabled(x=False, y=False)
-        self.i_item = pg.ImageItem(border="k")
-        self.p1.setAspectLocked(lock=True, ratio=1)
-        self.p1.showAxis("top", show=True)
-        self.p1.showAxis("bottom", show=True)
-        self.p1.showAxis("left", show=True)
-        self.p1.showAxis("right", show=True)
-        self.ay1 = self.p1.getAxis("left")
-        by1 = self.p1.getAxis("right")
-        self.ax1 = self.p1.getAxis("bottom")
-        bx1 = self.p1.getAxis("top")
-        self.ay1.setLabel(text="y",units="px")
-        self.ay1.enableAutoSIPrefix(enable=True)
-        self.ax1.setLabel(text="x",units="px")
-        self.ax1.enableAutoSIPrefix(enable=True)
-        self.ay1.setStyle(tickLength=8)
-        self.ax1.setStyle(tickLength=8)
-        by1.setStyle(showValues=False,tickLength=0)
-        bx1.setStyle(showValues=False,tickLength=0)
+    def OnScrollEng(self, value):
+        self.iev = value
+        if self.com.stack_loaded == 1:
+            self.slider_eng.setValue(value)
+            if self.com.i0_loaded == 0:
+                # Show flux image
+                image = self.stk.absdata[:, :, self.iev]  # .copy()
+            else:
+                # Show OD image
+                image = self.stk.od3d[:, :, self.iev]  # .copy()
+            self.odimgfig.draw(image)
 
-        self.p2 = self.pglayout.addPlot(row=0, col=1, rowspan=1, colspan=1)
-        self.p2.setMouseEnabled(x=False, y=False)
-        self.m_item = pg.ImageItem(border="k")
-        self.m_item.setZValue(1000)
-        self.p2.setAspectLocked(lock=True, ratio=1)
-        self.p2.showAxis("top", show=True)
-        self.p2.showAxis("bottom", show=True)
-        self.p2.showAxis("left", show=True)
-        self.p2.showAxis("right", show=True)
-        self.ay2 = self.p2.getAxis("left")
-        self.ay2.setZValue(1000)
-        by2 = self.p2.getAxis("right")
-        by2.setZValue(1000)
-        self.ax2 = self.p2.getAxis("bottom")
-        self.ax2.setZValue(1000)
-        bx2 = self.p2.getAxis("top")
-        bx2.setZValue(1000)
-        self.ay2.setLabel(text="y",units="px")
-        self.si_prefix = self.ay2.enableAutoSIPrefix(enable=True)
-        self.ax2.setLabel(text="x",units="px")
-        self.ax2.enableAutoSIPrefix(enable=True)
-        self.ay2.setStyle(tickLength=8)
-        self.ax2.setStyle(tickLength=8)
-        by2.setStyle(showValues=False,tickLength=0)
-        bx2.setStyle(showValues=False,tickLength=0)
-        self.p1.setTitle("")
-        self.p1.titleLabel.setText("<center>No images loaded</center>", size='10pt')
-
-
-        self.p2.setTitle("")
-        self.p2.titleLabel.setText("<center>No map available</center>", size='10pt')
-        #self.p1.titleLabel.item.setTextWidth(self.p1.width() * 0.7)
-        #self.p2.titleLabel.item.setTextWidth(self.p2.width() * 0.7)
-        self.cmimg = pg.ImageItem(border=None)
-        self.cm = self.pglayout.addPlot(row=0, col=2, rowspan=1, colspan=1)
-        self.cm.addItem(self.cmimg)
-        self.cm.setMouseEnabled(x=False, y=False)
-        self.cm.getViewBox().autoRange(padding=0)
-        self.cm.showAxis("top", show=True)
-        self.cm.showAxis("bottom", show=True)
-        self.cm.showAxis("left", show=True)
-        self.cm.showAxis("right", show=True)
-        self.cm.setTitle("")
-        self.cm.titleLabel.setText("", size='10pt')
-        ay3 = self.cm.getAxis("left")
-        ay3.setZValue(1000)
-        by3 = self.cm.getAxis("right")
-        by3.setZValue(1000)
-        bx3 = self.cm.getAxis("top")
-        bx3.setZValue(1000)
-        ax3 = self.cm.getAxis("bottom")
-        ax3.setZValue(1000)
-        ax3.setTicks([])
-        ax3.setLabel(text="", units="")
-        ax3.setStyle(tickLength=8)
-        by3 = self.cm.getAxis("right")
-        by3.setLabel(text="OD", units="")
-        by3.setStyle(tickLength=8)
-        #by3.textWidth()
-        ay3.setStyle(showValues=False,tickLength=0)
-        bx3.setStyle(showValues=False,tickLength=0)
-        ax3.setHeight(h=46.2)  # workaround for overly long colorbar
-        by3.setWidth(w=60)
-        self.pglayout.layout.setColumnMinimumWidth(2, 80)
-        self.pglayout.layout.setColumnMaximumWidth(2, 80)
-        #self.pglayout.layout.setColumnMinimumWidth(1, int((self.p1.width() + self.p2.width()) / 2))
-        #self.pglayout.layout.setColumnMinimumWidth(0, int((self.p1.width() + self.p2.width()) / 2))
-        self.p1.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
-        self.p2.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
-        self.cm.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Preferred)
     def mouseEventOnQList(self, e):
         if e.type() == QtCore.QEvent.MouseMove or e.type() == QtCore.QEvent.MouseButtonPress:
             qlist = self.MapSelectWidget1
@@ -15296,15 +15221,15 @@ class ShowODMap(QtWidgets.QWidget):
         self.prelst = [index for index, value in enumerate([x[1] for x in  self.stk.shifts]) if value == -1]
         self.postlst = [index for index, value in enumerate([x[1] for x in  self.stk.shifts]) if value == 1]
         #print(self.prelst,self.postlst)
-        self.OnScrollEng(self.MapSelectWidget1.currentRow())
+#        self.OnScrollEng(self.MapSelectWidget1.currentRow())
         if len(self.prelst) == 0 or len(self.postlst) == 0:
             if len(self.prelst + self.postlst) == 0:
                 self.pbClrSel.setEnabled(False)
             else:
                 self.pbClrSel.setEnabled(True)
-            self.p2.clear()
-            self.cm.clear()
-            self.p2.titleLabel.setText("<center>Select at least one pre- and post-edge image!</center>",size='10pt')
+            self.odimgfig.loadNewImage()
+#            self.cm.clear()
+            self.odimgfig.imageplot.titleLabel.setText("<center>Select at least one pre- and post-edge image!</center>",size='10pt')
 
             self.ODHighSpinBox.setEnabled(False)
             self.ODLowSpinBox.setEnabled(False)
@@ -15318,23 +15243,25 @@ class ShowODMap(QtWidgets.QWidget):
             #self.InfWarning = False
             self.ShowMap(self.prelst,self.postlst)
             # self.OnScrollEng(self.MapSelectWidget1.currentRow())
-            self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),
-                                    self.SquarePxCheckBox.isChecked())
+            #self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),
+            #                        self.SquarePxCheckBox.isChecked())
         return
     # ----------------------------------------------------------------------
     def OnSaveData(self,event):
         #Save Data
-        wildcard = "Float32 TIFF File (*.tif);;TextImage (*.txt);;"
+        wildcard = "TIFF Float32 File (*.tif);; TXT Image (*.txt);;"
 
         fileName, _filter = QtWidgets.QFileDialog.getSaveFileName(self, 'Save OD Map', '', wildcard)
 
         fileName = str(fileName)
         if fileName == '':
             return
-
         path, ext = os.path.splitext(fileName)
         ext = ext[1:].lower()
-
+        if ext == '':
+            ext = _filter.split()[0].lower()[0:3]
+            fileName = fileName+'.'+ext
+        print(ext)
         if ext != 'tif' and ext != 'txt':
             error_message = (
                   'Only the TIF and TXT data formats are supported.\n'
@@ -15349,88 +15276,56 @@ class ShowODMap(QtWidgets.QWidget):
         if ext == 'txt':
             np.savetxt(fileName, np.rot90(self.OD), delimiter='\t', newline='\n',fmt='%.5f')
     def OnCopy(self):
-        self.exp = pg.exporters.ImageExporter(self.pglayout)
+        self.exp = pg.exporters.ImageExporter(self.odimgfig.imageplot)
         self.exp.export(copy=True)
         return
     def OnSaveImage(self, event):
-        # Save Image
         wildcard = "TIFF (*.tif);;PNG (*.png);;JPG (*.jpg);;SVG (*.svg);;"
-
         fileName, _filter = QtWidgets.QFileDialog.getSaveFileName(self, 'Save OD Map', '', wildcard)
 
         fileName = str(fileName)
         if fileName == '':
             return
-
         path, ext = os.path.splitext(fileName)
         ext = ext[1:].lower()
+        if ext == '':
+            ext = _filter.split()[0].lower()[0:3]
+            fileName = fileName+'.'+ext
 
-        padding = 10  # clearance between OD color bar and p2 in px units
-        width = self.p2.size().width() + self.cm.size().width()
-        height = self.p2.size().height()
         if ext == 'svg':
-            p2exp = pg.exporters.SVGExporter(self.p2)
-            cmexp = pg.exporters.SVGExporter(self.cm)
+            exp = pg.exporters.SVGExporter(self.odimgfig.imageplot)
         else:
-            p2exp = pg.exporters.ImageExporter(self.p2)
-            cmexp = pg.exporters.ImageExporter(self.cm)
-        p2exp = p2exp.export(toBytes=True)
-        cmexp = cmexp.export(toBytes=True)
-        if ext == 'tif' or ext == 'png' or ext == 'jpg':
-            # The subsequent code was tested with pyqtgraph 0.11.0dev0 ; pyqtgraph < 0.11.0 shows a TypeError: 'float'...
-            # To combine self.p2 and self.cm (OD bar) in a single image, the two QImage objects are redrawn using a QPainter object.
-            # If self.cm is not needed, the following two lines are sufficient:
-            #   p2exp = pg.exporters.ImageExporter(self.p2)
-            #   p2exp.export(FileName)
-            qimg = QtGui.QImage(width + padding, height, QtGui.QImage.Format_ARGB32)
-            if ext == 'jpg':
-                qimg.fill(QtGui.QColor(255, 255, 255, 255)); # BG white if export as jpg
-            else:
-                qimg.fill(QtGui.QColor(0, 0, 0, 0));
-            painter = QtGui.QPainter()
-            painter.begin(qimg)
-            painter.drawImage(0, 0, p2exp)
-            painter.drawImage(p2exp.size().width() + padding, 0, cmexp)
-            painter.end()
-            #pixmap = QPixmap.fromImage(tile)
-            #QCoreApplication.instance().clipboard().setImage(qimg)
-            qimg.save(fileName,quality=100)
-        elif ext == 'svg':
-            fig1 = self.SVGClipPathRemover(etree.fromstring(p2exp))
-            fig2 = self.SVGClipPathRemover(etree.fromstring(cmexp))
-            mergedfig = self.SVGMerger(fig1,fig2,self.p2.size().width(), self.cm.size().width(),height,padding)
-            out = etree.tostring(mergedfig, xml_declaration=True,
-                                 standalone=True,
-                                 pretty_print=True)
-            with open(fileName, 'wb') as svg:
-                svg.write(out)
-    def SVGMerger(self, svg1, svg2, width1,width2, height, padding=0): #merges two lxml.etree elements horizontally with padding
-        ns = {'': svg1.tag.split('}')[0].strip('{')}
-        svg = etree.Element(svg1.tag, nsmap={None: 'http://www.w3.org/2000/svg', 'xlink': 'http://www.w3.org/1999/xlink'})
-        svg.set("version", "1.2")
-        svg.set('width', str(width1 + width2 + padding)+"px") #target width
-        svg.set('height', str(height)+"px") #target height
-        svg.set("viewBox", "0 0 %s %s" % (str(width1 + width2 +padding)+"px", str(height)+"px"))
-        g1 = etree.SubElement(svg, 'g')
-        g1.append(svg1.find('./g', ns))
-        g = etree.SubElement(g1, 'g')
-        g.set('transform','translate('+str(width1 + padding)+', 0) scale(1)')
-        g.append(svg2.find('./g', ns))
-        return svg
-    def SVGClipPathRemover(self, elem): #takes etree elements and removes clip-path tags and keys inside g tags if present.
-        ns = {'': elem.tag.split('}')[0].strip('{')}
-        try:
-            for clippath in elem.findall(".//clipPath", ns):
-                clippath.getparent().remove(clippath)
-        except:
-            pass
-        try:
-            for g in elem.findall(".//g", ns):
-                if g.keys()[0] == "clip-path":
-                    del g.attrib['clip-path']
-        except:
-            pass
-        return elem
+            exp = pg.exporters.ImageExporter(self.odimgfig.imageplot)
+        if ext in ['tif','png','jpg','svg']:
+            exp.export(fileName)
+
+    # def SVGMerger(self, svg1, svg2, width1,width2, height, padding=0): #merges two lxml.etree elements horizontally with padding
+    #     ns = {'': svg1.tag.split('}')[0].strip('{')}
+    #     svg = etree.Element(svg1.tag, nsmap={None: 'http://www.w3.org/2000/svg', 'xlink': 'http://www.w3.org/1999/xlink'})
+    #     svg.set("version", "1.2")
+    #     svg.set('width', str(width1 + width2 + padding)+"px") #target width
+    #     svg.set('height', str(height)+"px") #target height
+    #     svg.set("viewBox", "0 0 %s %s" % (str(width1 + width2 +padding)+"px", str(height)+"px"))
+    #     g1 = etree.SubElement(svg, 'g')
+    #     g1.append(svg1.find('./g', ns))
+    #     g = etree.SubElement(g1, 'g')
+    #     g.set('transform','translate('+str(width1 + padding)+', 0) scale(1)')
+    #     g.append(svg2.find('./g', ns))
+    #     return svg
+    # def SVGClipPathRemover(self, elem): #takes etree elements and removes clip-path tags and keys inside g tags if present.
+    #     ns = {'': elem.tag.split('}')[0].strip('{')}
+    #     try:
+    #         for clippath in elem.findall(".//clipPath", ns):
+    #             clippath.getparent().remove(clippath)
+    #     except:
+    #         pass
+    #     try:
+    #         for g in elem.findall(".//g", ns):
+    #             if g.keys()[0] == "clip-path":
+    #                 del g.attrib['clip-path']
+    #     except:
+    #         pass
+    #     return elem
 
     def OnCatChanged(self):
         self.CMMapBox.blockSignals(True)
@@ -15439,241 +15334,204 @@ class ShowODMap(QtWidgets.QWidget):
         self.CMMapBox.addItems(self.cmaps[self.CMCatBox.currentIndex()][1])
 
     def setODlimits(self,low, high):
-        self.ODHighSpinBox.setMaximum(self.ODmax)
-        self.ODHighSpinBox.setMinimum(low)
-        self.ODLowSpinBox.setMaximum(high)
-        self.ODLowSpinBox.setMinimum(self.ODmin)
+        #self.ODHighSpinBox.setMaximum(self.ODmax)
+        #self.ODHighSpinBox.setMinimum(low)
+        #self.ODLowSpinBox.setMaximum(high)
+        #self.ODLowSpinBox.setMinimum(self.ODmin)
         OD = np.clip(self.OD,low,high)
-        self.OnColormap(map=self.CMMapBox.currentText(), colors=self.StepSpin.value())
-        self.setODbar(low, high)
-        self.m_item.setImage(OD)
-    def setCrosshair(self):
-        if hasattr(self, 'vLine'):
-            self.p2.removeItem(self.vLine)
-            self.p2.removeItem(self.vLine)
-            self.canvas.removeItem(self.ODlabel)
+        #self.OnColormap(map=self.CMMapBox.currentText(), colors=self.StepSpin.value())
+        #self.setODbar(low, high)
+        self.odimgfig.draw(OD,False,True)
+        #self.m_item.setImage(OD)
+    # def setCrosshair(self):
+    #     if hasattr(self, 'vLine'):
+    #         self.p2.removeItem(self.vLine)
+    #         self.p2.removeItem(self.vLine)
+    #         self.canvas.removeItem(self.ODlabel)
+    #
+    #     self.vLine = pg.InfiniteLine(angle=90, movable=False, pen="0000")
+    #     self.hLine = pg.InfiniteLine(angle=0, movable=False,pen="0000")
+    #     self.ODlabel = pg.LabelItem(justify="left")
+    #     self.canvas.addItem(self.ODlabel)
+    #     self.p2.addItem(self.vLine, ignoreBounds=True)
+    #     self.p2.addItem(self.hLine, ignoreBounds=True)
+    #     self.proxy = pg.SignalProxy(self.p2.scene().sigMouseMoved, rateLimit=30, slot=self.OnMouseHover)
 
-        self.vLine = pg.InfiniteLine(angle=90, movable=False, pen="0000")
-        self.hLine = pg.InfiniteLine(angle=0, movable=False,pen="0000")
-        self.ODlabel = pg.LabelItem(justify="left")
-        self.canvas.addItem(self.ODlabel)
-        self.p2.addItem(self.vLine, ignoreBounds=True)
-        self.p2.addItem(self.hLine, ignoreBounds=True)
-        self.proxy = pg.SignalProxy(self.p2.scene().sigMouseMoved, rateLimit=30, slot=self.OnMouseHover)
+    # def OnMouseHover(self,evt):
+    #     pos = evt[0]
+    #     #print(pos)
+    #     if hasattr(self, 'OD'):
+    #         if self.p2.getViewBox().itemBoundingRect(self.m_item).contains(self.p2.getViewBox().mapSceneToView(pos)):
+    #             self.vLine.setPen("r")
+    #             self.hLine.setPen("r")
+    #             self.vLine.setZValue(1000)
+    #             self.hLine.setZValue(1000)
+    #             mousePoint = self.p2.getViewBox().mapSceneToView(pos)
+    #             if self.MetricCheckBox.isChecked():
+    #                 x_min = (self.p2.getViewBox().itemBoundingRect(self.m_item).x() / (self.scale * self.stk.x_pxsize)) # minimum x value in px
+    #                 y_min = (self.p2.getViewBox().itemBoundingRect(self.m_item).y() / (self.scale * self.stk.y_pxsize)) # minimum y value in px
+    #                 x_off = x_min - int(x_min)
+    #                 y_off = y_min - int(y_min)
+    #                 x_pos = mousePoint.x() / (self.scale * self.stk.x_pxsize) +1 #x mousepos in number of rows
+    #                 y_pos = mousePoint.y() / (self.scale * self.stk.y_pxsize) +1 #y mousepos in number of rows
+    #
+    #                 if mousePoint.x() < 0:
+    #                     xi = int(x_pos - x_off-1)
+    #                 else:
+    #                     xi = int(x_pos - x_off)
+    #                 if mousePoint.y() < 0:
+    #                     yi = int(y_pos - y_off -1)
+    #                 else:
+    #                     yi = int(y_pos - y_off)
+    #
+    #                 x = (xi - 0.5 + x_off) * self.scale * self.stk.x_pxsize
+    #                 y = (yi - 0.5 + y_off) * self.scale * self.stk.y_pxsize
+    #                 pt = QtCore.QPointF(x,y)
+    #                 self.ODlabel.setText("<span style='font-size: 10pt; color: red'> x = %0.3f  µm, <span style='color: red'> y = %0.3f µm</span>, <span style='color: red'> OD = %0.2f</span>" % (x/self.scale - 0.5 * self.stk.x_pxsize, y/self.scale - 0.5 * self.stk.y_pxsize, self.OD[xi-1-int(x_min),yi-1-int(y_min)]))
+    #             else:
+    #                 x = int(mousePoint.x()) + 0.5
+    #                 y = int(mousePoint.y()) + 0.5
+    #                 pt = QtCore.QPointF(x,y)
+    #                 self.ODlabel.setText("<span style='font-size: 10pt; color: red'> x = %0.0f, <span style='color: red'> y = %0.0f</span>, <span style='color: red'> OD = %0.2f</span>" % (x, y,self.OD[int(x),int(y)]))
+    #             #print(x,y)
+    #             self.vLine.setPos(x)
+    #             self.hLine.setPos(y)
+    #         else:
+    #             self.ODlabel.setText("")
+    #             self.vLine.setZValue(-1000)
+    #             self.hLine.setZValue(-1000)
+    #             self.vLine.setPen("0000")
+    #             self.hLine.setPen("0000")
 
-    def OnMouseHover(self,evt):
-        pos = evt[0]
-        #print(pos)
-        if hasattr(self, 'OD'):
-            if self.p2.getViewBox().itemBoundingRect(self.m_item).contains(self.p2.getViewBox().mapSceneToView(pos)):
-                self.vLine.setPen("r")
-                self.hLine.setPen("r")
-                self.vLine.setZValue(1000)
-                self.hLine.setZValue(1000)
-                mousePoint = self.p2.getViewBox().mapSceneToView(pos)
-                if self.MetricCheckBox.isChecked():
-                    x_min = (self.p2.getViewBox().itemBoundingRect(self.m_item).x() / (self.scale * self.stk.x_pxsize)) # minimum x value in px
-                    y_min = (self.p2.getViewBox().itemBoundingRect(self.m_item).y() / (self.scale * self.stk.y_pxsize)) # minimum y value in px
-                    x_off = x_min - int(x_min)
-                    y_off = y_min - int(y_min)
-                    x_pos = mousePoint.x() / (self.scale * self.stk.x_pxsize) +1 #x mousepos in number of rows
-                    y_pos = mousePoint.y() / (self.scale * self.stk.y_pxsize) +1 #y mousepos in number of rows
+    # def setODbar(self,min=None,max=None):
+    #     self.cm.setRange(xRange=[0,1], yRange=[min,max], update=False, disableAutoRange=True,padding=0)
+    #     self.cmimg.setRect(QtCore.QRectF(0,min,1,max-min))
 
-                    if mousePoint.x() < 0:
-                        xi = int(x_pos - x_off-1)
-                    else:
-                        xi = int(x_pos - x_off)
-                    if mousePoint.y() < 0:
-                        yi = int(y_pos - y_off -1)
-                    else:
-                        yi = int(y_pos - y_off)
+    # ToDo: Restore fine-alignment by arrow keys
+    # def keyPressEvent(self, e):
+    #     modifiers = QtWidgets.QApplication.keyboardModifiers()
+    #     if modifiers == QtCore.Qt.ShiftModifier:
+    #         noshift = False
+    #     elif modifiers == QtCore.Qt.KeypadModifier:
+    #         noshift = True
+    #     elif modifiers == (QtCore.Qt.KeypadModifier |
+    #                        QtCore.Qt.ShiftModifier):
+    #         noshift = False
+    #     else:
+    #         noshift = True
+    #     if e.key() == 67 and (e.modifiers() & QtCore.Qt.ControlModifier):
+    #         self.OnCopy()
+    #     if e.key() == Qt.Key_Up or (e.key() == QtCore.Qt.Key_8):
+    #         if noshift:
+    #             self.pbUU.click()
+    #         else:
+    #             self.pbU.click()
+    #     elif e.key() == Qt.Key_Down or (e.key() == QtCore.Qt.Key_2):
+    #         if noshift:
+    #             self.pbDD.click()
+    #         else:
+    #             self.pbD.click()
+    #     elif e.key() == Qt.Key_Left or (e.key() == QtCore.Qt.Key_4):
+    #         if noshift:
+    #             self.pbLL.click()
+    #         else:
+    #             self.pbL.click()
+    #     elif e.key() == Qt.Key_Right or (e.key() == QtCore.Qt.Key_6):
+    #         if noshift:
+    #             self.pbRR.click()
+    #         else:
+    #             self.pbR.click()
+    #     elif e.key() == QtCore.Qt.Key_Home:
+    #         if noshift:
+    #             self.pbLLUU.click()
+    #         else:
+    #             self.pbLU.click()
+    #     elif e.key() == QtCore.Qt.Key_PageUp:
+    #         if noshift:
+    #             self.pbRRUU.click()
+    #         else:
+    #             self.pbRU.click()
+    #     elif e.key() == QtCore.Qt.Key_End:
+    #         if noshift:
+    #             self.pbLLDD.click()
+    #         else:
+    #             self.pbLD.click()
+    #     elif e.key() == QtCore.Qt.Key_PageDown:
+    #         if noshift:
+    #             self.pbRRDD.click()
+    #         else:
+    #             self.pbRD.click()
+    #     elif e.key() == QtCore.Qt.Key_Clear:
+    #             self.pbRST.click()
 
-                    x = (xi - 0.5 + x_off) * self.scale * self.stk.x_pxsize
-                    y = (yi - 0.5 + y_off) * self.scale * self.stk.y_pxsize
-                    pt = QtCore.QPointF(x,y)
-                    self.ODlabel.setText("<span style='font-size: 10pt; color: red'> x = %0.3f  µm, <span style='color: red'> y = %0.3f µm</span>, <span style='color: red'> OD = %0.2f</span>" % (x/self.scale - 0.5 * self.stk.x_pxsize, y/self.scale - 0.5 * self.stk.y_pxsize, self.OD[xi-1-int(x_min),yi-1-int(y_min)]))
-                else:
-                    x = int(mousePoint.x()) + 0.5
-                    y = int(mousePoint.y()) + 0.5
-                    pt = QtCore.QPointF(x,y)
-                    self.ODlabel.setText("<span style='font-size: 10pt; color: red'> x = %0.0f, <span style='color: red'> y = %0.0f</span>, <span style='color: red'> OD = %0.2f</span>" % (x, y,self.OD[int(x),int(y)]))
-                #print(x,y)
-                self.vLine.setPos(x)
-                self.hLine.setPos(y)
-            else:
-                self.ODlabel.setText("")
-                self.vLine.setZValue(-1000)
-                self.hLine.setZValue(-1000)
-                self.vLine.setPen("0000")
-                self.hLine.setPen("0000")
-
-    def setODbar(self,min=None,max=None):
-        self.cm.setRange(xRange=[0,1], yRange=[min,max], update=False, disableAutoRange=True,padding=0)
-        self.cmimg.setRect(QtCore.QRectF(0,min,1,max-min))
-
-    def keyPressEvent(self, e):
-        modifiers = QtWidgets.QApplication.keyboardModifiers()
-        if modifiers == QtCore.Qt.ShiftModifier:
-            noshift = False
-        elif modifiers == QtCore.Qt.KeypadModifier:
-            noshift = True
-        elif modifiers == (QtCore.Qt.KeypadModifier |
-                           QtCore.Qt.ShiftModifier):
-            noshift = False
-        else:
-            noshift = True
-        if e.key() == 67 and (e.modifiers() & QtCore.Qt.ControlModifier):
-            self.OnCopy()
-        if e.key() == Qt.Key_Up or (e.key() == QtCore.Qt.Key_8):
-            if noshift:
-                self.pbUU.click()
-            else:
-                self.pbU.click()
-        elif e.key() == Qt.Key_Down or (e.key() == QtCore.Qt.Key_2):
-            if noshift:
-                self.pbDD.click()
-            else:
-                self.pbD.click()
-        elif e.key() == Qt.Key_Left or (e.key() == QtCore.Qt.Key_4):
-            if noshift:
-                self.pbLL.click()
-            else:
-                self.pbL.click()
-        elif e.key() == Qt.Key_Right or (e.key() == QtCore.Qt.Key_6):
-            if noshift:
-                self.pbRR.click()
-            else:
-                self.pbR.click()
-        elif e.key() == QtCore.Qt.Key_Home:
-            if noshift:
-                self.pbLLUU.click()
-            else:
-                self.pbLU.click()
-        elif e.key() == QtCore.Qt.Key_PageUp:
-            if noshift:
-                self.pbRRUU.click()
-            else:
-                self.pbRU.click()
-        elif e.key() == QtCore.Qt.Key_End:
-            if noshift:
-                self.pbLLDD.click()
-            else:
-                self.pbLD.click()
-        elif e.key() == QtCore.Qt.Key_PageDown:
-            if noshift:
-                self.pbRRDD.click()
-            else:
-                self.pbRD.click()
-        elif e.key() == QtCore.Qt.Key_Clear:
-                self.pbRST.click()
-
-    def Clear(self):
-        try:
-            self.slider_eng.valueChanged.disconnect()
-            self.qlistchanged.disconnect()
-            self.pbSelfromSpec.disconnect()
-        except:
-            pass
-        self.prelst = []
-        self.postlst =[]
-        self.stk.shifts = []
-        self.stk.absdata_shifted= []
-        self.p1.clear()
-        self.p2.clear()
-        self.cm.clear()
-        self.MapSelectWidget1.clear()
+#     def Clear(self):
+#         try:
+#             self.slider_eng.valueChanged.disconnect()
+#             self.qlistchanged.disconnect()
+#             self.pbSelfromSpec.disconnect()
+#         except:
+#             pass
+#         self.prelst = []
+#         self.postlst =[]
+#         self.stk.shifts = []
+#         self.stk.absdata_shifted= []
+# #        self.p1.clear()
+#         self.p2.clear()
+#         self.cm.clear()
+#         self.MapSelectWidget1.clear()
 
     def loadData(self): # Called when fresh data are loaded.
-        self.slider_eng.setRange(0, self.stk.n_ev - 1)
+        self.stk.shifts = []
+        #self.slider_eng.setRange(0, self.stk.n_ev - 1)
         self.ODHighSpinBox.setEnabled(False)
         self.ODLowSpinBox.setEnabled(False)
-        self.pbRSTOD.setEnabled(False)
+        #self.pbRSTOD.setEnabled(False)
         self.filterSpinBox.setEnabled(False)
         self.pbExpData.setEnabled(False)
         self.pbExpImg.setEnabled(False)
         self.pbClrSel.setEnabled(False)
         self.stk.absdata_shifted = self.stk.absdata.copy()
-        self.p1.addItem(self.i_item)
+        #self.p1.addItem(self.i_item)
         for i,e in enumerate(self.stk.ev): # Fill QList with energies
             self.stk.shifts.append([1,0,(0.0,0.0)]) #checked [0,1]; pre, post, undefined state for map [-1,1,0],(xshift [float],yshift [float])
             item = QtWidgets.QListWidgetItem(str(int(i)).zfill(3)+"     at     " + format(e, '.2f') + " eV     "+"+0.0"+"    +0.0")
             self.MapSelectWidget1.addItem(item)
-        self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
+        #self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
         self.qlistchanged.connect(self.qListChangeHandler)
-        self.OnScrollEng(0) # Plot first image & set Scrollbar
-        self.OnMetricScale(self.MetricCheckBox.isChecked(), True, False)
+        #self.OnScrollEng(0) # Plot first image & set Scrollbar
+        #self.OnMetricScale(self.MetricCheckBox.isChecked(), True, False)
         self.pbSelfromSpec.setEnabled(True)
         self.pbSelfromSpec.clicked.connect(self.OnSelfromSpec)
-    def UpdateEntry(self,row):
-        self.MapSelectWidget1.item(row).setText(str(int(row)).zfill(3)+"     at     " + format(self.stk.ev[row], '.2f') + " eV     "+format(self.stk.shifts[row][2][0], '+.1f')+"    "+format(self.stk.shifts[row][2][1], '+.1f'))
-        #self.MapSelectWidget1.addItem(self.MapSelectWidget1.item(row))
-        self.i_item.setImage(self.Shift(row))
-    def ResetAllItems(self,widget):
-        for i in range(widget.count()):
-            widget.item(i).setForeground(QtGui.QColor(0, 0, 0, 128))
-    def OnScrollEng(self, value):
-        self.slider_eng.blockSignals(True)
-        self.slider_eng.setValue(value)
-        self.slider_eng.blockSignals(False)
-        self.MapSelectWidget1.setCurrentRow(value)
-        self.ResetAllItems(self.MapSelectWidget1)
-        self.iev = value
-        self.p1.titleLabel.item.setTextWidth(self.p1.width() * 0.7)
-        self.p2.titleLabel.item.setTextWidth(self.p2.width() * 0.7)
-        #self.canvas.resizeEvent(None)
-        if self.com.stack_loaded == 1:
-            self.p1.titleLabel.setText("<center>Image at energy {0:5.2f} eV</center>".format(float(self.stk.ev[self.iev])),size='10pt')
-            self.i_item.setImage(self.Shift(int(self.iev)))
-            self.MapSelectWidget1.item(value).setForeground(QtGui.QColor(0, 0, 0, 255))
+    # def UpdateEntry(self,row):
+    #     self.MapSelectWidget1.item(row).setText(str(int(row)).zfill(3)+"     at     " + format(self.stk.ev[row], '.2f') + " eV     "+format(self.stk.shifts[row][2][0], '+.1f')+"    "+format(self.stk.shifts[row][2][1], '+.1f'))
+    #     #self.MapSelectWidget1.addItem(self.MapSelectWidget1.item(row))
+    #     self.i_item.setImage(self.Shift(row))
+    # def ResetAllItems(self,widget):
+    #     for i in range(widget.count()):
+    #         widget.item(i).setForeground(QtGui.QColor(0, 0, 0, 128))
+    # def OnScrollEng(self, value):
+    #     self.slider_eng.blockSignals(True)
+    #     self.slider_eng.setValue(value)
+    #     self.slider_eng.blockSignals(False)
+    #     self.MapSelectWidget1.setCurrentRow(value)
+    #     self.ResetAllItems(self.MapSelectWidget1)
+    #     self.iev = value
+    #     self.p1.titleLabel.item.setTextWidth(self.p1.width() * 0.7)
+    #     self.p2.titleLabel.item.setTextWidth(self.p2.width() * 0.7)
+    #     #self.canvas.resizeEvent(None)
+    #     if self.com.stack_loaded == 1:
+    #         self.p1.titleLabel.setText("<center>Image at energy {0:5.2f} eV</center>".format(float(self.stk.ev[self.iev])),size='10pt')
+    #         self.i_item.setImage(self.Shift(int(self.iev)))
+    #         self.MapSelectWidget1.item(value).setForeground(QtGui.QColor(0, 0, 0, 255))
 
-    def OnCropCB(self, value=True):
-        if self.com.stack_loaded == 1:
-            if value == True:
-                self.cropflag = True
-            else:
-                self.cropflag = False
-            self.ShowMap(self.prelst, self.postlst)
+    # def OnCropCB(self, value=True):
+    #     if self.com.stack_loaded == 1:
+    #         if value == True:
+    #             self.cropflag = True
+    #         else:
+    #             self.cropflag = False
+    #         self.ShowMap(self.prelst, self.postlst)
 
-
-    def OnMetricScale(self, setmetric= True, zeroorigin= True, square= False):
-        if self.com.stack_loaded == 1:
-            if setmetric==True:
-                self.SquarePxCheckBox.setVisible(False)
-                self.ZeroOriginCheckBox.setVisible(True)
-                self.p1.setAspectLocked(lock=True, ratio=1)
-                self.p2.setAspectLocked(lock=True, ratio=1)
-                if not zeroorigin:
-                    x_start = self.stk.x_start*self.scale
-                    y_start = self.stk.y_start*self.scale
-                else:
-                    x_start = 0
-                    y_start = 0
-                self.ay1.setLabel(text="y", units="m")
-                self.ax1.setLabel(text="x", units="m")
-                self.ay2.setLabel(text="y", units="m")
-                self.ax2.setLabel(text="x", units="m")
-
-                self.i_item.setRect(QtCore.QRectF(x_start, y_start, self.scale*self.stk.n_cols*self.stk.x_pxsize, self.scale*self.stk.n_rows*self.stk.y_pxsize))
-                if hasattr(self, "OD"):
-                    self.m_item.setRect(QtCore.QRectF(x_start, y_start, self.scale*np.shape(self.OD)[0]*self.stk.x_pxsize, self.scale*np.shape(self.OD)[1]*self.stk.y_pxsize))
-                    self.setCrosshair()
-            else:
-                self.ZeroOriginCheckBox.setVisible(False)
-                self.SquarePxCheckBox.setVisible(True)
-                if square == True:
-                    aspect = 1
-                else:
-                    aspect = self.stk.x_pxsize/self.stk.y_pxsize
-                    #print(aspect)
-                self.p1.setAspectLocked(lock=True, ratio=aspect)
-                self.ay1.setLabel(text="y", units="px")
-                self.ax1.setLabel(text="x", units="px")
-                self.i_item.setRect(QtCore.QRectF(0, 0, self.stk.n_cols, self.stk.n_rows))
-                if hasattr(self, "OD"):
-                    self.ay2.setLabel(text="y", units="px")
-                    self.ax2.setLabel(text="x", units="px")
-                    self.p2.setAspectLocked(lock=True, ratio=aspect)
-                    self.m_item.setRect(QtCore.QRectF(0, 0, np.shape(self.OD)[0], np.shape(self.OD)[1]))
     def OnClrSelection(self):
         for row in self.prelst + self.postlst:
             self.MapSelectWidget1.item(row).setBackground(QtGui.QColor(0, 0, 0, 0))
@@ -15685,61 +15543,61 @@ class ShowODMap(QtWidgets.QWidget):
         spectralimgmap = SpectralImageMap(self, self.com, self.stk)
         spectralimgmap.show()
 
-    def OnClrShifts(self):
-        for row in [index for index, value in enumerate([x[2] for x in  self.stk.shifts]) if value != (0.0,0.0)]:
-            self.stk.shifts[row].pop(2)  # remove tuple
-            self.stk.shifts[row].insert(2, (0.0, 0.0))
-            self.stk.absdata_shifted[:, :, row] = self.stk.absdata[:, :, row]
-            self.MapSelectWidget1.item(row).setText(
-                str(int(row)).zfill(3) + "     at     " + format(self.stk.ev[row], '.2f') + " eV     " + format(
-                    self.stk.shifts[row][2][0], '+.1f') + "    " + format(self.stk.shifts[row][2][1], '+.1f'))
-        if hasattr(self, 'prelst') and hasattr(self, 'postlst'):
-            if len(self.prelst) != 0 and len(self.postlst) != 0:
-                self.ShowMap(self.prelst,self.postlst)
-        if self.stk.shifts:
-            self.UpdateEntry(self.MapSelectWidget1.currentRow())
-
-    def setShifts(self,shift_x, shift_y):
-        #print("setshifts called")
-        # if hasattr(self, "OD"):
-        if self.stk.shifts:
-            row = self.MapSelectWidget1.currentRow()
-            xoffset, yoffset = self.stk.shifts[row][2] # current offset stored as tuple in table stk.shifts
-            #print(self.stk.shifts[self.MapSelectWidget1.currentRow()])
-            #yoffset = self.stk.shifts[self.MapSelectWidget1.currentRow()][2][1]
-            if shift_x == 0 and shift_y == 0: # if reset button pressed
-                if xoffset != 0 or yoffset != 0:
-                    self.stk.shifts[row].pop(2) # remove tuple
-                    self.stk.shifts[row].insert(2,(0.0,0.0))
-                else:
-                    print("Reset has no effect")
-                    return
-            else:
-                self.stk.shifts[row].pop(2)
-                xoffset = round(xoffset + shift_x,1)
-                yoffset = round(yoffset + shift_y,1)
-                self.stk.shifts[row].insert(2,(xoffset, yoffset))
-            #current_img = self.stk.absdata[:, :, self.MapSelectWidget1.currentRow()]
-            #print(type(self.stk.absdata), self.stk.shifts[self.MapSelectWidget1.currentRow()])
-            #self.Shift(row)
-            self.UpdateEntry(row)
-            if hasattr(self, 'prelst') and hasattr(self, 'postlst'):
-                if len(self.prelst) != 0 and len(self.postlst) != 0:
-                    self.ShowMap(self.prelst,self.postlst)
-    def Shift(self,row):
-        #current_img = self.stk.absdata_shifted[:, :, row]
-        original_img = self.stk.absdata[:, :, row]
-        xoffset, yoffset = self.stk.shifts[row][2] # x and y offsets of current image
-        if xoffset == 0 and yoffset == 0:
-            self.stk.absdata_shifted[:, :, row] = original_img # replace with original if no shift is applied
-            #self.ShiftLabel.setText("x = %0.1f \ny = %0.1f" % (self.xoffset, self.yoffset))
-            #return original_img
-        else:
-            shifted = ndimage.fourier_shift(np.fft.fft2(original_img), [float(xoffset), float(yoffset)])
-            shifted = np.fft.ifft2(shifted)
-            shifted_real = shifted.real
-            self.stk.absdata_shifted[:, :, row] = shifted_real
-        return self.stk.absdata_shifted[:,:, row]
+    # def OnClrShifts(self):
+    #     for row in [index for index, value in enumerate([x[2] for x in  self.stk.shifts]) if value != (0.0,0.0)]:
+    #         self.stk.shifts[row].pop(2)  # remove tuple
+    #         self.stk.shifts[row].insert(2, (0.0, 0.0))
+    #         self.stk.absdata_shifted[:, :, row] = self.stk.absdata[:, :, row]
+    #         self.MapSelectWidget1.item(row).setText(
+    #             str(int(row)).zfill(3) + "     at     " + format(self.stk.ev[row], '.2f') + " eV     " + format(
+    #                 self.stk.shifts[row][2][0], '+.1f') + "    " + format(self.stk.shifts[row][2][1], '+.1f'))
+    #     if hasattr(self, 'prelst') and hasattr(self, 'postlst'):
+    #         if len(self.prelst) != 0 and len(self.postlst) != 0:
+    #             self.ShowMap(self.prelst,self.postlst)
+    #     if self.stk.shifts:
+    #         self.UpdateEntry(self.MapSelectWidget1.currentRow())
+    #
+    # def setShifts(self,shift_x, shift_y):
+    #     #print("setshifts called")
+    #     # if hasattr(self, "OD"):
+    #     if self.stk.shifts:
+    #         row = self.MapSelectWidget1.currentRow()
+    #         xoffset, yoffset = self.stk.shifts[row][2] # current offset stored as tuple in table stk.shifts
+    #         #print(self.stk.shifts[self.MapSelectWidget1.currentRow()])
+    #         #yoffset = self.stk.shifts[self.MapSelectWidget1.currentRow()][2][1]
+    #         if shift_x == 0 and shift_y == 0: # if reset button pressed
+    #             if xoffset != 0 or yoffset != 0:
+    #                 self.stk.shifts[row].pop(2) # remove tuple
+    #                 self.stk.shifts[row].insert(2,(0.0,0.0))
+    #             else:
+    #                 print("Reset has no effect")
+    #                 return
+    #         else:
+    #             self.stk.shifts[row].pop(2)
+    #             xoffset = round(xoffset + shift_x,1)
+    #             yoffset = round(yoffset + shift_y,1)
+    #             self.stk.shifts[row].insert(2,(xoffset, yoffset))
+    #         #current_img = self.stk.absdata[:, :, self.MapSelectWidget1.currentRow()]
+    #         #print(type(self.stk.absdata), self.stk.shifts[self.MapSelectWidget1.currentRow()])
+    #         #self.Shift(row)
+    #         self.UpdateEntry(row)
+    #         if hasattr(self, 'prelst') and hasattr(self, 'postlst'):
+    #             if len(self.prelst) != 0 and len(self.postlst) != 0:
+    #                 self.ShowMap(self.prelst,self.postlst)
+    # def Shift(self,row):
+    #     #current_img = self.stk.absdata_shifted[:, :, row]
+    #     original_img = self.stk.absdata[:, :, row]
+    #     xoffset, yoffset = self.stk.shifts[row][2] # x and y offsets of current image
+    #     if xoffset == 0 and yoffset == 0:
+    #         self.stk.absdata_shifted[:, :, row] = original_img # replace with original if no shift is applied
+    #         #self.ShiftLabel.setText("x = %0.1f \ny = %0.1f" % (self.xoffset, self.yoffset))
+    #         #return original_img
+    #     else:
+    #         shifted = ndimage.fourier_shift(np.fft.fft2(original_img), [float(xoffset), float(yoffset)])
+    #         shifted = np.fft.ifft2(shifted)
+    #         shifted_real = shifted.real
+    #         self.stk.absdata_shifted[:, :, row] = shifted_real
+    #     return self.stk.absdata_shifted[:,:, row]
 
             #self.ShiftLabel.setText("x = %0.1f \ny = %0.1f" % (xoffset, yoffset))
     def CalcODMap(self,im_idx1,im_idx2):
@@ -15774,44 +15632,45 @@ class ShowODMap(QtWidgets.QWidget):
             OD[nan_idx] = 0
         return OD
 
-    def calcBinSize(self,i,N):
-        return int(round(256*(i+1)/N) - round(256*i/N))
+    # def calcBinSize(self,i,N):
+    #     return int(round(256*(i+1)/N) - round(256*i/N))
 
-    def OnColormap(self,map="afmhot", colors=256):
-        if hasattr(self, "OD"):
-            colormap = cm.get_cmap(map, colors)
-            colormap = colormap(np.arange(colors))
-            cm_lst = [[colormap[idx][0], colormap[idx][1], colormap[idx][2], colormap[idx][3]] for idx in range(np.shape(colormap)[0])] #convert to r,g,b,a list
-            cm_lst = [item for sub in [[cm_lst[i]]*self.calcBinSize(i,colors) for i in range(colors)] for item in sub] #fills 256 bins as equal as possible with n colors
-            cm_array = np.array([np.asarray(cm_lst)]) #vertical colorbar
-            cm_lst.extend((cm_lst[-1],cm_lst[-1],cm_lst[-1]))
-            lut = np.asarray(cm_lst)
-            lut = (lut * 255).view(np.ndarray) #lut for OD map
-            self.cmimg.setImage(cm_array)
-            self.m_item.setLookupTable(lut)
-            if hasattr(self, "OD"):
-                self.setODbar(self.ODmin, self.ODmax)
+    # def OnColormap(self,map="afmhot", colors=256):
+    #     if hasattr(self, "OD"):
+    #         colormap = cm.get_cmap(map, colors)
+    #         colormap = colormap(np.arange(colors))
+    #         cm_lst = [[colormap[idx][0], colormap[idx][1], colormap[idx][2], colormap[idx][3]] for idx in range(np.shape(colormap)[0])] #convert to r,g,b,a list
+    #         cm_lst = [item for sub in [[cm_lst[i]]*self.calcBinSize(i,colors) for i in range(colors)] for item in sub] #fills 256 bins as equal as possible with n colors
+    #         cm_array = np.array([np.asarray(cm_lst)]) #vertical colorbar
+    #         cm_lst.extend((cm_lst[-1],cm_lst[-1],cm_lst[-1]))
+    #         lut = np.asarray(cm_lst)
+    #         lut = (lut * 255).view(np.ndarray) #lut for OD map
+    #         self.cmimg.setImage(cm_array)
+    #         self.m_item.setLookupTable(lut)
+    #         if hasattr(self, "OD"):
+    #             self.setODbar(self.ODmin, self.ODmax)
 
     def ShowMap(self, preidx, postidx):
-        self.p2.clear()
-        self.p2.addItem(self.m_item)
-        self.cm.clear()
-        self.cm.addItem(self.cmimg)
-        self.setCrosshair()
+        # self.p2.clear()
+        # self.p2.addItem(self.m_item)
+        # self.cm.clear()
+        # self.cm.addItem(self.cmimg)
+
+        #self.setCrosshair()
         try:
             ## Optional sorting switched off for convenience. Allows maps to range to negative OD
             #selection = preidx + postidx
             # selection.sort()
             if len(preidx + postidx) == 2:
-                self.p2.titleLabel.setText("<center>Binary map from energies " + str(round(self.stk.ev[preidx[0]], 2)) + " and " + str(
+                self.odimgfig.imageplot.titleLabel.setText("<center>Binary map from energies " + str(round(self.stk.ev[preidx[0]], 2)) + " and " + str(
                 round(self.stk.ev[postidx[0]], 2)) + " eV</center>",
                                            size='10pt')
             elif len(preidx + postidx) <= 6:
-                self.p2.titleLabel.setText("<center>Map from energies " + str([round(self.stk.ev[e], 2) for e in preidx]).strip('[]') + " and " +
+                self.odimgfig.imageplot.titleLabel.setText("<center>Map from energies " + str([round(self.stk.ev[e], 2) for e in preidx]).strip('[]') + " and " +
                                  str([round(self.stk.ev[e], 2) for e in postidx]).strip('[]') + " eV</center>",
                                            size='10pt')
             else:
-                self.p2.titleLabel.setText("<center>Map from "+ str(len(preidx + postidx)) +" energies: " + str(round(self.stk.ev[preidx[0]], 2)) + ' ... ' + str(round(self.stk.ev[preidx[-1]], 2)) + " and "
+                self.odimgfig.imageplot.titleLabel.setText("<center>Map from "+ str(len(preidx + postidx)) +" energies: " + str(round(self.stk.ev[preidx[0]], 2)) + ' ... ' + str(round(self.stk.ev[preidx[-1]], 2)) + " and "
                                  + str(round(self.stk.ev[postidx[0]], 2)) + ' ... ' + str(round(self.stk.ev[postidx[-1]], 2)) + " eV</center>",
                                            size='10pt')
             self.OD = self.CalcODMap(preidx, postidx)
@@ -15836,15 +15695,16 @@ class ShowODMap(QtWidgets.QWidget):
             self.filterSpinBox.setEnabled(True)
             self.pbExpData.setEnabled(True)
             self.pbExpImg.setEnabled(True)
-            #self.pglayout.layout.setColumnMaximumWidth(1, self.p1.width())
+        #     #self.pglayout.layout.setColumnMaximumWidth(1, self.p1.width())
         except IndexError:
-            self.p2.clear()
-            self.cm.clear()
+            pass
+        #     self.p2.clear()
+        #     self.cm.clear()
             #self.p2.setTitle("Please select a second image!")
             #print("Select a second image!")
 
     def closeEvent(self, event):
-        self.Clear()
+        #self.Clear()
         self.close()
         self.parent.page1.button_spectralROI.setEnabled(True)
 #-----------------------------------------------------------------------
@@ -16374,30 +16234,24 @@ class SpecFig():
         #     "Energy range: [ " + str(min(x, default=0)) + " .. " + str(max(x, default=0)) + " ] eV, # values: "+ str(len(x)))
         return (x, y)
 
-
 # ----------------------------------------------------------------------
 class ImgFig():
     def __init__(self,parent,canvas):
         self.scale = 0.000001
         self.parent = parent
-        self.canvas = canvas
-        self.pglayout = pg.GraphicsLayout(border=None)
-        self.canvas.setBackground("w") # canvas is a pg.GraphicsView widget
-        self.canvas.setCentralWidget(self.pglayout)
-        self.pglayout.setSpacing(12)
-        self.pglayout.setContentsMargins(10,10,10,10)
-        self.p1 = self.pglayout.addPlot(row=0, col=0, rowspan=1, colspan=1)
-        self.p1.setMouseEnabled(x=False, y=False)
-        self.i_item = pg.ImageItem(border="k")
-        self.p1.setAspectLocked(lock=True, ratio=1)
-        self.p1.showAxis("top", show=True)
-        self.p1.showAxis("bottom", show=True)
-        self.p1.showAxis("left", show=True)
-        self.p1.showAxis("right", show=True)
-        self.ay1 = self.p1.getAxis("left")
-        by1 = self.p1.getAxis("right")
-        self.ax1 = self.p1.getAxis("bottom")
-        bx1 = self.p1.getAxis("top")
+        canvas.setBackground("w") # canvas is a pg.GraphicsLayoutWidget
+        self.imageplot = canvas.addPlot()
+        self.imageplot.setMouseEnabled(x=False, y=False)
+        self.imageitem = pg.ImageItem(border="k")
+        self.imageplot.setAspectLocked(lock=True, ratio=1)
+        self.imageplot.showAxis("top", show=True)
+        self.imageplot.showAxis("bottom", show=True)
+        self.imageplot.showAxis("left", show=True)
+        self.imageplot.showAxis("right", show=True)
+        self.ay1 = self.imageplot.getAxis("left")
+        by1 = self.imageplot.getAxis("right")
+        self.ax1 = self.imageplot.getAxis("bottom")
+        bx1 = self.imageplot.getAxis("top")
         self.ay1.setLabel(text="y",units="px")
         self.ay1.enableAutoSIPrefix(enable=True)
         self.ax1.setLabel(text="x",units="px")
@@ -16406,94 +16260,55 @@ class ImgFig():
         self.ax1.setStyle(tickLength=8)
         by1.setStyle(showValues=False,tickLength=0)
         bx1.setStyle(showValues=False,tickLength=0)
-        self.p1.setTitle("No data loaded")
-
-        self.cmimg = pg.ImageItem(border=None)
-        self.cm = self.pglayout.addPlot(row=0, col=1, rowspan=1, colspan=1)
-        self.cm.addItem(self.cmimg)
-        self.cm.setMouseEnabled(x=False, y=False)
-        self.cm.getViewBox().autoRange(padding=0)
-        self.cm.showAxis("top", show=True)
-        self.cm.showAxis("bottom", show=True)
-        self.cm.showAxis("left", show=True)
-        self.cm.showAxis("right", show=True)
-        self.cm.setTitle("")
-        ay3 = self.cm.getAxis("left")
-        ay3.setZValue(1000)
-        by3 = self.cm.getAxis("right")
-        by3.setZValue(1000)
-        bx3 = self.cm.getAxis("top")
-        bx3.setZValue(1000)
-        ax3 = self.cm.getAxis("bottom")
-        ax3.setHeight(h=46.2) #workaround for overly long colorbar in linux
-        by3.setWidth(w=60)
-        ax3.setZValue(1000)
-        ax3.setTicks([])
-        ax3.setLabel(text="", units="")
-        self.by3 = self.cm.getAxis("right")
-        #self.by3.setLabel(text="counts", units="")
-        self.by3.setStyle(tickLength=8)
-        ay3.setStyle(showValues=False,tickLength=0)
-        bx3.setStyle(showValues=False,tickLength=0)
-
-
-        self.pglayout.layout.setColumnMinimumWidth(1, 80)
-        self.pglayout.layout.setColumnMaximumWidth(1, 80)
+        self.imageplot.setTitle("No data loaded")
+        self.map = "gray"
+        cm = pg.colormap.get(self.map, source="matplotlib")
+        self.bar = pg.ColorBarItem(values=(0, 1), cmap=cm, rounding=0.0001)  # init color bar
 
     def loadNewImage(self):
         self.clear()
-        # if self.defaultdisplay == 1.0:
-        #     # use a pointer to the data not a copy
-        #     if self.showflux:
-        #         # Show flux image
-        #         image = self.stk.absdata[:, :, self.iev]  # .copy()
-        #     else:
-        #         # Show OD image
-        #         image = self.stk.od3d[:, :, self.iev]  # .copy()
-        # else:
-        #     # Adjustment to the data display setting has been made so make a copy
-        #     if self.showflux:
-        #         image = self.stk.absdata[:, :, self.iev].copy()
-        #     else:
-        #         image = self.stk.od3d[:, :, self.iev].copy()
+        self.parent.iev = 0
         self.loadData()
 
-
     def clear(self):
-        self.parent.iev = 0
-        self.p1.clear()
+        self.imageplot.clear()
 
     def loadData(self): # Called when fresh data are loaded.
-        self.p1.addItem(self.i_item)
+        self.imageplot.addItem(self.imageitem)
+
+        rightlabel = self.bar.getAxis("right")
         if self.parent.com.i0_loaded:
-            self.by3.setLabel(text="OD", units="")
+            rightlabel.setLabel(text="OD", units="")
         else:
-            self.by3.setLabel(text="counts", units="")
-        self.parent.slider_eng.blockSignals(True)
+            rightlabel.setLabel(text="counts", units="")
+        #self.parent.slider_eng.blockSignals(True)
         self.parent.slider_eng.setRange(0, self.parent.stk.n_ev - 1)
+        self.OnColormapChange(map=self.parent.CMMapBox.currentText(),num_colors=self.parent.StepSpin.value())
         self.parent.OnScrollEng(self.parent.iev) # Plot image & set Scrollbar
-        self.parent.slider_eng.blockSignals(False)
-        #self.draw(self.parent.image)
+
+        self.bar.setImageItem(self.imageitem, insert_in=self.imageplot)
         self.OnMetricScale(self.parent.MetricCheckBox.isChecked(), True, False)
 
-    def draw(self,image):
-        self.i_item.setImage(image)
-        if self.parent.com.stack_4d == 1:
-            self.p1.setTitle("<center>Image at {0:5.2f} eV and {1:5.1f}°</center>".format(float(self.parent.stk.ev[self.parent.iev]),
-                                                                                          float(self.parent.stk.theta[
-                                                                                                    self.parent.itheta])))
-        else:
-            self.p1.setTitle("<center>Image at energy {0:5.2f} eV</center>".format(float(self.parent.stk.ev[self.parent.iev])))
-        self.min = np.min(image)
-        self.max = np.max(image)
-        #self.i_item.setImage(image)
-        self.OnColormap(map=self.parent.CMMapBox.currentText(),colors=self.parent.StepSpin.value())
+    def draw(self,image,setlabel=True,setlut=False):
+        if setlut:
+            self.OnColormapChange(map=self.parent.CMMapBox.currentText(),num_colors=self.parent.StepSpin.value())
+        self.imageitem.setImage(image)
+        if setlabel:
+            if self.parent.com.stack_4d == 1:
+                self.imageplot.setTitle("<center>Image at {0:5.2f} eV and {1:5.1f}°</center>".format(float(self.parent.stk.ev[self.parent.iev]),
+                                                                                              float(self.parent.stk.theta[
+                                                                                                        self.parent.itheta])))
+            else:
+                self.imageplot.setTitle("<center>Image at energy {0:5.2f} eV</center>".format(float(self.parent.stk.ev[self.parent.iev])))
+        min = np.min(image)
+        max = np.max(image)
+        self.bar.setLevels(low=min, high=max)
     def OnMetricScale(self, setmetric= True, zeroorigin= True, square= False):
         if self.parent.com.stack_loaded == 1:
             if setmetric==True:
                 self.parent.SquarePxCheckBox.setVisible(False)
                 self.parent.ZeroOriginCheckBox.setVisible(True)
-                self.p1.setAspectLocked(lock=True, ratio=1)
+                self.imageplot.setAspectLocked(lock=True, ratio=1)
                 #self.p2.setAspectLocked(lock=True, ratio=1)
                 if not zeroorigin:
                     x_start = self.parent.stk.x_start*self.scale
@@ -16506,7 +16321,7 @@ class ImgFig():
                 #self.ay2.setLabel(text="y", units="m")
                 #self.ax2.setLabel(text="x", units="m")
 
-                self.i_item.setRect(QtCore.QRectF(x_start, y_start, self.scale*self.parent.stk.n_cols*self.parent.stk.x_pxsize, self.scale*self.parent.stk.n_rows*self.parent.stk.y_pxsize))
+                self.imageitem.setRect(QtCore.QRectF(x_start, y_start, self.scale*self.parent.stk.n_cols*self.parent.stk.x_pxsize, self.scale*self.parent.stk.n_rows*self.parent.stk.y_pxsize))
                 #if hasattr(self, "OD"):
                 #    self.m_item.setRect(QtCore.QRectF(x_start, y_start, self.scale*np.shape(self.OD)[0]*self.stk.x_pxsize, self.scale*np.shape(self.OD)[1]*self.stk.y_pxsize))
                 #    self.setCrosshair()
@@ -16518,10 +16333,10 @@ class ImgFig():
                 else:
                     aspect = self.parent.stk.x_pxsize/self.parent.stk.y_pxsize
                     #print(aspect)
-                self.p1.setAspectLocked(lock=True, ratio=aspect)
+                self.imageplot.setAspectLocked(lock=True, ratio=aspect)
                 self.ay1.setLabel(text="y", units="px")
                 self.ax1.setLabel(text="x", units="px")
-                self.i_item.setRect(QtCore.QRectF(0, 0, self.parent.stk.n_cols, self.parent.stk.n_rows))
+                self.imageitem.setRect(QtCore.QRectF(0, 0, self.parent.stk.n_cols, self.parent.stk.n_rows))
 
     def OnCatChanged(self):
         self.parent.CMMapBox.blockSignals(True)
@@ -16529,28 +16344,13 @@ class ImgFig():
         self.parent.CMMapBox.blockSignals(False)
         self.parent.CMMapBox.addItems(self.parent.cmaps[self.parent.CMCatBox.currentIndex()][1])
 
-    def OnColormap(self, map="gray", colors=256):
+    def OnColormapChange(self, map="gray", num_colors=256):
+        self.map = map
+        cm = pg.colormap.get(map, source="matplotlib")
+        lut = cm.getLookupTable(0, 1, num_colors)
         if self.parent.com.stack_loaded == 1:
-            colormap = cm.get_cmap(map, colors) #colormap from matplotlib
-            colormap = colormap(np.arange(colors))
-            cm_lst = [[colormap[idx][0], colormap[idx][1], colormap[idx][2], colormap[idx][3]] for idx in
-                      range(np.shape(colormap)[0])]  # convert to r,g,b,a list
-            cm_lst = [item for sub in [[cm_lst[i]] * self.calcBinSize(i, colors) for i in range(colors)] for item in
-                      sub]  # fills 256 bins as equal as possible with n colors
-            cm_array = np.array([np.asarray(cm_lst)])  # vertical colorbar
-            cm_lst.extend((cm_lst[-1], cm_lst[-1], cm_lst[-1]))
-            lut = np.asarray(cm_lst)
-            lut = (lut * 255).view(np.ndarray).astype(int)
-            self.cmimg.setImage(cm_array)
-            self.i_item.setLookupTable(lut)
-            self.setODbar(self.min, self.max)
-
-    def setODbar(self, min=None, max=None):
-        self.cm.setRange(xRange=[0, 1], yRange=[min, max], update=False, disableAutoRange=True, padding=0)
-        self.cmimg.setRect(QtCore.QRectF(0, min, 1, max - min))
-
-    def calcBinSize(self,i,N):
-        return int(round(256*(i+1)/N) - round(256*i/N))
+            self.bar.bar.setLookupTable(lut)
+            self.imageitem.setLookupTable(lut)
 
 #-----------------------------------------------------------------------
 class MainFrame(QtWidgets.QMainWindow):

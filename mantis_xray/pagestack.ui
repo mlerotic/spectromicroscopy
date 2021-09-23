@@ -353,7 +353,7 @@
          <number>0</number>
         </property>
         <item>
-         <layout class="QGridLayout" name="gridLayout_2" columnstretch="0,0" columnminimumwidth="0,0">
+         <layout class="QGridLayout" name="gridLayout_2" columnstretch="0,0">
           <property name="sizeConstraint">
            <enum>QLayout::SetDefaultConstraint</enum>
           </property>
@@ -367,7 +367,7 @@
            <number>0</number>
           </property>
           <item row="0" column="0">
-           <widget class="GraphicsView" name="canvas">
+           <widget class="GraphicsLayoutWidget" name="canvas">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
               <horstretch>0</horstretch>
@@ -382,6 +382,19 @@
             </property>
             <property name="styleSheet">
              <string notr="true">background: white</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QScrollBar" name="slider_theta">
+            <property name="font">
+             <font>
+              <family>Ubuntu</family>
+              <pointsize>8</pointsize>
+             </font>
+            </property>
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
             </property>
            </widget>
           </item>
@@ -417,19 +430,6 @@
             </property>
             <property name="invertedAppearance">
              <bool>false</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QScrollBar" name="slider_theta">
-            <property name="font">
-             <font>
-              <family>Ubuntu</family>
-              <pointsize>8</pointsize>
-             </font>
-            </property>
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
             </property>
            </widget>
           </item>
@@ -892,12 +892,12 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>GraphicsView</class>
+   <class>PlotWidget</class>
    <extends>QGraphicsView</extends>
-   <header location="global">pyqtgraph</header>
+   <header>pyqtgraph</header>
   </customwidget>
   <customwidget>
-   <class>PlotWidget</class>
+   <class>GraphicsLayoutWidget</class>
    <extends>QGraphicsView</extends>
    <header location="global">pyqtgraph</header>
   </customwidget>
