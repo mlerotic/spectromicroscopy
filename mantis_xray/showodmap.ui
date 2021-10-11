@@ -88,6 +88,13 @@
         </property>
        </widget>
       </item>
+      <item>
+       <widget class="QScrollBar" name="slider_eng">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+       </widget>
+      </item>
      </layout>
     </widget>
    </item>

@@ -9724,6 +9724,9 @@ class PageStack(QtWidgets.QWidget):
                 else:
                     image = self.stk.od3d[:, :, self.iev].copy()
             self.absimgfig.draw(image)
+
+            self.specfig.refmarker.setValue(self.stk.ev[self.iev])
+
             #self.loadSpectrum(self.ix, self.iy)
 #-----------------------------------------------------------------------
     def OnScrollTheta(self, value):
@@ -15115,9 +15118,11 @@ class ShowODMap(QtWidgets.QWidget):
         self.xoffset = 0
         self.yoffset = 0
 
-        self.slider_eng = self.MapSelectWidget1.verticalScrollBar()
+        #self.slider_eng = self.MapSelectWidget1.verticalScrollBar()
 
         self.odimgfig = ImgFig(self, self.canvas)
+        self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
+        self.unitlabel = self.odimgfig.bar.getAxis("right")
         # self.pbRST.clicked.connect(lambda: self.setShifts(0, 0))
         # self.pbL.clicked.connect(lambda: self.setShifts(-0.2,0))
         # self.pbR.clicked.connect(lambda: self.setShifts(0.2,0))
@@ -15221,16 +15226,20 @@ class ShowODMap(QtWidgets.QWidget):
         self.prelst = [index for index, value in enumerate([x[1] for x in  self.stk.shifts]) if value == -1]
         self.postlst = [index for index, value in enumerate([x[1] for x in  self.stk.shifts]) if value == 1]
         #print(self.prelst,self.postlst)
-#        self.OnScrollEng(self.MapSelectWidget1.currentRow())
+
         if len(self.prelst) == 0 or len(self.postlst) == 0:
             if len(self.prelst + self.postlst) == 0:
                 self.pbClrSel.setEnabled(False)
             else:
                 self.pbClrSel.setEnabled(True)
-            self.odimgfig.loadNewImage()
-#            self.cm.clear()
-            self.odimgfig.imageplot.titleLabel.setText("<center>Select at least one pre- and post-edge image!</center>",size='10pt')
 
+            #self.odimgfig.loadData()
+            self.odimgfig.OnColormapChange(map="gray", num_colors=self.StepSpin.value())
+            self.OnScrollEng(self.MapSelectWidget1.currentRow())
+            #            self.cm.clear()
+            self.odimgfig.imageplot.titleLabel.setText("<center>Select at least one pre- and post-edge image!</center>",size='10pt')
+            if self.com.i0_loaded == 0:
+                self.unitlabel.setLabel(text="counts", units="")
             self.ODHighSpinBox.setEnabled(False)
             self.ODLowSpinBox.setEnabled(False)
             self.pbRSTOD.setEnabled(False)
@@ -15241,6 +15250,7 @@ class ShowODMap(QtWidgets.QWidget):
         else:
             self.pbClrSel.setEnabled(True)
             #self.InfWarning = False
+            self.unitlabel.setLabel(text="OD", units="")
             self.ShowMap(self.prelst,self.postlst)
             # self.OnScrollEng(self.MapSelectWidget1.currentRow())
             #self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),
@@ -16163,8 +16173,14 @@ class SpecFig():
         self.plot.setTitle("")
         #if self.parent.com.stack_loaded == 1:
         #    self.SetupPlot()
+        self.refmarker = pg.InfiniteLine(angle=90, movable=True, markers=None,
+                                              pen=pg.mkPen(color=QtGui.QColor(0, 0, 0, 128), width=1.5, style=QtCore.Qt.DashLine))
 
     def clear(self):
+        try:
+            self.refmarker.sigPositionChangeFinished.disconnect()
+        except:
+            pass
         self.plot.clear()
     def toggleI0Spectrum(self):
         self.clear()
@@ -16183,10 +16199,10 @@ class SpecFig():
         if showi0:
             x,y = (self.parent.stk.evi0, self.parent.stk.i0data)
             self.ay.setLabel(text="Flux in selected I0 area [counts]")
-            self.plotitem_new = self.plot.plot(x, y, pen=pg.mkPen(color="r", width=2))
+            self.plotitem = self.plot.plot(x, y, pen=pg.mkPen(color="r", width=2))
         else:
             x,y = self.GenerateSpectrum(list(range(self.parent.stk.n_ev)))
-            self.plotitem_new = self.plot.plot(x, y, pen=pg.mkPen(color="b", width=2))
+            self.plotitem = self.plot.plot(x, y, pen=pg.mkPen(color="b", width=2))
 
     #     self.region = pg.LinearRegionItem(brush=[255,0,0,45],bounds=[np.min(x),np.max(x)])
     #     plot.addItem(self.region, ignoreBounds=False)
@@ -16195,13 +16211,30 @@ class SpecFig():
     #     self.plotitem = plot.plot(x, y, pen=pg.mkPen(color=0.8, width=2))
     #     self.refmarker = pg.InfiniteLine(angle=90, movable=False,
     #                                      pen=pg.mkPen(color="b", width=2, style=QtCore.Qt.DashLine))
-    #     plot.addItem(self.refmarker, ignoreBounds=True)
+        self.reflabel = pg.InfLineLabel(self.refmarker, str(self.parent.stk.ev[self.parent.iev])+" eV")
+        #self.refdot = self.refmarker.addMarker("o")
+        self.plot.addItem(self.refmarker, ignoreBounds=True)
+        self.refmarker.sigPositionChanged.connect(self.setreflabel)
     #     self.region.setRegion((min(x),max(x)))
     #     self.region.sigRegionChangeFinished.connect(lambda region: self.UpdateEVRegion(region))
 
-    def GenerateSpectrum(self, evselection):
 
-        left,right,bottom,top = (0,self.parent.ix,0,self.parent.iy)#self.GetRegion()
+    def setreflabel(self):
+        adiff = np.abs(self.plotitem.xData - self.refmarker.value())
+        idx = np.argmin(adiff)
+        ev = self.parent.stk.ev[idx]
+        #print(self.plotitem.yData[idx])
+        #print(self.plotitem.getViewBox().viewRect())
+        #vb = self.plotitem.getViewBox()
+        #print(self.plotitem.viewRect().bottom()-self.plotitem.viewRect().top())
+        ypos= 1+(self.plotitem.yData[idx]-self.plotitem.viewRect().bottom())/(self.plotitem.viewRect().bottom()-self.plotitem.viewRect().top())
+        #print(vb.mapSceneToView(QtCore.QPointF(ev, self.plotitem.yData[idx])))
+        #self.refmarker.setPos(ypos)
+        self.reflabel.setPosition(ypos)
+        self.reflabel.setFormat(str(ev)+" eV")
+
+    def GenerateSpectrum(self, evselection):
+        left,right,bottom,top = (0,self.parent.stk.n_cols,0,self.parent.stk.n_rows)#self.GetRegion()
         if self.parent.com.i0_loaded:
             #self.cb_od_per_px.setVisible(True)
             #if self.cb_od_per_px.isChecked():
