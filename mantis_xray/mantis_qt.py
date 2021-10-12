@@ -9724,8 +9724,8 @@ class PageStack(QtWidgets.QWidget):
                 else:
                     image = self.stk.od3d[:, :, self.iev].copy()
             self.absimgfig.draw(image)
-
-            self.specfig.refmarker.setValue(self.stk.ev[self.iev])
+            #self.specfig.setLineIndicator(self.iev)
+            self.specfig.LineIndicator.setValue(self.stk.ev[self.iev])
 
             #self.loadSpectrum(self.ix, self.iy)
 #-----------------------------------------------------------------------
@@ -10814,7 +10814,7 @@ class ShowHistogram(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
 
 #-----------------------------------------------------------------------
     def OnAccept(self, evt):
-        if self.MaskImage.zValue() > 0 and np.any(self.i0_indices[0]):
+        if self.MaskImage.zValue() > 0 and (np.any(self.i0_indices[0]) | np.any(self.i0_indices[1])):
             try:
                 self.stack.i0_from_histogram(self.i0_indices)
                 self.parent.I0histogramCalculated()
@@ -13341,7 +13341,7 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
         array = np.logical_or(self.stack.shiftsdict[self.itheta][selection[region][0]], self.stack.shiftsdict[self.itheta][selection[region][1]])
         return array
     def MakeNewScatterPlots(self):
-        print("makenewscatte")
+        print("makenewscatter")
         errorthreshold = self.stack.shiftsdict[self.itheta]["threshold"]
         errors = self.stack.shiftsdict[self.itheta]["errors"]
         self.MaskScatterDotsAboveErrorThreshold((errors,errorthreshold,self.itheta))
@@ -16171,14 +16171,17 @@ class SpecFig():
         ax = self.plot.getAxis("bottom")
         ax.setLabel(text="Photon energy [eV]")
         self.plot.setTitle("")
-        #if self.parent.com.stack_loaded == 1:
-        #    self.SetupPlot()
-        self.refmarker = pg.InfiniteLine(angle=90, movable=True, markers=None,
-                                              pen=pg.mkPen(color=QtGui.QColor(0, 0, 0, 128), width=1.5, style=QtCore.Qt.DashLine))
 
+        self.LineIndicator = pg.InfiniteLine(angle=90, movable=True, markers=None,
+                                              pen=pg.mkPen(color=QtGui.QColor(0, 0, 0, 128), width=1.5, style=QtCore.Qt.DashLine))
+        self.LineIndicatorLabel = pg.InfLineLabel(self.LineIndicator, " ")
     def clear(self):
+        self.plot.removeItem(self.LineIndicator)
         try:
-            self.refmarker.sigPositionChangeFinished.disconnect()
+            self.LineIndicator.sigPositionChangeFinished.disconnect()
+            self.LineIndicator.sigPositionChanged.disconnect()
+            self.plot.sigRangeChanged.disconnect()
+            self.plot.scene().sigMouseClicked.disconnect()
         except:
             pass
         self.plot.clear()
@@ -16204,34 +16207,45 @@ class SpecFig():
             x,y = self.GenerateSpectrum(list(range(self.parent.stk.n_ev)))
             self.plotitem = self.plot.plot(x, y, pen=pg.mkPen(color="b", width=2))
 
-    #     self.region = pg.LinearRegionItem(brush=[255,0,0,45],bounds=[np.min(x),np.max(x)])
-    #     plot.addItem(self.region, ignoreBounds=False)
-    #     self.region.setZValue(10)
-    #
-    #     self.plotitem = plot.plot(x, y, pen=pg.mkPen(color=0.8, width=2))
-    #     self.refmarker = pg.InfiniteLine(angle=90, movable=False,
-    #                                      pen=pg.mkPen(color="b", width=2, style=QtCore.Qt.DashLine))
-        self.reflabel = pg.InfLineLabel(self.refmarker, str(self.parent.stk.ev[self.parent.iev])+" eV")
-        #self.refdot = self.refmarker.addMarker("o")
-        self.plot.addItem(self.refmarker, ignoreBounds=True)
-        self.refmarker.sigPositionChanged.connect(self.setreflabel)
-    #     self.region.setRegion((min(x),max(x)))
-    #     self.region.sigRegionChangeFinished.connect(lambda region: self.UpdateEVRegion(region))
+        self.LineIndicator.addMarker("o")
+        self.dot = self.LineIndicator.markers[0][0]
+        self.plot.addItem(self.LineIndicator, ignoreBounds=True)
+        func = interp1d(self.plotitem.xData , self.plotitem.yData)
+        x_newgrid = np.linspace(min(self.plotitem.xData), max(self.plotitem.xData), num=min(3000,(30*len(self.plotitem.xData))), endpoint=True)
+        y_newgrid = func(x_newgrid)
 
+        def nearestidx(data):
+            adiff = np.abs(data - self.LineIndicator.value())
+            return np.argmin(adiff)
 
-    def setreflabel(self):
-        adiff = np.abs(self.plotitem.xData - self.refmarker.value())
-        idx = np.argmin(adiff)
-        ev = self.parent.stk.ev[idx]
-        #print(self.plotitem.yData[idx])
-        #print(self.plotitem.getViewBox().viewRect())
-        #vb = self.plotitem.getViewBox()
-        #print(self.plotitem.viewRect().bottom()-self.plotitem.viewRect().top())
-        ypos= 1+(self.plotitem.yData[idx]-self.plotitem.viewRect().bottom())/(self.plotitem.viewRect().bottom()-self.plotitem.viewRect().top())
-        #print(vb.mapSceneToView(QtCore.QPointF(ev, self.plotitem.yData[idx])))
-        #self.refmarker.setPos(ypos)
-        self.reflabel.setPosition(ypos)
-        self.reflabel.setFormat(str(ev)+" eV")
+        def snap():
+            idx = nearestidx(self.plotitem.xData)
+            self.LineIndicator.setPos(self.plotitem.xData[idx])
+            self.parent.slider_eng.blockSignals(True)
+            self.parent.OnScrollEng(idx)
+            self.parent.slider_eng.blockSignals(False)
+        def update():
+            idx = nearestidx(x_newgrid)
+            ypos = 1 + (y_newgrid[idx] - self.plotitem.viewRect().bottom()) / (
+                        self.plotitem.viewRect().bottom() - self.plotitem.viewRect().top())
+
+            self.LineIndicator.markers = [(self.dot, ypos, 10)]
+            self.LineIndicator.update()
+            self.LineIndicatorLabel.setPosition(ypos)
+            self.LineIndicatorLabel.setFormat(" "+str(round(x_newgrid[idx],2)) + " eV ")
+
+        self.LineIndicator.sigPositionChanged.connect(update)
+        self.LineIndicator.sigPositionChangeFinished.connect(snap)
+        self.plot.sigRangeChanged.connect(update)
+        self.plot.scene().sigMouseClicked.connect(self.OnMouseClick)
+        update()
+
+    def OnMouseClick(self,e):
+        if e.double():
+            vb = self.plotitem.getViewBox()
+            pos = vb.mapSceneToView(e.scenePos()).x()
+            self.LineIndicator.setPos(pos)
+            self.LineIndicator.sigPositionChangeFinished.emit(self)
 
     def GenerateSpectrum(self, evselection):
         left,right,bottom,top = (0,self.parent.stk.n_cols,0,self.parent.stk.n_rows)#self.GetRegion()
