@@ -9225,18 +9225,18 @@ class PageStack(QtWidgets.QWidget):
         #hbox41.addWidget(self.slider_theta)
         #gridsizer4.addLayout(hbox41, 2, 0)
 
-        self.MetricCheckBox.toggled.connect(lambda: self.absimgfig.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
-        self.ZeroOriginCheckBox.toggled.connect(lambda: self.absimgfig.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
-        self.SquarePxCheckBox.toggled.connect(lambda: self.absimgfig.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
-        self.SquarePxCheckBox.setVisible(False)
+        #self.MetricCheckBox.toggled.connect(lambda: self.absimgfig.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
+        #self.ZeroOriginCheckBox.toggled.connect(lambda: self.absimgfig.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
+        self.SquarePxCheckBox.toggled.connect(lambda: self.absimgfig.OnMetricScale(False, True,self.SquarePxCheckBox.isChecked()))
+        self.SquarePxCheckBox.setVisible(True)
 
         self.CMCatBox.addItems([self.cmaps[0][0],self.cmaps[1][0],self.cmaps[2][0],self.cmaps[3][0],self.cmaps[4][0],self.cmaps[5][0]])
         self.CMMapBox.addItems(self.cmaps[2][1])
         self.CMCatBox.setCurrentIndex(2)
         self.CMMapBox.setCurrentIndex(3)
         self.CMCatBox.currentIndexChanged.connect(self.absimgfig.OnCatChanged)
-        self.CMMapBox.currentIndexChanged.connect(lambda: self.absimgfig.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value()))
-        self.StepSpin.valueChanged.connect(lambda: self.absimgfig.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value()))
+        self.CMMapBox.currentIndexChanged.connect(lambda: self.absimgfig.OnColormapChange(map=self.CMMapBox.currentText(),num_colors=self.StepSpin.value()))
+        self.StepSpin.valueChanged.connect(lambda: self.absimgfig.OnColormapChange(map=self.CMMapBox.currentText(),num_colors=self.StepSpin.value()))
 
 
 
@@ -9382,8 +9382,8 @@ class PageStack(QtWidgets.QWidget):
             self.stk.od = self.stk.od3d.copy()
             self.stk.od = np.reshape(self.stk.od, (self.stk.n_cols*self.stk.n_rows, self.stk.n_ev), order='F')
 
-        self.absimgfig.loadNewImage()
         self.specfig.loadNewSpectrum()
+        self.absimgfig.loadNewImageWithROI()
 
         self.window().refresh_widgets()
 
@@ -9407,8 +9407,8 @@ class PageStack(QtWidgets.QWidget):
 
         self.com.i0_loaded = 1
         #self.loadSpectrum(self.ix, self.iy)
-        self.absimgfig.loadNewImage()
         self.specfig.loadNewSpectrum()
+        self.absimgfig.loadNewImageWithROI()
 
         self.window().refresh_widgets()
 
@@ -9466,8 +9466,8 @@ class PageStack(QtWidgets.QWidget):
         #self.rb_flux.setChecked(True)
 
         #self.loadSpectrum(self.ix, self.iy)
-        self.absimgfig.loadNewImage()
         self.specfig.loadNewSpectrum()
+        self.absimgfig.loadNewImageWithROI()
         self.window().refresh_widgets()
 
 
@@ -10984,9 +10984,9 @@ class ShowArtefacts(QtWidgets.QDialog):
             a, wf = self.OutlierCalc(a,final=True)
         self.stack.absdata = a
         #self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
-        self.parent.page1.absimgfig.loadNewImage()
-        self.parent.page0.absimgfig.loadNewImage()
         self.parent.page1.specfig.loadNewSpectrum()
+        self.parent.page1.absimgfig.loadNewImageWithROI()
+        self.parent.page0.absimgfig.loadNewImage()
         #self.parent.page0.Clear()
         #self.parent.page0.loadData()
 
@@ -11454,7 +11454,7 @@ class MultiCrop(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
 
 #        self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
         #self.parent.page1.Clear()
-        self.parent.page1.absimgfig.loadNewImage()
+        self.parent.page1.absimgfig.loadNewImageWithROI()
         self.parent.page0.absimgfig.loadNewImage()
         #self.parent.page1.specfig.loadNewSpectrum()
         #if showmaptab:
@@ -13787,7 +13787,7 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
 # ----------------------------------------------------------------------
     def OnCancel(self, evt):
         self.stack.absdata_shifted_cropped = self.stack.absdata
-        self.parent.page1.absimgfig.loadNewImage()
+        self.parent.page1.absimgfig.loadNewImageWithROI()
         self.parent.page0.absimgfig.loadNewImage()
 
         #if showmaptab:
@@ -13857,11 +13857,12 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
         #self.parent.page1.slider_eng.setRange(0,self.stack.n_ev-1)
         #self.parent.page1.iev = int(self.stack.n_ev/2)
         #self.parent.page1.slider_eng.setValue(self.parent.page1.iev)
-        self.parent.page1.absimgfig.loadNewImage()
+        self.parent.page1.specfig.loadNewSpectrum()
+        self.parent.page1.absimgfig.loadNewImageWithROI()
         self.parent.page0.absimgfig.loadNewImage()
         #self.parent.page1.ix = int(self.stack.n_cols/2)
         #self.parent.page1.iy = int(self.stack.n_rows/2)
-        self.parent.page1.specfig.loadNewSpectrum()
+
         #self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
         #self.parent.page1.loadImage()
 
@@ -14965,7 +14966,7 @@ class PageLoadData(QtWidgets.QWidget):
             #if showmaptab:
             #    self.window().page9.Clear()
             #    self.window().page9.loadData()
-            self.window().page1.absimgfig.loadNewImage()
+            self.window().page1.absimgfig.loadNewImageWithROI()
         return
 
     def OnRotate(self):
@@ -15004,8 +15005,8 @@ class PageLoadData(QtWidgets.QWidget):
             self.window().page1.ix = int(self.stk.n_cols / 2)
             self.window().page1.iy = int(self.stk.n_rows / 2)
             #self.window().page1.loadSpectrum(self.window().page1.ix, self.window().page1.iy)
-            self.window().page1.absimgfig.loadNewImage()
             self.window().page1.specfig.loadNewSpectrum()
+            self.window().page1.absimgfig.loadNewImageWithROI()
         return
 
 #-----------------------------------------------------------------------
@@ -16013,7 +16014,7 @@ class StackListFrame(QtWidgets.QDialog):
         self.parent.page1.slider_eng.setValue(self.parent.page1.iev)
 
         #self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
-        self.parent.page1.loadNewImage()
+        self.parent.page1.loadNewImageWithROI()
 
         self.parent.page0.ShowInfo(filelist[0], self.filepath)
 
@@ -16182,6 +16183,8 @@ class SpecFig():
             self.LineIndicator.sigPositionChanged.disconnect()
             self.plot.sigRangeChanged.disconnect()
             self.plot.scene().sigMouseClicked.disconnect()
+            self.parent.absimgfig.roi.sigRegionChanged.disconnect()
+            self.parent.absimgfig.roi.sigRegionChangeFinished.disconnect()
         except:
             pass
         self.plot.clear()
@@ -16197,7 +16200,32 @@ class SpecFig():
         self.parent.button_showi0.blockSignals(False)
         self.clear()
         self.loadData()
+    def updatePlotData(self):
+        x,y = self.GenerateSpectrum(list(range(self.parent.stk.n_ev)))
+        self.plot.blockSignals(True)
+        self.plotitem = self.plot.plot(x, y, pen=pg.mkPen(color="b", width=2), clear=True)
+        self.plot.blockSignals(False)
+    def getIntersectionY(self):
+        x_newgrid = self.plotitem.xData
+        y_newgrid = self.plotitem.yData
+        if len(self.plotitem.xData)> 2:
+            func = interp1d(self.plotitem.xData, self.plotitem.yData)
+            x_newgrid = np.linspace(min(self.plotitem.xData), max(self.plotitem.xData), num=min(3000,(30*len(self.plotitem.xData))), endpoint=True)
+            y_newgrid = func(x_newgrid)
+        diff = np.abs(x_newgrid - self.LineIndicator.value())
+        idx = np.argmin(diff)
+        ypos = 1 + (y_newgrid[idx] - self.plotitem.viewRect().bottom()) / (
+                    self.plotitem.viewRect().bottom() - self.plotitem.viewRect().top())
+        return ypos
 
+
+    def updateLineIndicator(self):
+        self.plot.addItem(self.LineIndicator, ignoreBounds=True)
+        self.ypos = self.getIntersectionY()
+        self.LineIndicator.markers = [(self.dot, self.ypos, 10)]
+        self.LineIndicator.update()
+        self.LineIndicatorLabel.setPosition(self.ypos)
+        
     def loadData(self, showi0=False):
         if showi0:
             x,y = (self.parent.stk.evi0, self.parent.stk.i0data)
@@ -16206,39 +16234,37 @@ class SpecFig():
         else:
             x,y = self.GenerateSpectrum(list(range(self.parent.stk.n_ev)))
             self.plotitem = self.plot.plot(x, y, pen=pg.mkPen(color="b", width=2))
+        self.plotitem.setZValue(9)
 
         self.LineIndicator.addMarker("o")
         self.dot = self.LineIndicator.markers[0][0]
         self.plot.addItem(self.LineIndicator, ignoreBounds=True)
-        func = interp1d(self.plotitem.xData , self.plotitem.yData)
-        x_newgrid = np.linspace(min(self.plotitem.xData), max(self.plotitem.xData), num=min(3000,(30*len(self.plotitem.xData))), endpoint=True)
-        y_newgrid = func(x_newgrid)
+        self.LineIndicator.setZValue(10)
 
-        def nearestidx(data):
-            adiff = np.abs(data - self.LineIndicator.value())
-            return np.argmin(adiff)
+        self.ypos = self.getIntersectionY()
 
-        def snap():
-            idx = nearestidx(self.plotitem.xData)
-            self.LineIndicator.setPos(self.plotitem.xData[idx])
-            self.parent.slider_eng.blockSignals(True)
-            self.parent.OnScrollEng(idx)
-            self.parent.slider_eng.blockSignals(False)
-        def update():
-            idx = nearestidx(x_newgrid)
-            ypos = 1 + (y_newgrid[idx] - self.plotitem.viewRect().bottom()) / (
-                        self.plotitem.viewRect().bottom() - self.plotitem.viewRect().top())
-
-            self.LineIndicator.markers = [(self.dot, ypos, 10)]
-            self.LineIndicator.update()
-            self.LineIndicatorLabel.setPosition(ypos)
-            self.LineIndicatorLabel.setFormat(" "+str(round(x_newgrid[idx],2)) + " eV ")
-
-        self.LineIndicator.sigPositionChanged.connect(update)
-        self.LineIndicator.sigPositionChangeFinished.connect(snap)
-        self.plot.sigRangeChanged.connect(update)
+        self.LineIndicator.sigPositionChanged.connect(self.OnIndicatorMoved)
+        self.LineIndicator.sigPositionChangeFinished.connect(self.SnapIndicatorToEV)
+        self.plot.sigRangeChanged.connect(self.OnIndicatorMoved)
         self.plot.scene().sigMouseClicked.connect(self.OnMouseClick)
-        update()
+        self.OnIndicatorMoved()
+
+    def SnapIndicatorToEV(self):
+        #print("snap")
+        diff = np.abs(self.plotitem.xData - self.LineIndicator.value())
+        idx = np.argmin(diff)
+        self.LineIndicator.setPos(self.plotitem.xData[idx])
+        self.parent.slider_eng.blockSignals(True)
+        self.parent.OnScrollEng(idx)
+        self.parent.slider_eng.blockSignals(False)
+
+    def OnIndicatorMoved(self):
+        #print("update")
+        self.ypos = self.getIntersectionY()
+        self.LineIndicator.markers = [(self.dot, self.ypos, 10)]
+        self.LineIndicator.update()
+        self.LineIndicatorLabel.setPosition(self.ypos)
+        self.LineIndicatorLabel.setFormat(" "+str(round(self.LineIndicator.value(),2)) + " eV ")
 
     def OnMouseClick(self,e):
         if e.double():
@@ -16247,8 +16273,18 @@ class SpecFig():
             self.LineIndicator.setPos(pos)
             self.LineIndicator.sigPositionChangeFinished.emit(self)
 
+    def GetRegion(self,box):
+        left = int(box.pos().x())
+        right = left + int(box.size().x())
+        bottom = int(box.pos().y())
+        top = bottom + int(box.size().y())
+        return (left,right,top,bottom)
+
     def GenerateSpectrum(self, evselection):
-        left,right,bottom,top = (0,self.parent.stk.n_cols,0,self.parent.stk.n_rows)#self.GetRegion()
+        left,right,top,bottom = self.GetRegion(self.parent.absimgfig.roi)
+        left = max(0,left)
+        bottom = max(0,bottom)
+
         if self.parent.com.i0_loaded:
             #self.cb_od_per_px.setVisible(True)
             #if self.cb_od_per_px.isChecked():
@@ -16316,10 +16352,29 @@ class ImgFig():
         self.clear()
         self.parent.iev = 0
         self.loadData()
-
+    def loadNewImageWithROI(self):
+        self.clear()
+        self.parent.iev = 0
+        self.loadData()
+        self.addROI()
     def clear(self):
         self.imageplot.clear()
 
+    def addROI(self):
+        #print(self.imageplot.boundingRect().height(),self.imageitem.boundingRect().height()*self.scale*self.parent.stk.y_pxsize)
+        #print(self.imageplot.boundingRect().width(),self.imageitem.boundingRect().width()*self.scale*self.parent.stk.y_pxsize)
+        self.roi = pg.RectROI((0,0),(self.imageitem.boundingRect().width(),#*self.scale*self.parent.stk.x_pxsize,
+                               self.imageitem.boundingRect().height()),#*self.scale*self.parent.stk.y_pxsize),
+                              pen=(5, 8), handlePen=QtGui.QPen(QtGui.QColor(255, 0, 128, 255)),
+                          #centered=False,
+                          #sideScalers=True,
+                          resizable=True, removable=False, movable=True, scaleSnap=True, translateSnap=True)
+        #self.roi.addScaleHandle([0.5, 1], [0.5, 0.5])
+        #self.roi.addScaleHandle([0, 0.5], [0.5, 0.5])
+        self.imageplot.addItem(self.roi, ignoreBounds=True)
+        self.roi.setZValue(10)  # make sure ROI is drawn above image
+        self.roi.sigRegionChanged.connect(self.parent.specfig.updatePlotData)
+        self.roi.sigRegionChangeFinished.connect(self.parent.specfig.updateLineIndicator)
     def loadData(self): # Called when fresh data are loaded.
         self.imageplot.addItem(self.imageitem)
 
@@ -16334,7 +16389,11 @@ class ImgFig():
         self.parent.OnScrollEng(self.parent.iev) # Plot image & set Scrollbar
 
         self.bar.setImageItem(self.imageitem, insert_in=self.imageplot)
-        self.OnMetricScale(self.parent.MetricCheckBox.isChecked(), True, False)
+        try:
+            self.OnMetricScale(self.parent.MetricCheckBox.isChecked(), True, False)
+        except AttributeError:
+            self.OnMetricScale(False, True, self.parent.SquarePxCheckBox.isChecked())
+
 
     def draw(self,image,setlabel=True,setlut=False):
         if setlut:
@@ -16373,7 +16432,10 @@ class ImgFig():
                 #    self.m_item.setRect(QtCore.QRectF(x_start, y_start, self.scale*np.shape(self.OD)[0]*self.stk.x_pxsize, self.scale*np.shape(self.OD)[1]*self.stk.y_pxsize))
                 #    self.setCrosshair()
             else:
-                self.parent.ZeroOriginCheckBox.setVisible(False)
+                try:
+                    self.parent.ZeroOriginCheckBox.setVisible(False)
+                except AttributeError:
+                    pass
                 self.parent.SquarePxCheckBox.setVisible(True)
                 if square == True:
                     aspect = 1
@@ -16621,7 +16683,7 @@ class MainFrame(QtWidgets.QMainWindow):
             self.page0.absimgfig.loadNewImage()
             self.page0.ShowInfo(self.page1.filename, directory)
             #self.page1.ResetDisplaySettings()
-            self.page1.absimgfig.loadNewImage()
+            self.page1.absimgfig.loadNewImageWithROI()
             self.page1.button_multicrop.setText('Crop stack 3D...')
             #print (x,y), (self.ix,self.iy), self.stk.absdata.shape
             self.page1.specfig.loadNewSpectrum()
@@ -16771,8 +16833,8 @@ class MainFrame(QtWidgets.QMainWindow):
 
 
             #self.page1.ResetDisplaySettings()
-            self.page1.absimgfig.loadNewImage()
             self.page1.specfig.loadNewSpectrum()
+            self.page1.absimgfig.loadNewImageWithROI()
             #self.page1.loadSpectrum(self.ix, self.iy)
             self.page1.textctrl.setText(self.page1.filename)
 
