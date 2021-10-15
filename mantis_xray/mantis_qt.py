@@ -9382,8 +9382,8 @@ class PageStack(QtWidgets.QWidget):
             self.stk.od = self.stk.od3d.copy()
             self.stk.od = np.reshape(self.stk.od, (self.stk.n_cols*self.stk.n_rows, self.stk.n_ev), order='F')
 
-        self.specfig.loadNewSpectrum()
         self.absimgfig.loadNewImageWithROI()
+        self.specfig.loadNewSpectrum()
 
         self.window().refresh_widgets()
 
@@ -9407,9 +9407,8 @@ class PageStack(QtWidgets.QWidget):
 
         self.com.i0_loaded = 1
         #self.loadSpectrum(self.ix, self.iy)
-        self.specfig.loadNewSpectrum()
         self.absimgfig.loadNewImageWithROI()
-
+        self.specfig.loadNewSpectrum()
         self.window().refresh_widgets()
 
 #-----------------------------------------------------------------------
@@ -9466,8 +9465,8 @@ class PageStack(QtWidgets.QWidget):
         #self.rb_flux.setChecked(True)
 
         #self.loadSpectrum(self.ix, self.iy)
-        self.specfig.loadNewSpectrum()
         self.absimgfig.loadNewImageWithROI()
+        self.specfig.loadNewSpectrum()
         self.window().refresh_widgets()
 
 
@@ -10983,10 +10982,9 @@ class ShowArtefacts(QtWidgets.QDialog):
         if self.remove_outliers.isChecked():
             a, wf = self.OutlierCalc(a,final=True)
         self.stack.absdata = a
-        #self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
-        self.parent.page1.specfig.loadNewSpectrum()
-        self.parent.page1.absimgfig.loadNewImageWithROI()
         self.parent.page0.absimgfig.loadNewImage()
+        self.parent.page1.absimgfig.loadNewImageWithROI()
+        self.parent.page1.specfig.loadNewSpectrum()
         #self.parent.page0.Clear()
         #self.parent.page0.loadData()
 
@@ -11456,7 +11454,7 @@ class MultiCrop(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
         #self.parent.page1.Clear()
         self.parent.page1.absimgfig.loadNewImageWithROI()
         self.parent.page0.absimgfig.loadNewImage()
-        #self.parent.page1.specfig.loadNewSpectrum()
+        self.parent.page1.specfig.loadNewSpectrum()
         #if showmaptab:
         #    self.parent.page9.Clear()
         #    self.parent.page9.loadData()
@@ -13857,9 +13855,9 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
         #self.parent.page1.slider_eng.setRange(0,self.stack.n_ev-1)
         #self.parent.page1.iev = int(self.stack.n_ev/2)
         #self.parent.page1.slider_eng.setValue(self.parent.page1.iev)
-        self.parent.page1.specfig.loadNewSpectrum()
-        self.parent.page1.absimgfig.loadNewImageWithROI()
         self.parent.page0.absimgfig.loadNewImage()
+        self.parent.page1.absimgfig.loadNewImageWithROI()
+        self.parent.page1.specfig.loadNewSpectrum()
         #self.parent.page1.ix = int(self.stack.n_cols/2)
         #self.parent.page1.iy = int(self.stack.n_rows/2)
 
@@ -16192,8 +16190,10 @@ class SpecFig():
         self.clear()
         if self.parent.button_showi0.isChecked():
             self.loadData(showi0=True)
+            self.parent.absimgfig.roi.setVisible(False)
         else:
             self.loadData()
+            self.parent.absimgfig.roi.setVisible(True)
     def loadNewSpectrum(self):
         self.parent.button_showi0.blockSignals(True)
         self.parent.button_showi0.setChecked(False)
@@ -16247,6 +16247,8 @@ class SpecFig():
         self.LineIndicator.sigPositionChangeFinished.connect(self.SnapIndicatorToEV)
         self.plot.sigRangeChanged.connect(self.OnIndicatorMoved)
         self.plot.scene().sigMouseClicked.connect(self.OnMouseClick)
+        self.parent.absimgfig.roi.sigRegionChanged.connect(self.updatePlotData)
+        self.parent.absimgfig.roi.sigRegionChangeFinished.connect(self.updateLineIndicator)
         self.OnIndicatorMoved()
 
     def SnapIndicatorToEV(self):
@@ -16284,13 +16286,14 @@ class SpecFig():
         left,right,top,bottom = self.GetRegion(self.parent.absimgfig.roi)
         left = max(0,left)
         bottom = max(0,bottom)
-
+        top = min(self.parent.stk.n_rows,max(0,top))
+        right = min(self.parent.stk.n_cols,max(0,right))
         if self.parent.com.i0_loaded:
             #self.cb_od_per_px.setVisible(True)
             #if self.cb_od_per_px.isChecked():
-                #self.ay.setLabel(text="Optical density per px")
+            self.ay.setLabel(text="Optical density per px inside ROI")
             #else:
-            self.ay.setLabel(text="Sum of optical densities in FOV")
+            #self.ay.setLabel(text="Sum of optical densities in FOV")
             if self.parent.com.stack_4d:
                 total = self.parent.stk.od4d[left:right, bottom:top, :, int(self.parent.itheta)].copy()
             else:
@@ -16309,7 +16312,7 @@ class SpecFig():
         #if self.cb_od_per_px.isChecked():
         #    total = total.sum(axis=(0,1)) / (int(self.box.size().x()) * int(self.box.size().y()))
         #else:
-        total = total.sum(axis=(0,1))
+        total = total.sum(axis=(0,1)) / max(((right-left)*(top-bottom)),1)
         x = [self.parent.stk.ev[i] for i in evselection]
         y = [total[i] for i in evselection]
         # self.label_spatial_range.setText("Stack size: [ "+str(int(self.box.size().x()))+" x "+str(int(self.box.size().y()))+" ] px²")
@@ -16373,8 +16376,7 @@ class ImgFig():
         #self.roi.addScaleHandle([0, 0.5], [0.5, 0.5])
         self.imageplot.addItem(self.roi, ignoreBounds=True)
         self.roi.setZValue(10)  # make sure ROI is drawn above image
-        self.roi.sigRegionChanged.connect(self.parent.specfig.updatePlotData)
-        self.roi.sigRegionChangeFinished.connect(self.parent.specfig.updateLineIndicator)
+
     def loadData(self): # Called when fresh data are loaded.
         self.imageplot.addItem(self.imageitem)
 
