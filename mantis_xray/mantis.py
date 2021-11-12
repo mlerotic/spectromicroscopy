@@ -25,7 +25,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 #from matplotlib.backends.backend_qt5agg import FigureCanvas
 from matplotlib.figure import Figure
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
-from mpl_toolkits.axes_grid1.colorbar import colorbar
+import matplotlib.colorbar as colorbar
 #from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import data_struct
