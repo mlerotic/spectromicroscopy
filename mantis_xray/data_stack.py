@@ -573,32 +573,32 @@ class data:
         else:
             self.squarepx = False
 
-        #ToDo: Restore scale_bar option.
-    # def scale_bar(self):
-        # bar_microns = 0.2 * np.abs(self.x_stop - self.x_start)
-        #
-        # if bar_microns >= 10.:
-        #     bar_microns = 10. * int(0.5 + 0.1 * int(0.5 + bar_microns))
-        #     bar_string = str(int(0.01 + bar_microns)).strip()
-        # elif bar_microns >= 1.:
-        #     bar_microns = float(int(0.5 + bar_microns))
-        #     if bar_microns == 1.:
-        #         bar_string = '1'
-        #     else:
-        #         bar_string = str(int(0.01 + bar_microns)).strip()
-        # else:
-        #     bar_microns = np.maximum(0.1 * int(0.5 + 10 * bar_microns), 0.1)
-        #     bar_string = str(bar_microns).strip()
-        #
-        # self.scale_bar_string = bar_string
-        #
-        # self.scale_bar_pixels_x = int(0.5 + float(self.n_cols) *
-        #                               float(bar_microns) / float(abs(self.x_stop - self.x_start)))
-        #
-        # self.scale_bar_pixels_y = int(0.01 * self.n_rows)
-        #
-        # if self.scale_bar_pixels_y < 2:
-        #     self.scale_bar_pixels_y = 2
+    #ToDo: Restore scale_bar option for NNMA and overview plots
+    def scale_bar(self):
+         bar_microns = 0.2 * np.abs(self.x_stop - self.x_start)
+
+         if bar_microns >= 10.:
+             bar_microns = 10. * int(0.5 + 0.1 * int(0.5 + bar_microns))
+             bar_string = str(int(0.01 + bar_microns)).strip()
+         elif bar_microns >= 1.:
+             bar_microns = float(int(0.5 + bar_microns))
+             if bar_microns == 1.:
+                 bar_string = '1'
+             else:
+                 bar_string = str(int(0.01 + bar_microns)).strip()
+         else:
+             bar_microns = np.maximum(0.1 * int(0.5 + 10 * bar_microns), 0.1)
+             bar_string = str(bar_microns).strip()
+
+         self.scale_bar_string = bar_string
+
+         self.scale_bar_pixels_x = int(0.5 + float(self.n_cols) *
+                                       float(bar_microns) / float(abs(self.x_stop - self.x_start)))
+
+         self.scale_bar_pixels_y = int(0.01 * self.n_rows)
+
+         if self.scale_bar_pixels_y < 2:
+             self.scale_bar_pixels_y = 2
 
     # ----------------------------------------------------------------------
     def write_xas(self, filename, evdata, data):
