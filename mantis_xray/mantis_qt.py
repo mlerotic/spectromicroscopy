@@ -16348,7 +16348,8 @@ class ImgFig():
         bx1.setStyle(showValues=False,tickLength=0)
         self.imageplot.setTitle("No data loaded")
         self.map = "gray"
-        cm = pg.colormap.get(self.map, source="matplotlib")
+        # Future syntax: cm = pg.colormap.get(map, source="matplotlib")
+        cm = pg.colormap.getFromMatplotlib(self.map)
         self.bar = pg.ColorBarItem(values=(0, 1), cmap=cm, rounding=0.0001)  # init color bar
 
     def loadNewImage(self):
@@ -16457,7 +16458,8 @@ class ImgFig():
 
     def OnColormapChange(self, map="gray", num_colors=256):
         self.map = map
-        cm = pg.colormap.get(map, source="matplotlib")
+        # Future syntax: cm = pg.colormap.get(map, source="matplotlib")
+        cm = pg.colormap.getFromMatplotlib(self.map)
         lut = cm.getLookupTable(0, 1, num_colors)
         if self.parent.com.stack_loaded == 1:
             self.bar.bar.setLookupTable(lut)
