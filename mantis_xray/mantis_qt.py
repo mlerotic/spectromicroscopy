@@ -10573,7 +10573,7 @@ class SaveWinP1(QtWidgets.QDialog):
                                          img_all_tif = im_all_tif)
 
 #----------------------------------------------------------------------
-class ShowHistogram(QtWidgets.QDialog, QtGui.QGraphicsScene):
+class ShowHistogram(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
     def __init__(self, parent, stack):
         QtWidgets.QWidget.__init__(self, parent)
         dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -10903,7 +10903,7 @@ class ShowArtefacts(QtWidgets.QDialog):
 
         self.close()
 #----------------------------------------------------------------------
-class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
+class MultiCrop(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
     evlistchanged = pyqtSignal([object])
     thetalistchanged = pyqtSignal([object])
     def __init__(self, parent, common, stack):
@@ -11152,7 +11152,7 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.thetaidx_selected = []
         for i,e in enumerate(self.stack.theta): # Fill QList with energies
             #self.stk.shifts.append([1,0,(0.0,0.0)]) #checked [0,1]; pre, post, undefined state for map [-1,1,0],(xshift [float],yshift [float])
-            item = QtGui.QListWidgetItem(str(int(i)).zfill(3)+"     at     " + format(e, '.1f') + "°")
+            item = QtWidgets.QListWidgetItem(str(int(i)).zfill(3)+"     at     " + format(e, '.1f') + "°")
             self.theta_widget.addItem(item)
             self.theta_selected.append(item)
             self.thetaidx_selected.append(i)
@@ -11163,7 +11163,7 @@ class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.idx_selected = []
         for i,e in enumerate(self.stack.ev): # Fill QList with energies
             #self.stk.shifts.append([1,0,(0.0,0.0)]) #checked [0,1]; pre, post, undefined state for map [-1,1,0],(xshift [float],yshift [float])
-            item = QtGui.QListWidgetItem(str(int(i)).zfill(3)+"     at     " + format(e, '.2f') + " eV")
+            item = QtWidgets.QListWidgetItem(str(int(i)).zfill(3)+"     at     " + format(e, '.2f') + " eV")
             self.ev_widget.addItem(item)
             self.ev_selected.append(item)
             self.idx_selected.append(i)
@@ -13053,7 +13053,7 @@ class TaskDispatcher(QtCore.QObject):
     def enqueuetask(self, func, *args, **kargs):
         self.queue.put((func, args, kargs))
 
-class ImageRegistrationFFT(QtWidgets.QDialog, QtGui.QGraphicsScene):
+class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
     def __init__(self, parent, common, stack):
         QtWidgets.QWidget.__init__(self, parent)
         uic.loadUi(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'showalign2.ui'), self)
@@ -13771,7 +13771,7 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtGui.QGraphicsScene):
         self.close()
 
 #----------------------------------------------------------------------
-class SpectralImageMap(QtWidgets.QDialog, QtGui.QGraphicsScene):
+class SpectralImageMap(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
     #evlistchanged = pyqtSignal([object])
     #thetalistchanged = pyqtSignal([object])
     def __init__(self, parent, common, stack):
@@ -15322,7 +15322,7 @@ class PageMap(QtWidgets.QWidget):
         self.pglayout = pg.GraphicsLayout(border=None)
         self.canvas.setBackground("w") # canvas is a pg.GraphicsView widget
         self.canvas.setCentralWidget(self.pglayout)
-        #self.pglayout.addItem(pg.AxisItem('left',vPolicy =QtGui.QSizePolicy.Maximum), row=1, col=0, rowspan=1, colspan=3)
+        #self.pglayout.addItem(pg.AxisItem('left',vPolicy =QtWidgets.QSizePolicy.Maximum), row=1, col=0, rowspan=1, colspan=3)
         self.p1 = self.pglayout.addPlot(row=0, col=0, rowspan=1, colspan=1)
         self.p1.setMouseEnabled(x=False, y=False)
         self.i_item = pg.ImageItem(border="k")
@@ -15411,9 +15411,9 @@ class PageMap(QtWidgets.QWidget):
         self.pglayout.layout.setColumnMaximumWidth(2, 80)
         #self.pglayout.layout.setColumnMinimumWidth(1, int((self.p1.width() + self.p2.width()) / 2))
         #self.pglayout.layout.setColumnMinimumWidth(0, int((self.p1.width() + self.p2.width()) / 2))
-        self.p1.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
-        self.p2.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
-        self.cm.setSizePolicy(QtGui.QSizePolicy.Maximum, QtGui.QSizePolicy.Preferred)
+        self.p1.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
+        self.p2.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
+        self.cm.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Preferred)
     def mouseEventOnQList(self, e):
         if e.type() == QtCore.QEvent.MouseMove or e.type() == QtCore.QEvent.MouseButtonPress:
             qlist = self.MapSelectWidget1
@@ -15752,7 +15752,7 @@ class PageMap(QtWidgets.QWidget):
         self.p1.addItem(self.i_item)
         for i,e in enumerate(self.stk.ev): # Fill QList with energies
             self.stk.shifts.append([1,0,(0.0,0.0)]) #checked [0,1]; pre, post, undefined state for map [-1,1,0],(xshift [float],yshift [float])
-            item = QtGui.QListWidgetItem(str(int(i)).zfill(3)+"     at     " + format(e, '.2f') + " eV     "+"+0.0"+"    +0.0")
+            item = QtWidgets.QListWidgetItem(str(int(i)).zfill(3)+"     at     " + format(e, '.2f') + " eV     "+"+0.0"+"    +0.0")
             self.MapSelectWidget1.addItem(item)
         self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
         self.qlistchanged.connect(self.qListChangeHandler)
