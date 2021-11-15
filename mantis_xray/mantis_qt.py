@@ -14934,7 +14934,8 @@ class PageLoadData(QtWidgets.QWidget):
             np.savetxt(fileName, np.rot90(self.absimgfig.imageitem.image), delimiter='\t', newline='\n',fmt='%.5f')
 # ----------------------------------------------------------------------
     def OnCopy(self):
-        self.exp = pg.exporters.ImageExporter(self.absimgfig.pglayout)
+        # self.exp = pg.exporters.ImageExporter(self.absimgfig.imageitem) # just image
+        self.exp = pg.exporters.ImageExporter(self.absimgfig.imageplot) # image and axes, i.e., complete viewbox
         self.exp.export(copy=True)
         return
 
@@ -16409,8 +16410,8 @@ class ImgFig():
                                                                                                         self.parent.itheta])))
             else:
                 self.imageplot.setTitle("<center>Image at energy {0:5.2f} eV</center>".format(float(self.parent.stk.ev[self.parent.iev])))
-        min = np.min(image)
-        max = np.max(image)
+        min = np.nanmin(image)  # ignoring nans
+        max = np.nanmax(image)
         self.bar.setLevels(low=min, high=max)
     def OnMetricScale(self, setmetric= True, zeroorigin= True, square= False):
         if self.parent.com.stack_loaded == 1:
