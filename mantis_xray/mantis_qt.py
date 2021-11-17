@@ -9001,7 +9001,7 @@ class PageStack(QtWidgets.QWidget):
 
         #self.textctrl = QtWidgets.QLabel(self)
         #vbox21.addWidget(self.textctrl)
-        self.textctrl.setText('File name')
+        #self.textctrl.setText('File name')
 
         #sizer21.setLayout(vbox21)
 
@@ -15118,28 +15118,9 @@ class ShowODMap(QtWidgets.QWidget):
         self.xoffset = 0
         self.yoffset = 0
 
-        #self.slider_eng = self.MapSelectWidget1.verticalScrollBar()
-
         self.odimgfig = ImgFig(self, self.canvas)
         self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
         self.unitlabel = self.odimgfig.bar.getAxis("right")
-        # self.pbRST.clicked.connect(lambda: self.setShifts(0, 0))
-        # self.pbL.clicked.connect(lambda: self.setShifts(-0.2,0))
-        # self.pbR.clicked.connect(lambda: self.setShifts(0.2,0))
-        # self.pbU.clicked.connect(lambda: self.setShifts(0,0.2))
-        # self.pbD.clicked.connect(lambda: self.setShifts(0,-0.2))
-        # self.pbRD.clicked.connect(lambda: self.setShifts(0.2,-0.2))
-        # self.pbRU.clicked.connect(lambda: self.setShifts(0.2,0.2))
-        # self.pbLD.clicked.connect(lambda: self.setShifts(-0.2,-0.2))
-        # self.pbLU.clicked.connect(lambda: self.setShifts(-0.2,0.2))
-        # self.pbLL.clicked.connect(lambda: self.setShifts(-1,0))
-        # self.pbRR.clicked.connect(lambda: self.setShifts(1,0))
-        # self.pbUU.clicked.connect(lambda: self.setShifts(0,1))
-        # self.pbDD.clicked.connect(lambda: self.setShifts(0,-1))
-        # self.pbLLDD.clicked.connect(lambda: self.setShifts(-1,-1))
-        # self.pbRRUU.clicked.connect(lambda: self.setShifts(1,1))
-        # self.pbLLUU.clicked.connect(lambda: self.setShifts(-1,1))
-        # self.pbRRDD.clicked.connect(lambda: self.setShifts(1,-1))
 
         self.pbExpData.clicked.connect(self.OnSaveData)
         self.pbExpImg.clicked.connect(self.OnSaveImage)
@@ -15151,10 +15132,10 @@ class ShowODMap(QtWidgets.QWidget):
         self.SquarePxCheckBox.setVisible(False)
 
         #self.CropCheckBox.toggled.connect(lambda: self.OnCropCB(self.CropCheckBox.isChecked()))
-        self.cropflag = True
+        #self.cropflag = True
         #self.ShiftLabel.setText("x = %0.1f \ny = %0.1f" % (0, 0))
-        self.ODHighSpinBox.valueChanged.connect(lambda: self.setODlimits(self.ODLowSpinBox.value(),self.ODHighSpinBox.value()))
-        self.ODLowSpinBox.valueChanged.connect(lambda: self.setODlimits(self.ODLowSpinBox.value(),self.ODHighSpinBox.value()))
+        #self.ODHighSpinBox.valueChanged.connect(lambda: self.setODlimits(self.ODLowSpinBox.value(),self.ODHighSpinBox.value()))
+        #self.ODLowSpinBox.valueChanged.connect(lambda: self.setODlimits(self.ODLowSpinBox.value(),self.ODHighSpinBox.value()))
         self.pbRSTOD.clicked.connect(lambda: self.ShowMap(self.prelst, self.postlst))
         # self.pbClrShifts.clicked.connect(self.OnClrShifts)
         self.pbClrSel.clicked.connect(self.OnClrSelection)
@@ -15240,8 +15221,8 @@ class ShowODMap(QtWidgets.QWidget):
             self.odimgfig.imageplot.titleLabel.setText("<center>Select at least one pre- and post-edge image!</center>",size='10pt')
             if self.com.i0_loaded == 0:
                 self.unitlabel.setLabel(text="counts", units="")
-            self.ODHighSpinBox.setEnabled(False)
-            self.ODLowSpinBox.setEnabled(False)
+            #self.ODHighSpinBox.setEnabled(False)
+            #self.ODLowSpinBox.setEnabled(False)
             self.pbRSTOD.setEnabled(False)
             self.filterSpinBox.setEnabled(False)
             self.pbExpData.setEnabled(False)
@@ -15493,8 +15474,8 @@ class ShowODMap(QtWidgets.QWidget):
     def loadData(self): # Called when fresh data are loaded.
         self.stk.shifts = []
         #self.slider_eng.setRange(0, self.stk.n_ev - 1)
-        self.ODHighSpinBox.setEnabled(False)
-        self.ODLowSpinBox.setEnabled(False)
+        #self.ODHighSpinBox.setEnabled(False)
+        #self.ODLowSpinBox.setEnabled(False)
         #self.pbRSTOD.setEnabled(False)
         self.filterSpinBox.setEnabled(False)
         self.pbExpData.setEnabled(False)
@@ -15618,20 +15599,20 @@ class ShowODMap(QtWidgets.QWidget):
             im1 = np.mean([self.stk.absdata_shifted[:, :, i] for i in im_idx1], axis=0)
             im2 = np.mean([self.stk.absdata_shifted[:, :, i] for i in im_idx2], axis=0)
         OD = np.log(im1/im2)
-        if self.cropflag:
-            shiftlst = [self.stk.shifts[i][2] for i in im_idx1 + im_idx2]
-            #print(shiftlst)
-            # print(max(shiftlst, key=itemgetter(0))[0]) # possible alternative to lambda function
-            #Calculate crops
-            l = int(np.floor(min(shiftlst, key=lambda item: item[0])[0]))
-            cl = l if l < 0 else None
-            r = int(np.ceil(max(shiftlst, key=lambda item: item[0])[0]))
-            t = int(np.ceil(max(shiftlst, key=lambda item: item[1])[1]))
-            b = int(np.floor(min(shiftlst, key=lambda item: item[1])[1]))
-            cb = b if b < 0 else None
-            # Crop map
-            OD = OD[r:cl,t:cb]
-            #print(r,cl,t,cb)
+        # if self.cropflag:
+        #     shiftlst = [self.stk.shifts[i][2] for i in im_idx1 + im_idx2]
+        #     #print(shiftlst)
+        #     # print(max(shiftlst, key=itemgetter(0))[0]) # possible alternative to lambda function
+        #     #Calculate crops
+        #     l = int(np.floor(min(shiftlst, key=lambda item: item[0])[0]))
+        #     cl = l if l < 0 else None
+        #     r = int(np.ceil(max(shiftlst, key=lambda item: item[0])[0]))
+        #     t = int(np.ceil(max(shiftlst, key=lambda item: item[1])[1]))
+        #     b = int(np.floor(min(shiftlst, key=lambda item: item[1])[1]))
+        #     cb = b if b < 0 else None
+        #     # Crop map
+        #     OD = OD[r:cl,t:cb]
+        #     #print(r,cl,t,cb)
         inf_idx = np.where(np.isinf(OD))
         nan_idx = np.where(np.isnan(OD))
         if np.any(inf_idx) or np.any(nan_idx):
@@ -15688,19 +15669,19 @@ class ShowODMap(QtWidgets.QWidget):
                 self.OD = ndimage.filters.uniform_filter(self.OD, size=self.filterSpinBox.value(), mode='nearest')
             self.ODmin = np.min(self.OD)
             self.ODmax = np.max(self.OD)
-            self.ODHighSpinBox.setEnabled(True)
-            self.ODLowSpinBox.setEnabled(True)
-            self.ODHighSpinBox.blockSignals(True)
-            self.ODLowSpinBox.blockSignals(True)
-            self.ODHighSpinBox.setMaximum(self.ODmax)
-            self.ODHighSpinBox.setMinimum(self.ODmin)
-            self.ODLowSpinBox.setMaximum(self.ODmax)
-            self.ODLowSpinBox.setMinimum(self.ODmin)
-            self.ODLowSpinBox.setValue(self.ODmin)
-            self.ODHighSpinBox.setValue(self.ODmax)
+            #self.ODHighSpinBox.setEnabled(True)
+            #self.ODLowSpinBox.setEnabled(True)
+            #self.ODHighSpinBox.blockSignals(True)
+            #self.ODLowSpinBox.blockSignals(True)
+            #self.ODHighSpinBox.setMaximum(self.ODmax)
+            #self.ODHighSpinBox.setMinimum(self.ODmin)
+            #self.ODLowSpinBox.setMaximum(self.ODmax)
+            #self.ODLowSpinBox.setMinimum(self.ODmin)
+            #self.ODLowSpinBox.setValue(self.ODmin)
+            #self.ODHighSpinBox.setValue(self.ODmax)
             self.setODlimits(self.ODmin, self.ODmax)
-            self.ODHighSpinBox.blockSignals(False)
-            self.ODLowSpinBox.blockSignals(False)
+            #self.ODHighSpinBox.blockSignals(False)
+            #self.ODLowSpinBox.blockSignals(False)
             self.pbRSTOD.setEnabled(True)
             self.filterSpinBox.setEnabled(True)
             self.pbExpData.setEnabled(True)
@@ -16412,7 +16393,8 @@ class ImgFig():
                 self.imageplot.setTitle("<center>Image at energy {0:5.2f} eV</center>".format(float(self.parent.stk.ev[self.parent.iev])))
         min = np.nanmin(image)  # ignoring nans
         max = np.nanmax(image)
-        self.bar.setLevels(low=min, high=max)
+        if not np.isnan(min) and not np.isnan(max):
+            self.bar.setLevels(low=min, high=max)
     def OnMetricScale(self, setmetric= True, zeroorigin= True, square= False):
         if self.parent.com.stack_loaded == 1:
             if setmetric==True:
@@ -16692,7 +16674,7 @@ class MainFrame(QtWidgets.QMainWindow):
             self.page1.button_multicrop.setText('Crop stack 3D...')
             #print (x,y), (self.ix,self.iy), self.stk.absdata.shape
             self.page1.specfig.loadNewSpectrum()
-            self.page1.textctrl.setText(self.page1.filename)
+            #self.page1.textctrl.setText(self.page1.filename)
 
             self.page5.updatewidgets()
 
