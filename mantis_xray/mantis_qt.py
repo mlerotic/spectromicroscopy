@@ -9225,6 +9225,9 @@ class PageStack(QtWidgets.QWidget):
         #hbox41.addWidget(self.slider_theta)
         #gridsizer4.addLayout(hbox41, 2, 0)
 
+        self.pb_copy_img.clicked.connect(self.absimgfig.OnCopy)
+        self.pb_copy_specimg.clicked.connect(self.specfig.OnCopy)
+
         #self.MetricCheckBox.toggled.connect(lambda: self.absimgfig.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
         #self.ZeroOriginCheckBox.toggled.connect(lambda: self.absimgfig.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
         self.SquarePxCheckBox.toggled.connect(lambda: self.absimgfig.OnMetricScale(False, True,self.SquarePxCheckBox.isChecked()))
@@ -14878,6 +14881,7 @@ class PageLoadData(QtWidgets.QWidget):
         self.button_sm.setToolTip('Supported Formats .sm, .xrm')
         self.button_sm.clicked.connect( self.OnBuildStack)
 
+        self.pb_copy.clicked.connect(self.absimgfig.OnCopy)
         self.MetricCheckBox.toggled.connect(lambda: self.absimgfig.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
         self.ZeroOriginCheckBox.toggled.connect(lambda: self.absimgfig.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
         self.SquarePxCheckBox.toggled.connect(lambda: self.absimgfig.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
@@ -14893,7 +14897,6 @@ class PageLoadData(QtWidgets.QWidget):
 
         self.pb_rotate.clicked.connect(self.OnRotate)
         self.pb_mirror.clicked.connect(self.OnMirror)
-        self.pb_copy.clicked.connect(self.OnCopy)
         self.pb_rawexp.clicked.connect(self.OnSaveData)
 
         self.tc_file.setText('File name')
@@ -14933,12 +14936,6 @@ class PageLoadData(QtWidgets.QWidget):
         if ext == 'txt':
             np.savetxt(fileName, np.rot90(self.absimgfig.imageitem.image), delimiter='\t', newline='\n',fmt='%.5f')
 # ----------------------------------------------------------------------
-    def OnCopy(self):
-        # self.exp = pg.exporters.ImageExporter(self.absimgfig.imageitem) # just image
-        self.exp = pg.exporters.ImageExporter(self.absimgfig.imageplot) # image and axes, i.e., complete viewbox
-        self.exp.export(copy=True)
-        return
-
     def OnMirror(self):
         if self.com.stack_loaded == 1:
             if self.com.stack_4d == 1:
@@ -16302,6 +16299,12 @@ class SpecFig():
         #     "Energy range: [ " + str(min(x, default=0)) + " .. " + str(max(x, default=0)) + " ] eV, # values: "+ str(len(x)))
         return (x, y)
 
+    def OnCopy(self):
+        # self.exp = pg.exporters.ImageExporter(self.plotitem) # just plot
+        self.exp = pg.exporters.ImageExporter(self.plot.scene()) # plot and axes, i.e., complete viewbox
+        self.exp.export(copy=True)
+        return
+
 # ----------------------------------------------------------------------
 class ImgFig():
     def __init__(self,parent,canvas):
@@ -16447,6 +16450,12 @@ class ImgFig():
         if self.parent.com.stack_loaded == 1:
             self.bar.bar.setLookupTable(lut)
             self.imageitem.setLookupTable(lut)
+
+    def OnCopy(self):
+        # self.exp = pg.exporters.ImageExporter(self.imageitem) # just image
+        self.exp = pg.exporters.ImageExporter(self.imageplot) # image and axes, i.e., complete viewbox
+        self.exp.export(copy=True)
+        return
 
 #-----------------------------------------------------------------------
 class MainFrame(QtWidgets.QMainWindow):
