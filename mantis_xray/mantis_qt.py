@@ -15983,7 +15983,7 @@ class StackListFrame(QtWidgets.QDialog):
         self.parent.refresh_widgets()
         self.parent.page1.ResetDisplaySettings()
         self.parent.page1.filename = filelist[0]
-        self.parent.page1.textctrl.setText(filelist[0])
+        # self.parent.page1.textctrl.setText(filelist[0])
 
         self.parent.page0.slider_eng.setRange(0,self.stk.n_ev-1)
         #self.parent.page0.iev = int(self.stk.n_ev/2)
@@ -16823,7 +16823,7 @@ class MainFrame(QtWidgets.QMainWindow):
             self.page1.specfig.loadNewSpectrum()
             self.page1.absimgfig.loadNewImageWithROI()
             #self.page1.loadSpectrum(self.ix, self.iy)
-            self.page1.textctrl.setText(self.page1.filename)
+            # self.page1.textctrl.setText(self.page1.filename)
 
             self.page0.absimgfig.loadNewImage()
             self.page0.ShowInfo(self.page1.filename, directory)
@@ -17129,7 +17129,7 @@ class MainFrame(QtWidgets.QMainWindow):
         #self.page1.AbsImagePanel.draw()
         self.page1.tc_imageeng.setText("Image at energy: ")
 
-        self.page1.textctrl.setText(' ')
+        # self.page1.textctrl.setText(' ')
 
         self.page1.ResetROI()
 
