@@ -9283,7 +9283,7 @@ class PageStack(QtWidgets.QWidget):
                 self.iy = int(y/2)
                 self.stk.read_sdf_i0(filepath)
                 self.com.i0_loaded = 1
-                self.loadSpectrum(self.ix, self.iy)
+                self.showSpectrum(self.ix, self.iy)
                 self.loadImage()
 
                 QtWidgets.QApplication.restoreOverrideCursor()
@@ -9302,7 +9302,7 @@ class PageStack(QtWidgets.QWidget):
                 self.stk.read_stk_i0(filepath, extension)
 
                 self.com.i0_loaded = 1
-                self.loadSpectrum(self.ix, self.iy)
+                self.showSpectrum(self.ix, self.iy)
                 self.loadImage()
 
                 QtWidgets.QApplication.restoreOverrideCursor()
@@ -9320,7 +9320,7 @@ class PageStack(QtWidgets.QWidget):
                 self.stk.read_stk_i0(filepath, extension)
 
                 self.com.i0_loaded = 1
-                self.loadSpectrum(self.ix, self.iy)
+                self.showSpectrum(self.ix, self.iy)
                 self.loadImage()
 
                 QtWidgets.QApplication.restoreOverrideCursor()
@@ -9355,7 +9355,7 @@ class PageStack(QtWidgets.QWidget):
             self.stk.od = self.stk.od3d.copy()
             self.stk.od = np.reshape(self.stk.od, (self.stk.n_cols*self.stk.n_rows, self.stk.n_ev), order='F')
 
-        self.loadSpectrum(self.ix, self.iy)
+        self.showSpectrum(self.ix, self.iy)
         self.loadImage()
 
         self.window().refresh_widgets()
@@ -9378,7 +9378,7 @@ class PageStack(QtWidgets.QWidget):
         self.stk.UsePreNormalizedData()
 
         self.com.i0_loaded = 1
-        self.loadSpectrum(self.ix, self.iy)
+        self.showSpectrum(self.ix, self.iy)
         self.loadImage()
 
         self.window().refresh_widgets()
@@ -9409,7 +9409,7 @@ class PageStack(QtWidgets.QWidget):
             self.ix = int(x/2)
             self.iy = int(y/2)
 
-            self.loadSpectrum(self.ix, self.iy)
+            self.showSpectrum(self.ix, self.iy)
             self.loadImage()
             self.com.i0_loaded = 1
             QtWidgets.QApplication.restoreOverrideCursor()
@@ -9436,7 +9436,7 @@ class PageStack(QtWidgets.QWidget):
         self.showflux = True
         self.rb_flux.setChecked(True)
 
-        self.loadSpectrum(self.ix, self.iy)
+        self.showSpectrum(self.ix, self.iy)
         self.loadImage()
         self.window().refresh_widgets()
 
@@ -9669,13 +9669,13 @@ class PageStack(QtWidgets.QWidget):
                 self.iev = i
                 self.loadImage()
                 self.slider_eng.setValue(self.iev)
-                self.loadSpectrum(self.ix, self.iy)
+                self.showSpectrum(self.ix, self.iy)
 
 
             self.iev = old_iev
             self.loadImage()
             self.slider_eng.setValue(self.iev)
-            self.loadSpectrum(self.ix, self.iy)
+            self.showSpectrum(self.ix, self.iy)
             self.button_slideshow.setText("Play stack movie")
             self.movie_playing = 0
 
@@ -9688,7 +9688,7 @@ class PageStack(QtWidgets.QWidget):
 
         if self.com.stack_loaded == 1:
             self.loadImage()
-            self.loadSpectrum(self.ix, self.iy)
+            self.showSpectrum(self.ix, self.iy)
 
 #----------------------------------------------------------------------
     def OnScrollTheta(self, value):
@@ -9707,7 +9707,7 @@ class PageStack(QtWidgets.QWidget):
 
         if self.com.stack_loaded == 1:
             self.loadImage()
-            self.loadSpectrum(self.ix, self.iy)
+            self.showSpectrum(self.ix, self.iy)
 
 
         self.window().page0.itheta = self.itheta
@@ -9732,7 +9732,7 @@ class PageStack(QtWidgets.QWidget):
 
             self.iev = sel_ev
 
-            self.loadSpectrum(self.ix, self.iy)
+            self.showSpectrum(self.ix, self.iy)
             self.loadImage()
 
             self.slider_eng.setValue(self.iev)
@@ -9763,7 +9763,7 @@ class PageStack(QtWidgets.QWidget):
                 self.iy=self.stk.n_rows-1
 
 
-            self.loadSpectrum(self.ix, self.iy)
+            self.showSpectrum(self.ix, self.iy)
             self.loadImage()
 
 
@@ -9998,7 +9998,7 @@ class PageStack(QtWidgets.QWidget):
 
 
 #----------------------------------------------------------------------
-    def loadSpectrum(self, xpos, ypos):
+    def showSpectrum(self, xpos, ypos):
 
 
         fig = self.specfig
@@ -10007,27 +10007,29 @@ class PageStack(QtWidgets.QWidget):
         axes = fig.gca()
 
 
+        axes.set_xlabel('Photon Energy [eV]')
         if self.com.i0_loaded == 1:
             self.spectrum = self.stk.od3d[int(xpos),int(ypos), :]
-
-            axes.set_xlabel('Photon Energy [eV]')
             axes.set_ylabel('Optical Density')
         else:
-
             self.spectrum = self.stk.absdata[int(xpos),int(ypos), :]
-            axes.set_xlabel('Photon Energy [eV]')
             axes.set_ylabel('Flux')
 
+        if self.addroi == 0:
+            self.tc_spec.setText('Spectrum at pixel [{0}, {1}] or position [{2:5.2f}, {3:5.2f}]'.format(str(xpos),  str(ypos), np.float(self.stk.x_dist[int(xpos)]), np.float(self.stk.y_dist[int(ypos)])))
+            specplot = axes.plot(self.stk.ev,self.spectrum)
+        else:
+            self.tc_spec.setText("Average ROI Spectrum: ")
+            self.CalcROISpectrum()
+            specplot = axes.plot(self.stk.ev,self.ROIspectrum)
 
-        specplot = axes.plot(self.stk.ev,self.spectrum)
+        
 
         axes.axvline(x=self.stk.ev[self.iev], color = 'g', alpha=0.5)
 
 
         self.SpectrumPanel.draw()
 
-
-        self.tc_spec.setText('Spectrum at pixel [{0}, {1}] or position [{2:5.2f}, {3:5.2f}]'.format(str(xpos),  str(ypos), np.float(self.stk.x_dist[int(xpos)]), np.float(self.stk.y_dist[int(ypos)])))
 
 #----------------------------------------------------------------------
     def ResetDisplaySettings(self):
@@ -10102,8 +10104,6 @@ class PageStack(QtWidgets.QWidget):
 
         fig = self.specfig
         fig.clf()
-        self.SpectrumPanel.draw()
-        self.tc_spec.setText("Average ROI Spectrum: ")
 
         self.button_acceptROI.setEnabled(False)
         self.button_resetROI.setEnabled(True)
@@ -10124,10 +10124,15 @@ class PageStack(QtWidgets.QWidget):
 
 
 
-
-        for ie in range(self.stk.n_ev):
-            thiseng_od = self.stk.od3d[:,:,ie]
-            self.ROIspectrum[ie] = np.sum(thiseng_od[indices])/numroipix
+        if self.com.i0_loaded == 1:
+            for ie in range(self.stk.n_ev):
+                thiseng_od = self.stk.od3d[:,:,ie]
+                self.ROIspectrum[ie] = np.sum(thiseng_od[indices])/numroipix
+        else:
+            for ie in range(self.stk.n_ev):
+                thiseng_abs = self.stk.absdata[:,:,ie]
+                self.ROIspectrum[ie] = np.sum(thiseng_abs[indices])/numroipix
+            
 
 #----------------------------------------------------------------------
     def ShowROISpectrum(self):
@@ -10151,6 +10156,7 @@ class PageStack(QtWidgets.QWidget):
 
 #----------------------------------------------------------------------
     def OnAcceptROI(self, evt):
+        print("does OnAcceptROI(self, evt) even get called???")
         QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
         self.roixdata.append(self.start_point[0])
         self.roiydata.append(self.start_point[1])
@@ -10203,7 +10209,6 @@ class PageStack(QtWidgets.QWidget):
 
     def OnSelectLasso(self,verts):
 
-
         path = matplotlib.path.Path(verts)
         #find pixels inside the polygon
 
@@ -10238,8 +10243,7 @@ class PageStack(QtWidgets.QWidget):
         self.window().refresh_widgets()
 
         self.loadImage()
-        if (self.com.i0_loaded == 1):
-            self.ShowROISpectrum()
+        self.showSpectrum(0, 0)
 
         QtWidgets.QApplication.restoreOverrideCursor()
 
@@ -10261,12 +10265,12 @@ class PageStack(QtWidgets.QWidget):
         self.button_resetROI.setEnabled(False)
         self.button_saveROIspectr.setEnabled(False)
         self.button_ROIdosecalc.setEnabled(False)
+        self.cid1 = self.AbsImagePanel.mpl_connect('button_press_event', self.OnPointAbsimage)
+        self.AbsImagePanel.draw()
         self.window().refresh_widgets()
 
-        if (self.com.i0_loaded == 1):
-            self.loadImage()
-            self.loadSpectrum(self.ix, self.iy)
-        pass
+        self.loadImage()
+        self.showSpectrum(self.ix, self.iy)
 
 #----------------------------------------------------------------------
     def CalcROI_I0Spectrum(self):
@@ -10302,7 +10306,7 @@ class PageStack(QtWidgets.QWidget):
         self.showROImask = 0
         self.ROIpix = None
 
-        self.loadSpectrum(self.ix, self.iy)
+        self.showSpectrum(self.ix, self.iy)
         self.loadImage()
 
         self.button_acceptROI.setEnabled(False)
@@ -10892,7 +10896,7 @@ class ShowArtefacts(QtWidgets.QDialog):
     def OnAccept(self, evt):
         a, wf = self.LevelCalc(self.stack.absdata.astype('float64'),final=True)
         self.stack.absdata = a
-        self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
+        self.parent.page1.showSpectrum(self.parent.page1.ix, self.parent.page1.iy)
         self.parent.page1.loadImage()
         self.parent.page0.Clear()
         self.parent.page0.LoadEntries()
@@ -11353,7 +11357,7 @@ class MultiCrop(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
         self.parent.page0.iev = 0
         self.parent.page0.slider_eng.setValue(int(self.parent.page1.iev))
 
-        self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
+        self.parent.page1.showSpectrum(self.parent.page1.ix, self.parent.page1.iy)
         self.parent.page1.loadImage()
         self.parent.page0.Clear()
         self.parent.page0.LoadEntries()
@@ -12134,7 +12138,7 @@ class ImageRegistrationManual(QtWidgets.QDialog):
         self.parent.page1.iev = self.stack.n_ev/2
         self.parent.page1.slider_eng.setValue(self.parent.page1.iev)
 
-        self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
+        self.parent.page1.showSpectrum(self.parent.page1.ix, self.parent.page1.iy)
         self.parent.page1.loadImage()
 
         self.ShowImage()
@@ -12585,7 +12589,7 @@ class ImageRegistrationManual(QtWidgets.QDialog):
         self.parent.page1.ix = int(self.stack.n_cols/2)
         self.parent.page1.iy = int(self.stack.n_rows/2)
 
-        self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
+        self.parent.page1.showSpectrum(self.parent.page1.ix, self.parent.page1.iy)
         self.parent.page1.loadImage()
         #self.parent.page9.loadImage()
 
@@ -13761,7 +13765,7 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
         self.parent.page1.ix = int(self.stack.n_cols/2)
         self.parent.page1.iy = int(self.stack.n_rows/2)
 
-        self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
+        self.parent.page1.showSpectrum(self.parent.page1.ix, self.parent.page1.iy)
         self.parent.page1.loadImage()
 
         if showmaptab:
@@ -14075,7 +14079,7 @@ class SpectralImageMap(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
     #     self.parent.page0.iev = 0
     #     self.parent.page0.slider_eng.setValue(int(self.parent.page1.iev))
     #
-    #     self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
+    #     self.parent.page1.showSpectrum(self.parent.page1.ix, self.parent.page1.iy)
     #     self.parent.page1.loadImage()
     #     self.parent.page0.Clear()
     #     self.parent.page0.LoadEntries()
@@ -14610,7 +14614,7 @@ class DarkSignal(QtWidgets.QDialog):
             self.stack.fill_h5_struct_normalization()
 
 
-        self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
+        self.parent.page1.showSpectrum(self.parent.page1.ix, self.parent.page1.iy)
         self.parent.page1.loadImage()
 
 
@@ -15150,7 +15154,7 @@ class PageLoadData(QtWidgets.QWidget):
                 self.window().page9.LoadEntries()
             self.window().page1.ix = int(self.stk.n_cols / 2)
             self.window().page1.iy = int(self.stk.n_rows / 2)
-            self.window().page1.loadSpectrum(self.window().page1.ix, self.window().page1.iy)
+            self.window().page1.showSpectrum(self.window().page1.ix, self.window().page1.iy)
             self.window().page1.loadImage()
         return
 
@@ -16293,7 +16297,7 @@ class StackListFrame(QtWidgets.QDialog):
         self.parent.page1.iev = self.stk.n_ev/2
         self.parent.page1.slider_eng.setValue(self.parent.page1.iev)
 
-        self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
+        self.parent.page1.showSpectrum(self.parent.page1.ix, self.parent.page1.iy)
         self.parent.page1.loadImage()
 
         self.parent.page0.ShowInfo(filelist[0], self.filepath)
@@ -16660,7 +16664,7 @@ class MainFrame(QtWidgets.QMainWindow):
             self.page1.loadImage()
             self.page1.button_multicrop.setText('Crop stack 3D...')
             #print (x,y), (self.ix,self.iy), self.stk.absdata.shape
-            self.page1.loadSpectrum(self.ix, self.iy)
+            self.page1.showSpectrum(self.ix, self.iy)
             self.page1.textctrl.setText(self.page1.filename)
 
             self.page0.Clear()
@@ -16813,7 +16817,7 @@ class MainFrame(QtWidgets.QMainWindow):
 
             self.page1.ResetDisplaySettings()
             self.page1.loadImage()
-            self.page1.loadSpectrum(self.ix, self.iy)
+            self.page1.showSpectrum(self.ix, self.iy)
             self.page1.textctrl.setText(self.page1.filename)
 
             self.page0.Clear()
