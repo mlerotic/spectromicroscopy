@@ -63,8 +63,10 @@ def read(FileName,stack_object,selection=(0,0), *args, **kwargs):
         axes_list = [item.decode('UTF-8') for item in F[entry][detector].attrs['axes']]
         if 'line_position' in axes_list:
             axes_order = [axes_list.index('line_position'),axes_list.index('line_position'),axes_list.index('energy')] #linescan
+        elif 'energy' in axes_list:
+            axes_order = [axes_list.index('sample_x'),axes_list.index('sample_y'),axes_list.index('energy')] #stack
         else:
-            axes_order = [axes_list.index('sample_x'),axes_list.index('sample_y'),axes_list.index('energy')] #stack or image
+            axes_order = [axes_list.index('sample_x'),axes_list.index('sample_y')] #image
     else: # Old version from before the specification was finalised
         if 'energy' in list(F[entry][detector]):
             try:
@@ -82,9 +84,10 @@ def read(FileName,stack_object,selection=(0,0), *args, **kwargs):
     if axes_order[0] == axes_order[1]: #i.e. if linescan
         temp = numpy.transpose(numpy.array(F[entry][detector][signal_name]),axes=axes_order[1:])
         stack_object.absdata = numpy.tile(temp,(temp.shape[0],1,1))
+    elif len(axes_order)<3: #i.e. if image
+        stack_object.absdata = numpy.expand_dims(numpy.transpose(numpy.array(F[entry][detector][signal_name]),axes=axes_order),2)
     else:
         stack_object.absdata = numpy.transpose(numpy.array(F[entry][detector][signal_name]),axes=axes_order)
-
 
     F.close()
 
