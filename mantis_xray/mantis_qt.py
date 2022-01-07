@@ -14813,9 +14813,9 @@ class PageLoadData(QtWidgets.QWidget):
         self.button_sm.setToolTip('Supported Formats .sm, .xrm')
         self.button_sm.clicked.connect( self.OnBuildStack)
 
-        self.MetricCheckBox.toggled.connect(lambda: self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
+        self.MetricCheckBox.toggled.connect(lambda:     self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
         self.ZeroOriginCheckBox.toggled.connect(lambda: self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
-        self.SquarePxCheckBox.toggled.connect(lambda: self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
+        self.SquarePxCheckBox.toggled.connect(lambda:   self.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
         self.SquarePxCheckBox.setVisible(False)
 
         self.CMCatBox.addItems([self.cmaps[0][0],self.cmaps[1][0],self.cmaps[2][0],self.cmaps[3][0],self.cmaps[4][0],self.cmaps[5][0]])
@@ -14824,7 +14824,7 @@ class PageLoadData(QtWidgets.QWidget):
         self.CMMapBox.setCurrentIndex(3)
         self.CMCatBox.currentIndexChanged.connect(self.OnCatChanged)
         self.CMMapBox.currentIndexChanged.connect(lambda: self.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value()))
-        self.StepSpin.valueChanged.connect(lambda: self.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value()))
+        self.StepSpin.valueChanged.connect(lambda:        self.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value()))
 
         self.pb_rotate.clicked.connect(self.OnRotate)
         self.pb_mirror.clicked.connect(self.OnMirror)
@@ -14929,7 +14929,7 @@ class PageLoadData(QtWidgets.QWidget):
             else:
                 self.ZeroOriginCheckBox.setVisible(False)
                 self.SquarePxCheckBox.setVisible(True)
-                if square == True:
+                if square == True or self.stk.x_pxsize == 0 or self.stk.y_pxsize == 0:
                     aspect = 1
                 else:
                     aspect = self.stk.x_pxsize/self.stk.y_pxsize
