@@ -9131,12 +9131,6 @@ class PageStack(QtWidgets.QWidget):
         self.button_addROI.setEnabled(False)
         vbox3.addWidget(self.button_addROI)
 
-        self.button_acceptROI = QtWidgets.QPushButton('Accept ROI')
-        self.button_acceptROI.clicked.connect( self.OnAcceptROI)
-        self.button_acceptROI.setEnabled(False)
-        self.button_acceptROI.setVisible(False)
-        vbox3.addWidget(self.button_acceptROI)
-
         self.button_resetROI = QtWidgets.QPushButton('Reset ROI')
         self.button_resetROI.clicked.connect( self.OnResetROI)
         self.button_resetROI.setEnabled(False)
@@ -9740,11 +9734,8 @@ class PageStack(QtWidgets.QWidget):
 
 #----------------------------------------------------------------------
     def OnPointAbsimage(self, evt):
-
-
         x = evt.xdata
         y = evt.ydata
-
 
         if (x == None) or (y == None):
             return
@@ -9765,25 +9756,6 @@ class PageStack(QtWidgets.QWidget):
 
             self.showSpectrum(self.ix, self.iy)
             self.loadImage()
-
-
-        if (self.com.stack_loaded == 1) and (self.addroi == 1):
-            if self.line == None: # if there is no line, create a line
-                self.line = matplotlib.lines.Line2D([x,  x], [y, y], marker = '.', color = 'red')
-                self.start_point = [x,y]
-                self.previous_point =  self.start_point
-                self.roixdata.append(x)
-                self.roiydata.append(y)
-                self.loadImage()
-            # add a segment
-            else: # if there is a line, create a segment
-                self.roixdata.append(x)
-                self.roiydata.append(y)
-                self.line.set_data(self.roixdata,self.roiydata)
-                self.previous_point = [x,y]
-                if len(self.roixdata) == 3:
-                    self.button_acceptROI.setEnabled(True)
-                self.loadImage()
 
 #----------------------------------------------------------------------
     def OnRb_fluxod(self, enabled):
@@ -10055,57 +10027,19 @@ class PageStack(QtWidgets.QWidget):
         self.tc_gamma.setText('Gamma:  \t{0:5.2f}'.format(self.gamma))
 
 
-
-#----------------------------------------------------------------------
-# Determine if a point is inside a given polygon or not. The algorithm is called
-# "Ray Casting Method".
-    def point_in_poly(self, x, y, polyx, polyy):
-
-        n = len(polyx)
-        inside = False
-
-        p1x = polyx[0]
-        p1y = polyy[0]
-        for i in range(n+1):
-            p2x = polyx[i % n]
-            p2y = polyy[i % n]
-            if y > min(p1y,p2y):
-                if y <= max(p1y,p2y):
-                    if x <= max(p1x,p2x):
-                        if p1y != p2y:
-                            xinters = (y-p1y)*(p2x-p1x)/(p2y-p1y)+p1x
-                            if p1x == p2x or x <= xinters:
-                                inside = not inside
-            p1x,p1y = p2x,p2y
-
-        return inside
-
 #----------------------------------------------------------------------
     def OnAddROI(self, evt):
-#         self.addroi = 1
-#         self.previous_point = []
-#         self.start_point = []
-#         self.end_point = []
-#         self.line = None
-#         self.roixdata = []
-#         self.roiydata = []
 
         self.addroi = 1
-
         self.AbsImagePanel.mpl_disconnect(self.cid1)
-
-
 
         lineprops = dict(color='red', linestyle='-', linewidth = 1, alpha=1)
 
-
         self.lasso = LassoSelector(self.axes, onselect=self.OnSelectLasso, useblit=False, lineprops=lineprops)
-
 
         fig = self.specfig
         fig.clf()
 
-        self.button_acceptROI.setEnabled(False)
         self.button_resetROI.setEnabled(True)
         self.button_ROIdosecalc.setEnabled(False)
         self.window().refresh_widgets()
@@ -10133,77 +10067,6 @@ class PageStack(QtWidgets.QWidget):
                 thiseng_abs = self.stk.absdata[:,:,ie]
                 self.ROIspectrum[ie] = np.sum(thiseng_abs[indices])/numroipix
             
-
-#----------------------------------------------------------------------
-    def ShowROISpectrum(self):
-
-        self.CalcROISpectrum()
-
-        fig = self.specfig
-        fig.clf()
-        fig.add_axes((0.15,0.15,0.75,0.75))
-        axes = fig.gca()
-
-
-        specplot = axes.plot(self.stk.ev,self.ROIspectrum)
-
-        axes.set_xlabel('Photon Energy [eV]')
-        axes.set_ylabel('Optical Density')
-
-        self.SpectrumPanel.draw()
-
-        self.tc_spec.setText("Average ROI Spectrum: ")
-
-#----------------------------------------------------------------------
-    def OnAcceptROI(self, evt):
-        print("does OnAcceptROI(self, evt) even get called???")
-        QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
-        self.roixdata.append(self.start_point[0])
-        self.roiydata.append(self.start_point[1])
-        self.line.set_data(self.roixdata,self.roiydata)
-        #self.loadImage()
-
-        #find pixels inside the polygon
-        if self.ROIpix == None:
-            self.ROIpix = np.zeros((self.stk.n_cols,self.stk.n_rows))
-
-
-        #print(self.stk.n_cols, self.stk.n_rows)
-
-        for i in range(self.stk.n_cols):
-            for j in range(self.stk.n_rows):
-                Pinside = self.point_in_poly(i, j, self.roixdata, self.stk.n_rows-1-self.roiydata)
-                if Pinside == True:
-                    self.ROIpix[i, j] = 255
-
-
-
-        self.ROIpix = np.ma.array(self.ROIpix)
-
-
-        self.ROIpix_masked =  np.ma.masked_values(self.ROIpix, 0)
-
-
-        self.showROImask = 1
-        self.line = None
-        self.previous_point = []
-        self.start_point = []
-        self.end_point = []
-        self.roixdata = []
-        self.roiydata = []
-
-        self.button_saveROIspectr.setEnabled(True)
-        self.button_setROII0.setEnabled(True)
-        self.button_ROIdosecalc.setEnabled(True)
-        self.window().refresh_widgets()
-
-        self.loadImage()
-        if (self.com.i0_loaded == 1):
-            self.ShowROISpectrum()
-
-        QtWidgets.QApplication.restoreOverrideCursor()
-
-
 
 #----------------------------------------------------------------------
 
@@ -10260,7 +10123,7 @@ class PageStack(QtWidgets.QWidget):
         self.showROImask = 0
         self.ROIpix = None
 
-        self.button_acceptROI.setEnabled(False)
+        #self.button_acceptROI.setEnabled(False)
         self.button_setROII0.setEnabled(False)
         self.button_resetROI.setEnabled(False)
         self.button_saveROIspectr.setEnabled(False)
