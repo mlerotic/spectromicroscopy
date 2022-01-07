@@ -77,6 +77,14 @@ from .file_plugins import file_stk
 from .file_plugins import file_csv
 
 from .__init__ import __version__ as version
+welcome_string = "Welcome to MANTiS {0}".format(version)
+print("="*len(welcome_string))
+print(welcome_string)
+print("="*len(welcome_string))
+from .helpers import check_for_updates
+check_for_updates(version)
+print("\nPlease report issues to https://github.com/mlerotic/spectromicroscopy/issues \n")
+
 ## Global Stylesheet
 qsspath = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'stylesheet_global.qss')
 
