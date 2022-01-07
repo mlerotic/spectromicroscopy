@@ -10634,12 +10634,8 @@ class ShowHistogram(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
 #----------------------------------------------------------------------
     def OnAccept(self, evt):
         if self.MaskImage.zValue() > 0 and np.any(self.i0_indices[0]):
-            try:
-                self.stack.i0_from_histogram(self.i0_indices)
-                self.parent.I0histogramCalculated()
-            except ValueError:
-                QtWidgets.QMessageBox.warning(self, 'Error', 'Stack must have at least two images for I0 calculation'.format(id))
-                pass
+            self.stack.i0_from_histogram(self.i0_indices)
+            self.parent.I0histogramCalculated()
             self.stack.i0_mask = self.redpix
             self.stack.i0_mask[:, :] = False
             self.stack.i0_mask[self.i0_indices] = True

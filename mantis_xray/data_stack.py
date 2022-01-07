@@ -414,9 +414,12 @@ class data:
         if len(self.evi0) > 3: # >3 is needed to avoid boundary error!
             fi0int = scipy.interpolate.interp1d(self.evi0.astype(np.double), self.i0data.astype(np.double),
                                                 kind='cubic', bounds_error=False, fill_value=0.0)
-        else:
+        elif len(self.evi0) > 1: # use linear interpolation when there are fewer points
             fi0int = scipy.interpolate.interp1d(self.evi0.astype(np.double), self.i0data.astype(np.double),
                                                 bounds_error=False, fill_value=0.0)
+        else: # use constant value when only a single value is available
+            fi0int = lambda x: self.i0data.astype(np.double)
+        
         i0 = fi0int(self.ev)
 
         if (self.data_dwell is not None) and (self.i0_dwell is not None):
