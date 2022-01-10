@@ -4,4 +4,5 @@ include mantis_xray/Mantis_batch_settings.txt
 include mantis_xray/images/*
 include mantis_xray/henke.xdr
 include mantis_xray/*.ui
+include mantis_xray/*.qss
 recursive-include mantis_xray *.py
