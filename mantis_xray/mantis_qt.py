@@ -6818,7 +6818,8 @@ class PageCluster(QtWidgets.QWidget):
         frame.setFrameStyle(QtWidgets.QFrame.StyledPanel|QtWidgets.QFrame.Sunken)
         fbox = QtWidgets.QHBoxLayout()
 
-        self.clusterindvimgfig = Figure((PlotH*0.73, PlotH*0.73))
+        #self.clusterindvimgfig = Figure((PlotH*0.73, PlotH*0.73))
+        self.clusterindvimgfig = Figure((PlotH, PlotH))
         self.ClusterIndvImagePan = FigureCanvas(self.clusterindvimgfig)
         self.ClusterIndvImagePan.setParent(self)
         fbox.addWidget(self.ClusterIndvImagePan)
@@ -6839,7 +6840,7 @@ class PageCluster(QtWidgets.QWidget):
         frame = QtWidgets.QFrame()
         frame.setFrameStyle(QtWidgets.QFrame.StyledPanel|QtWidgets.QFrame.Sunken)
         fbox = QtWidgets.QHBoxLayout()
-        self.clusterdistmapfig = Figure((PlotH*0.73, PlotH*0.73))
+        self.clusterdistmapfig = Figure((PlotH, PlotH))
         self.ClusterDistMapPan = FigureCanvas(self.clusterdistmapfig)
         self.ClusterDistMapPan.setParent(self)
         fbox.addWidget(self.ClusterDistMapPan)
@@ -7101,10 +7102,8 @@ class PageCluster(QtWidgets.QWidget):
 #Show composite cluster image
     def showIndvClusterImage(self):
 
-        indvclusterimage = np.zeros((self.anlz.stack.n_cols, self.anlz.stack.n_rows))+20.
-        ind = np.where(self.anlz.cluster_indices == self.selcluster-1)
-        colorcl = min(self.selcluster-1,self.maxclcolors-1)
-        indvclusterimage[ind] = colorcl
+        indvclusterimage = self.anlz.cluster_indices.copy()
+        indvclusterimage[indvclusterimage!=self.selcluster-1] = 20.
 
         fig = self.clusterindvimgfig
         fig.clf()
