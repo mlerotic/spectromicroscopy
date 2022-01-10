@@ -14,7 +14,7 @@ Mantis package and binaries can be downloaded from
 Alternatively, you can install [Python](https://www.python.org/downloads/) and then run the command: `python3 -m pip install mantis-xray`
 
 ## Update ##
-You can upgrade to the latest package release with the command: `pip3 install mantis-xray -U`
+You can upgrade to the latest package release with the command: `pip3 install mantis-xray -U`.
 It is recommended that you also upgrade the dependencies with: `pip3 install mantis-xray -U --upgrade-strategy "eager"`
 
 ## Run ##
