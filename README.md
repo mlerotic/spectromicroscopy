@@ -13,8 +13,12 @@ Mantis package and binaries can be downloaded from
 [spectromicroscopy.com](http://spectromicroscopy.com).
 Alternatively, you can install [Python](https://www.python.org/downloads/) and then run the command: `python3 -m pip install mantis-xray`
 
+## Update ##
+You can upgrade to the latest package release with the command: `pip3 install mantis-xray -U`
+It is recommended that you also upgrade the dependencies with: `pip3 install mantis-xray -U --upgrade-strategy "eager"`
+
 ## Run ##
-Installation via pip provides the `mantis-xray` command to start the Mantis GUI.
+Installation via pip provides the `mantis-xray` command (alternatively `python3 -m mantis_xray`) to start the Mantis GUI.
 
 ## User Guide ##
 Mantis User Guide can be found on the project Wiki pages [Home](https://github.com/mlerotic/spectromicroscopy/wiki).
