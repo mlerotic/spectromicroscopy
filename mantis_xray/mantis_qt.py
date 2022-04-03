@@ -511,18 +511,18 @@ class PageTomo(QtWidgets.QWidget):
         #vboxt1.addWidget(sizer3)
         #vboxt1.addStretch (1)
 
-        hboxtop.addStretch (0.5)
+        hboxtop.addStretch (5)
         hboxtop.addLayout(vboxt1)
-        hboxtop.addStretch (0.5)
+        hboxtop.addStretch (5)
         hboxtop.addLayout(vbox5)
-        hboxtop.addStretch (0.5)
+        hboxtop.addStretch (5)
 
 
 
 
-        vboxtop.addStretch (0.5)
+        vboxtop.addStretch (5)
         vboxtop.addLayout(hboxtop)
-        vboxtop.addStretch (0.9)
+        vboxtop.addStretch (9)
 
         vboxtop.setContentsMargins(20,20,20,20)
         self.setLayout(vboxtop)
@@ -9089,7 +9089,7 @@ class PageStack(QtWidgets.QWidget):
 
         self.slider_gamma = QtWidgets.QSlider(QtCore.Qt.Horizontal, self)
         self.slider_gamma.setRange(1,20)
-        self.slider_gamma.setValue(self.displaygamma)
+        self.slider_gamma.setValue(int(self.displaygamma))
         self.slider_gamma.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.slider_gamma.valueChanged[int].connect(self.OnScrollGamma)
 
