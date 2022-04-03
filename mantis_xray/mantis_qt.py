@@ -10027,7 +10027,7 @@ class PageStack(QtWidgets.QWidget):
 
         self.slider_brightness_max.setValue(self.dispbrightness_max)
         self.slider_brightness_min.setValue(self.dispbrightness_min)
-        self.slider_gamma.setValue(self.displaygamma)
+        self.slider_gamma.setValue(int(self.displaygamma))
 
         self.tc_min.setText('Minimum: \t{0:5d}%'.format(int(100*self.brightness_min)))
         self.tc_max.setText('Maximum:{0:5d}%'.format(int(100*self.brightness_max)))
