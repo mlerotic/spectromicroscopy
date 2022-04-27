@@ -10512,6 +10512,7 @@ class ShowHistogram(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
 #----------------------------------------------------------------------
     def draw_histogram(self):
         histogram_data =  np.reshape(self.stack.histogram, (self.stack.n_cols*self.stack.n_rows), order='F')
+        histogram_data = histogram_data[~np.isnan(histogram_data)] #remove non-finite values
 
         y, x = np.histogram(histogram_data, bins=100)
 
@@ -15072,7 +15073,8 @@ class PageLoadData(QtWidgets.QWidget):
             self.ODmin = np.min(image)
             self.ODmax = np.max(image)
             self.i_item.setImage(image)
-            self.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value())
+            if np.isfinite(self.ODmin) or np.isfinite(self.ODmax): #incomplete stacks can contain NAN values that mess up the function on the next line
+                self.OnColormap(map=self.CMMapBox.currentText(),colors=self.StepSpin.value())
 #----------------------------------------------------------------------
     def OnScrollTheta(self, value):
         self.slider_theta.setValue(value)
