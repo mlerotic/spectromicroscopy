@@ -582,7 +582,7 @@ class data:
             self.squarepx = False
 
         # Set scale_bar as well
-        self.scale_bar()
+        #self.scale_bar()
 
     #ToDo: Restore scale_bar option for NNMA and overview plots
     def scale_bar(self):

@@ -10266,8 +10266,13 @@ class PageStack(QtWidgets.QWidget):
         #self.button_ROIdosecalc.setEnabled(False)
         self.window().refresh_widgets()
 
-        self.loadImage()
-        self.loadSpectrum(self.ix, self.iy)
+        #self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
+        #self.parent.page1.loadImage()
+        self.absimgfig.loadNewImageWithROI()
+        self.absimgfig.loadNewImage()
+        self.specfig.loadNewSpectrum()
+        #self.loadImage()
+        #self.loadSpectrum(self.ix, self.iy)
 
 #-----------------------------------------------------------------------
     def CalcROI_I0Spectrum(self):
@@ -10957,7 +10962,7 @@ class ShowArtefacts(QtWidgets.QDialog):
             self.parent.page1.OnResetI0() # Reset I0 on PageStack
         self.close()
 #----------------------------------------------------------------------
-class MultiCrop(QtWidgets.QDialog, QtGui.QGraphicsScene):
+class MultiCrop(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
     evlistchanged = pyqtSignal([object])
     thetalistchanged = pyqtSignal([object])
     def __init__(self, parent, common, stack):
@@ -16675,9 +16680,9 @@ class MainFrame(QtWidgets.QMainWindow):
                 self.anlz.delete_data()
             try:
                 JSONconvert = dlg.jsoncheck.isChecked()
+                ringnorm = dlg.ringnormcheck.isChecked()
             except UnboundLocalError:
                 print("DataChoiceDialog skipped")
-            ringnorm = dlg.ringnormcheck.isChecked()
             file_plugins.load(filepath, stack_object=self.stk, plugin=plugin, selection=FileInternalSelection,json=JSONconvert,inorm=ringnorm)
             directory = os.path.dirname(str(filepath))
             self.page1.filename = os.path.basename(str(filepath))
