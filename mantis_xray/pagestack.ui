@@ -41,10 +41,16 @@
       <item>
        <widget class="QFrame" name="verticalFrame">
         <property name="sizePolicy">
-         <sizepolicy hsizetype="Maximum" vsizetype="Minimum">
+         <sizepolicy hsizetype="Maximum" vsizetype="MinimumExpanding">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>260</width>
+          <height>620</height>
+         </size>
         </property>
         <property name="font">
          <font>
@@ -55,6 +61,9 @@
         <layout class="QVBoxLayout" name="verticalLayout_2">
          <property name="spacing">
           <number>12</number>
+         </property>
+         <property name="sizeConstraint">
+          <enum>QLayout::SetDefaultConstraint</enum>
          </property>
          <property name="leftMargin">
           <number>9</number>
@@ -99,7 +108,10 @@
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_5">
             <property name="spacing">
-             <number>0</number>
+             <number>6</number>
+            </property>
+            <property name="sizeConstraint">
+             <enum>QLayout::SetMinimumSize</enum>
             </property>
             <item>
              <widget class="QPushButton" name="button_align">
@@ -182,7 +194,7 @@
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_6">
             <property name="spacing">
-             <number>0</number>
+             <number>6</number>
             </property>
             <property name="sizeConstraint">
              <enum>QLayout::SetMinimumSize</enum>
@@ -330,7 +342,10 @@
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_10">
             <property name="spacing">
-             <number>0</number>
+             <number>6</number>
+            </property>
+            <property name="sizeConstraint">
+             <enum>QLayout::SetMinimumSize</enum>
             </property>
             <item>
              <widget class="QPushButton" name="button_addROI">
@@ -451,6 +466,38 @@
            <property name="spacing">
             <number>0</number>
            </property>
+           <item row="1" column="0">
+            <widget class="QScrollBar" name="slider_theta">
+             <property name="font">
+              <font>
+               <family>Ubuntu</family>
+               <pointsize>8</pointsize>
+              </font>
+             </property>
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="0">
+            <widget class="GraphicsLayoutWidget" name="canvas">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="font">
+              <font>
+               <family>Ubuntu</family>
+               <pointsize>8</pointsize>
+              </font>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">background: white</string>
+             </property>
+            </widget>
+           </item>
            <item row="0" column="1">
             <widget class="QScrollBar" name="slider_eng">
              <property name="sizePolicy">
@@ -483,38 +530,6 @@
              </property>
              <property name="invertedAppearance">
               <bool>false</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QScrollBar" name="slider_theta">
-             <property name="font">
-              <font>
-               <family>Ubuntu</family>
-               <pointsize>8</pointsize>
-              </font>
-             </property>
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="0">
-            <widget class="GraphicsLayoutWidget" name="canvas">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="font">
-              <font>
-               <family>Ubuntu</family>
-               <pointsize>8</pointsize>
-              </font>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">background: white</string>
              </property>
             </widget>
            </item>
@@ -611,6 +626,99 @@
          </size>
         </property>
        </spacer>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="groupBox_8">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>150</height>
+         </size>
+        </property>
+        <property name="font">
+         <font>
+          <family>Ubuntu</family>
+          <pointsize>8</pointsize>
+         </font>
+        </property>
+        <property name="title">
+         <string>Spectra</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_10">
+         <property name="spacing">
+          <number>6</number>
+         </property>
+         <property name="sizeConstraint">
+          <enum>QLayout::SetDefaultConstraint</enum>
+         </property>
+         <property name="leftMargin">
+          <number>8</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>6</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <layout class="QVBoxLayout" name="verticalLayout_4">
+           <property name="spacing">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QPushButton" name="button_lockspectrum">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>24</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>Lock spectrum</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="button_clearspecfig">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>24</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>Clear spectra</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </widget>
       </item>
       <item>
        <widget class="QGroupBox" name="groupBox_4">

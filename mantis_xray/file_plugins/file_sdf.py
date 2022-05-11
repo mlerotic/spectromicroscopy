@@ -223,7 +223,7 @@ class HDR_FileParser:
 
 
 #-----------------------------------------------------------------------
-def read(filename, self, selection=None, JSONstatus=None):
+def read(filename, self, selection=None, JSONstatus=None, *args, **kwargs):
     HDR = HDR_FileParser(filename)
     if JSONstatus:
         with open(splitext(filename)[0] + '.json', 'w') as outfile:

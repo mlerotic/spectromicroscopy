@@ -41,7 +41,8 @@ def identify(filename):
     except:
         return False
 
-def read(FileName,stack_object,selection=(0,0), *args, **kwargs):
+def read(FileName,stack_object,selection=(0,0), json=None, inorm=None, *args, **kwargs):
+    #print(inorm)
     D = GetFileStructure(FileName)
     entry = list(D.keys())[selection[0]]
     detector = list(D[entry].keys())[selection[1]] #[counter0, ...]
@@ -96,6 +97,12 @@ def read(FileName,stack_object,selection=(0,0), *args, **kwargs):
         stack_object.absdata = numpy.transpose(numpy.array(F[entry][detector][signal_name]),axes=axes_order)
         if len(axes_order) < 3: # for single images add one more dimension
             stack_object.absdata = numpy.expand_dims(stack_object.absdata, axis=2)
+    if inorm and ('ringcurrent' in list(F[entry])):
+        ringcurrent = numpy.transpose(numpy.array(F[entry]['ringcurrent']['data']),axes=axes_order)
+        if len(axes_order) < 3: # for single images add one more dimension
+            ringcurrent = numpy.expand_dims(ringcurrent, axis=2)
+        ringcurrent_median = numpy.nanmedian(ringcurrent, keepdims=False)
+        stack_object.absdata = stack_object.absdata / (ringcurrent/ringcurrent_median)
 
     F.close()
 

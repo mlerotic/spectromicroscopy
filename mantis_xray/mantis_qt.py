@@ -40,6 +40,8 @@ from scipy.stats import linregress
 from scipy.interpolate import interp1d, griddata, RegularGridInterpolator
 # from skimage.feature import register_translation ## deprecated
 from skimage.registration import phase_cross_correlation
+from importlib.metadata import version as version_check
+from packaging.version import parse as parse_version
 #from skimage.segmentation import watershed, mark_boundaries
 from queue import SimpleQueue, Empty
 import threading
@@ -1655,6 +1657,7 @@ class File_GUI():
         self.supported_filters = file_plugins.supported_filters
         self.filter_list = file_plugins.filter_list
         self.option_write_json = False
+        self.option_norm_ringcurrent = True
         #print(self.filter_list)
 
     def SelectFile(self,action,data_type):
@@ -1723,11 +1726,19 @@ class File_GUI():
 
             # Add widgets for the fourth row - just OK, cancel buttons
             self.jsoncheck = QtWidgets.QCheckBox("Write Data Structure to JSON-file (for .HDR only!)")
-            self.jsoncheck.clicked.connect(self.setChecked)
+            self.jsoncheck.stateChanged.connect(lambda: self.setChecked("jsoncheck",self.jsoncheck.isChecked()))
             hbox4.addWidget(self.jsoncheck)
             self.jsoncheck.setChecked(File_GUI.option_write_json)
             if plugin.title not in ['SDF']:
                 self.jsoncheck.hide()
+
+            self.ringnormcheck = QtWidgets.QCheckBox("Normalize ringcurrent (for NEXUS .HDF5 only!)")
+            self.ringnormcheck.stateChanged.connect(lambda: self.setChecked("ringnormcheck",self.ringnormcheck.isChecked()))
+            hbox4.addWidget(self.ringnormcheck)
+            self.ringnormcheck.setChecked(File_GUI.option_norm_ringcurrent)
+            if plugin.title not in ['NXstxm']:
+                self.ringnormcheck.hide()
+
             hbox4.addStretch(1)
             self.button_ok = QtWidgets.QPushButton('Accept')
             self.button_ok.clicked.connect(self.OnAccept)
@@ -1754,10 +1765,13 @@ class File_GUI():
                     self.contents = filestruct
                 self.Entry_info.UpdateInfo(self.contents)
 
-        def setChecked(self,value=True):
-            File_GUI.option_write_json = value
-            self.jsoncheck.setChecked(value)
-
+        def setChecked(self,name,value=True):
+            if name == "ringnormcheck":
+                File_GUI.option_norm_ringcurrent = value
+                #self.ringnormcheck.setChecked(value)
+            elif name == "jsoncheck":
+                File_GUI.option_write_json = value
+                #self.jsoncheck.setChecked(value)
         def OnAccept(self):
             self.selection = self.Entry_info.GetSelection()
             if len(self.selection) == 0:
@@ -9458,7 +9472,7 @@ class PageStack(QtWidgets.QWidget):
 
 
 #-----------------------------------------------------------------------
-    def OnResetI0(self, event):
+    def OnResetI0(self):
 
         self.stk.reset_i0()
 
@@ -10900,24 +10914,24 @@ class ShowArtefacts(QtWidgets.QDialog):
             bg_median = np.nanmedian(array, axis=0, keepdims=False)
         if mask is None or wf == 0.0:
             # returns the median filtered array neglecting the i0 mask
-            return (np.nanmedian(array_i, axis=0, keepdims=False) - array_i)
+            return (array_i / np.nanmedian(array_i, axis=0, keepdims=False))
         elif wf == 1:
-            return ((bg_median - array)*(wf))
+            return ((array / bg_median)*(wf))
         else:
-            return ((bg_median - array)*(wf) + (bg_median - array_i)*(1-wf))
+            return ((array / bg_median)*(wf) + (array_i / bg_median)*(1-wf))
 
     def LevelCalc(self,a,final=False):
         wf = 0.0
         mask = None
-        diff_v = 0
-        diff_h = 0
+        factor_v = 1
+        factor_h = 1
         if self.cb_h.isChecked():
             wf = (self.weight_slider.value()) / 100
             if self.rb_median_i0.isChecked():
                 mask = self.stack.i0_mask[:, :, 0]
                 if final:
                     mask = mask[:, :, None]
-            diff_h = self.CorrectionArray(a, 0, float(wf), mask)[None, :]
+            factor_h = self.CorrectionArray(a, 0, float(wf), mask)[None, :]
             #a += diff[None, :]
         if self.cb_v.isChecked():
             wf = (self.weight_slider.value()) / 100
@@ -10925,8 +10939,9 @@ class ShowArtefacts(QtWidgets.QDialog):
                 mask = self.stack.i0_mask[:, :, 0]
                 if final:
                     mask = mask[:, :, None]
-            diff_v = self.CorrectionArray(a, 1, float(wf), mask)[: ,None]
-        a = a + diff_v + diff_h
+            factor_v = self.CorrectionArray(a, 1, float(wf), mask)[: ,None]
+        a = a/factor_h
+        a = a/factor_v
         return(a,int(wf*100))
 
     def CorrectOutliers(self,array,wf,mask = None,):
@@ -10984,17 +10999,10 @@ class ShowArtefacts(QtWidgets.QDialog):
         a, wf = self.LevelCalc(self.stack.absdata.astype('float64'),final=True)
         if self.remove_outliers.isChecked():
             a, wf = self.OutlierCalc(a,final=True)
-        self.stack.absdata = a
-        self.parent.page0.absimgfig.loadNewImage()
-        self.parent.page1.absimgfig.loadNewImageWithROI()
-        self.parent.page1.specfig.loadNewSpectrum()
-        #self.parent.page0.Clear()
-        #self.parent.page0.loadData()
-
-        #if showmaptab:
-        #    self.parent.page9.Clear()
-        #    self.parent.page9.loadData()
-
+        if not np.array_equal(self.stack.absdata, a, equal_nan=False):
+            self.stack.absdata = a
+            self.parent.page0.absimgfig.loadNewImage() # Load new image on PageLoadData
+            self.parent.page1.OnResetI0() # Reset I0 on PageStack
         self.close()
 #-----------------------------------------------------------------------
 class MultiCrop(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
@@ -13064,10 +13072,11 @@ class GeneralPurposeProcessor(QtCore.QRunnable):
     def __init__(self, parent, queue):
         super(GeneralPurposeProcessor, self).__init__()
         self.signals = GeneralPurposeSignals()
-        self.funcdict = {"ShiftImg": self.ShiftImg, "AlignReferenced": self.AlignReferenced}
+        self.funcdict = {"ShiftImg": self.ShiftImg, "AlignReferenced": self.AlignReferenced, "AlignReferenced_compatibility": self.AlignReferenced_compatibility}
         self.parent = parent
         self.queue = queue
         self.current_itheta = 0
+        self.upsampling = 20 ## equals 0.05 px precision
 
     @pyqtSlot()
     def run(self):
@@ -13088,8 +13097,7 @@ class GeneralPurposeProcessor(QtCore.QRunnable):
             self.signals.ithetaprogress.emit(itheta)
         drift_x = [0,0]
         drift_y = [0,0]
-        drift, error, _ = phase_cross_correlation(self.Gauss(self.parent.stack.absdata_cropped[:, :, data[0],itheta]),
-                                                  self.Gauss(self.parent.stack.absdata_cropped[:, :, data[1],itheta]),upsample_factor=20) ## 20 means 0.05 px precision
+        drift, error, _ = phase_cross_correlation(self.Gauss(self.parent.stack.absdata_cropped[:, :, data[0],itheta]), self.Gauss(self.parent.stack.absdata_cropped[:, :, data[1],itheta]),upsample_factor=self.upsampling,normalization=None)
         self.parent.stack.shiftsdict[itheta]["errors"][data[0]] = round(error,4)
         if data[0] - data[1] > 0:
             drift_x[1] = round(drift[0],2)
@@ -13101,6 +13109,26 @@ class GeneralPurposeProcessor(QtCore.QRunnable):
             drift_y[0] = round(drift[1],2)
             self.parent.stack.shiftsdict[itheta]["xdots"][data[0]]= drift_x[0]
             self.parent.stack.shiftsdict[itheta]["ydots"][data[0]]= drift_y[0]
+
+    def AlignReferenced_compatibility(self, data, itheta):
+        if self.current_itheta != itheta:
+            self.current_itheta = itheta
+            self.signals.ithetaprogress.emit(itheta)
+        drift_x = [0,0]
+        drift_y = [0,0]
+        drift, error, _ = phase_cross_correlation(self.Gauss(self.parent.stack.absdata_cropped[:, :, data[0],itheta]), self.Gauss(self.parent.stack.absdata_cropped[:, :, data[1],itheta]),upsample_factor=self.upsampling)
+        self.parent.stack.shiftsdict[itheta]["errors"][data[0]] = round(error,4)
+        if data[0] - data[1] > 0:
+            drift_x[1] = round(drift[0],2)
+            drift_y[1] = round(drift[1],2)
+            self.parent.stack.shiftsdict[itheta]["xdots"][data[0]]= drift_x[1]
+            self.parent.stack.shiftsdict[itheta]["ydots"][data[0]]= drift_y[1]
+        else:
+            drift_x[0] = round(drift[0],2)
+            drift_y[0] = round(drift[1],2)
+            self.parent.stack.shiftsdict[itheta]["xdots"][data[0]]= drift_x[0]
+            self.parent.stack.shiftsdict[itheta]["ydots"][data[0]]= drift_y[0]
+
 
     def ShiftImg(self, row,x,y,itheta):
         shifted = ndimage.fourier_shift(np.fft.fft2(self.parent.stack.absdata4d[:, :, row,itheta]), [float(-x),float(-y)])
@@ -13548,6 +13576,11 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
         ref_idx = self.iev
         # Reset reference img:
         self.resetPoolThread()
+        # Check scikit-image version:
+        if parse_version(version_check('scikit-image')) >= parse_version('0.19.1'):
+            AlignFunc = "AlignReferenced"
+        else:
+            AlignFunc = "AlignReferenced_compatibility"
 
         itheta = 0
         ntheta = max(self.stack.n_theta,1) # necessary work around for 3d stacks and if 4d stack is loaded with LoadStack()
@@ -13556,12 +13589,12 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
             while idx: # Generate pairs of indices starting at reference image index.
                 running = 2
                 if (ref_idx + (self.stack.n_ev-idx)) < self.stack.n_ev-1:
-                    self.pool.enqueuetask("AlignReferenced", (ref_idx + (self.stack.n_ev-idx) + 1, ref_idx), itheta)
+                    self.pool.enqueuetask(AlignFunc, (ref_idx + (self.stack.n_ev-idx) + 1, ref_idx), itheta)
                     #q.put((ref_idx + (self.stack.n_ev-idx) + 1, ref_idx))
                 else:
                     running -= 1
                 if ref_idx - (self.stack.n_ev-idx) > 0:
-                    self.pool.enqueuetask("AlignReferenced", (ref_idx - (self.stack.n_ev-idx) - 1, ref_idx), itheta)
+                    self.pool.enqueuetask(AlignFunc, (ref_idx - (self.stack.n_ev-idx) - 1, ref_idx), itheta)
                     #q.put(((ref_idx - (self.stack.n_ev-idx) - 1),ref_idx))
                 else:
                     running -= 1
@@ -16153,105 +16186,138 @@ class SpecFig():
         self.LineIndicator = pg.InfiniteLine(angle=90, movable=True, markers=None,
                                               pen=pg.mkPen(color=QtGui.QColor(0, 0, 0, 128), width=1.5, style=QtCore.Qt.DashLine))
         self.LineIndicatorLabel = pg.InfLineLabel(self.LineIndicator, " ")
+        self.plots = []
     def clear(self):
+        #print("clear")
         self.plot.removeItem(self.LineIndicator)
+        for item in self.plots:
+            self.plot.removeItem(item)
+            self.plots.remove(item)
         try:
             self.LineIndicator.sigPositionChangeFinished.disconnect()
             self.LineIndicator.sigPositionChanged.disconnect()
             self.plot.sigRangeChanged.disconnect()
             self.plot.scene().sigMouseClicked.disconnect()
             self.parent.absimgfig.roi.sigRegionChanged.disconnect()
-            self.parent.absimgfig.roi.sigRegionChangeFinished.disconnect()
         except:
             pass
-        self.plot.clear()
+        #self.plot.clear()
     def toggleI0Spectrum(self):
-        self.clear()
+        #self.clear()
         if self.parent.button_showi0.isChecked():
             self.loadData(showi0=True)
             self.parent.absimgfig.roi.setVisible(False)
         else:
             self.loadData()
             self.parent.absimgfig.roi.setVisible(True)
+
+    def OnLockSpectrum(self):
+        nplots = len(self.plots) + 1
+        print("lock ",nplots)
+        x = self.plots[0].xData
+        y = self.plots[0].yData
+        curve = pg.PlotCurveItem(pen=({'color': pg.intColor(nplots), 'width': 2}), skipFiniteCheck=True)
+        self.plot.addItem(curve)
+        self.plots.append(curve)
+        self.plots[-1].setData(x,y)
+
+
     def loadNewSpectrum(self):
+        print("load new spectrum")
         self.parent.button_showi0.blockSignals(True)
         self.parent.button_showi0.setChecked(False)
         self.parent.button_showi0.blockSignals(False)
-        self.clear()
+        try:
+            self.clear()
+        except IndexError:
+            pass
+        curve = pg.PlotCurveItem(pen=({'color': pg.intColor(6), 'width': 2}), skipFiniteCheck=True)
+
+        self.plot.addItem(self.LineIndicator, ignoreBounds=True)
+        self.plot.addItem(curve)
+        self.plots.append(curve)
+        self.plots.reverse()
         self.loadData()
+        self.parent.button_lockspectrum.clicked.connect(self.OnLockSpectrum)
     def updatePlotData(self):
         x,y = self.GenerateSpectrum(list(range(self.parent.stk.n_ev)))
         self.plot.blockSignals(True)
-        self.plotitem = self.plot.plot(x, y, pen=pg.mkPen(color="b", width=2), clear=True)
+        self.plots[0].setData(x, y)
+        self.LineIndicator.setPos(QtCore.QPointF(self.plots[0].xData[self.parent.iev], self.plots[0].yData[self.parent.iev]))
         self.plot.blockSignals(False)
+
     def getIntersectionY(self):
-        x_newgrid = self.plotitem.xData
-        y_newgrid = self.plotitem.yData
-        if len(self.plotitem.xData)> 2:
-            func = interp1d(self.plotitem.xData, self.plotitem.yData)
-            x_newgrid = np.linspace(min(self.plotitem.xData), max(self.plotitem.xData), num=min(3000,(30*len(self.plotitem.xData))), endpoint=True)
+        x_newgrid = self.plots[0].xData
+        y_newgrid = self.plots[0].yData
+
+        if len(self.plots[0].xData)> 2:
+            func = interp1d(x_newgrid, self.plots[0].yData)
+            x_newgrid = np.linspace(min(x_newgrid), max(x_newgrid), num=min(5000,(40*len(x_newgrid))), endpoint=True)
             y_newgrid = func(x_newgrid)
         diff = np.abs(x_newgrid - self.LineIndicator.value())
         idx = np.argmin(diff)
-        ypos = 1 + (y_newgrid[idx] - self.plotitem.viewRect().bottom()) / (
-                    self.plotitem.viewRect().bottom() - self.plotitem.viewRect().top())
+
+        vb = self.plots[0].getViewBox()
+        ypos = 1 + (y_newgrid[idx] - vb.viewRect().bottom()) / (
+                    vb.viewRect().bottom() - vb.viewRect().top())
         return ypos
 
-
-    def updateLineIndicator(self):
-        self.plot.addItem(self.LineIndicator, ignoreBounds=True)
-        self.ypos = self.getIntersectionY()
-        self.LineIndicator.markers = [(self.dot, self.ypos, 10)]
-        self.LineIndicator.update()
-        self.LineIndicatorLabel.setPosition(self.ypos)
-        
     def loadData(self, showi0=False):
+        #nplots = len(self.plots) + 1
         if showi0:
             x,y = (self.parent.stk.evi0, self.parent.stk.i0data)
             self.ay.setLabel(text="Flux in selected I0 area [counts]")
-            self.plotitem = self.plot.plot(x, y, pen=pg.mkPen(color="r", width=2))
+            #self.plotitem = self.plot.plot(x, y, pen=pg.mkPen(color="r", width=2))
         else:
             x,y = self.GenerateSpectrum(list(range(self.parent.stk.n_ev)))
-            self.plotitem = self.plot.plot(x, y, pen=pg.mkPen(color="b", width=2))
-        self.plotitem.setZValue(9)
+        self.plots[0].setData(x,y)
+            #self.plotitem = self.plots[0]
+       # self.plotitem.setZValue(9)
+        #print("nplots: ",nplots)
+        # if nplots > 1:
+        #     self.plots.reverse()
+        #     for idx in range(1,nplots):
+        #         print(range(1,nplots),idx)
+        #         curve = pg.PlotCurveItem(pen=({'color': (idx, nplots * 1.3), 'width': 2}), skipFiniteCheck=True)
+        #         self.plot.addItem(curve)
+            # curve.setPos(0, idx * 2)
+            #self.plots.append(curve)
+
 
         self.LineIndicator.addMarker("o")
         self.dot = self.LineIndicator.markers[0][0]
-        self.plot.addItem(self.LineIndicator, ignoreBounds=True)
         self.LineIndicator.setZValue(10)
 
         self.ypos = self.getIntersectionY()
 
-        self.LineIndicator.sigPositionChanged.connect(self.OnIndicatorMoved)
+        self.LineIndicator.sigPositionChanged.connect(self.OnUpdateLineIndicator)
         self.LineIndicator.sigPositionChangeFinished.connect(self.SnapIndicatorToEV)
-        self.plot.sigRangeChanged.connect(self.OnIndicatorMoved)
+        self.plot.sigRangeChanged.connect(self.OnUpdateLineIndicator)
         self.plot.scene().sigMouseClicked.connect(self.OnMouseClick)
         self.parent.absimgfig.roi.sigRegionChanged.connect(self.updatePlotData)
-        self.parent.absimgfig.roi.sigRegionChangeFinished.connect(self.updateLineIndicator)
-        self.OnIndicatorMoved()
+        self.OnUpdateLineIndicator()
 
     def SnapIndicatorToEV(self):
-        #print("snap")
-        diff = np.abs(self.plotitem.xData - self.LineIndicator.value())
+        diff = np.abs(self.plots[0].xData - self.LineIndicator.value())
         idx = np.argmin(diff)
-        self.LineIndicator.setPos(self.plotitem.xData[idx])
         self.parent.slider_eng.blockSignals(True)
         self.parent.OnScrollEng(idx)
         self.parent.slider_eng.blockSignals(False)
 
-    def OnIndicatorMoved(self):
-        #print("update")
+    def OnUpdateLineIndicator(self):
+        #print("onupdateline")
         self.ypos = self.getIntersectionY()
         self.LineIndicator.markers = [(self.dot, self.ypos, 10)]
         self.LineIndicator.update()
         self.LineIndicatorLabel.setPosition(self.ypos)
         self.LineIndicatorLabel.setFormat(" "+str(round(self.LineIndicator.value(),2)) + " eV ")
-
     def OnMouseClick(self,e):
         if e.double():
-            vb = self.plotitem.getViewBox()
+            vb = self.plots[0].getViewBox()
             pos = vb.mapSceneToView(e.scenePos()).x()
+            self.LineIndicator.blockSignals(True)
             self.LineIndicator.setPos(pos)
+            self.LineIndicator.blockSignals(False)
             self.LineIndicator.sigPositionChangeFinished.emit(self)
 
     def GetRegion(self,box):
@@ -16610,7 +16676,6 @@ class MainFrame(QtWidgets.QMainWindow):
         """
 
         filepath, plugin = File_GUI.SelectFile('read','stack')
-        JSONconvert = False
         if filepath is not None:
             if plugin is None: # auto-assign appropriate plugin
                 plugin = file_plugins.identify(filepath)
@@ -16637,7 +16702,8 @@ class MainFrame(QtWidgets.QMainWindow):
                 JSONconvert = dlg.jsoncheck.isChecked()
             except UnboundLocalError:
                 print("DataChoiceDialog skipped")
-            file_plugins.load(filepath, stack_object=self.stk, plugin=plugin, selection=FileInternalSelection,json=JSONconvert)
+            ringnorm = dlg.ringnormcheck.isChecked()
+            file_plugins.load(filepath, stack_object=self.stk, plugin=plugin, selection=FileInternalSelection,json=JSONconvert,inorm=ringnorm)
             directory = os.path.dirname(str(filepath))
             self.page1.filename = os.path.basename(str(filepath))
 

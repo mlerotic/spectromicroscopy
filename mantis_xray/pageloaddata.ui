@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1024</width>
-    <height>880</height>
+    <height>1123</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -21,7 +21,7 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QFrame" name="">
+    <widget class="QFrame" name="frame">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
        <horstretch>0</horstretch>
@@ -42,6 +42,12 @@
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>260</width>
+          <height>0</height>
+         </size>
         </property>
         <property name="font">
          <font>
@@ -89,6 +95,9 @@
             <string>Load Data</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_5">
+            <property name="sizeConstraint">
+             <enum>QLayout::SetMinimumSize</enum>
+            </property>
             <item>
              <widget class="QPushButton" name="button_multiload">
               <property name="font">
@@ -142,6 +151,9 @@
             <string>Build a stack from a set of files</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_6">
+            <property name="sizeConstraint">
+             <enum>QLayout::SetMinimumSize</enum>
+            </property>
             <item>
              <widget class="QPushButton" name="button_sm">
               <property name="sizePolicy">
@@ -309,7 +321,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QFrame" name="">
+    <widget class="QFrame" name="frame">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
        <horstretch>0</horstretch>
