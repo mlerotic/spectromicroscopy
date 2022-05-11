@@ -24,8 +24,17 @@ def check_for_updates(current_version):
             github_init = init_file.read()
         #print(github_init)
         github_latest = re.search(r"(?:__version__*\s=*\s)['|\"]+([\d\.]+)", github_init.decode()).group(1)
+        print("Current default (master) code is version {0}".format(github_latest))
+    except:
+        pass
+    try:
+        with urllib.request.urlopen(
+                "https://raw.githubusercontent.com/mlerotic/spectromicroscopy/development/mantis_xray/__init__.py") as init_file:
+            github_init = init_file.read()
+        # print(github_init)
+        github_latest = re.search(r"(?:__version__*\s=*\s)['|\"]+([\d\.]+)", github_init.decode()).group(1)
         print("Current development code is version {0}".format(github_latest))
     except:
         pass
-    
+
     
