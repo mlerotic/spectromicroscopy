@@ -293,7 +293,7 @@ class data:
     # ----------------------------------------------------------------------
     def calc_histogram(self):
         # calculate average flux for each pixel
-        self.averageflux = np.mean(self.absdata, axis=2)
+        self.averageflux = np.nanmean(self.absdata, axis=2)
         self.histogram = self.averageflux
 
         return
@@ -313,10 +313,15 @@ class data:
             self.i0datahist = np.zeros((self.n_ev))
             self.i0data = self.i0datahist
             if np.any(i0_indices):
-                invnumel = 1. / self.averageflux[i0_indices].shape[0]
+                #invnumel = 1. / self.averageflux[i0_indices].shape[0]
                 for ie in range(self.n_ev):
                     thiseng_abs = self.absdata[:, :, ie]
-                    self.i0datahist[ie] = np.sum(thiseng_abs[i0_indices]) * invnumel
+                    #self.i0datahist[ie] = np.sum(thiseng_abs[i0_indices]) * invnumel
+                    finite_vals = thiseng_abs[i0_indices][np.isfinite(thiseng_abs[i0_indices])]
+                    if len(finite_vals)>0:
+                        self.i0datahist[ie] = np.nanmean(finite_vals)
+                    else:
+                        self.i0datahist[ie] = self.i0datahist[ie-1] #If this fails on the first image then the data is probably completely empty anyway
 
             self.calculate_optical_density()
 
@@ -413,9 +418,12 @@ class data:
         if len(self.evi0) > 3: # >3 is needed to avoid boundary error!
             fi0int = scipy.interpolate.interp1d(self.evi0.astype(np.double), self.i0data.astype(np.double),
                                                 kind='cubic', bounds_error=False, fill_value=0.0)
-        else:
+        elif len(self.evi0) > 1: # use linear interpolation when there are fewer points
             fi0int = scipy.interpolate.interp1d(self.evi0.astype(np.double), self.i0data.astype(np.double),
                                                 bounds_error=False, fill_value=0.0)
+        else: # use constant value when only a single value is available
+            fi0int = lambda x: self.i0data.astype(np.double)
+        
         i0 = fi0int(self.ev)
 
         if (self.data_dwell is not None) and (self.i0_dwell is not None):

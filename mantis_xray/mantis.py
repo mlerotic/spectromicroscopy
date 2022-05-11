@@ -18,7 +18,6 @@
 
 import sys
 import os
-import getopt
 import numpy as np
 import matplotlib
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -26,28 +25,32 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 import matplotlib.colorbar as colorbar
-#Future: from matplotlib.pyplot import colorbar
-#from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-import data_struct
-import data_stack
-import analyze
-import henke
+#Internal imports
+from . import data_struct
+from . import data_stack
+from . import analyze
+from . import nnma
+from . import henke
+from . import tomo_reconstruction
 
-import file_plugins
-from file_plugins import file_xrm
-from file_plugins import file_bim
-from file_plugins import file_dataexch_hdf5
-from file_plugins import file_ncb
-from file_plugins import file_tif
-from file_plugins import file_stk
+from . import file_plugins
+from .file_plugins import file_xrm
+from .file_plugins import file_bim
+from .file_plugins import file_dataexch_hdf5
+from .file_plugins import file_ncb
+from .file_plugins import file_json
+from .file_plugins import file_tif
+from .file_plugins import file_stk
+from .file_plugins import file_csv
+
 
 PlotH = 4.0
 PlotW = PlotH*1.61803
 
 
 
-#-----------------------------------------------------------------------
+#----------------------------------------------------------------------
 def save_keyeng(key_engs, odir, filename, stk, anlz, png, pdf, svg):
 
     SaveFileName = os.path.join(odir,filename)
@@ -98,7 +101,7 @@ def save_keyeng(key_engs, odir, filename, stk, anlz, png, pdf, svg):
     return
 
 
-#-----------------------------------------------------------------------
+#----------------------------------------------------------------------
 def save_spa(odir, filename, stk, anlz, png, pdf, svg):
 
     SaveFileName = os.path.join(odir,filename)
@@ -197,7 +200,7 @@ def save_spa(odir, filename, stk, anlz, png, pdf, svg):
     return
 
 
-#-----------------------------------------------------------------------
+#----------------------------------------------------------------------
 def MakeColorTable():
     maxclcolors = 11
     colors_i = np.linspace(0, maxclcolors, maxclcolors+1)
@@ -224,7 +227,7 @@ def MakeColorTable():
     return clusterclrmap1, bnorm1, clusterclrmap2, bnorm2
 
 
-#-----------------------------------------------------------------------
+#----------------------------------------------------------------------
 #If png_pdg = 1 save png, if =2 save pdf, if =3 save svg
 def SaveScatt(SaveFileName, stk, anlz, png_pdf = 1):
 
@@ -291,7 +294,7 @@ def SaveScatt(SaveFileName, stk, anlz, png_pdf = 1):
     fig.savefig(fileName_sct)
 
 
-#-----------------------------------------------------------------------
+#----------------------------------------------------------------------
 def save_ca(odir, filename, stk, anlz, png, pdf, svg):
 
     clusterclrmap1, bnorm1, clusterclrmap2, bnorm2 = MakeColorTable()
@@ -433,7 +436,7 @@ def save_ca(odir, filename, stk, anlz, png, pdf, svg):
     return
 
 
-#-----------------------------------------------------------------------
+#----------------------------------------------------------------------
 def save_pca(odir, filename, stk, anlz, png, pdf, svg):
 
     SaveFileName = os.path.join(odir,filename)
@@ -529,7 +532,7 @@ def save_pca(odir, filename, stk, anlz, png, pdf, svg):
     return
 
 
-#-----------------------------------------------------------------------
+#----------------------------------------------------------------------
 def batch_mode():
 
     verbose  = 1
@@ -769,27 +772,8 @@ def main():
 
     verbose = True
 
-    run_qt = 1
-    run_cl = 0
-    arguments = sys.argv[1:]
-    try:
-        options, extraParams = getopt.getopt(arguments, '', ['batch', 'nnma'])
-    except:
-        print('Error - wrong command line option used. Available options are --batch and --nnma')
-        return
-
-    for opt, arg in options:
-        if opt in '--batch':
-            run_qt = 0
-            run_cl = 1
-
-
-    if run_qt == 1:
-        import mantis_qt
-        m_qt = mantis_qt.main()
-    elif run_cl == 1:
-        print('Running Mantis in batch mode.')
-        batch_mode()
+    print('Running Mantis in batch mode.')
+    batch_mode()
 
     sys.exit()
 

@@ -26,6 +26,12 @@ extension = ['*.hdf','*.hdf5','*.nxs']
 read_types = ['spectrum','image','stack','sample line spectrum']
 write_types = []#'spectrum','image','stack']
 
+def perhaps_decode(value):
+	try:
+		return value.decode("utf-8")	# h5py <3.0
+	except AttributeError:
+		return value					# h5py >=3.0
+
 def identify(filename):
     try:
         # Open HDF5 file
@@ -68,12 +74,10 @@ def read(FileName,stack_object,selection=(0,0), json=None, inorm=None, *args, **
         axes_list = [item.decode('UTF-8') for item in F[entry][detector].attrs['axes']]
         if 'line_position' in axes_list:
             axes_order = [axes_list.index('line_position'),axes_list.index('line_position'),axes_list.index('energy')] #linescan
-            #axes_order = [axes_list.index('sample_x'), axes_list.index('sample_y'), axes_list.index('energy')]  # stack
+        elif 'energy' in axes_list:
+            axes_order = [axes_list.index('sample_x'),axes_list.index('sample_y'),axes_list.index('energy')] #stack
         else:
-            try:
-                axes_order = [axes_list.index('sample_x'),axes_list.index('sample_y'),axes_list.index('energy')] #stack
-            except ValueError: #The energy axis is missing for single images!
-                axes_order = [axes_list.index('sample_x'),axes_list.index('sample_y')] #image
+            axes_order = [axes_list.index('sample_x'),axes_list.index('sample_y')] #image
     else: # Old version from before the specification was finalised
         if 'energy' in list(F[entry][detector]):
             try:
@@ -87,7 +91,7 @@ def read(FileName,stack_object,selection=(0,0), json=None, inorm=None, *args, **
         axes_order = [F[entry][detector]['sample_x'].attrs['axis']-1,F[entry][detector]['sample_y'].attrs['axis']-1,energy_axis-1]
     signal_name = 'data'
     if 'signal' in list(F[entry][detector].attrs):
-        signal_name = F[entry][detector].attrs['signal'].decode("utf-8")
+        signal_name = perhaps_decode(F[entry][detector].attrs['signal'])
     if axes_order[0] == axes_order[1]: #i.e. if linescan
         temp = numpy.transpose(numpy.array(F[entry][detector][signal_name]),axes=axes_order[1:])
         temp = numpy.expand_dims(temp, axis=0)
@@ -137,11 +141,11 @@ def GetFileStructure(FileName):
                     D[entry].scan_type = F[entry][channel_zero]['stxm_scan_type'][0].decode("utf-8")
                 signal_name = 'data'
                 if 'signal' in list(F[entry][channel_zero].attrs):
-                    signal_name = F[entry][channel_zero].attrs['signal'].decode("utf-8")
+                    signal_name = perhaps_decode(F[entry][channel_zero].attrs['signal'])
                 if signal_name in list(F[entry][channel_zero]):
                     D[entry].data_shape = F[entry][channel_zero][signal_name].shape
                 if 'axes' in list(F[entry][channel_zero].attrs):
-                    D[entry].data_axes = [item.decode('UTF-8') for item in F[entry][channel_zero].attrs['axes']]
+                    D[entry].data_axes = [perhaps_decode(item) for item in F[entry][channel_zero].attrs['axes']]
     F.close()
     if len(D) == 0:
         return None

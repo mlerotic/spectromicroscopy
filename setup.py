@@ -17,10 +17,9 @@ setuptools.setup(
         "Code": "https://github.com/mlerotic/spectromicroscopy",
         "Documentation": "https://docs.spectromicroscopy.com",
     },
-    install_requires=['numpy', 'scipy','matplotlib','h5py','Pillow','lxml','pyqtgraph','scikit-image','PyQt5==5.15.2'],
+    install_requires=['PyQt5','numpy', 'scipy', 'matplotlib', 'h5py', 'Pillow', 'lxml', 'pyqtgraph', "scikit-image"],
     extras_require={
-        "netCDF":  "netcdf4-python"
-    },
+        "netCDF":  "netcdf4-python"},
     entry_points={
         "gui_scripts": "mantis-xray = mantis_xray.mantis_qt:main"},
     classifiers=[
