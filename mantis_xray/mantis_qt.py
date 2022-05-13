@@ -69,6 +69,7 @@ from . import henke
 from . import tomo_reconstruction
 
 from .helpers import resource_path
+from .helpers import PDFExporter
 from . import file_plugins
 from .file_plugins import file_xrm
 from .file_plugins import file_bim
@@ -9497,7 +9498,6 @@ class PageStack(QtWidgets.QWidget):
 
         self.SaveFileName = os.path.join(path,filename)
 
-
         try:
             ext = 'png'
             suffix = "." + ext
@@ -9505,15 +9505,14 @@ class PageStack(QtWidgets.QWidget):
 
             if spec_png:
                 fileName_spec = self.SaveFileName+"_spectrum."+ext
-
                 fig = self.specfig
-                fig.savefig(fileName_spec)
+                fig.SaveFig(fileName_spec)
 
             if img_png:
 
                 fileName_img = self.SaveFileName+"_" +str(self.stk.ev[self.iev])+"eV."+ext
                 fig = self.absimgfig
-                fig.savefig(fileName_img, pad_inches = 0.0)
+                fig.SaveFig(fileName_img)
 
             #Save all images in the stack
             if img_all:
@@ -9554,7 +9553,7 @@ class PageStack(QtWidgets.QWidget):
                         image = self.stk.od3d[:,:,i]
 
                     fileName_img = self.SaveFileName+"_imnum_" +str(i+1)+".tif"
-                    img1 = Image.fromarray(image)
+                    img1 = Image.fromarray(np.rot90(image))
                     img1.save(fileName_img)
 
                 QtWidgets.QApplication.restoreOverrideCursor()
@@ -9565,16 +9564,16 @@ class PageStack(QtWidgets.QWidget):
             if spec_pdf:
                 fileName_spec = self.SaveFileName+"_spectrum."+ext
                 fig = self.specfig
-                fig.savefig(fileName_spec)
+                fig.SaveFig(fileName_spec)
 
             if img_pdf:
                 fileName_img = self.SaveFileName+"_" +str(self.stk.ev[self.iev])+"eV."+ext
                 fig = self.absimgfig
-                fig.savefig(fileName_img, pad_inches = 0.0)
+                fig.SaveFig(fileName_img)
 
             if sp_csv:
                 fileName_spec = self.SaveFileName+"_spectrum.csv"
-                self.stk.write_csv(fileName_spec, self.stk.ev, self.spectrum)
+                self.stk.write_csv(fileName_spec, *self.specfig.plots[0].getData())
 
             ext = 'svg'
             suffix = "." + ext
@@ -9582,12 +9581,12 @@ class PageStack(QtWidgets.QWidget):
             if spec_svg:
                 fileName_spec = self.SaveFileName+"_spectrum."+ext
                 fig = self.specfig
-                fig.savefig(fileName_spec)
+                fig.SaveFig(fileName_spec)
 
             if img_svg:
                 fileName_img = self.SaveFileName+"_" +str(self.stk.ev[self.iev])+"eV."+ext
                 fig = self.absimgfig
-                fig.savefig(fileName_img, pad_inches = 0.0)
+                fig.SaveFig(fileName_img)
 
             if img_tif:
                 fileName_img = self.SaveFileName+"_" +str(self.stk.ev[self.iev])+"eV.tif"
@@ -9595,7 +9594,7 @@ class PageStack(QtWidgets.QWidget):
                     image = self.stk.absdata[:,:,self.iev]
                 else:
                     image = self.stk.od3d[:,:,self.iev]
-                img1 = Image.fromarray(image)
+                img1 = Image.fromarray(np.rot90(image))
                 img1.save(fileName_img)
 
 
@@ -10826,7 +10825,7 @@ class ShowArtefacts(QtWidgets.QDialog):
         self.remove_outliers.toggled.connect(self.ShowImage)
         self.cb_h.stateChanged.connect(self.ShowImage)
         self.cb_v.stateChanged.connect(self.ShowImage)
-        #ToDo: I initially wanted to use Qt.QueuedConnection to create a non-blocking Slider.
+        # I initially wanted to use Qt.QueuedConnection to create a non-blocking Slider. It is good enough.
         self.weight_slider.valueChanged.connect(self.ShowCalcImage)
         self.weight_slider_2.valueChanged.connect(self.ShowCalcImage)
         self.slider_eng.sliderPressed.connect(self.ShowImage)
@@ -16348,6 +16347,22 @@ class SpecFig():
         self.exp.export(copy=True)
         return
 
+    def SaveFig(self,fileName):
+        fileName = str(fileName)
+        if fileName == '':
+            return
+        path, ext = os.path.splitext(fileName)
+        ext = ext[1:].lower()
+
+        if ext == 'svg':
+            exp = pg.exporters.SVGExporter(self.plot.scene())
+        elif ext== 'pdf':
+            exp = PDFExporter(self.plot.scene())
+        else:
+            exp = pg.exporters.ImageExporter(self.plot.scene())
+        if ext in ['tif','png','jpg','svg','pdf']:
+            exp.export(fileName)
+
 # ----------------------------------------------------------------------
 class ImgFig():
     def __init__(self,parent,canvas):
@@ -16499,6 +16514,23 @@ class ImgFig():
         self.exp = pg.exporters.ImageExporter(self.imageplot) # image and axes, i.e., complete viewbox
         self.exp.export(copy=True)
         return
+
+    def SaveFig(self,fileName):
+        fileName = str(fileName)
+        if fileName == '':
+            return
+        path, ext = os.path.splitext(fileName)
+        ext = ext[1:].lower()
+
+        if ext == 'svg':
+            # ToDo: Line widths are problematic for self.imageplot. Switch between imageplot/imageitem would be nice.
+            exp = pg.exporters.SVGExporter(self.imageitem)
+        elif ext== 'pdf':
+            exp = PDFExporter(self.imageitem)
+        else:
+            exp = pg.exporters.ImageExporter(self.imageitem)
+        if ext in ['tif','png','jpg']:#'svg','pdf']:
+            exp.export(fileName)
 
 #-----------------------------------------------------------------------
 class MainFrame(QtWidgets.QMainWindow):
