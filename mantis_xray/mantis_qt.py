@@ -16678,11 +16678,13 @@ class MainFrame(QtWidgets.QMainWindow):
                 self.new_stack_refresh()
                 self.stk.new_data()
                 self.anlz.delete_data()
-            try:
+            try:    #if checkboxes exist, return checked/unchecked
                 JSONconvert = dlg.jsoncheck.isChecked()
                 ringnorm = dlg.ringnormcheck.isChecked()
-            except UnboundLocalError:
+            except UnboundLocalError: #if checkboxes missing, i.e. for prenormalized data, *.ncb, etc.
                 print("DataChoiceDialog skipped")
+                JSONconvert = None
+                ringnorm = None
             file_plugins.load(filepath, stack_object=self.stk, plugin=plugin, selection=FileInternalSelection,json=JSONconvert,inorm=ringnorm)
             directory = os.path.dirname(str(filepath))
             self.page1.filename = os.path.basename(str(filepath))
