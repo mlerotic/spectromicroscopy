@@ -40,6 +40,7 @@ from scipy.stats import linregress
 from scipy.interpolate import interp1d, griddata, RegularGridInterpolator
 # from skimage.feature import register_translation ## deprecated
 from skimage.registration import phase_cross_correlation
+from skimage import img_as_ubyte, exposure
 from importlib.metadata import version as version_check
 from packaging.version import parse as parse_version
 #from skimage.segmentation import watershed, mark_boundaries
@@ -8951,17 +8952,6 @@ class PageStack(QtWidgets.QWidget):
         self.button_multicrop.setEnabled(False)
         #vbox1.addWidget(self.button_multicrop)
 
-
-        # self.button_limitev = QtWidgets.QPushButton('Limit energy range...')
-        # self.button_limitev.clicked.connect( self.OnLimitEv)
-        # self.button_limitev.setEnabled(False)
-        # vbox1.addWidget(self.button_limitev)
-
-        # self.button_subregion = QtWidgets.QPushButton('Clip to subregion...')
-        # self.button_subregion.clicked.connect(self.OnCliptoSubregion)
-        # self.button_subregion.setEnabled(False)
-        # vbox1.addWidget(self.button_subregion)
-
         #self.button_artefacts = QtWidgets.QPushButton('Artefacts && Leveling')
         self.button_artefacts.clicked.connect( self.OnArtefacts)
         self.button_artefacts.setEnabled(False)
@@ -9482,17 +9472,7 @@ class PageStack(QtWidgets.QWidget):
         multicropwin = MultiCrop(self.window(), self.com, self.stk)
         multicropwin.show()
 #----------------------------------------------------------------------
-#     def OnLimitEv(self, evt):
-#
-#         limitevwin = LimitEv(self.window(), self.com, self.stk)
-#         limitevwin.show()
-#
-# #----------------------------------------------------------------------
-#     def OnCliptoSubregion(self, evt):
-#         clipwin = CliptoSubregion(self.window(), self.com, self.stk)
-#         clipwin.show()
-
-#----------------------------------------------------------------------
+    # ToDo: Similar dialogs are widely used throughout this code. It would make sense to put it elsewhere in future versions so that it can be accessed globally.
     def Save(self, filename, path, spec_png = True, spec_pdf = False, spec_svg = False, sp_csv = False,
              img_png = True, img_pdf = False, img_svg = False, img_tif = False, img_all = False, img_all_tif = False):
 
@@ -9501,7 +9481,6 @@ class PageStack(QtWidgets.QWidget):
         try:
             ext = 'png'
             suffix = "." + ext
-            matplotlib.rcParams['pdf.fonttype'] = 42
 
             if spec_png:
                 fileName_spec = self.SaveFileName+"_spectrum."+ext
@@ -9517,8 +9496,6 @@ class PageStack(QtWidgets.QWidget):
             #Save all images in the stack
             if img_all:
                 QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
-                from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-                matplotlib.rcParams['pdf.fonttype'] = 42
 
                 for i in range (self.stk.n_ev):
                     if self.showflux:
@@ -9527,17 +9504,10 @@ class PageStack(QtWidgets.QWidget):
                     else:
                         #Show OD image
                         image = self.stk.od3d[:,:,i]
-
-                    fig = matplotlib.figure.Figure(figsize =(float(self.stk.n_rows)/10, float(self.stk.n_cols)/10))
-                    fig.clf()
-                    canvas = FigureCanvas(fig)
-                    fig.add_axes((0.0,0.0,1.0,1.0))
-                    axes = fig.gca()
-                    im = axes.imshow(np.rot90(image), cmap=matplotlib.cm.get_cmap(self.colortable))
-                    axes.axis("off")
-
-                    fileName_img = self.SaveFileName+"_imnum_" +str(i+1)+"."+ext
-                    fig.savefig(fileName_img,  dpi=ImgDpi, pad_inches = 0.0)
+                    image = img_as_ubyte(exposure.rescale_intensity(image))
+                    img = Image.fromarray(np.rot90(image))
+                    fileName_img = self.SaveFileName + "_imnum_" + str(i + 1) + "." + ext
+                    img.save(fileName_img)
                 QtWidgets.QApplication.restoreOverrideCursor()
 
             #Save all images in the stack
@@ -9553,8 +9523,8 @@ class PageStack(QtWidgets.QWidget):
                         image = self.stk.od3d[:,:,i]
 
                     fileName_img = self.SaveFileName+"_imnum_" +str(i+1)+".tif"
-                    img1 = Image.fromarray(np.rot90(image))
-                    img1.save(fileName_img)
+                    img = Image.fromarray(np.rot90(image))
+                    img.save(fileName_img)
 
                 QtWidgets.QApplication.restoreOverrideCursor()
 
@@ -10371,163 +10341,24 @@ class SaveWinP1(QtWidgets.QDialog):
 
     def __init__(self, parent):
         QtWidgets.QWidget.__init__(self, parent)
-
+        uic.loadUi(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dialogsave.ui'), self)
         self.parent = parent
-
-
-        self.resize(400, 300)
         self.setWindowTitle('Save')
 
-        pal = QtGui.QPalette()
-        self.setAutoFillBackground(True)
-        pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
-        self.setPalette(pal)
-
-
         self.com = self.parent.common
-
-        path, ext = os.path.splitext(self.com.filename)
+        path, ext = os.path.splitext(self.com.filename) # currently empty?
         ext = ext[1:].lower()
         suffix = "." + ext
         path, fn = os.path.split(self.com.filename)
-        filename = fn[:-len(suffix)]
-
-        self.path = self.com.path
-        self.filename = filename
-
-
-        vboxtop = QtWidgets.QVBoxLayout()
-        vboxtop.setContentsMargins(20,20,20,20)
-
-        gridtop = QtWidgets.QGridLayout()
-        gridtop.setVerticalSpacing(20)
-
-        fontb = QtGui.QFont()
-        fontb.setBold(True)
-
-        st1 = QtWidgets.QLabel(self)
-        st1.setText('Save')
-        st1.setFont(fontb)
-        st2 = QtWidgets.QLabel(self)
-        st2.setText('.pdf')
-        st2.setFont(fontb)
-        st3 = QtWidgets.QLabel(self)
-        st3.setText('.png')
-        st3.setFont(fontb)
-        st4 = QtWidgets.QLabel(self)
-        st4.setText('.svg')
-        st4.setFont(fontb)
-        st9 = QtWidgets.QLabel(self)
-        st9.setText('.tif (data)')
-        st9.setFont(fontb)
-        st5 = QtWidgets.QLabel(self)
-        st5.setText('.csv')
-        st5.setFont(fontb)
-
-
-        st6 = QtWidgets.QLabel(self)
-        st6.setText('_spectrum')
-
-        self.cb11 = QtWidgets.QCheckBox('', self)
-        self.cb11.setChecked(True)
-
-        self.cb12 = QtWidgets.QCheckBox('', self)
-
-        self.cb13 = QtWidgets.QCheckBox('', self)
-
-        self.cb14 = QtWidgets.QCheckBox('', self)
-
-        st7 = QtWidgets.QLabel(self)
-        st7.setText('_image')
-
-        self.cb21 = QtWidgets.QCheckBox('', self)
-        self.cb21.setChecked(True)
-
-        self.cb22 = QtWidgets.QCheckBox('', self)
-
-        self.cb23 = QtWidgets.QCheckBox('', self)
-
-        self.cb24 = QtWidgets.QCheckBox('', self)
-
-        st8 = QtWidgets.QLabel(self)
-        st8.setText('all images')
-
-        self.cb32 = QtWidgets.QCheckBox('', self)
-
-        self.cb34 = QtWidgets.QCheckBox('', self)
-
-
-        gridtop.addWidget(st1, 0, 0)
-        gridtop.addWidget(st2, 0, 1)
-        gridtop.addWidget(st3, 0, 2)
-        gridtop.addWidget(st4, 0, 3)
-        gridtop.addWidget(st9, 0, 5)
-        gridtop.addWidget(st5, 0, 4)
-
-        gridtop.addWidget(st6, 1, 0)
-        gridtop.addWidget(self.cb11, 1, 1)
-        gridtop.addWidget(self.cb12, 1, 2)
-        gridtop.addWidget(self.cb13, 1, 3)
-        gridtop.addWidget(self.cb14, 1, 4)
-
-        gridtop.addWidget(st7, 2, 0)
-        gridtop.addWidget(self.cb21, 2, 1)
-        gridtop.addWidget(self.cb22, 2, 2)
-        gridtop.addWidget(self.cb23, 2, 3)
-        gridtop.addWidget(self.cb24, 2, 5)
-
-        gridtop.addWidget(st8, 3, 0)
-        gridtop.addWidget(self.cb32, 3, 2)
-        gridtop.addWidget(self.cb34, 3, 5)
-
-        vboxtop.addStretch(0.5)
-        vboxtop.addLayout(gridtop)
-        vboxtop.addStretch(1)
-
-
-        hbox0 = QtWidgets.QHBoxLayout()
-
-        stf = QtWidgets.QLabel(self)
-        stf.setText('Filename:\t')
-        self.tc_savefn = QtWidgets.QLineEdit(self)
+        self.filename = fn[:-len(suffix)]
         self.tc_savefn.setText(self.filename)
 
-        hbox0.addWidget(stf)
-        hbox0.addWidget(self.tc_savefn)
-
-        hbox1 = QtWidgets.QHBoxLayout()
-
-        stp = QtWidgets.QLabel(self)
-        stp.setText('Path:  \t')
-        self.tc_savepath = QtWidgets.QLineEdit(self)
-        self.tc_savepath.setReadOnly(True)
+        self.path = self.com.path
         self.tc_savepath.setText(self.path)
-        self.tc_savepath.setMinimumWidth(100)
-        hbox1.addWidget(stp)
-        hbox1.addWidget(self.tc_savepath)
+        self.button_path.clicked.connect(self.OnBrowseDir)
+        self.buttonBox.accepted.connect(self.OnSave)
+        self.buttonBox.rejected.connect(self.close)
 
-        button_path = QtWidgets.QPushButton('Browse...')
-        button_path.clicked.connect(self.OnBrowseDir)
-        hbox1.addWidget(button_path)
-
-
-        hbox2 = QtWidgets.QHBoxLayout()
-        button_save = QtWidgets.QPushButton('Save')
-        button_save.clicked.connect(self.OnSave)
-        hbox2.addWidget(button_save)
-
-        button_cancel = QtWidgets.QPushButton('Cancel')
-        button_cancel.clicked.connect(self.close)
-        hbox2.addWidget(button_cancel)
-
-        vboxtop.addLayout(hbox0)
-        vboxtop.addLayout(hbox1)
-        vboxtop.addStretch(1.0)
-        vboxtop.addLayout(hbox2)
-
-
-
-        self.setLayout(vboxtop)
 
 #----------------------------------------------------------------------
     def OnBrowseDir(self, evt):
@@ -10549,7 +10380,7 @@ class SaveWinP1(QtWidgets.QDialog):
 
 
 #----------------------------------------------------------------------
-    def OnSave(self, evt):
+    def OnSave(self):
 
         self.filename = str(self.tc_savefn.text())
 
@@ -10560,9 +10391,9 @@ class SaveWinP1(QtWidgets.QDialog):
         im_pdf = self.cb21.isChecked()
         im_png = self.cb22.isChecked()
         im_svg = self.cb23.isChecked()
-        im_tif = self.cb24.isChecked()
+        im_tif = self.cb25.isChecked()
         im_all = self.cb32.isChecked()
-        im_all_tif = self.cb34.isChecked()
+        im_all_tif = self.cb35.isChecked()
 
         self.close()
         self.parent.page1.Save(self.filename, self.path,
@@ -15291,34 +15122,6 @@ class ShowODMap(QtWidgets.QWidget):
         if ext in ['tif','png','jpg','svg']:
             exp.export(fileName)
 
-    # def SVGMerger(self, svg1, svg2, width1,width2, height, padding=0): #merges two lxml.etree elements horizontally with padding
-    #     ns = {'': svg1.tag.split('}')[0].strip('{')}
-    #     svg = etree.Element(svg1.tag, nsmap={None: 'http://www.w3.org/2000/svg', 'xlink': 'http://www.w3.org/1999/xlink'})
-    #     svg.set("version", "1.2")
-    #     svg.set('width', str(width1 + width2 + padding)+"px") #target width
-    #     svg.set('height', str(height)+"px") #target height
-    #     svg.set("viewBox", "0 0 %s %s" % (str(width1 + width2 +padding)+"px", str(height)+"px"))
-    #     g1 = etree.SubElement(svg, 'g')
-    #     g1.append(svg1.find('./g', ns))
-    #     g = etree.SubElement(g1, 'g')
-    #     g.set('transform','translate('+str(width1 + padding)+', 0) scale(1)')
-    #     g.append(svg2.find('./g', ns))
-    #     return svg
-    # def SVGClipPathRemover(self, elem): #takes etree elements and removes clip-path tags and keys inside g tags if present.
-    #     ns = {'': elem.tag.split('}')[0].strip('{')}
-    #     try:
-    #         for clippath in elem.findall(".//clipPath", ns):
-    #             clippath.getparent().remove(clippath)
-    #     except:
-    #         pass
-    #     try:
-    #         for g in elem.findall(".//g", ns):
-    #             if g.keys()[0] == "clip-path":
-    #                 del g.attrib['clip-path']
-    #     except:
-    #         pass
-    #     return elem
-
     def OnCatChanged(self):
         self.CMMapBox.blockSignals(True)
         self.CMMapBox.clear()
@@ -16523,13 +16326,16 @@ class ImgFig():
         ext = ext[1:].lower()
 
         if ext == 'svg':
-            # ToDo: Line widths are problematic for self.imageplot. Switch between imageplot/imageitem would be nice.
-            exp = pg.exporters.SVGExporter(self.imageitem)
+
+            exp = pg.exporters.SVGExporter(self.imageplot)
+            # The SVG output is clean.
+            # Display errors (line widths, etc.) likely result from external software not properly handling SVG.
+
         elif ext== 'pdf':
-            exp = PDFExporter(self.imageitem)
+            exp = PDFExporter(self.imageplot)
         else:
-            exp = pg.exporters.ImageExporter(self.imageitem)
-        if ext in ['tif','png','jpg']:#'svg','pdf']:
+            exp = pg.exporters.ImageExporter(self.imageplot)
+        if ext in ['tif','png','jpg','svg','pdf']:
             exp.export(fileName)
 
 #-----------------------------------------------------------------------
