@@ -584,7 +584,6 @@ class PageTomo(QtWidgets.QWidget):
 
 
         self.button_save.setEnabled(False)
-        self.button_save.setEnabled(False)
         self.tc_comp.setText('Component: ')
         self.slider_comp.setEnabled(False)
 
@@ -1423,7 +1422,6 @@ class PageTomo(QtWidgets.QWidget):
         self.button_expdata.setEnabled(False)
         self.button_calc1.setEnabled(False)
         self.button_calcall.setEnabled(False)
-        self.button_save.setEnabled(False)
         self.button_save.setEnabled(False)
         self.button_roi.setEnabled(False)
         self.button_roidel.setEnabled(False)
@@ -9223,16 +9221,8 @@ class PageStack(QtWidgets.QWidget):
         frame.setFrameStyle(QtWidgets.QFrame.StyledPanel|QtWidgets.QFrame.Sunken)
         fbox = QtWidgets.QHBoxLayout()
 
-        #self.absimgfig = Figure((PlotH, PlotH))
         self.absimgfig = ImgFig(self,self.canvas)
         self.specfig = SpecFig(self, self.spectrum_plotwidget)
-        #self.AbsImagePanel = FigureCanvas(self.absimgfig)
-        #self.AbsImagePanel.setParent(self)
-        #self.cid1 = self.AbsImagePanel.mpl_connect('button_press_event', self.OnPointAbsimage)
-        #fbox.addWidget(self.AbsImagePanel)
-        #frame.setLayout(fbox)
-        #gridsizer4.addWidget(frame, 1, 0, QtCore .Qt. AlignLeft)
-
 
         #self.slider_eng = QtWidgets.QScrollBar(QtCore.Qt.Vertical)
         #self.slider_eng.setFocusPolicy(QtCore.Qt.StrongFocus)
@@ -9254,7 +9244,9 @@ class PageStack(QtWidgets.QWidget):
         #gridsizer4.addLayout(hbox41, 2, 0)
 
         self.pb_copy_img.clicked.connect(self.absimgfig.OnCopy)
+        self.pb_copy_img.setEnabled(False)
         self.pb_copy_specimg.clicked.connect(self.specfig.OnCopy)
+        self.pb_copy_specimg.setEnabled(False)
 
         #self.MetricCheckBox.toggled.connect(lambda: self.absimgfig.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
         #self.ZeroOriginCheckBox.toggled.connect(lambda: self.absimgfig.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
@@ -9464,119 +9456,13 @@ class PageStack(QtWidgets.QWidget):
 #----------------------------------------------------------------------
     def OnSave(self, event):
 
-        savewin = SaveWinP1(self.window())
+        savewin = SaveWin(self, self.com, self.stk)
         savewin.show()
 
 # ----------------------------------------------------------------------
     def OnMultiCrop(self, evt):
         multicropwin = MultiCrop(self.window(), self.com, self.stk)
         multicropwin.show()
-#----------------------------------------------------------------------
-    # ToDo: Similar dialogs are widely used throughout this code. It would make sense to put it elsewhere in future versions so that it can be accessed globally.
-    def Save(self, filename, path, spec_png = True, spec_pdf = False, spec_svg = False, sp_csv = False,
-             img_png = True, img_pdf = False, img_svg = False, img_tif = False, img_all = False, img_all_tif = False):
-
-        self.SaveFileName = os.path.join(path,filename)
-
-        try:
-            ext = 'png'
-            suffix = "." + ext
-
-            if spec_png:
-                fileName_spec = self.SaveFileName+"_spectrum."+ext
-                fig = self.specfig
-                fig.SaveFig(fileName_spec)
-
-            if img_png:
-
-                fileName_img = self.SaveFileName+"_" +str(self.stk.ev[self.iev])+"eV."+ext
-                fig = self.absimgfig
-                fig.SaveFig(fileName_img)
-
-            #Save all images in the stack
-            if img_all:
-                QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
-
-                for i in range (self.stk.n_ev):
-                    if self.showflux:
-                        #Show flux image
-                        image = self.stk.absdata[:,:,i]
-                    else:
-                        #Show OD image
-                        image = self.stk.od3d[:,:,i]
-                    image = img_as_ubyte(exposure.rescale_intensity(image))
-                    img = Image.fromarray(np.rot90(image))
-                    fileName_img = self.SaveFileName + "_imnum_" + str(i + 1) + "." + ext
-                    img.save(fileName_img)
-                QtWidgets.QApplication.restoreOverrideCursor()
-
-            #Save all images in the stack
-            if img_all_tif:
-                QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
-
-                for i in range (self.stk.n_ev):
-                    if self.showflux:
-                        #Show flux image
-                        image = self.stk.absdata[:,:,i]
-                    else:
-                        #Show OD image
-                        image = self.stk.od3d[:,:,i]
-
-                    fileName_img = self.SaveFileName+"_imnum_" +str(i+1)+".tif"
-                    img = Image.fromarray(np.rot90(image))
-                    img.save(fileName_img)
-
-                QtWidgets.QApplication.restoreOverrideCursor()
-
-            ext = 'pdf'
-            suffix = "." + ext
-
-            if spec_pdf:
-                fileName_spec = self.SaveFileName+"_spectrum."+ext
-                fig = self.specfig
-                fig.SaveFig(fileName_spec)
-
-            if img_pdf:
-                fileName_img = self.SaveFileName+"_" +str(self.stk.ev[self.iev])+"eV."+ext
-                fig = self.absimgfig
-                fig.SaveFig(fileName_img)
-
-            if sp_csv:
-                fileName_spec = self.SaveFileName+"_spectrum.csv"
-                self.stk.write_csv(fileName_spec, *self.specfig.plots[0].getData())
-
-            ext = 'svg'
-            suffix = "." + ext
-
-            if spec_svg:
-                fileName_spec = self.SaveFileName+"_spectrum."+ext
-                fig = self.specfig
-                fig.SaveFig(fileName_spec)
-
-            if img_svg:
-                fileName_img = self.SaveFileName+"_" +str(self.stk.ev[self.iev])+"eV."+ext
-                fig = self.absimgfig
-                fig.SaveFig(fileName_img)
-
-            if img_tif:
-                fileName_img = self.SaveFileName+"_" +str(self.stk.ev[self.iev])+"eV.tif"
-                if self.showflux:
-                    image = self.stk.absdata[:,:,self.iev]
-                else:
-                    image = self.stk.od3d[:,:,self.iev]
-                img1 = Image.fromarray(np.rot90(image))
-                img1.save(fileName_img)
-
-
-        except IOError as e:
-            if e.strerror:
-                err = e.strerror
-            else:
-                err = e
-
-            QtWidgets.QMessageBox.warning(self,'Error','Could not save file: %s' % err)
-
-
 #----------------------------------------------------------------------
     def OnSaveOD(self, event):
 
@@ -9729,49 +9615,6 @@ class PageStack(QtWidgets.QWidget):
 
 
 #----------------------------------------------------------------------
-    def OnPointAbsimage(self, evt):
-        x = evt.xdata
-        y = evt.ydata
-
-        if (x == None) or (y == None):
-            return
-
-        if (self.com.stack_loaded == 1) and (self.addroi == 0):
-            self.ix = int(np.floor(x))
-            self.iy = self.stk.n_rows-1-int(np.floor(y))
-
-            if self.ix<0 :
-                self.ix=0
-            if self.ix>self.stk.n_cols-1 :
-                self.ix=self.stk.n_cols-1
-            if self.iy<0 :
-                self.iy=0
-            if self.iy>self.stk.n_rows-1 :
-                self.iy=self.stk.n_rows-1
-
-
-            self.loadSpectrum(self.ix, self.iy)
-            self.loadImage()
-
-
-        if (self.com.stack_loaded == 1) and (self.addroi == 1):
-            if self.line == None: # if there is no line, create a line
-                self.line = matplotlib.lines.Line2D([x,  x], [y, y], marker = '.', color = 'red')
-                self.start_point = [x,y]
-                self.previous_point =  self.start_point
-                self.roixdata.append(x)
-                self.roiydata.append(y)
-                self.loadImage()
-            # add a segment
-            else: # if there is a line, create a segment
-                self.roixdata.append(x)
-                self.roiydata.append(y)
-                self.line.set_data(self.roixdata,self.roiydata)
-                self.previous_point = [x,y]
-                if len(self.roixdata) == 3:
-                    self.button_acceptROI.setEnabled(True)
-                self.loadImage()
-#-----------------------------------------------------------------------
     def OnRb_fluxod(self, enabled):
 
         state = enabled
@@ -10337,15 +10180,28 @@ class PageStack(QtWidgets.QWidget):
         specroiwin.show()
 
 #----------------------------------------------------------------------
-class SaveWinP1(QtWidgets.QDialog):
+class SaveWin(QtWidgets.QDialog):
 
-    def __init__(self, parent):
+    def __init__(self, parent, com, stk):
         QtWidgets.QWidget.__init__(self, parent)
         uic.loadUi(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dialogsave.ui'), self)
         self.parent = parent
         self.setWindowTitle('Save')
+        self.com = com
+        self.stk = stk
 
-        self.com = self.parent.common
+        self.cb11.setChecked(True)
+        self.cb21.setChecked(True)
+
+        if not hasattr(parent, 'specfig'):
+            self.label_spectrum.setVisible(False)
+            self.label_csv.setVisible(False)
+            self.cb11.setVisible(False)
+            self.cb11.setChecked(False)
+            self.cb12.setVisible(False)
+            self.cb13.setVisible(False)
+            self.cb14.setVisible(False)
+
         path, ext = os.path.splitext(self.com.filename) # currently empty?
         ext = ext[1:].lower()
         suffix = "." + ext
@@ -10396,7 +10252,7 @@ class SaveWinP1(QtWidgets.QDialog):
         im_all_tif = self.cb35.isChecked()
 
         self.close()
-        self.parent.page1.Save(self.filename, self.path,
+        self.Save(self.filename, self.path,
                                          spec_png = sp_png,
                                          spec_pdf = sp_pdf,
                                          spec_svg = sp_svg,
@@ -10407,6 +10263,118 @@ class SaveWinP1(QtWidgets.QDialog):
                                          img_tif = im_tif,
                                          img_all = im_all,
                                          img_all_tif = im_all_tif)
+
+
+#----------------------------------------------------------------------
+    def Save(self, filename, path, spec_png = True, spec_pdf = False, spec_svg = False, sp_csv = False,
+             img_png = True, img_pdf = False, img_svg = False, img_tif = False, img_all = False, img_all_tif = False):
+
+        self.SaveFileName = os.path.join(path,filename)
+
+        try:
+            ext = 'png'
+            suffix = "." + ext
+
+            if spec_png:
+                fileName_spec = self.SaveFileName+"_spectrum."+ext
+                fig = self.parent.specfig
+                fig.SaveFig(fileName_spec)
+
+            if img_png:
+
+                fileName_img = self.SaveFileName+"_" +str(self.stk.ev[self.parent.iev])+"eV."+ext
+                fig = self.parent.absimgfig
+                fig.SaveFig(fileName_img)
+
+            #Save all images in the stack
+            if img_all:
+                QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
+
+                for i in range (self.stk.n_ev):
+                    if self.parent.showflux:
+                        #Show flux image
+                        image = self.stk.absdata[:,:,i]
+                    else:
+                        #Show OD image
+                        image = self.stk.od3d[:,:,i]
+                    image = img_as_ubyte(exposure.rescale_intensity(image))
+                    img = Image.fromarray(np.rot90(image))
+                    fileName_img = self.SaveFileName + "_imnum_" + str(i + 1) + "." + ext
+                    img.save(fileName_img)
+                QtWidgets.QApplication.restoreOverrideCursor()
+
+            #Save all images in the stack
+            if img_all_tif:
+                QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
+
+                for i in range (self.stk.n_ev):
+                    if self.parent.showflux:
+                        #Show flux image
+                        image = self.stk.absdata[:,:,i]
+                    else:
+                        #Show OD image
+                        image = self.stk.od3d[:,:,i]
+
+                    fileName_img = self.SaveFileName+"_imnum_" +str(i+1)+".tif"
+                    img = Image.fromarray(np.rot90(image))
+                    img.save(fileName_img)
+
+                QtWidgets.QApplication.restoreOverrideCursor()
+
+            ext = 'pdf'
+            suffix = "." + ext
+
+            if spec_pdf:
+                fileName_spec = self.SaveFileName+"_spectrum."+ext
+                fig = self.parent.specfig
+                fig.SaveFig(fileName_spec)
+
+            if img_pdf:
+                fileName_img = self.SaveFileName+"_" +str(self.stk.ev[self.parent.iev])+"eV."+ext
+                fig = self.parent.absimgfig
+                fig.SaveFig(fileName_img)
+
+            if sp_csv:
+                fileName_spec = self.SaveFileName+"_spectrum.csv"
+                self.stk.write_csv(fileName_spec, *self.parent.specfig.plots[0].getData())
+
+            ext = 'svg'
+            suffix = "." + ext
+
+            if spec_svg:
+                fileName_spec = self.SaveFileName+"_spectrum."+ext
+                fig = self.parent.specfig
+                fig.SaveFig(fileName_spec)
+
+            if img_svg:
+                fileName_img = self.SaveFileName+"_" +str(self.stk.ev[self.parent.iev])+"eV."+ext
+                fig = self.parent.absimgfig
+                fig.SaveFig(fileName_img)
+
+            if img_tif:
+                fileName_img = self.SaveFileName+"_" +str(self.stk.ev[self.parent.iev])+"eV.tif"
+                if self.parent.showflux:
+                    image = self.stk.absdata[:,:,self.parent.iev]
+                else:
+                    image = self.stk.od3d[:,:,self.parent.iev]
+                img1 = Image.fromarray(np.rot90(image))
+                img1.save(fileName_img)
+
+            # Textimage
+            # ext = 'txt'
+            # if img_txt:
+            #    np.savetxt(fileName, np.rot90(image), delimiter='\t', newline='\n', fmt='%.5f')
+
+
+        except IOError as e:
+            if e.strerror:
+                err = e.strerror
+            else:
+                err = e
+
+            QtWidgets.QMessageBox.warning(self,'Error','Could not save file: %s' % err)
+
+
 
 #-----------------------------------------------------------------------
 class ShowHistogram(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
@@ -14694,6 +14662,7 @@ class PageLoadData(QtWidgets.QWidget):
         self.com = common
 
         self.filename = " "
+        self.showflux = True
         self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
         self.slider_theta.valueChanged[int].connect(self.OnScrollTheta)
         self.iev = 0
@@ -14716,7 +14685,9 @@ class PageLoadData(QtWidgets.QWidget):
         self.button_sm.setToolTip('Supported Formats .sm, .xrm')
         self.button_sm.clicked.connect( self.OnBuildStack)
 
-        self.pb_copy.clicked.connect(self.absimgfig.OnCopy)
+        self.pb_copy_img.clicked.connect(self.absimgfig.OnCopy)
+        self.pb_copy_img.setEnabled(False)
+        self.pb_copy_specimg.setVisible(False)
         self.MetricCheckBox.toggled.connect(lambda: self.absimgfig.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
         self.ZeroOriginCheckBox.toggled.connect(lambda: self.absimgfig.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
         self.SquarePxCheckBox.toggled.connect(lambda: self.absimgfig.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
@@ -14732,7 +14703,8 @@ class PageLoadData(QtWidgets.QWidget):
 
         self.pb_rotate.clicked.connect(self.OnRotate)
         self.pb_mirror.clicked.connect(self.OnMirror)
-        self.pb_rawexp.clicked.connect(self.OnSaveData)
+        self.button_save.clicked.connect( self.OnSave)
+        self.button_save.setEnabled(False)
 
         self.tc_file.setText('File name')
 
@@ -14744,32 +14716,10 @@ class PageLoadData(QtWidgets.QWidget):
             self.OnCopy()
 
 # ----------------------------------------------------------------------
-    def OnSaveData(self,event):
-        #Save Data
-        wildcard = "Float32 TIFF File (*.tif);;TextImage (*.txt);;"
+    def OnSave(self, event):
 
-        fileName, _filter = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Raw Data', '', wildcard)
-
-        fileName = str(fileName)
-        if fileName == '':
-            return
-
-        path, ext = os.path.splitext(fileName)
-        ext = ext[1:].lower()
-
-        if ext != 'tif' and ext != 'txt':
-            error_message = (
-                  'Only the TIF and TXT data formats are supported.\n'
-                 'A file extension of `tif\' or `txt\' must be used.')
-            QtWidgets.QMessageBox.warning(self, 'Error', 'Error - Could not save file.')
-            return
-
-        if ext == 'tif':
-            from PIL import Image
-            img1 = Image.fromarray(np.rot90(self.absimgfig.imageitem.image))
-            img1.save(fileName)
-        if ext == 'txt':
-            np.savetxt(fileName, np.rot90(self.absimgfig.imageitem.image), delimiter='\t', newline='\n',fmt='%.5f')
+        savewin = SaveWin(self, self.com, self.stk)
+        savewin.show()
 # ----------------------------------------------------------------------
     def OnMirror(self):
         if self.com.stack_loaded == 1:
@@ -16701,7 +16651,6 @@ class MainFrame(QtWidgets.QMainWindow):
             self.page1.slider_theta.setRange(0,self.stk.n_theta-1)
             self.page1.itheta = self.itheta
             self.page1.slider_theta.setValue(self.itheta)
-            self.page1.button_multicrop.setText('Crop stack 4D...')
             #self.page1.tc_imagetheta.setText("4D Data Angle: "+str(self.stk.theta[self.itheta]))
 
             self.page2.button_calcpca4D.setVisible(True)
@@ -16713,15 +16662,13 @@ class MainFrame(QtWidgets.QMainWindow):
             if self.stk.data_struct.spectromicroscopy.normalization.white_spectrum is not None:
                 self.common.i0_loaded = 1
 
-
-            #self.page1.ResetDisplaySettings()
-            self.page1.specfig.loadNewSpectrum()
-            self.page1.absimgfig.loadNewImageWithROI()
-            #self.page1.loadSpectrum(self.ix, self.iy)
-            # self.page1.textctrl.setText(self.page1.filename)
-
             self.page0.absimgfig.loadNewImage()
             self.page0.ShowInfo(self.page1.filename, directory)
+            #self.page1.ResetDisplaySettings()
+            self.page1.absimgfig.loadNewImageWithROI()
+            self.page1.button_multicrop.setText('Crop stack 4D...')
+            self.page1.specfig.loadNewSpectrum()
+            # self.page1.textctrl.setText(self.page1.filename)
 
             self.page5.updatewidgets()
 
@@ -16869,7 +16816,11 @@ class MainFrame(QtWidgets.QMainWindow):
                 self.page1.button_refimgs.setEnabled(False)
                 #self.page1.button_subregion.setEnabled(False)
                 self.page1.button_darksig.setEnabled(False)
+            self.page0.button_save.setEnabled(True)
             self.page1.button_save.setEnabled(True)
+            self.page0.pb_copy_img.setEnabled(True)
+            self.page1.pb_copy_img.setEnabled(True)
+            self.page1.pb_copy_specimg.setEnabled(True)
             self.page1.button_savestack.setEnabled(True)
             self.page1.button_align.setEnabled(True)
             self.page1.button_slideshow.setEnabled(True)

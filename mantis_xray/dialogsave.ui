@@ -39,7 +39,7 @@
         </widget>
        </item>
        <item row="1" column="0">
-        <widget class="QLabel" name="label_5">
+        <widget class="QLabel" name="label_spectrum">
          <property name="text">
           <string>_spectrum</string>
          </property>
@@ -67,7 +67,7 @@
         </widget>
        </item>
        <item row="0" column="4">
-        <widget class="QLabel" name="label_9">
+        <widget class="QLabel" name="label_csv">
          <property name="text">
           <string>.csv (data)</string>
          </property>
