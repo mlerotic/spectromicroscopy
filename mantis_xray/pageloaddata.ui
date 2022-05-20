@@ -169,7 +169,7 @@
                </font>
               </property>
               <property name="text">
-               <string>Select a directory with stack files [.sm, xrm]</string>
+               <string>Select a directory [.sm, .xrm, .tif]</string>
               </property>
              </widget>
             </item>

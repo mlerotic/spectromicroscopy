@@ -22,6 +22,7 @@ from __future__ import absolute_import
 
 import sys
 import os
+import re
 import time
 import copy
 
@@ -10299,7 +10300,7 @@ class SaveWin(QtWidgets.QDialog):
                         image = self.stk.od3d[:,:,i]
                     image = img_as_ubyte(exposure.rescale_intensity(image))
                     img = Image.fromarray(np.rot90(image))
-                    fileName_img = self.SaveFileName + "_imnum_" + str(i + 1) + "." + ext
+                    fileName_img = self.SaveFileName + "_" + str(self.stk.ev[i])+"eV_"+ str(i + 1) + "." + ext
                     img.save(fileName_img)
                 QtWidgets.QApplication.restoreOverrideCursor()
 
@@ -10315,7 +10316,7 @@ class SaveWin(QtWidgets.QDialog):
                         #Show OD image
                         image = self.stk.od3d[:,:,i]
 
-                    fileName_img = self.SaveFileName+"_imnum_" +str(i+1)+".tif"
+                    fileName_img = self.SaveFileName+"_" +str(self.stk.ev[i])+"eV_" +str(i+1)+".tif"
                     img = Image.fromarray(np.rot90(image))
                     img.save(fileName_img)
 
@@ -15505,8 +15506,8 @@ class StackListFrame(QtWidgets.QDialog):
         self.filelist.setRowCount(0)
 
         self.filelist.cellClicked.connect(self.OnFileList)
-
-
+        self.filelist.horizontalHeader().setSortIndicatorShown(True)
+        self.filelist.horizontalHeader().sectionClicked.connect(self.OnSort)
 
         vbox.addWidget(self.filelist)
         vbox.addStretch(1)
@@ -15526,7 +15527,7 @@ class StackListFrame(QtWidgets.QDialog):
 
 
         self.button_accept = QtWidgets.QPushButton('Accept')
-        #self.button_accept.setEnabled(False)
+        self.button_accept.setEnabled(False)
         self.button_accept.clicked.connect( self.OnAccept)
         hbox.addWidget(self.button_accept)
 
@@ -15543,6 +15544,9 @@ class StackListFrame(QtWidgets.QDialog):
 
         self.ShowFileList()
 
+# ----------------------------------------------------------------------
+    def OnSort(self):
+        self.sm_files = [self.filelist.item(i,0).text() for i in range(self.filelist.rowCount())]
 #----------------------------------------------------------------------
     def OnFileList(self, row, column):
 
@@ -15550,7 +15554,7 @@ class StackListFrame(QtWidgets.QDialog):
         if (self.have1st == 1) and (self.havelast==1):
             self.have1st = 0
             self.havelast = 0
-            #self.button_accept.setEnabled(False)
+            self.button_accept.setEnabled(False)
             self.tc_first.setText('First stack file: ')
             self.tc_last.setText('Last stack file: ')
 
@@ -15565,9 +15569,8 @@ class StackListFrame(QtWidgets.QDialog):
             self.tc_last.setText('Last stack file: ' + fn)
             self.textt.setText('Select first stack file')
             self.filelast = fn
-            #self.button_accept.setEnabled(True)
+            self.button_accept.setEnabled(True)
             self.havelast = 1
-
 #----------------------------------------------------------------------
     def ShowFileList(self):
 
@@ -15674,6 +15677,36 @@ class StackListFrame(QtWidgets.QDialog):
 
             self.sm_files = self.bim_files
 
+        self.tif_files = [x for x in os.listdir(filepath) if x.endswith('.tif')]
+        if self.tif_files:
+
+            self.filetype = 'tif'
+
+            count = 0
+
+            for i in range(len(self.tif_files)):
+
+                filename = self.tif_files[i]
+                thisfile = os.path.join(filepath, filename)
+
+                ncols, nrows = file_tif.read_tif_info(thisfile)
+                #auto-read energies when the following syntax applies "<str>_XXX.XeV_XX.tif"
+                fnlist = filename.split('_')
+                ind =[ m for m, j in enumerate(fnlist) if re.search('\deV', j)][0]
+                iev = float(fnlist[ind][:-2])
+
+                self.filelist.insertRow(count)
+                self.filelist.setRowHeight(count, 20)
+
+                self.filelist.setItem(count, 0, QtWidgets.QTableWidgetItem(filename))
+                self.filelist.setItem(count, 1, QtWidgets.QTableWidgetItem(str(ncols)))
+                self.filelist.setItem(count, 2, QtWidgets.QTableWidgetItem(str(nrows)))
+                self.filelist.setItem(count, 3, QtWidgets.QTableWidgetItem('{0:5.2f}'.format(iev)))
+
+                count += 1
+            self.sm_files = self.tif_files
+
+        self.filelist.setSortingEnabled(True)
         return
 
 
@@ -15683,8 +15716,9 @@ class StackListFrame(QtWidgets.QDialog):
 
         QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
 
-        self.parent.new_stack_refresh()
-        self.stk.new_data()
+        if self.common.stack_loaded == 1:
+            self.parent.new_stack_refresh()
+            self.stk.new_data()
 
         ind1st = self.sm_files.index(self.file1st)
         indlast = self.sm_files.index(self.filelast)
@@ -15699,6 +15733,8 @@ class StackListFrame(QtWidgets.QDialog):
             file_xrm.read_xrm_list(self, filelist, self.filepath, self.data_struct)
         elif self.filetype == 'bim':
             file_bim.read_bim_list(self, filelist, self.filepath, self.data_struct)
+        elif self.filetype == 'tif':
+            file_tif.read_tif_list(self, filelist, self.filepath, self.data_struct)
         else:
             print('Wrong file type')
             return
@@ -15727,31 +15763,41 @@ class StackListFrame(QtWidgets.QDialog):
         self.stk.setScale()
 
 
-        self.parent.page1.iev = int(self.stk.n_ev/3) #Is this correct?
+        #self.parent.page1.iev = int(self.stk.n_ev/3) #Is this correct?
 
         self.parent.ix = int(self.stk.n_cols/2)
         self.parent.iy = int(self.stk.n_rows/2)
 
         self.common.stack_loaded = 1
 
+        self.parent.page0.absimgfig.loadNewImage()
+        directory = os.path.dirname(str(self.filepath))
+        self.parent.page0.ShowInfo(os.path.basename(str(self.filepath)), directory)
+        # self.page1.ResetDisplaySettings()
+        self.parent.page1.absimgfig.loadNewImageWithROI()
+        self.parent.page1.button_multicrop.setText('Crop stack 3D...')
+        # print (x,y), (self.ix,self.iy), self.stk.absdata.shape
+        self.parent.page1.specfig.loadNewSpectrum()
+
+        # self.parent.refresh_widgets()
+        # self.parent.page1.ResetDisplaySettings()
+        # self.parent.page1.filename = filelist[0]
+        # # self.parent.page1.textctrl.setText(filelist[0])
+        #
+        # self.parent.page0.slider_eng.setRange(0,self.stk.n_ev-1)
+        # #self.parent.page0.iev = int(self.stk.n_ev/2)
+        # self.parent.page0.slider_eng.setValue(self.parent.page1.iev)
+        #
+        # self.parent.page1.slider_eng.setRange(0,self.stk.n_ev-1)
+        # #self.parent.page1.iev = self.stk.n_ev/2
+        # self.parent.page1.slider_eng.setValue(self.parent.page1.iev)
+        #
+        # self.parent.page1.specfig.loadNewSpectrum()
+        # self.parent.page1.absimgfig.loadNewImageWithROI()
+        #
+        # self.parent.page0.ShowInfo(filelist[0], self.filepath)
+        self.parent.page5.updatewidgets()
         self.parent.refresh_widgets()
-        self.parent.page1.ResetDisplaySettings()
-        self.parent.page1.filename = filelist[0]
-        # self.parent.page1.textctrl.setText(filelist[0])
-
-        self.parent.page0.slider_eng.setRange(0,self.stk.n_ev-1)
-        #self.parent.page0.iev = int(self.stk.n_ev/2)
-        self.parent.page0.slider_eng.setValue(self.parent.page1.iev)
-
-        self.parent.page1.slider_eng.setRange(0,self.stk.n_ev-1)
-        #self.parent.page1.iev = self.stk.n_ev/2
-        self.parent.page1.slider_eng.setValue(self.parent.page1.iev)
-
-        #self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
-        self.parent.page1.loadNewImageWithROI()
-
-        self.parent.page0.ShowInfo(filelist[0], self.filepath)
-
         QtWidgets.QApplication.restoreOverrideCursor()
         self.close()
 

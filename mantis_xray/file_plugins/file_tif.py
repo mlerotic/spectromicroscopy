@@ -109,7 +109,73 @@ def read(filename, self, selection=None, *args, **kwargs):
 
     self.fill_h5_struct_from_stk()
 
+def read_tif_info(filename):
+    img = Image.open(filename)
+    arr = np.array(img)
+    n_cols = arr.shape[1]
+    n_rows = arr.shape[0]
+    return n_cols, n_rows
+
 #-----------------------------------------------------------------------
+def read_tif_list(self, filelist, filepath, ds):
+    from PyQt5.QtCore import Qt
+    n_ev = len(filelist)
+    ev = []
+    cols = []
+    rows =[]
+    for i in range(n_ev):
+        row = self.filelist.findItems(filelist[i], Qt.MatchContains)[0].row()
+        cols.append(int(self.filelist.item(row,1).text()))
+        rows.append(int(self.filelist.item(row,2).text()))
+        ev.append(float(self.filelist.item(row,3).text()))
+    assert rows.count(rows[0]) == len(rows), 'x dimension not equally sized'
+    assert cols.count(cols[0]) == len(cols), 'y dimension not equally sized'
+    n_rows = rows[0]
+    n_cols = cols[0]
+
+    absdata = np.zeros((n_cols, n_rows, n_ev))
+
+    for i in range(n_ev):
+        fn = filelist[i]
+        filename = os.path.join(filepath, fn)
+        img = Image.open(filename)
+        imagestack = np.rot90(np.array(img),3)
+        absdata[:, :, i] = np.reshape(imagestack, (n_cols, n_rows), order='C')
+    # Since we do not know the pixel size, x_dist and y_dist is derived from pixel number
+    pixelsize = 1
+    x_dist = np.arange(np.float(n_cols))*pixelsize
+    y_dist = np.arange(np.float(n_rows))*pixelsize
+    # Since unknown, set dwell time to 1
+    msec = 1
+    data_dwell = np.ones((n_ev))*msec
+    #
+    # Fill the data structure with data:
+    ds.implements = 'information:exchange:spectromicroscopy'
+    ds.version = '1.0'
+    ds.information.comment = 'Converted from .tif file list in MANTiS',
+
+    import datetime
+    now = datetime.datetime.now()
+    ds.information.file_creation_datetime = now.strftime("%Y-%m-%dT%H:%M")
+
+    ds.information.experimenter.name = ''
+    ds.information.sample.name = ''
+
+    ds.exchange.data = absdata
+    ds.exchange.data_signal = 1
+    ds.exchange.data_axes = 'x:y'
+
+    ds.exchange.energy = np.array(ev)
+    ds.exchange.energy_units = 'eV'
+
+    ds.exchange.x = x_dist
+    ds.exchange.x_units = 'um'
+    ds.exchange.y = y_dist
+    ds.exchange.y_units = 'um'
+
+    ds.spectromicroscopy.data_dwell = data_dwell
+    return
+
 def write(filename, data_object, data_type):
     """Switchyard for writing different types of data."""
     if data_type in ['stack']:
