@@ -15547,6 +15547,13 @@ class StackListFrame(QtWidgets.QDialog):
 # ----------------------------------------------------------------------
     def OnSort(self):
         self.sm_files = [self.filelist.item(i,0).text() for i in range(self.filelist.rowCount())]
+        self.have1st = 0
+        self.havelast = 0
+        self.file1st = ' '
+        self.filelast = ' '
+        self.button_accept.setEnabled(False)
+        self.tc_first.setText('First stack file: ')
+        self.tc_last.setText('Last stack file: ')
 #----------------------------------------------------------------------
     def OnFileList(self, row, column):
 
@@ -15682,8 +15689,6 @@ class StackListFrame(QtWidgets.QDialog):
 
             self.filetype = 'tif'
 
-            count = 0
-
             for i in range(len(self.tif_files)):
 
                 filename = self.tif_files[i]
@@ -15692,18 +15697,19 @@ class StackListFrame(QtWidgets.QDialog):
                 ncols, nrows = file_tif.read_tif_info(thisfile)
                 #auto-read energies when the following syntax applies "<str>_XXX.XeV_XX.tif"
                 fnlist = filename.split('_')
-                ind =[ m for m, j in enumerate(fnlist) if re.search('\deV', j)][0]
-                iev = float(fnlist[ind][:-2])
+                try:
+                    ind =[ m for m, j in enumerate(fnlist) if re.search('\deV', j)][0]
+                    iev = float(fnlist[ind][:-2])
+                except IndexError:
+                    iev = i
+                self.filelist.insertRow(i)
+                self.filelist.setRowHeight(i, 20)
 
-                self.filelist.insertRow(count)
-                self.filelist.setRowHeight(count, 20)
+                self.filelist.setItem(i, 0, QtWidgets.QTableWidgetItem(filename))
+                self.filelist.setItem(i, 1, QtWidgets.QTableWidgetItem(str(ncols)))
+                self.filelist.setItem(i, 2, QtWidgets.QTableWidgetItem(str(nrows)))
+                self.filelist.setItem(i, 3, QtWidgets.QTableWidgetItem('{0:5.2f}'.format(iev)))
 
-                self.filelist.setItem(count, 0, QtWidgets.QTableWidgetItem(filename))
-                self.filelist.setItem(count, 1, QtWidgets.QTableWidgetItem(str(ncols)))
-                self.filelist.setItem(count, 2, QtWidgets.QTableWidgetItem(str(nrows)))
-                self.filelist.setItem(count, 3, QtWidgets.QTableWidgetItem('{0:5.2f}'.format(iev)))
-
-                count += 1
             self.sm_files = self.tif_files
 
         self.filelist.setSortingEnabled(True)
@@ -15722,8 +15728,11 @@ class StackListFrame(QtWidgets.QDialog):
 
         ind1st = self.sm_files.index(self.file1st)
         indlast = self.sm_files.index(self.filelast)
-
-        filelist = self.sm_files[ind1st:indlast+1]
+        if indlast < ind1st:
+            filelist = self.sm_files[indlast:ind1st+1]
+            filelist.reverse()
+        else:
+            filelist = self.sm_files[ind1st:indlast+1]
 
 
         if self.filetype == 'sm':
