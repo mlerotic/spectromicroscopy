@@ -26,6 +26,7 @@ import scipy.ndimage
 import h5py
 import datetime
 import os
+import csv
 
 from .file_plugins import file_stk
 from .file_plugins import file_sdf
@@ -649,39 +650,53 @@ class data:
 
     # ----------------------------------------------------------------------
     def write_csv(self, filename, evdata, data, cname=''):
-        f = open(filename, 'w')
-        print('*********************  X-ray Absorption Data  ********************', file=f)
-        print('*', file=f)
-        print('* Formula: ', file=f)
-        print('* Common name: {0}'.format(cname), file=f)
-        print('* Edge: ', file=f)
-        print('* Acquisition mode: ', file=f)
-        print('* Source and purity: ', file=f)
-        print('* Comments: Stack list ROI ""', file=f)
-        print('* Delta eV: ', file=f)
-        print('* Min eV: ', file=f)
-        print('* Max eV: ', file=f)
-        print('* Y axis: ', file=f)
-        print('* Contact person: ', file=f)
-        print('* Write date: ', file=f)
-        print('* Journal: ', file=f)
-        print('* Authors: ', file=f)
-        print('* Title: ', file=f)
-        print('* Volume: ', file=f)
-        print('* Issue number: ', file=f)
-        print('* Year: ', file=f)
-        print('* Pages: ', file=f)
-        print('* Booktitle: ', file=f)
-        print('* Editors: ', file=f)
-        print('* Publisher: ', file=f)
-        print('* Address: ', file=f)
-        print('*--------------------------------------------------------------', file=f)
-        for ie in range(self.n_ev):
-            print('{0:06.2f}, {1:06f}'.format(evdata[ie], data[ie]), file=f)
-
-        f.close()
-
-        return
+        with open(filename, 'w', ) as f:
+            writer = csv.writer(f, quoting=csv.QUOTE_ALL)
+            header = [['*********************  X-ray Absorption Data  ********************'],
+                      ['*'],
+                      ['* Formula: '],
+                      ['* Common name: {0}'.format(cname)],
+                      ['* Edge: '],
+                      ['* Acquisition mode: '],
+                      ['* Source and purity: '],
+                      ['* Comments: Stack list ROI ""'],
+                      ['* Delta eV: '],
+                      ['* Min eV: '],
+                      ['* Max eV: '],
+                      ['* Y axis: '],
+                      ['* Contact person: '],
+                      ['* Write date: '],
+                      ['* Journal: '],
+                      ['* Authors: '],
+                      ['* Title: '],
+                      ['* Volume: '],
+                      ['* Issue number: '],
+                      ['* Year: '],
+                      ['* Pages: '],
+                      ['* Booktitle: '],
+                      ['* Editors: '],
+                      ['* Publisher: '],
+                      ['* Address: '],
+                      ['*--------------------------------------------------------------']]
+            for line in header:
+                writer.writerows([line])
+            if cname == "ROI spectra":
+                l = ["photon energy"]
+                for i in range(len(data)):
+                    if i == 0:
+                        l.append("current ROI")
+                    else:
+                        l.append("ROI "+ str(i))
+                writer.writerow(l)
+                data.insert(0,evdata)
+                data = [list(i) for i in zip(*data)]
+                for row in data:
+                    writer.writerows([row])
+                return
+            else:
+                for ie in range(self.n_ev):
+                    writer.writerow(['{0:06.2f}, {1:06f}'.format(evdata[ie], data[ie])])
+                return
 
     # ----------------------------------------------------------------------
     # Read x-ray absorption spectrum

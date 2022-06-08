@@ -8929,6 +8929,7 @@ class PageStack(QtWidgets.QWidget):
         self.white_scale_bar = 0
 
         self.movie_playing = 0
+        self.mean_visible = 0
 
 
         #panel 1
@@ -9038,6 +9039,9 @@ class PageStack(QtWidgets.QWidget):
         #vbox22 = QtWidgets.QVBoxLayout()
         #self.button_slideshow = QtWidgets.QPushButton('Play stack movie')
         #self.button_slideshow.setMaximumSize (150 , 150)
+        self.button_meanflux.clicked.connect( self.OnShowMean)
+        self.button_meanflux.setEnabled(False)
+        self.button_meanflux.setChecked(False)
         self.button_slideshow.clicked.connect( self.OnSlideshow)
         self.button_slideshow.setEnabled(False)
         #vbox22.addWidget(self.button_slideshow)
@@ -9355,14 +9359,13 @@ class PageStack(QtWidgets.QWidget):
 #----------------------------------------------------------------------
     def I0histogramCalculated(self):
         self.com.i0_loaded = 1
-
         if self.com.stack_4d == 1:
             self.stk.od3d = self.stk.od4d[:,:,:,self.itheta]
             self.stk.od = self.stk.od3d.copy()
             self.stk.od = np.reshape(self.stk.od, (self.stk.n_cols*self.stk.n_rows, self.stk.n_ev), order='F')
 
         self.absimgfig.loadNewImageWithROI()
-        self.specfig.loadNewSpectrum()
+        self.specfig.ClearandReload()
 
         self.window().refresh_widgets()
 
@@ -9387,7 +9390,7 @@ class PageStack(QtWidgets.QWidget):
         self.com.i0_loaded = 1
         #self.loadSpectrum(self.ix, self.iy)
         self.absimgfig.loadNewImageWithROI()
-        self.specfig.loadNewSpectrum()
+        self.specfig.ClearandReload()
         self.window().refresh_widgets()
 
 #-----------------------------------------------------------------------
@@ -9434,7 +9437,7 @@ class PageStack(QtWidgets.QWidget):
 
 
 #----------------------------------------------------------------------
-    def OnResetI0(self, event):
+    def OnResetI0(self):
 
         self.stk.reset_i0()
 
@@ -9443,9 +9446,8 @@ class PageStack(QtWidgets.QWidget):
         self.showflux = True
         #self.rb_flux.setChecked(True)
 
-        #self.loadSpectrum(self.ix, self.iy)
         self.absimgfig.loadNewImageWithROI()
-        self.specfig.loadNewSpectrum()
+        self.specfig.ClearandReload()
         self.window().refresh_widgets()
 
 
@@ -9530,14 +9532,36 @@ class PageStack(QtWidgets.QWidget):
         dswin.show()
 
 #----------------------------------------------------------------------
+    def OnShowMean(self, event):
+        if (self.com.stack_loaded == 1):
+            if (self.mean_visible == 1):
+                self.mean_visible = 0
+                self.OnScrollEng(self.iev)
+                return
+            self.mean_visible = 1
+            if self.com.i0_loaded == 0:
+                # Show flux mean
+
+                image = np.nanmean(self.stk.absdata, axis=2)
+                self.absimgfig.draw(image)
+                self.absimgfig.imageplot.setTitle("Mean flux")
+            else:
+                # Show OD mean
+                image = np.nanmean(self.stk.od3d, axis=2)
+                self.absimgfig.draw(image)
+                self.absimgfig.imageplot.setTitle("Mean OD")
+
+
+#----------------------------------------------------------------------
     def OnSlideshow(self, event):
 
         if (self.com.stack_loaded == 1) and (self.addroi == 0):
 
             if (self.movie_playing == 1):
                 self.movie_playing = 0
+                self.button_meanflux.setEnabled(True)
                 return
-
+            self.button_meanflux.setEnabled(False)
             self.button_slideshow.setText("Stop stack movie")
             self.movie_playing = 1
             # #self.loadSpectrum(self.ix, self.iy)
@@ -9559,6 +9583,8 @@ class PageStack(QtWidgets.QWidget):
 #-----------------------------------------------------------------------
     def OnScrollEng(self, value):
         self.iev = value
+        self.button_meanflux.setChecked(False)
+        self.mean_visible = 0
         if self.com.stack_loaded == 1:
             self.slider_eng.setValue(value)
             if self.defaultdisplay == 1.0:
@@ -9583,6 +9609,8 @@ class PageStack(QtWidgets.QWidget):
 #----------------------------------------------------------------------
     def OnScrollTheta(self, value):
         self.itheta = value
+        self.button_meanflux.setChecked(False)
+        self.mean_visible = 0
         if self.com.stack_loaded == 1:
             self.slider_theta.setValue(value)
             self.stk.absdata = self.stk.stack4D[:,:,:,self.itheta].copy()
@@ -9591,7 +9619,7 @@ class PageStack(QtWidgets.QWidget):
             #self.p1.setTitle("<center>Image at {0:5.2f} eV and {1:5.1f}°</center>".format(float(self.stk.ev[self.iev]),
             #                                                                 float(self.stk.theta[self.itheta])))
             self.absimgfig.draw(image)
-            self.specfig.loadNewSpectrum()
+            self.specfig.ClearandReload()
 
 #-----------------------------------------------------------------------
     def OnPointSpectrum(self, evt):
@@ -10083,7 +10111,7 @@ class PageStack(QtWidgets.QWidget):
         #self.parent.page1.loadImage()
         self.absimgfig.loadNewImageWithROI()
         self.absimgfig.loadNewImage()
-        self.specfig.loadNewSpectrum()
+        self.specfig.ClearandReload()
         #self.loadImage()
         #self.loadSpectrum(self.ix, self.iy)
 
@@ -10337,7 +10365,12 @@ class SaveWin(QtWidgets.QDialog):
 
             if sp_csv:
                 fileName_spec = self.SaveFileName+"_spectrum.csv"
-                self.stk.write_csv(fileName_spec, *self.parent.specfig.plots[0].getData())
+                plot_num = len(self.parent.specfig.plotitem.items)
+                evdata = self.parent.specfig.plotitem.items[1].xData.tolist()
+                data = []
+                for i in range(plot_num - 1):
+                    data.append(self.parent.specfig.plotitem.items[i+1].yData.tolist())
+                self.stk.write_csv(fileName_spec, evdata, data, cname="ROI spectra")
 
             ext = 'svg'
             suffix = "." + ext
@@ -11008,7 +11041,7 @@ class MultiCrop(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
         self.thetaidx_selected = []
         for i,e in enumerate(self.stack.theta): # Fill QList with energies
             #self.stk.shifts.append([1,0,(0.0,0.0)]) #checked [0,1]; pre, post, undefined state for map [-1,1,0],(xshift [float],yshift [float])
-            item = QtWidgets.QListWidgetItem(str(int(i)).zfill(3)+"     at     " + format(e, '.1f') + "°")
+            item = QtWidgets.QListWidgetItem(str(int(i)).zfill(4)+"     at     " + format(e, '.1f') + "°")
             self.theta_widget.addItem(item)
             self.theta_selected.append(item)
             self.thetaidx_selected.append(i)
@@ -11019,7 +11052,7 @@ class MultiCrop(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
         self.idx_selected = []
         for i,e in enumerate(self.stack.ev): # Fill QList with energies
             #self.stk.shifts.append([1,0,(0.0,0.0)]) #checked [0,1]; pre, post, undefined state for map [-1,1,0],(xshift [float],yshift [float])
-            item = QtWidgets.QListWidgetItem(str(int(i)).zfill(3)+"     at     " + format(e, '.2f') + " eV")
+            item = QtWidgets.QListWidgetItem(str(int(i)).zfill(4)+"     at     " + format(e, '.2f') + " eV")
             self.ev_widget.addItem(item)
             self.ev_selected.append(item)
             self.idx_selected.append(i)
@@ -11221,7 +11254,7 @@ class MultiCrop(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
         #self.parent.page1.Clear()
         self.parent.page1.absimgfig.loadNewImageWithROI()
         self.parent.page0.absimgfig.loadNewImage()
-        self.parent.page1.specfig.loadNewSpectrum()
+        self.parent.page1.specfig.ClearandReload()
         #if showmaptab:
         #    self.parent.page9.Clear()
         #    self.parent.page9.loadData()
@@ -13649,7 +13682,7 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
         #self.parent.page1.slider_eng.setValue(self.parent.page1.iev)
         self.parent.page0.absimgfig.loadNewImage()
         self.parent.page1.absimgfig.loadNewImageWithROI()
-        self.parent.page1.specfig.loadNewSpectrum()
+        self.parent.page1.specfig.ClearandReload()
         #self.parent.page1.ix = int(self.stack.n_cols/2)
         #self.parent.page1.iy = int(self.stack.n_rows/2)
 
@@ -14677,13 +14710,12 @@ class PageLoadData(QtWidgets.QWidget):
 
         self.button_multiload.clicked.connect( self.OnLoadMulti)
         self.button_multiload.setToolTip('Supported Formats .hdf .hdf5 .ncb .nxs .hdr .stk .tif .tiff .txrm')
-
+        #self.button_multiload.setToolTip('Supported Formats .hdf .hdf5 .ncb .npy .nxs .hdr .stk .tif .tiff .txrm')
         self.button_4d.setToolTip('Supported Formats .hdf5 .ncb')
         self.button_4d.clicked.connect( self.OnLoad4D)
 
-        #ToDo: Repair Stack Builder
         #ToDo: Repair Scaling/scalebar for HDF5 files.
-        self.button_sm.setToolTip('Supported Formats .sm, .xrm')
+        self.button_sm.setToolTip('Supported Formats .sm, .tif, .xrm')
         self.button_sm.clicked.connect( self.OnBuildStack)
 
         self.pb_copy_img.clicked.connect(self.absimgfig.OnCopy)
@@ -14787,7 +14819,7 @@ class PageLoadData(QtWidgets.QWidget):
             self.window().page1.ix = int(self.stk.n_cols / 2)
             self.window().page1.iy = int(self.stk.n_rows / 2)
             #self.window().page1.loadSpectrum(self.window().page1.ix, self.window().page1.iy)
-            self.window().page1.specfig.loadNewSpectrum()
+            self.window().page1.specfig.ClearandReload()
             self.window().page1.absimgfig.loadNewImageWithROI()
         return
 
@@ -15786,7 +15818,7 @@ class StackListFrame(QtWidgets.QDialog):
         self.parent.page1.absimgfig.loadNewImageWithROI()
         self.parent.page1.button_multicrop.setText('Crop stack 3D...')
         # print (x,y), (self.ix,self.iy), self.stk.absdata.shape
-        self.parent.page1.specfig.loadNewSpectrum()
+        self.parent.page1.specfig.ClearandReload()
 
         # self.parent.refresh_widgets()
         # self.parent.page1.ResetDisplaySettings()
@@ -15946,8 +15978,8 @@ class SpecFig():
     def __init__(self,parent,plotwidget):
         self.parent = parent
         self.plot = plotwidget
+        self.plotitem = self.plot.getPlotItem()
         self.plot.setBackground("w")
-
         pi = self.plot.getPlotItem()
         pi.layout.setSpacing(12)
         pi.layout.setContentsMargins(10,10,40,10)
@@ -15966,17 +15998,26 @@ class SpecFig():
         ax = self.plot.getAxis("bottom")
         ax.setLabel(text="Photon energy [eV]")
         self.plot.setTitle("")
-
+        self.plot.addLegend()
         self.LineIndicator = pg.InfiniteLine(angle=90, movable=True, markers=None,
                                               pen=pg.mkPen(color=QtGui.QColor(0, 0, 0, 128), width=1.5, style=QtCore.Qt.DashLine))
         self.LineIndicatorLabel = pg.InfLineLabel(self.LineIndicator, " ")
-        self.plots = []
-    def clear(self):
-        #print("clear")
-        self.plot.removeItem(self.LineIndicator)
-        for item in self.plots:
-            self.plot.removeItem(item)
-            self.plots.remove(item)
+        self.parent.button_lockspectrum.clicked.connect(self.OnLockSpectrum)
+        self.parent.button_clearspecfig.clicked.connect(self.ClearandReload)
+        #self.plots = []
+    def ClearandReload(self):
+        self.plot.blockSignals(True)
+        #self.plotitem.removeItem(self.LineIndicator)
+        iterator = len(self.plotitem.items)-1
+        # The expression "for item in self.plotitem.items: " does not work! Instead we count the items and iterate through them
+        for i in range(iterator,-1,-1):
+                self.plotitem.removeItem(self.plotitem.items[i])  # remove spectra
+                try:    # remove locked ROIs from imageplot
+                    roiitem = self.parent.absimgfig.imageplot.items[i]
+                    if isinstance(roiitem, QtWidgets.QGraphicsRectItem): # only remove RectItems
+                        self.parent.absimgfig.imageplot.removeItem(roiitem)
+                except IndexError:  # if previously removed, ignore
+                    pass
         try:
             self.LineIndicator.sigPositionChangeFinished.disconnect()
             self.LineIndicator.sigPositionChanged.disconnect()
@@ -15985,6 +16026,8 @@ class SpecFig():
             self.parent.absimgfig.roi.sigRegionChanged.disconnect()
         except:
             pass
+        self.plot.blockSignals(False)
+        self.loadNewSpectrum()
         #self.plot.clear()
     def toggleI0Spectrum(self):
         #self.clear()
@@ -15996,76 +16039,65 @@ class SpecFig():
             self.parent.absimgfig.roi.setVisible(True)
 
     def OnLockSpectrum(self):
-        nplots = len(self.plots) + 1
-        print("lock ",nplots)
-        x = self.plots[0].xData
-        y = self.plots[0].yData
-        curve = pg.PlotCurveItem(pen=({'color': pg.intColor(nplots), 'width': 2}), skipFiniteCheck=True)
-        self.plot.addItem(curve)
-        self.plots.append(curve)
-        self.plots[-1].setData(x,y)
-
+        nplots = len(self.plotitem.items) + 1
+        roi_name = "ROI " + str(nplots-2) # 2 plots are consumed for the lineindicator at pos [0] and the current roi at [-1].
+        x = self.plotitem.items[1].xData
+        y = self.plotitem.items[1].yData
+        curve = pg.PlotCurveItem(pen=({'color': pg.intColor(nplots,alpha=150), 'width': 2}), skipFiniteCheck=True,name=roi_name)
+        self.plotitem.addItem(curve)
+        self.parent.absimgfig.addLockedROI()
+        #self.plots.append(curve)
+        self.plotitem.items[-1].setData(x,y)
 
     def loadNewSpectrum(self):
-        print("load new spectrum")
         self.parent.button_showi0.blockSignals(True)
         self.parent.button_showi0.setChecked(False)
         self.parent.button_showi0.blockSignals(False)
-        try:
-            self.clear()
-        except IndexError:
-            pass
+        if self.plotitem.items:
+            try:
+                self.ClearandReload()
+                #self.parent.button_lockspectrum.disconnect()
+                #self.parent.button_clearspecfig.disconnect()
+            except IndexError:
+                pass
         curve = pg.PlotCurveItem(pen=({'color': pg.intColor(6), 'width': 2}), skipFiniteCheck=True)
 
-        self.plot.addItem(self.LineIndicator, ignoreBounds=True)
-        self.plot.addItem(curve)
-        self.plots.append(curve)
-        self.plots.reverse()
+        self.plotitem.addItem(self.LineIndicator, ignoreBounds=True)
+        self.plotitem.addItem(curve)
         self.loadData()
-        self.parent.button_lockspectrum.clicked.connect(self.OnLockSpectrum)
     def updatePlotData(self):
         x,y = self.GenerateSpectrum(list(range(self.parent.stk.n_ev)))
         self.plot.blockSignals(True)
-        self.plots[0].setData(x, y)
-        self.LineIndicator.setPos(QtCore.QPointF(self.plots[0].xData[self.parent.iev], self.plots[0].yData[self.parent.iev]))
+        self.plotitem.items[1].setData(x, y)
+        self.LineIndicator.setPos(QtCore.QPointF(self.plotitem.items[1].xData[self.parent.iev], self.plotitem.items[1].yData[self.parent.iev]))
         self.plot.blockSignals(False)
 
     def getIntersectionY(self):
-        x_newgrid = self.plots[0].xData
-        y_newgrid = self.plots[0].yData
+        x_newgrid = self.plotitem.items[1].xData
+        y_newgrid = self.plotitem.items[1].yData
 
-        if len(self.plots[0].xData)> 2:
-            func = interp1d(x_newgrid, self.plots[0].yData)
+        if len(self.plotitem.items[1].xData)> 2:
+            func = interp1d(x_newgrid, self.plotitem.items[1].yData)
             x_newgrid = np.linspace(min(x_newgrid), max(x_newgrid), num=min(5000,(40*len(x_newgrid))), endpoint=True)
             y_newgrid = func(x_newgrid)
         diff = np.abs(x_newgrid - self.LineIndicator.value())
         idx = np.argmin(diff)
 
-        vb = self.plots[0].getViewBox()
+        vb = self.plotitem.items[1].getViewBox()
         ypos = 1 + (y_newgrid[idx] - vb.viewRect().bottom()) / (
                     vb.viewRect().bottom() - vb.viewRect().top())
         return ypos
 
     def loadData(self, showi0=False):
-        #nplots = len(self.plots) + 1
         if showi0:
             x,y = (self.parent.stk.evi0, self.parent.stk.i0data)
             self.ay.setLabel(text="Flux in selected I0 area [counts]")
+            self.plotitem.items[1].setPen(pg.mkPen(pg.mkPen(color="r", width=2)))
             #self.plotitem = self.plot.plot(x, y, pen=pg.mkPen(color="r", width=2))
         else:
             x,y = self.GenerateSpectrum(list(range(self.parent.stk.n_ev)))
-        self.plots[0].setData(x,y)
-            #self.plotitem = self.plots[0]
-       # self.plotitem.setZValue(9)
-        #print("nplots: ",nplots)
-        # if nplots > 1:
-        #     self.plots.reverse()
-        #     for idx in range(1,nplots):
-        #         print(range(1,nplots),idx)
-        #         curve = pg.PlotCurveItem(pen=({'color': (idx, nplots * 1.3), 'width': 2}), skipFiniteCheck=True)
-        #         self.plot.addItem(curve)
-            # curve.setPos(0, idx * 2)
-            #self.plots.append(curve)
+            self.plotitem.items[1].setPen(pg.mkPen(pg.mkPen(color="b", width=2)))
+        self.plotitem.items[1].setData(x,y)
 
 
         self.LineIndicator.addMarker("o")
@@ -16082,7 +16114,7 @@ class SpecFig():
         self.OnUpdateLineIndicator()
 
     def SnapIndicatorToEV(self):
-        diff = np.abs(self.plots[0].xData - self.LineIndicator.value())
+        diff = np.abs(self.plotitem.items[1].xData - self.LineIndicator.value())
         idx = np.argmin(diff)
         self.parent.slider_eng.blockSignals(True)
         self.parent.OnScrollEng(idx)
@@ -16097,7 +16129,7 @@ class SpecFig():
         self.LineIndicatorLabel.setFormat(" "+str(round(self.LineIndicator.value(),2)) + " eV ")
     def OnMouseClick(self,e):
         if e.double():
-            vb = self.plots[0].getViewBox()
+            vb = self.plotitem.items[1].getViewBox()
             pos = vb.mapSceneToView(e.scenePos()).x()
             self.LineIndicator.blockSignals(True)
             self.LineIndicator.setPos(pos)
@@ -16109,14 +16141,14 @@ class SpecFig():
         right = left + int(box.size().x())
         bottom = int(box.pos().y())
         top = bottom + int(box.size().y())
-        return (left,right,top,bottom)
-
-    def GenerateSpectrum(self, evselection):
-        left,right,top,bottom = self.GetRegion(self.parent.absimgfig.roi)
         left = max(0,left)
         bottom = max(0,bottom)
         top = min(self.parent.stk.n_rows,max(0,top))
         right = min(self.parent.stk.n_cols,max(0,right))
+        return (left,right,top,bottom)
+
+    def GenerateSpectrum(self, evselection):
+        left,right,top,bottom = self.GetRegion(self.parent.absimgfig.roi)
         if self.parent.com.i0_loaded:
             #self.cb_od_per_px.setVisible(True)
             #if self.cb_od_per_px.isChecked():
@@ -16228,7 +16260,13 @@ class ImgFig():
         #self.roi.addScaleHandle([0, 0.5], [0.5, 0.5])
         self.imageplot.addItem(self.roi, ignoreBounds=True)
         self.roi.setZValue(10)  # make sure ROI is drawn above image
-
+    def addLockedROI(self):
+        nrois = len(self.imageplot.items)
+        left,right,top,bottom = self.parent.specfig.GetRegion(self.roi)
+        lockedroi = pg.QtGui.QGraphicsRectItem(left, bottom, right-left, top-bottom)
+        lockedroi.setPen(pg.mkPen({'color': pg.intColor(nrois+1,alpha=150), 'width': 2}))
+        self.imageplot.addItem(lockedroi, ignoreBounds=True)
+        lockedroi.setZValue(11)  # make sure ROI is drawn above image
     def loadData(self): # Called when fresh data are loaded.
         self.imageplot.addItem(self.imageitem)
 
@@ -16573,7 +16611,7 @@ class MainFrame(QtWidgets.QMainWindow):
             self.page1.absimgfig.loadNewImageWithROI()
             self.page1.button_multicrop.setText('Crop stack 3D...')
             #print (x,y), (self.ix,self.iy), self.stk.absdata.shape
-            self.page1.specfig.loadNewSpectrum()
+            self.page1.specfig.ClearandReload()
             #self.page1.textctrl.setText(self.page1.filename)
 
             self.page5.updatewidgets()
@@ -16722,7 +16760,7 @@ class MainFrame(QtWidgets.QMainWindow):
             #self.page1.ResetDisplaySettings()
             self.page1.absimgfig.loadNewImageWithROI()
             self.page1.button_multicrop.setText('Crop stack 4D...')
-            self.page1.specfig.loadNewSpectrum()
+            self.page1.specfig.ClearandReload()
             # self.page1.textctrl.setText(self.page1.filename)
 
             self.page5.updatewidgets()
@@ -16848,6 +16886,7 @@ class MainFrame(QtWidgets.QMainWindow):
             self.page1.button_save.setEnabled(False)
             self.page1.button_savestack.setEnabled(False)
             self.page1.button_align.setEnabled(False)
+            self.page1.button_meanflux.setEnabled(False)
             self.page1.button_slideshow.setEnabled(False)
             self.page1.button_addROI.setEnabled(False)
             self.page1.button_spectralROI.setEnabled(False)
@@ -16878,6 +16917,7 @@ class MainFrame(QtWidgets.QMainWindow):
             self.page1.pb_copy_specimg.setEnabled(True)
             self.page1.button_savestack.setEnabled(True)
             self.page1.button_align.setEnabled(True)
+            self.page1.button_meanflux.setEnabled(True)
             self.page1.button_slideshow.setEnabled(True)
             #self.page1.button_addROI.setEnabled(True)
             self.page1.button_spectralROI.setEnabled(True)
