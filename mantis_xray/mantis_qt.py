@@ -10110,7 +10110,7 @@ class PageStack(QtWidgets.QWidget):
         #self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
         #self.parent.page1.loadImage()
         self.absimgfig.loadNewImageWithROI()
-        self.absimgfig.loadNewImage()
+        #self.absimgfig.loadNewImage()
         self.specfig.ClearandReload()
         #self.loadImage()
         #self.loadSpectrum(self.ix, self.iy)
@@ -10387,6 +10387,8 @@ class SaveWin(QtWidgets.QDialog):
 
             if img_tif:
                 fileName_img = self.SaveFileName+"_" +str(self.stk.ev[self.parent.iev])+"eV.tif"
+                #if self.parent.mean_visible:
+
                 if self.parent.showflux:
                     image = self.stk.absdata[:,:,self.parent.iev]
                 else:
@@ -16004,7 +16006,18 @@ class SpecFig():
         self.LineIndicatorLabel = pg.InfLineLabel(self.LineIndicator, " ")
         self.parent.button_lockspectrum.clicked.connect(self.OnLockSpectrum)
         self.parent.button_clearspecfig.clicked.connect(self.ClearandReload)
+        self.parent.button_clearlastroi.clicked.connect(self.ClearLast)
         #self.plots = []
+    def ClearLast(self):
+        self.plot.blockSignals(True)
+        try:
+            roiitem = self.parent.absimgfig.imageplot.items[-1]
+            if isinstance(roiitem, QtWidgets.QGraphicsRectItem):  # only remove if RectItem
+                self.parent.absimgfig.imageplot.removeItem(roiitem)
+                self.plotitem.removeItem(self.plotitem.items[-1])  # remove spectra
+        except IndexError:  # if previously removed, ignore
+            pass
+        self.plot.blockSignals(False)
     def ClearandReload(self):
         self.plot.blockSignals(True)
         #self.plotitem.removeItem(self.LineIndicator)
@@ -16147,18 +16160,27 @@ class SpecFig():
         right = min(self.parent.stk.n_cols,max(0,right))
         return (left,right,top,bottom)
 
+    def GetSpecAndCoords(self,data):
+        arr, coords = self.parent.absimgfig.roi.getArrayRegion(data, self.parent.absimgfig.imageitem,
+                                                       axes=(0, 1), returnMappedCoords=True)
+        maxx, maxy, _ = data.shape
+        # create a boolean mask with pixel coordinates not exceeding the image dimensions.
+        mask = ((coords[0] > maxx-1) | (coords[0] < 0)) | ((coords[1] > maxy - 1) | (coords[1] < 0))
+        mask = np.expand_dims(mask, axis=0)
+        mask = np.repeat(mask, 2, axis=0)
+        coords = coords[~mask] # filter valid coords
+        spec = arr.sum(axis=(0,1)) / max(coords.size >> 1, 1) # spectrum normalized to pixel count. (bitwise coords.size divide by 2 gives number of pixels below roi)
+        return spec, coords
+
     def GenerateSpectrum(self, evselection):
-        left,right,top,bottom = self.GetRegion(self.parent.absimgfig.roi)
         if self.parent.com.i0_loaded:
             #self.cb_od_per_px.setVisible(True)
             #if self.cb_od_per_px.isChecked():
             self.ay.setLabel(text="Optical density per px inside ROI")
-            #else:
-            #self.ay.setLabel(text="Sum of optical densities in FOV")
             if self.parent.com.stack_4d:
-                total = self.parent.stk.od4d[left:right, bottom:top, :, int(self.parent.itheta)].copy()
+                data = self.parent.stk.od4d[:, :, :, int(self.parent.itheta)].copy()
             else:
-                total = self.parent.stk.od3d[left:right, bottom:top, :].copy()
+                data = self.parent.stk.od3d
         else:
             self.ay.setLabel(text="Flux in image area [counts]")
             if self.parent.com.stack_4d == 1:
@@ -16167,13 +16189,10 @@ class SpecFig():
                 #    "Theta range: [ " + str(min(t, default=0)) + "° .. " + str(
                 #        max(t, default=0)) + "° ], # values: " + str(
                 #        len(t)))
-                total = self.parent.stk.stack4D[left:right, bottom:top, :, int(self.parent.itheta)].copy()
+                data = self.parent.stk.stack4D[:, :, :, int(self.parent.itheta)]
             else:
-                total = self.parent.stk.absdata[left:right, bottom:top, :].copy()
-        #if self.cb_od_per_px.isChecked():
-        #    total = total.sum(axis=(0,1)) / (int(self.box.size().x()) * int(self.box.size().y()))
-        #else:
-        total = total.sum(axis=(0,1)) / max(((right-left)*(top-bottom)),1)
+                data = self.parent.stk.absdata
+        total, coords = self.GetSpecAndCoords(data)
         x = [self.parent.stk.ev[i] for i in evselection]
         y = [total[i] for i in evselection]
         # self.label_spatial_range.setText("Stack size: [ "+str(int(self.box.size().x()))+" x "+str(int(self.box.size().y()))+" ] px²")

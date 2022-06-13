@@ -830,6 +830,19 @@
             </widget>
            </item>
            <item>
+            <widget class="QPushButton" name="button_clearlastroi">
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>24</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>Clear last ROI</string>
+             </property>
+            </widget>
+           </item>
+           <item>
             <widget class="QPushButton" name="button_clearspecfig">
              <property name="enabled">
               <bool>true</bool>
@@ -850,22 +863,6 @@
               <string>Clear all ROI</string>
              </property>
             </widget>
-           </item>
-           <item>
-            <spacer name="verticalSpacer_4">
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
-             </property>
-             <property name="sizeType">
-              <enum>QSizePolicy::Fixed</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>20</width>
-               <height>32</height>
-              </size>
-             </property>
-            </spacer>
            </item>
           </layout>
          </item>
