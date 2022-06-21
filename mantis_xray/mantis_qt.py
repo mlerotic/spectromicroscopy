@@ -16012,7 +16012,7 @@ class SpecFig():
         self.plot.blockSignals(True)
         try:
             roiitem = self.parent.absimgfig.imageplot.items[-1]
-            if isinstance(roiitem, QtWidgets.QGraphicsRectItem):  # only remove if RectItem
+            if isinstance(roiitem, pg.ImageItem) and len(self.parent.absimgfig.imageplot.items) > 3:
                 self.parent.absimgfig.imageplot.removeItem(roiitem)
                 self.plotitem.removeItem(self.plotitem.items[-1])  # remove spectra
         except IndexError:  # if previously removed, ignore
@@ -16020,14 +16020,13 @@ class SpecFig():
         self.plot.blockSignals(False)
     def ClearandReload(self):
         self.plot.blockSignals(True)
-        #self.plotitem.removeItem(self.LineIndicator)
         iterator = len(self.plotitem.items)-1
         # The expression "for item in self.plotitem.items: " does not work! Instead we count the items and iterate through them
         for i in range(iterator,-1,-1):
                 self.plotitem.removeItem(self.plotitem.items[i])  # remove spectra
                 try:    # remove locked ROIs from imageplot
-                    roiitem = self.parent.absimgfig.imageplot.items[i]
-                    if isinstance(roiitem, QtWidgets.QGraphicsRectItem): # only remove RectItems
+                    roiitem = self.parent.absimgfig.imageplot.items[i+1]# +1 because transparent selection "ROImask" exists.
+                    if isinstance(roiitem, pg.ImageItem) and len(self.parent.absimgfig.imageplot.items) > 3:
                         self.parent.absimgfig.imageplot.removeItem(roiitem)
                 except IndexError:  # if previously removed, ignore
                     pass
@@ -16160,17 +16159,39 @@ class SpecFig():
         right = min(self.parent.stk.n_cols,max(0,right))
         return (left,right,top,bottom)
 
-    def GetSpecAndCoords(self,data):
-        arr, coords = self.parent.absimgfig.roi.getArrayRegion(data, self.parent.absimgfig.imageitem,
-                                                       axes=(0, 1), returnMappedCoords=True)
-        maxx, maxy, _ = data.shape
-        # create a boolean mask with pixel coordinates not exceeding the image dimensions.
-        mask = ((coords[0] > maxx-1) | (coords[0] < 0)) | ((coords[1] > maxy - 1) | (coords[1] < 0))
-        mask = np.expand_dims(mask, axis=0)
-        mask = np.repeat(mask, 2, axis=0)
-        coords = coords[~mask] # filter valid coords
-        spec = arr.sum(axis=(0,1)) / max(coords.size >> 1, 1) # spectrum normalized to pixel count. (bitwise coords.size divide by 2 gives number of pixels below roi)
-        return spec, coords
+    def GetSpecfromROI(self,data):
+        roimask = self.parent.absimgfig.ROImask
+        roirgba = self.parent.absimgfig.ROIrgba
+        roirgba[:,:] = [0, 0, 0, 0]
+        cols = self.parent.stk.n_cols
+        rows = self.parent.stk.n_rows
+        ev = self.parent.stk.n_ev
+        boolmask = np.full((self.parent.stk.n_cols, self.parent.stk.n_rows), True)
+
+        s, v, o = self.parent.absimgfig.roi.getAffineSliceParams(boolmask,self.parent.absimgfig.imageitem, fromBoundingRect=False)
+        coords = pg.affineSliceCoords(s, o, v, (0,1))
+        x = coords[0].astype(int).flatten()
+        y = coords[1].astype(int).flatten()
+        # Delete indices outside the image area
+        idcs = np.where((x >= cols) | (x < 0) | (y >= rows) | (y < 0))
+        x = np.delete(x, idcs)
+        y = np.delete(y, idcs)
+        boolmask[x, y] = False
+        valid_pixel_count = (cols * rows) - np.count_nonzero(boolmask)
+        if not valid_pixel_count:
+            roimask.setImage(None)
+            self.parent.absimgfig.boolmask[:,:] = True
+            return np.zeros(ev)
+
+        # Fill holes in data due to rounding errors by applying and reverting a binary dilation.
+        boolmask = ndimage.binary_dilation(~ndimage.binary_dilation(~boolmask))
+
+        roirgba[~boolmask] = (0,0,255,255)
+        roimask.setImage(roirgba)
+        mask = np.broadcast_to(np.expand_dims(boolmask, axis=2), (cols, rows, ev))
+        spectrum = np.ma.array(data, mask=mask).sum(axis=(0,1)) / max(valid_pixel_count,1)
+        self.parent.absimgfig.boolmask = boolmask
+        return spectrum
 
     def GenerateSpectrum(self, evselection):
         if self.parent.com.i0_loaded:
@@ -16192,9 +16213,9 @@ class SpecFig():
                 data = self.parent.stk.stack4D[:, :, :, int(self.parent.itheta)]
             else:
                 data = self.parent.stk.absdata
-        total, coords = self.GetSpecAndCoords(data)
+        spectrum = self.GetSpecfromROI(data)
         x = [self.parent.stk.ev[i] for i in evselection]
-        y = [total[i] for i in evselection]
+        y = [spectrum[i] for i in evselection]
         # self.label_spatial_range.setText("Stack size: [ "+str(int(self.box.size().x()))+" x "+str(int(self.box.size().y()))+" ] px²")
         # self.label_ev_range.setText(
         #     "Energy range: [ " + str(min(x, default=0)) + " .. " + str(max(x, default=0)) + " ] eV, # values: "+ str(len(x)))
@@ -16278,12 +16299,24 @@ class ImgFig():
         #self.roi.addScaleHandle([0.5, 1], [0.5, 0.5])
         #self.roi.addScaleHandle([0, 0.5], [0.5, 0.5])
         self.imageplot.addItem(self.roi, ignoreBounds=True)
+        self.ROImask = pg.ImageItem(border="k", opacity=0.3)
+        self.imageplot.addItem(self.ROImask)
+        self.ROIrgba = np.zeros([*self.imageitem.image.shape, 4], dtype=np.uint8)
+        self.boolmask = np.full((self.parent.stk.n_cols, self.parent.stk.n_rows), True)
         self.roi.setZValue(10)  # make sure ROI is drawn above image
+
     def addLockedROI(self):
         nrois = len(self.imageplot.items)
-        left,right,top,bottom = self.parent.specfig.GetRegion(self.roi)
-        lockedroi = pg.QtGui.QGraphicsRectItem(left, bottom, right-left, top-bottom)
-        lockedroi.setPen(pg.mkPen({'color': pg.intColor(nrois+1,alpha=150), 'width': 2}))
+        roi = np.zeros([*self.imageitem.image.shape, 4], dtype=np.uint8)
+        #left,right,top,bottom = self.parent.specfig.GetRegion(self.roi)
+        indices = np.where(self.boolmask == False)
+        roi[indices] = pg.intColor(nrois,alpha=255).getRgb()
+        #self.parent.absimgfig.ROImask.setImage(self.parent.absimgfig.ROIarray, opacity=0.3)
+        lockedroi = pg.ImageItem(image=roi,border="k", opacity=0.3)
+
+        #lockedroi = pg.QtGui.QGraphicsRectItem(left, bottom, right-left, top-bottom)
+        #lockedroi = pg.IsocurveItem(self.binROImask, level= 0.5, pen=pg.mkPen({'color': pg.intColor(nrois+1,alpha=150), 'width': 2}))
+        #lockedroi.setPen(pg.mkPen({'color': pg.intColor(nrois+1,alpha=150), 'width': 2}))
         self.imageplot.addItem(lockedroi, ignoreBounds=True)
         lockedroi.setZValue(11)  # make sure ROI is drawn above image
     def loadData(self): # Called when fresh data are loaded.
