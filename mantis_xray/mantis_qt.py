@@ -9266,6 +9266,14 @@ class PageStack(QtWidgets.QWidget):
         self.CMMapBox.currentIndexChanged.connect(lambda: self.absimgfig.OnColormapChange(map=self.CMMapBox.currentText(),num_colors=self.StepSpin.value()))
         self.StepSpin.valueChanged.connect(lambda: self.absimgfig.OnColormapChange(map=self.CMMapBox.currentText(),num_colors=self.StepSpin.value()))
 
+        self.ROIShapeBox.addItems(["Rectangle", "Circle", "Ellipse","Polygon"])
+        self.ROIShapeBox.currentTextChanged.connect(self.absimgfig.OnROIShapeChanged)
+        self.button_lockspectrum.setEnabled(False)
+        self.button_clearlastroi.setEnabled(False)
+        self.button_clearspecfig.setEnabled(False)
+        self.ROIShapeBox.setEnabled(False)
+        self.ROIvisibleCheckBox.setEnabled(False)
+        self.ROIvisibleCheckBox.stateChanged.connect(self.absimgfig.OnROIVisibility)
 #----------------------------------------------------------------------
 
     def OnI0FFile(self, event):
@@ -16166,25 +16174,35 @@ class SpecFig():
         cols = self.parent.stk.n_cols
         rows = self.parent.stk.n_rows
         ev = self.parent.stk.n_ev
+        angle = self.parent.absimgfig.roi.angle()
+        offsetx = 0
+        offsety = 0
         boolmask = np.full((self.parent.stk.n_cols, self.parent.stk.n_rows), True)
 
-        s, v, o = self.parent.absimgfig.roi.getAffineSliceParams(boolmask,self.parent.absimgfig.imageitem, fromBoundingRect=False)
-        coords = pg.affineSliceCoords(s, o, v, (0,1))
-        x = coords[0].astype(int).flatten()
-        y = coords[1].astype(int).flatten()
-        # Delete indices outside the image area
-        idcs = np.where((x >= cols) | (x < 0) | (y >= rows) | (y < 0))
+        mask, coords = self.parent.absimgfig.roi.getArrayRegion(boolmask,self.parent.absimgfig.imageitem, axes=(0,1), returnMappedCoords=True)
+        # calculate offsets to avoid mismatch of roi and selected pixels
+        if angle:
+            offsetx = np.clip(np.sin(0.785398) * np.cos(np.radians(angle) + 0.785398) - 0.5, -1, 0)
+            offsety = np.clip(np.sin(0.785398) * np.cos(np.radians(angle) - 0.785398) - 0.5, -1, 0)
+        x = np.rint(coords[0] + offsetx).astype(int).flatten()
+        y = np.rint(coords[1] + offsety).astype(int).flatten()
+        # Delete indices outside image region
+        if isinstance(self.parent.absimgfig.roi, pg.RectROI):
+            idcs = np.where((x >= cols) | (x < 0) | (y >= rows) | (y < 0))
+        else:
+            mask = mask.astype(bool).flatten()
+            idcs = np.where((x > cols) | (x < 0) | (y > rows) | (y < 0) | ~mask)
         x = np.delete(x, idcs)
         y = np.delete(y, idcs)
         boolmask[x, y] = False
+        # Handle edge cases and gaps. Fill holes in data due to rounding errors by applying and reverting a binary dilation.
+        boolmask = np.pad(boolmask, ((1, 1), (1, 1)), 'constant', constant_values=True)
+        boolmask = ndimage.binary_dilation(~ndimage.binary_dilation(~boolmask))[1:-1, 1:-1]
         valid_pixel_count = (cols * rows) - np.count_nonzero(boolmask)
         if not valid_pixel_count:
             roimask.setImage(None)
             self.parent.absimgfig.boolmask[:,:] = True
             return np.zeros(ev)
-
-        # Fill holes in data due to rounding errors by applying and reverting a binary dilation.
-        boolmask = ndimage.binary_dilation(~ndimage.binary_dilation(~boolmask))
 
         roirgba[~boolmask] = (0,0,255,255)
         roimask.setImage(roirgba)
@@ -16203,7 +16221,7 @@ class SpecFig():
             else:
                 data = self.parent.stk.od3d
         else:
-            self.ay.setLabel(text="Flux in image area [counts]")
+            self.ay.setLabel(text="Flux per px inside ROI [counts]")
             if self.parent.com.stack_4d == 1:
                 #t = [self.parent.stk.theta[i] for i in self.parent.itheta]
                 #self.label_theta_range.setText(
@@ -16279,23 +16297,50 @@ class ImgFig():
         self.clear()
         self.parent.iev = 0
         self.loadData()
+
     def loadNewImageWithROI(self):
         self.clear()
         self.parent.iev = 0
         self.loadData()
-        self.addROI()
+        self.addROI((0,0),(self.imageitem.boundingRect().width(), self.imageitem.boundingRect().height()))
+
     def clear(self):
         self.imageplot.clear()
 
-    def addROI(self):
-        #print(self.imageplot.boundingRect().height(),self.imageitem.boundingRect().height()*self.scale*self.parent.stk.y_pxsize)
-        #print(self.imageplot.boundingRect().width(),self.imageitem.boundingRect().width()*self.scale*self.parent.stk.y_pxsize)
-        self.roi = pg.RectROI((0,0),(self.imageitem.boundingRect().width(),#*self.scale*self.parent.stk.x_pxsize,
-                               self.imageitem.boundingRect().height()),#*self.scale*self.parent.stk.y_pxsize),
-                              pen=(5, 8), handlePen=QtGui.QPen(QtGui.QColor(255, 0, 128, 255)),
-                          #centered=False,
-                          #sideScalers=True,
-                          resizable=True, removable=False, movable=True, scaleSnap=True, translateSnap=True)
+    def OnROIVisibility(self, state):
+        if state == QtCore.Qt.Checked:
+            self.roi.show()
+            self.ROImask.show()
+            self.parent.specfig.plotitem.items[1].show()
+        else:
+            self.roi.hide()
+            self.ROImask.hide()
+            self.parent.specfig.plotitem.items[1].hide()
+
+
+    def OnROIShapeChanged(self,shape):
+        if isinstance(self.roi, pg.PolyLineROI):
+            state = self.roi.getState()
+            points = state['points']
+            x = (max(points, key=lambda item: item[0])[0] -
+                min(points, key=lambda item: item[0])[0])
+            y = (max(points, key=lambda item: item[1])[1] -
+                 min(points, key=lambda item: item[1])[1])
+            size = np.rint((x,y))
+        else:
+            size = np.rint(self.roi.size())
+        pos = np.rint(self.roi.pos())
+        self.roi.disconnect()
+        self.imageplot.removeItem(self.ROImask)
+        self.imageplot.removeItem(self.roi)
+        self.addROI(pos,size,shape)
+        self.parent.specfig.updatePlotData()
+
+    def addROI(self,pos, size, shape="Rectangle"):
+        kwargs= {'pen': (5, 8), 'handlePen' : QtGui.QPen(QtGui.QColor(255, 0, 128, 255)), 'resizable' : True, 'removable' : False, 'movable' : True, 'scaleSnap' : True, 'translateSnap' : True}
+        selection = {"Rectangle": pg.RectROI(pos,size,**kwargs), "Circle": pg.CircleROI(pos,size,**kwargs),
+                         "Ellipse": pg.EllipseROI(pos,size,**kwargs), "Polygon": pg.PolyLineROI(positions= [(0,0),(0,size[1]),(size[0],size[1]),(size[0],0)], pos=pos, closed=True,**kwargs)}
+        self.roi = selection[shape]
         #self.roi.addScaleHandle([0.5, 1], [0.5, 0.5])
         #self.roi.addScaleHandle([0, 0.5], [0.5, 0.5])
         self.imageplot.addItem(self.roi, ignoreBounds=True)
@@ -16303,22 +16348,25 @@ class ImgFig():
         self.imageplot.addItem(self.ROImask)
         self.ROIrgba = np.zeros([*self.imageitem.image.shape, 4], dtype=np.uint8)
         self.boolmask = np.full((self.parent.stk.n_cols, self.parent.stk.n_rows), True)
+        # items are appended to the items list. relocate the two freshly added items, otherwise roi removal fails.
+        items = self.imageplot.items
+        items.remove(self.roi)
+        items.insert(1, self.roi)
+        items.remove(self.ROImask)
+        items.insert(2, self.ROImask)
         self.roi.setZValue(10)  # make sure ROI is drawn above image
+        self.roi.sigRegionChanged.connect(self.parent.specfig.updatePlotData)
 
     def addLockedROI(self):
         nrois = len(self.imageplot.items)
         roi = np.zeros([*self.imageitem.image.shape, 4], dtype=np.uint8)
-        #left,right,top,bottom = self.parent.specfig.GetRegion(self.roi)
         indices = np.where(self.boolmask == False)
         roi[indices] = pg.intColor(nrois,alpha=255).getRgb()
-        #self.parent.absimgfig.ROImask.setImage(self.parent.absimgfig.ROIarray, opacity=0.3)
         lockedroi = pg.ImageItem(image=roi,border="k", opacity=0.3)
 
-        #lockedroi = pg.QtGui.QGraphicsRectItem(left, bottom, right-left, top-bottom)
-        #lockedroi = pg.IsocurveItem(self.binROImask, level= 0.5, pen=pg.mkPen({'color': pg.intColor(nrois+1,alpha=150), 'width': 2}))
-        #lockedroi.setPen(pg.mkPen({'color': pg.intColor(nrois+1,alpha=150), 'width': 2}))
         self.imageplot.addItem(lockedroi, ignoreBounds=True)
         lockedroi.setZValue(11)  # make sure ROI is drawn above image
+
     def loadData(self): # Called when fresh data are loaded.
         self.imageplot.addItem(self.imageitem)
 
@@ -16354,6 +16402,7 @@ class ImgFig():
         max = np.nanmax(image)
         if not np.isnan(min) and not np.isnan(max):
             self.bar.setLevels(low=min, high=max)
+
     def OnMetricScale(self, setmetric= True, zeroorigin= True, square= False):
         if self.parent.com.stack_loaded == 1:
             if setmetric==True:
@@ -16942,6 +16991,12 @@ class MainFrame(QtWidgets.QMainWindow):
             self.page1.button_slideshow.setEnabled(False)
             self.page1.button_addROI.setEnabled(False)
             self.page1.button_spectralROI.setEnabled(False)
+            self.page1.button_spectralROI.setEnabled(False)
+            self.page1.button_lockspectrum.setEnabled(False)
+            self.page1.button_clearlastroi.setEnabled(False)
+            self.page1.button_clearspecfig.setEnabled(False)
+            self.page1.ROIShapeBox.setEnabled(False)
+            self.page1.ROIvisibleCheckBox.setEnabled(False)
             #self.page1.button_resetdisplay.setEnabled(False)
             #self.page1.button_despike.setEnabled(False)
             #self.page1.button_displaycolor.setEnabled(False)
@@ -16973,6 +17028,11 @@ class MainFrame(QtWidgets.QMainWindow):
             self.page1.button_slideshow.setEnabled(True)
             #self.page1.button_addROI.setEnabled(True)
             self.page1.button_spectralROI.setEnabled(True)
+            self.page1.button_lockspectrum.setEnabled(True)
+            self.page1.button_clearlastroi.setEnabled(True)
+            self.page1.button_clearspecfig.setEnabled(True)
+            self.page1.ROIShapeBox.setEnabled(True)
+            self.page1.ROIvisibleCheckBox.setEnabled(True)
             #self.page1.button_resetdisplay.setEnabled(True)
             #self.page1.button_despike.setEnabled(True)
             #self.page1.button_displaycolor.setEnabled(True)
