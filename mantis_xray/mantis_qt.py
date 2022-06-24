@@ -14791,6 +14791,7 @@ class PageLoadData(QtWidgets.QWidget):
             #    self.window().page9.Clear()
             #    self.window().page9.loadData()
             self.window().page1.absimgfig.loadNewImageWithROI()
+            self.window().page1.specfig.ClearandReload()
         return
 
     def OnRotate(self):
@@ -14829,8 +14830,8 @@ class PageLoadData(QtWidgets.QWidget):
             self.window().page1.ix = int(self.stk.n_cols / 2)
             self.window().page1.iy = int(self.stk.n_rows / 2)
             #self.window().page1.loadSpectrum(self.window().page1.ix, self.window().page1.iy)
-            self.window().page1.specfig.ClearandReload()
             self.window().page1.absimgfig.loadNewImageWithROI()
+            self.window().page1.specfig.ClearandReload()
         return
 
 #-----------------------------------------------------------------------
@@ -16177,7 +16178,7 @@ class SpecFig():
         angle = self.parent.absimgfig.roi.angle()
         offsetx = 0
         offsety = 0
-        boolmask = np.full((self.parent.stk.n_cols, self.parent.stk.n_rows), True)
+        boolmask = np.full((cols , rows), True)
 
         mask, coords = self.parent.absimgfig.roi.getArrayRegion(boolmask,self.parent.absimgfig.imageitem, axes=(0,1), returnMappedCoords=True)
         # calculate offsets to avoid mismatch of roi and selected pixels
@@ -16203,7 +16204,6 @@ class SpecFig():
             roimask.setImage(None)
             self.parent.absimgfig.boolmask[:,:] = True
             return np.zeros(ev)
-
         roirgba[~boolmask] = (0,0,255,255)
         roimask.setImage(roirgba)
         mask = np.broadcast_to(np.expand_dims(boolmask, axis=2), (cols, rows, ev))
