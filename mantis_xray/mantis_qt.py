@@ -32,8 +32,10 @@ import getopt
 from PyQt5 import QtCore, QtGui, QtWidgets, uic
 from PyQt5.QtCore import Qt, QCoreApplication, pyqtSignal, pyqtSlot
 
-QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
-QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps, True)
+if hasattr(Qt, "HighDpiScaleFactorRoundingPolicy"):
+    QtWidgets.QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
+    QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+    QtWidgets.QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, False)
 
 from PIL import Image
 from scipy import ndimage
@@ -95,7 +97,7 @@ print("\nPlease report issues to https://github.com/mlerotic/spectromicroscopy/i
 qsspath = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'stylesheet_global.qss')
 
 Winsizex = 1620
-Winsizey = 960
+Winsizey = 920
 
 PlotH = 4.0
 PlotW = PlotH*1.61803
@@ -16589,12 +16591,12 @@ class MainFrame(QtWidgets.QMainWindow):
         screen = QtWidgets.QDesktopWidget().screenGeometry()
         center = screen.center()
 
-        if screen.height() <= 1080 - 50 | screen.width() <= 1920:
-            self.showMaximized()
-
         winrect = self.frameGeometry()
         winrect.moveCenter(center)
         self.move(winrect.topLeft())
+
+        if screen.height() <= 1080 - 50 | screen.width() <= 1920:
+            self.showMaximized()
 
         self.show()
         if sys.platform == "darwin":
