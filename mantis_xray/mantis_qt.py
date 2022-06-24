@@ -94,12 +94,8 @@ print("\nPlease report issues to https://github.com/mlerotic/spectromicroscopy/i
 ## Global Stylesheet
 qsspath = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'stylesheet_global.qss')
 
-if sys.platform == 'win32':
-    Winsizex = 1000
-    Winsizey = 800
-else:
-    Winsizex = 1920
-    Winsizey = 1080
+Winsizex = 1620
+Winsizey = 960
 
 PlotH = 4.0
 PlotW = PlotH*1.61803
@@ -16591,11 +16587,14 @@ class MainFrame(QtWidgets.QMainWindow):
 
 
         screen = QtWidgets.QDesktopWidget().screenGeometry()
+        center = screen.center()
 
-
-        if screen.height() < Winsizey - 50:
+        if screen.height() <= 1080 - 50 | screen.width() <= 1920:
             self.showMaximized()
 
+        winrect = self.frameGeometry()
+        winrect.moveCenter(center)
+        self.move(winrect.topLeft())
 
         self.show()
         if sys.platform == "darwin":
