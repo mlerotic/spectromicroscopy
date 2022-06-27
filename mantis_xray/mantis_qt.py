@@ -9169,12 +9169,6 @@ class PageStack(QtWidgets.QWidget):
         vbox3 = QtWidgets.QVBoxLayout()
         vbox3.setSpacing(0)
 
-
-        #self.button_addROI = QtWidgets.QPushButton('Select ROI (Lasso)')
-        self.button_addROI.clicked.connect( self.OnAddROI)
-        self.button_addROI.setEnabled(False)
-        #vbox3.addWidget(self.button_addROI)
-
         #self.button_acceptROI = QtWidgets.QPushButton('Accept ROI')
         #self.button_acceptROI.clicked.connect( self.OnAcceptROI)
         #self.button_acceptROI.setEnabled(False)
@@ -9182,8 +9176,8 @@ class PageStack(QtWidgets.QWidget):
         #vbox3.addWidget(self.button_acceptROI)
 
         #self.button_resetROI = QtWidgets.QPushButton('Reset ROI')
-        self.button_resetROI.clicked.connect( self.OnResetROI)
-        self.button_resetROI.setEnabled(False)
+        #self.button_resetROI.clicked.connect( self.OnResetROI)
+        #self.button_resetROI.setEnabled(False)
         #vbox3.addWidget(self.button_resetROI)
 
         #self.button_setROII0 = QtWidgets.QPushButton('Set ROI As I0')
@@ -9264,7 +9258,7 @@ class PageStack(QtWidgets.QWidget):
         self.CMMapBox.currentIndexChanged.connect(lambda: self.absimgfig.OnColormapChange(map=self.CMMapBox.currentText(),num_colors=self.StepSpin.value()))
         self.StepSpin.valueChanged.connect(lambda: self.absimgfig.OnColormapChange(map=self.CMMapBox.currentText(),num_colors=self.StepSpin.value()))
 
-        self.ROIShapeBox.addItems(["Rectangle", "Circle", "Ellipse","Polygon"])
+        self.ROIShapeBox.addItems(["Rectangle", "Circle", "Ellipse","Polygon","Lasso"])
         self.ROIShapeBox.currentTextChanged.connect(self.absimgfig.OnROIShapeChanged)
         self.button_lockspectrum.setEnabled(False)
         self.button_clearlastroi.setEnabled(False)
@@ -9937,35 +9931,6 @@ class PageStack(QtWidgets.QWidget):
 
 
 #----------------------------------------------------------------------
-    def OnAddROI(self, evt):
-        #ToDo: restore ROI functionality
-
-        #self.addroi = 1
-
-        #self.AbsImagePanel.mpl_disconnect(self.cid1)
-
-
-
-        #lineprops = dict(color='red', linestyle='-', linewidth = 1, alpha=1)
-
-
-        #self.lasso = LassoSelector(self.axes, onselect=self.OnSelectLasso, useblit=False, lineprops=lineprops)
-
-
-        #fig = self.specfig
-        #fig.clf()
-        #self.SpectrumPanel.draw()
-        #self.tc_spec.setText("Average ROI Spectrum: ")
-
-        #self.button_acceptROI.setEnabled(False)
-        #self.button_resetROI.setEnabled(True)
-        #self.button_ROIdosecalc.setEnabled(False)
-        #self.window().refresh_widgets()
-
-        return
-
-
-#----------------------------------------------------------------------
     def CalcROISpectrum(self):
 
         self.ROIspectrum = np.zeros((self.stk.n_ev))
@@ -10092,34 +10057,6 @@ class PageStack(QtWidgets.QWidget):
             self.ShowROISpectrum()
 
         QtWidgets.QApplication.restoreOverrideCursor()
-
-
-#----------------------------------------------------------------------
-    def OnResetROI(self, evt):
-
-        self.ResetROI()
-
-#----------------------------------------------------------------------
-    def ResetROI(self):
-
-        self.addroi = 0
-        self.showROImask = 0
-        self.ROIpix = None
-
-        #self.button_acceptROI.setEnabled(False)
-        #self.button_setROII0.setEnabled(False)
-        #self.button_resetROI.setEnabled(False)
-        #self.button_saveROIspectr.setEnabled(False)
-        #self.button_ROIdosecalc.setEnabled(False)
-        self.window().refresh_widgets()
-
-        #self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
-        #self.parent.page1.loadImage()
-        self.absimgfig.loadNewImageWithROI()
-        #self.absimgfig.loadNewImage()
-        self.specfig.ClearandReload()
-        #self.loadImage()
-        #self.loadSpectrum(self.ix, self.iy)
 
 #-----------------------------------------------------------------------
     def CalcROI_I0Spectrum(self):
@@ -16047,7 +15984,13 @@ class SpecFig():
             pass
         self.plot.blockSignals(False)
         self.loadNewSpectrum()
-        #self.plot.clear()
+        vb = self.plotitem.items[1].getViewBox()
+        vb.updateAutoRange()
+        self.plotitem.items[1].hide()
+        self.plotitem.items[0].hide()
+        if self.parent.ROIShapeBox.currentText() != "Lasso":
+            self.parent.absimgfig.OnROIVisibility(self.parent.ROIvisibleCheckBox.checkState())
+
     def toggleI0Spectrum(self):
         #self.clear()
         if self.parent.button_showi0.isChecked():
@@ -16069,9 +16012,6 @@ class SpecFig():
         self.plotitem.items[-1].setData(x,y)
 
     def loadNewSpectrum(self):
-        self.parent.button_showi0.blockSignals(True)
-        self.parent.button_showi0.setChecked(False)
-        self.parent.button_showi0.blockSignals(False)
         if self.plotitem.items:
             try:
                 self.ClearandReload()
@@ -16108,17 +16048,42 @@ class SpecFig():
         return ypos
 
     def loadData(self, showi0=False):
+        try:
+            self.LineIndicator.sigPositionChangeFinished.disconnect()
+            self.LineIndicator.sigPositionChanged.disconnect()
+            self.plot.sigRangeChanged.disconnect()
+            self.plot.scene().sigMouseClicked.disconnect()
+            self.parent.absimgfig.roi.sigRegionChanged.disconnect()
+        except:
+            pass
+        iterator = len(self.plotitem.items) - 1
         if showi0:
+            self.parent.ROIvisibleCheckBox.setEnabled(False)
+            self.parent.ROIShapeBox.setEnabled(False)
+            self.parent.button_lockspectrum.setEnabled(False)
+            self.parent.button_clearspecfig.setEnabled(False)
+            self.parent.button_clearlastroi.setEnabled(False)
+            self.parent.absimgfig.ROImask.hide()
             x,y = (self.parent.stk.evi0, self.parent.stk.i0data)
             self.ay.setLabel(text="Flux in selected I0 area [counts]")
             self.plotitem.items[1].setPen(pg.mkPen(pg.mkPen(color="r", width=2)))
+            #vb = self.plotitem.items[1].getViewBox()
+            #vb.updateAutoRange()
+            # The expression "for item in self.plotitem.items: " does not work! Instead we count the items and iterate through them
+            for i in range(iterator, -1, -1):
+                self.plotitem.items[i].hide()
+            self.plotitem.items[1].show()
             #self.plotitem = self.plot.plot(x, y, pen=pg.mkPen(color="r", width=2))
         else:
+            self.parent.ROIvisibleCheckBox.setEnabled(True)
             x,y = self.GenerateSpectrum(list(range(self.parent.stk.n_ev)))
             self.plotitem.items[1].setPen(pg.mkPen(pg.mkPen(color="b", width=2)))
+            for i in range(iterator, -1, -1):
+                self.plotitem.items[i].show()
+            if self.parent.ROIShapeBox.currentText() == "Lasso":
+                self.plotitem.items[1].hide()
+                self.parent.absimgfig.OnROIVisibility(self.parent.ROIvisibleCheckBox.checkState())
         self.plotitem.items[1].setData(x,y)
-
-
         self.LineIndicator.addMarker("o")
         self.dot = self.LineIndicator.markers[0][0]
         self.LineIndicator.setZValue(10)
@@ -16290,6 +16255,7 @@ class ImgFig():
         # Future syntax: cm = pg.colormap.get(map, source="matplotlib")
         cm = pg.colormap.getFromMatplotlib(self.map)
         self.bar = pg.ColorBarItem(values=(0, 1), cmap=cm, rounding=0.0001)  # init color bar
+        self.mousepressed = False
 
     def loadNewImage(self):
         self.clear()
@@ -16297,11 +16263,14 @@ class ImgFig():
         self.loadData()
 
     def loadNewImageWithROI(self):
+        defaultshape = "Lasso"
         self.clear()
         self.parent.iev = 0
         self.loadData()
-        self.addROI((0,0),(self.imageitem.boundingRect().width(), self.imageitem.boundingRect().height()))
-
+        self.addROI((0,0),(self.imageitem.boundingRect().width(), self.imageitem.boundingRect().height()), defaultshape)
+        self.parent.ROIShapeBox.blockSignals(True)
+        self.parent.ROIShapeBox.setCurrentText(defaultshape)
+        self.parent.ROIShapeBox.blockSignals(False)
     def clear(self):
         self.imageplot.clear()
 
@@ -16309,39 +16278,98 @@ class ImgFig():
         if state == QtCore.Qt.Checked:
             self.roi.show()
             self.ROImask.show()
-            self.parent.specfig.plotitem.items[1].show()
+            self.parent.specfig.plotitem.items[1].show() # curve
+            self.parent.specfig.plotitem.items[0].show() # line & dot
+            self.parent.ROIShapeBox.setEnabled(True)
+            self.parent.button_lockspectrum.setEnabled(True)
+            self.parent.button_clearspecfig.setEnabled(True)
+            self.parent.button_clearlastroi.setEnabled(True)
         else:
             self.roi.hide()
             self.ROImask.hide()
             self.parent.specfig.plotitem.items[1].hide()
+            self.parent.specfig.plotitem.items[0].hide()
+            self.parent.ROIShapeBox.setEnabled(False)
+            self.parent.button_lockspectrum.setEnabled(False)
+
 
 
     def OnROIShapeChanged(self,shape):
+        pos = np.rint(self.roi.pos())
         if isinstance(self.roi, pg.PolyLineROI):
             state = self.roi.getState()
             points = state['points']
-            x = (max(points, key=lambda item: item[0])[0] -
-                min(points, key=lambda item: item[0])[0])
-            y = (max(points, key=lambda item: item[1])[1] -
-                 min(points, key=lambda item: item[1])[1])
+            try:
+                minx= min(points, key=lambda item: item[0])[0]
+                miny = min(points, key=lambda item: item[1])[1]
+                x = (max(points, key=lambda item: item[0])[0] -
+                    minx)
+                y = (max(points, key=lambda item: item[1])[1] -
+                     miny)
+                pos = QtCore.QPointF(np.rint(pos[0]+minx),np.rint(pos[1]+miny))
+            except ValueError: # of no points found expand to image dimension.
+                x,y = (self.imageitem.boundingRect().width(), self.imageitem.boundingRect().height())
+                pos = QtCore.QPointF(0,0)
+                pass
             size = np.rint((x,y))
         else:
             size = np.rint(self.roi.size())
-        pos = np.rint(self.roi.pos())
         self.roi.disconnect()
         self.imageplot.removeItem(self.ROImask)
         self.imageplot.removeItem(self.roi)
         self.addROI(pos,size,shape)
         self.parent.specfig.updatePlotData()
 
-    def addROI(self,pos, size, shape="Rectangle"):
+    def onMousePress(self,e):
+        if not self.parent.button_showi0.isChecked():
+            self.mousepressed = True
+    def onMouseRelease(self,e):
+        if self.mousepressed:
+            self.mousepressed = False
+            self.proxy.disconnect()
+            self.roi.addSegment(self.roi.handles[-1]['item'], self.roi.handles[0]['item'])
+            self.imageitem.mousePressEvent = self.imageplot.mousePressEvent
+            self.imageitem.mouseReleaseEvent = self.imageplot.mouseReleaseEvent
+    def onMouseMoved(self,e):
+        pos = self.vb.mapSceneToView(e[0])
+        roipos = pos-self.vb.mapFromViewToItem(self.roi,pos)
+        if self.mousepressed and self.vb.itemBoundingRect(self.imageitem).contains(pos):
+            pos = (np.rint(pos.x()-roipos.x()), np.rint(pos.y()-roipos.y()))
+            try:
+                if self.roi.handles[-1]['pos'] != QtCore.QPointF(*pos): # if same point as before, do not add handle
+                    self.roi.addFreeHandle(pos)
+                    self.roi.addSegment(self.roi.handles[-2]['item'], self.roi.handles[-1]['item'])
+            except IndexError: # first handle
+                self.parent.specfig.plotitem.items[1].show()
+                self.parent.specfig.plotitem.items[0].show()
+                self.roi.addFreeHandle(pos)
+
+    def addROI(self,pos, size, shape):
+        self.imageitem.mousePressEvent = self.imageplot.mousePressEvent
+        self.imageitem.mouseReleaseEvent = self.imageplot.mouseReleaseEvent
         kwargs= {'pen': (5, 8), 'handlePen' : QtGui.QPen(QtGui.QColor(255, 0, 128, 255)), 'resizable' : True, 'removable' : False, 'movable' : True, 'scaleSnap' : True, 'translateSnap' : True}
         selection = {"Rectangle": pg.RectROI(pos,size,**kwargs), "Circle": pg.CircleROI(pos,size,**kwargs),
-                         "Ellipse": pg.EllipseROI(pos,size,**kwargs), "Polygon": pg.PolyLineROI(positions= [(0,0),(0,size[1]),(size[0],size[1]),(size[0],0)], pos=pos, closed=True,**kwargs)}
+                     "Ellipse": pg.EllipseROI(pos,size,**kwargs), "Polygon": pg.PolyLineROI(positions= [(0,0),(0,size[1]),(size[0],size[1]),(size[0],0)], pos=pos, closed=True,**kwargs),
+                     "Lasso": pg.PolyLineROI(positions= [], pos=pos, closed=True,**kwargs)}
         self.roi = selection[shape]
-        #self.roi.addScaleHandle([0.5, 1], [0.5, 0.5])
-        #self.roi.addScaleHandle([0, 0.5], [0.5, 0.5])
         self.imageplot.addItem(self.roi, ignoreBounds=True)
+        if shape == "Lasso":
+            try:
+                self.parent.specfig.plotitem.items[1].hide()
+                self.parent.specfig.plotitem.items[0].hide()
+            except IndexError: # if first roi, spectra are not existing at this point
+              pass
+            self.roi.handlePen = QtGui.QPen(QtGui.QColor(255, 0, 128, 0)) # Make handles invisible
+            self.vb = self.imageitem.getViewBox()
+            self.imageitem.mousePressEvent = self.onMousePress
+            self.imageitem.mouseReleaseEvent = self.onMouseRelease
+            self.proxy = pg.SignalProxy(self.vb.scene().sigMouseMoved, rateLimit=15, slot=self.onMouseMoved)
+        else:
+            try:
+                self.parent.specfig.plotitem.items[1].show()
+                self.parent.specfig.plotitem.items[0].show()
+            except IndexError: # if first roi, spectra are not existing at this point
+              pass
         self.ROImask = pg.ImageItem(border="k", opacity=0.3)
         self.imageplot.addItem(self.ROImask)
         self.ROIrgba = np.zeros([*self.imageitem.image.shape, 4], dtype=np.uint8)
@@ -16364,6 +16392,8 @@ class ImgFig():
 
         self.imageplot.addItem(lockedroi, ignoreBounds=True)
         lockedroi.setZValue(11)  # make sure ROI is drawn above image
+        if self.parent.ROIShapeBox.currentText() == "Lasso": # remove lasso ROI after function call
+            self.OnROIShapeChanged("Lasso")
 
     def loadData(self): # Called when fresh data are loaded.
         self.imageplot.addItem(self.imageitem)
@@ -17144,7 +17174,7 @@ class MainFrame(QtWidgets.QMainWindow):
                 self.page6.slider_spec.setEnabled(False)
 
 
-        # ToDo: RestoreResetDisplaysetting functionality
+        # ToDo: RestoreResetDisplaysetting functionality # Really needed?
         #self.page1.ResetDisplaySettings()
 
 
@@ -17184,8 +17214,6 @@ class MainFrame(QtWidgets.QMainWindow):
         self.page1.tc_imageeng.setText("Image at energy: ")
 
         # self.page1.textctrl.setText(' ')
-
-        self.page1.ResetROI()
 
         self.page1.ResetDisplaySettings()
         #page 0
