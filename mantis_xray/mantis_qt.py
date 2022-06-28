@@ -9262,6 +9262,8 @@ class PageStack(QtWidgets.QWidget):
         self.ROIShapeBox.currentTextChanged.connect(self.absimgfig.OnROIShapeChanged)
         self.button_lockspectrum.setEnabled(False)
         self.button_clearlastroi.setEnabled(False)
+        self.button_mergeroi.setEnabled(True)
+        self.button_subtractroi.setEnabled(True)
         self.button_clearspecfig.setEnabled(False)
         self.ROIShapeBox.setEnabled(False)
         self.ROIvisibleCheckBox.setEnabled(False)
@@ -15951,9 +15953,11 @@ class SpecFig():
         self.parent.button_lockspectrum.clicked.connect(self.OnLockSpectrum)
         self.parent.button_clearspecfig.clicked.connect(self.ClearandReload)
         self.parent.button_clearlastroi.clicked.connect(self.ClearLast)
-        #self.plots = []
+        self.parent.button_mergeroi.clicked.connect(self.mergeROI)
+        self.parent.button_subtractroi.clicked.connect(self.subtractROI)
+
     def ClearLast(self):
-        self.plot.blockSignals(True)
+        #self.plot.blockSignals(True)
         try:
             roiitem = self.parent.absimgfig.imageplot.items[-1]
             if isinstance(roiitem, pg.ImageItem) and len(self.parent.absimgfig.imageplot.items) > 3:
@@ -15961,7 +15965,8 @@ class SpecFig():
                 self.plotitem.removeItem(self.plotitem.items[-1])  # remove spectra
         except IndexError:  # if previously removed, ignore
             pass
-        self.plot.blockSignals(False)
+        #self.plot.blockSignals(False)
+
     def ClearandReload(self):
         self.plot.blockSignals(True)
         iterator = len(self.plotitem.items)-1
@@ -15986,8 +15991,8 @@ class SpecFig():
         self.loadNewSpectrum()
         vb = self.plotitem.items[1].getViewBox()
         vb.updateAutoRange()
-        self.plotitem.items[1].hide()
-        self.plotitem.items[0].hide()
+        #self.plotitem.items[1].hide()
+        #self.plotitem.items[0].hide()
         if self.parent.ROIShapeBox.currentText() != "Lasso":
             self.parent.absimgfig.OnROIVisibility(self.parent.ROIvisibleCheckBox.checkState())
 
@@ -16008,15 +16013,87 @@ class SpecFig():
         curve = pg.PlotCurveItem(pen=({'color': pg.intColor(nplots,alpha=150), 'width': 2}), skipFiniteCheck=True,name=roi_name)
         self.plotitem.addItem(curve)
         self.parent.absimgfig.addLockedROI()
-        #self.plots.append(curve)
         self.plotitem.items[-1].setData(x,y)
+
+    def mergeROI(self):
+        self.plot.blockSignals(True)
+        roiitems = self.parent.absimgfig.imageplot.items
+        try:
+            if isinstance(roiitems[-2], pg.ImageItem) and len(self.parent.absimgfig.imageplot.items) > 4:
+                b1 = np.sum(roiitems[-1].image, axis = 2)[:,:] > 0
+                b2 = np.sum(roiitems[-2].image, axis = 2)[:,:] > 0
+                boolmask = ~np.logical_or(b1, b2)
+                indices = np.where(boolmask == False)
+                self.plotitem.removeItem(self.plotitem.items[-1])
+                self.parent.absimgfig.imageplot.removeItem(roiitems[-1])
+                self.plotitem.removeItem(self.plotitem.items[-1])
+                self.parent.absimgfig.imageplot.removeItem(roiitems[-1])
+                nrois = len(self.parent.absimgfig.imageplot.items)
+                roi = np.zeros([*boolmask.shape, 4], dtype=np.uint8)
+                roi[indices] = pg.intColor(nrois, alpha=255).getRgb()
+                lockedroi = pg.ImageItem(image=roi, border="k", opacity=0.3)
+                self.parent.absimgfig.imageplot.addItem(lockedroi, ignoreBounds=True)
+
+                data = self.prefilterData()
+                #mask = self.createROImask()
+                #self.drawROImask(mask)
+                x, y = self.getSpecfromROI(data,boolmask)
+                nplots = len(self.plotitem.items) + 1
+
+                roi_name = "ROI " + str(
+                    nplots - 2)  # 2 plots are consumed for the lineindicator at pos [0] and the current roi at [-1].
+                curve = pg.PlotCurveItem(pen=({'color': pg.intColor(nplots, alpha=150), 'width': 2}),
+                                         skipFiniteCheck=True, name=roi_name)
+                self.plotitem.addItem(curve)
+                self.plotitem.items[-1].setData(x, y)
+        except IndexError:
+            pass
+        self.plot.blockSignals(False)
+
+    def subtractROI(self):
+        self.plot.blockSignals(True)
+        roiitems = self.parent.absimgfig.imageplot.items
+        try:
+            if isinstance(roiitems[-2], pg.ImageItem) and len(self.parent.absimgfig.imageplot.items) > 4:
+                b1 = np.sum(roiitems[-1].image, axis = 2)[:,:] > 0
+                b2 = np.sum(roiitems[-2].image, axis = 2)[:,:] > 0
+                #boolmask = ~np.logical_and(b1, b2) # intersect
+                boolmask = ~np.logical_and(~b1, b2)  # subtract
+                if not np.any(~boolmask):
+                    self.ClearLast()
+                    self.ClearLast()
+                    return
+                indices = np.where(boolmask == False)
+                self.plotitem.removeItem(self.plotitem.items[-1])
+                self.parent.absimgfig.imageplot.removeItem(roiitems[-1])
+                self.plotitem.removeItem(self.plotitem.items[-1])
+                self.parent.absimgfig.imageplot.removeItem(roiitems[-1])
+                nrois = len(self.parent.absimgfig.imageplot.items)
+                roi = np.zeros([*boolmask.shape, 4], dtype=np.uint8)
+                roi[indices] = pg.intColor(nrois, alpha=255).getRgb()
+                lockedroi = pg.ImageItem(image=roi, border="k", opacity=0.3)
+                self.parent.absimgfig.imageplot.addItem(lockedroi, ignoreBounds=True)
+
+                data = self.prefilterData()
+                #mask = self.createROImask()
+                #self.drawROImask(mask)
+                x, y = self.getSpecfromROI(data,boolmask)
+                nplots = len(self.plotitem.items) + 1
+
+                roi_name = "ROI " + str(
+                    nplots - 2)  # 2 plots are consumed for the lineindicator at pos [0] and the current roi at [-1].
+                curve = pg.PlotCurveItem(pen=({'color': pg.intColor(nplots, alpha=150), 'width': 2}),
+                                         skipFiniteCheck=True, name=roi_name)
+                self.plotitem.addItem(curve)
+                self.plotitem.items[-1].setData(x, y)
+        except IndexError:
+            pass
+        self.plot.blockSignals(False)
 
     def loadNewSpectrum(self):
         if self.plotitem.items:
             try:
                 self.ClearandReload()
-                #self.parent.button_lockspectrum.disconnect()
-                #self.parent.button_clearspecfig.disconnect()
             except IndexError:
                 pass
         curve = pg.PlotCurveItem(pen=({'color': pg.intColor(6), 'width': 2}), skipFiniteCheck=True)
@@ -16024,8 +16101,12 @@ class SpecFig():
         self.plotitem.addItem(self.LineIndicator, ignoreBounds=True)
         self.plotitem.addItem(curve)
         self.loadData()
+
     def updatePlotData(self):
-        x,y = self.GenerateSpectrum(list(range(self.parent.stk.n_ev)))
+        data = self.prefilterData()
+        mask = self.createROImask()
+        self.drawROImask(mask)
+        x, y = self.getSpecfromROI(data,self.parent.absimgfig.boolmask)
         self.plot.blockSignals(True)
         self.plotitem.items[1].setData(x, y)
         self.LineIndicator.setPos(QtCore.QPointF(self.plotitem.items[1].xData[self.parent.iev], self.plotitem.items[1].yData[self.parent.iev]))
@@ -16063,6 +16144,8 @@ class SpecFig():
             self.parent.button_lockspectrum.setEnabled(False)
             self.parent.button_clearspecfig.setEnabled(False)
             self.parent.button_clearlastroi.setEnabled(False)
+            self.parent.button_mergeroi.setEnabled(False)
+            self.parent.button_subtractroi.setEnabled(False)
             self.parent.absimgfig.ROImask.hide()
             x,y = (self.parent.stk.evi0, self.parent.stk.i0data)
             self.ay.setLabel(text="Flux in selected I0 area [counts]")
@@ -16076,7 +16159,10 @@ class SpecFig():
             #self.plotitem = self.plot.plot(x, y, pen=pg.mkPen(color="r", width=2))
         else:
             self.parent.ROIvisibleCheckBox.setEnabled(True)
-            x,y = self.GenerateSpectrum(list(range(self.parent.stk.n_ev)))
+            data = self.prefilterData()
+            mask = self.createROImask()
+            self.drawROImask(mask)
+            x, y = self.getSpecfromROI(data, self.parent.absimgfig.boolmask)
             self.plotitem.items[1].setPen(pg.mkPen(pg.mkPen(color="b", width=2)))
             for i in range(iterator, -1, -1):
                 self.plotitem.items[i].show()
@@ -16131,19 +16217,19 @@ class SpecFig():
         right = min(self.parent.stk.n_cols,max(0,right))
         return (left,right,top,bottom)
 
-    def GetSpecfromROI(self,data):
-        roimask = self.parent.absimgfig.ROImask
-        roirgba = self.parent.absimgfig.ROIrgba
-        roirgba[:,:] = [0, 0, 0, 0]
+    def createROImask(self):
         cols = self.parent.stk.n_cols
         rows = self.parent.stk.n_rows
-        ev = self.parent.stk.n_ev
         angle = self.parent.absimgfig.roi.angle()
         offsetx = 0
         offsety = 0
         boolmask = np.full((cols , rows), True)
-
+        if self.parent.absimgfig.roi.boundingRect().width() > 1000:
+            print("ROI wider than 1000 px is not supported. Refer to _getArrayRegionForArbitraryShape().")
+            return None
         mask, coords = self.parent.absimgfig.roi.getArrayRegion(boolmask,self.parent.absimgfig.imageitem, axes=(0,1), returnMappedCoords=True)
+        if mask.size == 0:
+            return None
         # calculate offsets to avoid mismatch of roi and selected pixels
         if angle:
             offsetx = np.clip(np.sin(0.785398) * np.cos(np.radians(angle) + 0.785398) - 0.5, -1, 0)
@@ -16162,19 +16248,38 @@ class SpecFig():
         # Handle edge cases and gaps. Fill holes in data due to rounding errors by applying and reverting a binary dilation.
         boolmask = np.pad(boolmask, ((1, 1), (1, 1)), 'constant', constant_values=True)
         boolmask = ndimage.binary_dilation(~ndimage.binary_dilation(~boolmask))[1:-1, 1:-1]
+        return boolmask
+
+    def getSpecfromROI(self, data, boolmask):
+        cols = self.parent.stk.n_cols
+        rows = self.parent.stk.n_rows
+        ev = self.parent.stk.n_ev
+        if boolmask is None:
+            return [self.parent.stk.ev[i] for i in list(range(ev))], np.zeros(ev)
         valid_pixel_count = (cols * rows) - np.count_nonzero(boolmask)
         if not valid_pixel_count:
-            roimask.setImage(None)
-            self.parent.absimgfig.boolmask[:,:] = True
-            return np.zeros(ev)
-        roirgba[~boolmask] = (0,0,255,255)
-        roimask.setImage(roirgba)
+            return [self.parent.stk.ev[i] for i in list(range(ev))], np.zeros(ev)
         mask = np.broadcast_to(np.expand_dims(boolmask, axis=2), (cols, rows, ev))
         spectrum = np.ma.array(data, mask=mask).sum(axis=(0,1)) / max(valid_pixel_count,1)
-        self.parent.absimgfig.boolmask = boolmask
-        return spectrum
+        x = [self.parent.stk.ev[i] for i in list(range(ev))]
+        y = [spectrum[i] for i in list(range(ev))]
+        return x, y
 
-    def GenerateSpectrum(self, evselection):
+    def drawROImask(self,boolmask):
+        cols = self.parent.stk.n_cols
+        rows = self.parent.stk.n_rows
+        valid_pixel_count = (cols * rows) - np.count_nonzero(boolmask)
+        roimask = self.parent.absimgfig.ROImask
+        if not valid_pixel_count or boolmask is None:
+            self.parent.absimgfig.boolmask[:,:] = True
+        else:
+            self.parent.absimgfig.boolmask = boolmask
+        roirgba = self.parent.absimgfig.ROIrgba
+        roirgba[:,:] = [0, 0, 0, 0]
+        roirgba[~self.parent.absimgfig.boolmask] = (0,0,255,255)
+        roimask.setImage(roirgba)
+
+    def prefilterData(self):
         if self.parent.com.i0_loaded:
             #self.cb_od_per_px.setVisible(True)
             #if self.cb_od_per_px.isChecked():
@@ -16194,13 +16299,10 @@ class SpecFig():
                 data = self.parent.stk.stack4D[:, :, :, int(self.parent.itheta)]
             else:
                 data = self.parent.stk.absdata
-        spectrum = self.GetSpecfromROI(data)
-        x = [self.parent.stk.ev[i] for i in evselection]
-        y = [spectrum[i] for i in evselection]
         # self.label_spatial_range.setText("Stack size: [ "+str(int(self.box.size().x()))+" x "+str(int(self.box.size().y()))+" ] px²")
         # self.label_ev_range.setText(
         #     "Energy range: [ " + str(min(x, default=0)) + " .. " + str(max(x, default=0)) + " ] eV, # values: "+ str(len(x)))
-        return (x, y)
+        return data
 
     def OnCopy(self):
         # self.exp = pg.exporters.ImageExporter(self.plotitem) # just plot
@@ -16284,11 +16386,15 @@ class ImgFig():
             self.parent.button_lockspectrum.setEnabled(True)
             self.parent.button_clearspecfig.setEnabled(True)
             self.parent.button_clearlastroi.setEnabled(True)
+            self.parent.button_mergeroi.setEnabled(True)
+            self.parent.button_subtractroi.setEnabled(True)
         else:
             self.roi.hide()
             self.ROImask.hide()
             self.parent.specfig.plotitem.items[1].hide()
             self.parent.specfig.plotitem.items[0].hide()
+            vb = self.parent.specfig.plotitem.getViewBox()
+            vb.updateAutoRange()
             self.parent.ROIShapeBox.setEnabled(False)
             self.parent.button_lockspectrum.setEnabled(False)
 
@@ -16321,15 +16427,16 @@ class ImgFig():
         self.parent.specfig.updatePlotData()
 
     def onMousePress(self,e):
-        if not self.parent.button_showi0.isChecked():
+        if not self.parent.button_showi0.isChecked() and self.parent.ROIvisibleCheckBox.isChecked():
             self.mousepressed = True
     def onMouseRelease(self,e):
         if self.mousepressed:
             self.mousepressed = False
-            self.proxy.disconnect()
-            self.roi.addSegment(self.roi.handles[-1]['item'], self.roi.handles[0]['item'])
-            self.imageitem.mousePressEvent = self.imageplot.mousePressEvent
-            self.imageitem.mouseReleaseEvent = self.imageplot.mouseReleaseEvent
+            if len(self.roi.handles) > 2:
+                self.proxy.disconnect()
+                self.roi.addSegment(self.roi.handles[-1]['item'], self.roi.handles[0]['item'])
+                self.imageitem.mousePressEvent = self.imageplot.mousePressEvent
+                self.imageitem.mouseReleaseEvent = self.imageplot.mouseReleaseEvent
     def onMouseMoved(self,e):
         pos = self.vb.mapSceneToView(e[0])
         roipos = pos-self.vb.mapFromViewToItem(self.roi,pos)
@@ -17020,11 +17127,11 @@ class MainFrame(QtWidgets.QMainWindow):
             self.page1.button_align.setEnabled(False)
             self.page1.button_meanflux.setEnabled(False)
             self.page1.button_slideshow.setEnabled(False)
-            self.page1.button_addROI.setEnabled(False)
-            self.page1.button_spectralROI.setEnabled(False)
             self.page1.button_spectralROI.setEnabled(False)
             self.page1.button_lockspectrum.setEnabled(False)
             self.page1.button_clearlastroi.setEnabled(False)
+            self.page1.button_mergeroi.setEnabled(False)
+            self.page1.button_subtractroi.setEnabled(False)
             self.page1.button_clearspecfig.setEnabled(False)
             self.page1.ROIShapeBox.setEnabled(False)
             self.page1.ROIvisibleCheckBox.setEnabled(False)
@@ -17057,10 +17164,11 @@ class MainFrame(QtWidgets.QMainWindow):
             self.page1.button_align.setEnabled(True)
             self.page1.button_meanflux.setEnabled(True)
             self.page1.button_slideshow.setEnabled(True)
-            #self.page1.button_addROI.setEnabled(True)
             self.page1.button_spectralROI.setEnabled(True)
             self.page1.button_lockspectrum.setEnabled(True)
             self.page1.button_clearlastroi.setEnabled(True)
+            self.page1.button_mergeroi.setEnabled(True)
+            self.page1.button_subtractroi.setEnabled(True)
             self.page1.button_clearspecfig.setEnabled(True)
             self.page1.ROIShapeBox.setEnabled(True)
             self.page1.ROIvisibleCheckBox.setEnabled(True)
