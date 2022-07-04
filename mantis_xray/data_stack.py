@@ -583,11 +583,10 @@ class data:
             self.squarepx = False
 
         # Set scale_bar as well
-        #self.scale_bar()
+        self.scale_bar()
 
-    #ToDo: Restore scale_bar option for NNMA and overview plots
     def scale_bar(self):
-         bar_microns = 0.2 * np.abs(self.x_stop - self.x_start)
+         bar_microns = 0.2 * self.n_cols * self.x_pxsize
 
          if bar_microns >= 10.:
              bar_microns = 10. * int(0.5 + 0.1 * int(0.5 + bar_microns))

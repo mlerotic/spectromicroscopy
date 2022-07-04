@@ -9074,20 +9074,6 @@ class PageStack(QtWidgets.QWidget):
         #self.rb_flux.setEnabled(False)
         #self.rb_od.setEnabled(False)
 
-        #ToDo: Restore Scalebar option
-        #self.add_scale_cb = QtWidgets.QCheckBox('Scalebar', self)
-        #self.add_scale_cb.setChecked(True)
-        #self.add_scale_cb.stateChanged.connect(self.OnShowScale)
-        #vbox23.addWidget(self.add_scale_cb)
-
-        #hbox211 = QtWidgets.QHBoxLayout()
-        #hbox211.addSpacing(20)
-        #self.cb_white_scale_bar = QtWidgets.QCheckBox('White', self)
-        #self.cb_white_scale_bar.setChecked(False)
-        #self.cb_white_scale_bar.stateChanged.connect(self.OnWhiteScale)
-        #hbox211.addWidget(self.cb_white_scale_bar)
-        #vbox23.addLayout(hbox211)
-
         #self.add_colbar_cb = QtWidgets.QCheckBox('Colorbar', self)
         #self.add_colbar_cb.stateChanged.connect(self.OnShowColBar)
         #vbox23.addWidget(self.add_colbar_cb)
@@ -9249,6 +9235,7 @@ class PageStack(QtWidgets.QWidget):
         #self.ZeroOriginCheckBox.toggled.connect(lambda: self.absimgfig.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
         self.SquarePxCheckBox.toggled.connect(lambda: self.absimgfig.OnMetricScale(False, True,self.SquarePxCheckBox.isChecked()))
         self.SquarePxCheckBox.setVisible(True)
+        self.ScalebarCheckBox.toggled.connect(lambda: self.absimgfig.OnUpdateScale(self.ScalebarCheckBox.isChecked()))
 
         self.CMCatBox.addItems([self.cmaps[0][0],self.cmaps[1][0],self.cmaps[2][0],self.cmaps[3][0],self.cmaps[4][0],self.cmaps[5][0]])
         self.CMMapBox.addItems(self.cmaps[2][1])
@@ -11148,6 +11135,7 @@ class MultiCrop(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
         self.stack.n_rows = self.stack.absdata.shape[1]
         self.parent.page1.ix = int(self.stack.n_cols/2)
         self.parent.page1.iy = int(self.stack.n_rows/2)
+        self.stack.scale_bar()
 
         if self.com.stack_4d:
             if self.cb_remove_theta.isChecked():
@@ -14661,7 +14649,6 @@ class PageLoadData(QtWidgets.QWidget):
         self.button_4d.setToolTip('Supported Formats .hdf5 .ncb')
         self.button_4d.clicked.connect( self.OnLoad4D)
 
-        #ToDo: Repair Scaling/scalebar for HDF5 files.
         self.button_sm.setToolTip('Supported Formats .sm, .tif, .xrm')
         self.button_sm.clicked.connect( self.OnBuildStack)
 
@@ -14672,6 +14659,7 @@ class PageLoadData(QtWidgets.QWidget):
         self.ZeroOriginCheckBox.toggled.connect(lambda: self.absimgfig.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
         self.SquarePxCheckBox.toggled.connect(lambda: self.absimgfig.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
         self.SquarePxCheckBox.setVisible(False)
+        self.ScalebarCheckBox.toggled.connect(lambda: self.absimgfig.OnUpdateScale(self.ScalebarCheckBox.isChecked()))
 
         self.CMCatBox.addItems([self.cmaps[0][0],self.cmaps[1][0],self.cmaps[2][0],self.cmaps[3][0],self.cmaps[4][0],self.cmaps[5][0]])
         self.CMMapBox.addItems(self.cmaps[2][1])
@@ -16335,6 +16323,7 @@ class ImgFig():
         self.imageplot = canvas.addPlot()
         self.imageplot.setMouseEnabled(x=False, y=False)
         self.imageitem = pg.ImageItem(border="k")
+        self.scalebar = pg.ScaleBar(size=1, suffix="m")
         self.imageplot.setAspectLocked(lock=True, ratio=1)
         self.imageplot.showAxis("top", show=True)
         self.imageplot.showAxis("bottom", show=True)
@@ -16374,6 +16363,8 @@ class ImgFig():
         self.parent.ROIShapeBox.setCurrentText(defaultshape)
         self.parent.ROIShapeBox.blockSignals(False)
     def clear(self):
+        self.imageplot.removeItem(self.scalebar)
+        self.imageplot.removeItem(self.imageitem)
         self.imageplot.clear()
 
     def OnROIVisibility(self, state):
@@ -16467,7 +16458,6 @@ class ImgFig():
             except IndexError: # if first roi, spectra are not existing at this point
               pass
             self.roi.handlePen = QtGui.QPen(QtGui.QColor(255, 0, 128, 0)) # Make handles invisible
-            self.vb = self.imageitem.getViewBox()
             self.imageitem.mousePressEvent = self.onMousePress
             self.imageitem.mouseReleaseEvent = self.onMouseRelease
             self.proxy = pg.SignalProxy(self.vb.scene().sigMouseMoved, rateLimit=15, slot=self.onMouseMoved)
@@ -16503,8 +16493,12 @@ class ImgFig():
             self.OnROIShapeChanged("Lasso")
 
     def loadData(self): # Called when fresh data are loaded.
+        try:
+            self.vb.sigRangeChanged.disconnect()
+        except:
+            pass
         self.imageplot.addItem(self.imageitem)
-
+        self.vb = self.imageitem.getViewBox()
         rightlabel = self.bar.getAxis("right")
         if self.parent.com.i0_loaded:
             rightlabel.setLabel(text="OD", units="")
@@ -16520,7 +16514,8 @@ class ImgFig():
             self.OnMetricScale(self.parent.MetricCheckBox.isChecked(), True, False)
         except AttributeError:
             self.OnMetricScale(False, True, self.parent.SquarePxCheckBox.isChecked())
-
+        self.OnShowScale()
+        self.vb.sigRangeChanged.connect(lambda: self.OnUpdateScale(self.parent.ScalebarCheckBox.isChecked()))
 
     def draw(self,image,setlabel=True,setlut=False):
         if setlut:
@@ -16568,7 +16563,9 @@ class ImgFig():
                 self.parent.SquarePxCheckBox.setVisible(True)
                 if square == True:
                     aspect = 1
+                    self.parent.ScalebarCheckBox.setVisible(False)
                 else:
+                    self.parent.ScalebarCheckBox.setVisible(True)
                     aspect = self.parent.stk.x_pxsize/self.parent.stk.y_pxsize
                     #print(aspect)
                 self.imageplot.setAspectLocked(lock=True, ratio=aspect)
@@ -16590,6 +16587,27 @@ class ImgFig():
         if self.parent.com.stack_loaded == 1:
             self.bar.bar.setLookupTable(lut)
             self.imageitem.setLookupTable(lut)
+
+    def OnShowScale(self):
+        suffix = "m"
+        self.scalebar.text.setText(pg.siFormat(float(self.parent.stk.scale_bar_string)*self.scale, suffix=suffix))
+        self.scalebar.setParentItem(self.imageplot.getViewBox())
+        self.scalebar.anchor((1, 1), (1, 1), offset=(-20, -20))
+        self.scalebar.hide()
+        self.OnUpdateScale(self.parent.ScalebarCheckBox.isChecked())
+
+    def OnUpdateScale(self, set):
+        if not set or self.parent.SquarePxCheckBox.isChecked():
+            self.scalebar.hide()
+            return
+        if not hasattr(self.parent, "MetricCheckBox"):
+            self.scalebar.size = float(self.parent.stk.scale_bar_string) / self.parent.stk.x_pxsize
+        elif not self.parent.MetricCheckBox.isChecked():
+            self.scalebar.size = float(self.parent.stk.scale_bar_string) / self.parent.stk.x_pxsize
+        elif self.parent.MetricCheckBox.isChecked():
+            self.scalebar.size = float(self.parent.stk.scale_bar_string)*self.scale
+        self.scalebar.updateBar()
+        self.scalebar.show()
 
     def OnCopy(self):
         # self.exp = pg.exporters.ImageExporter(self.imageitem) # just image
