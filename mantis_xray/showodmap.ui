@@ -108,13 +108,13 @@
      </property>
      <property name="minimumSize">
       <size>
-       <width>250</width>
+       <width>285</width>
        <height>0</height>
       </size>
      </property>
      <property name="maximumSize">
       <size>
-       <width>250</width>
+       <width>285</width>
        <height>16777215</height>
       </size>
      </property>
@@ -436,7 +436,7 @@
             </font>
            </property>
            <property name="text">
-            <string>Colormap Category      Colormap   Steps</string>
+            <string>Colormap Category            Colormap             Steps</string>
            </property>
           </widget>
          </item>
@@ -511,7 +511,7 @@
           </layout>
          </item>
          <item>
-          <layout class="QHBoxLayout" name="horizontalLayout_6" stretch="1,1,1,0">
+          <layout class="QHBoxLayout" name="horizontalLayout_6" stretch="1,1,1,0,0">
            <property name="spacing">
             <number>1</number>
            </property>
@@ -595,7 +595,7 @@
               <bool>false</bool>
              </property>
              <property name="text">
-              <string>Force square px</string>
+              <string>Square px</string>
              </property>
              <property name="checkable">
               <bool>true</bool>
@@ -611,6 +611,13 @@
              </property>
              <property name="tristate">
               <bool>false</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="ScalebarCheckBox">
+             <property name="text">
+              <string>Scalebar</string>
              </property>
             </widget>
            </item>

@@ -14881,6 +14881,7 @@ class ShowODMap(QtWidgets.QWidget):
         self.ZeroOriginCheckBox.toggled.connect(lambda: self.odimgfig.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
         self.SquarePxCheckBox.toggled.connect(lambda: self.odimgfig.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
         self.SquarePxCheckBox.setVisible(False)
+        self.ScalebarCheckBox.toggled.connect(lambda: self.odimgfig.OnUpdateScale(self.ScalebarCheckBox.isChecked()))
 
         #self.CropCheckBox.toggled.connect(lambda: self.OnCropCB(self.CropCheckBox.isChecked()))
         #self.cropflag = True
@@ -16597,17 +16598,18 @@ class ImgFig():
         self.OnUpdateScale(self.parent.ScalebarCheckBox.isChecked())
 
     def OnUpdateScale(self, set):
-        if not set or self.parent.SquarePxCheckBox.isChecked():
-            self.scalebar.hide()
-            return
-        if not hasattr(self.parent, "MetricCheckBox"):
-            self.scalebar.size = float(self.parent.stk.scale_bar_string) / self.parent.stk.x_pxsize
-        elif not self.parent.MetricCheckBox.isChecked():
-            self.scalebar.size = float(self.parent.stk.scale_bar_string) / self.parent.stk.x_pxsize
-        elif self.parent.MetricCheckBox.isChecked():
-            self.scalebar.size = float(self.parent.stk.scale_bar_string)*self.scale
-        self.scalebar.updateBar()
-        self.scalebar.show()
+        if hasattr(self.parent.stk, "scale_bar_string"):
+            if not set or self.parent.SquarePxCheckBox.isChecked():
+                self.scalebar.hide()
+                return
+            if not hasattr(self.parent, "MetricCheckBox"):
+                self.scalebar.size = float(self.parent.stk.scale_bar_string) / self.parent.stk.x_pxsize
+            elif not self.parent.MetricCheckBox.isChecked():
+                self.scalebar.size = float(self.parent.stk.scale_bar_string) / self.parent.stk.x_pxsize
+            elif self.parent.MetricCheckBox.isChecked():
+                self.scalebar.size = float(self.parent.stk.scale_bar_string)*self.scale
+            self.scalebar.updateBar()
+            self.scalebar.show()
 
     def OnCopy(self):
         # self.exp = pg.exporters.ImageExporter(self.imageitem) # just image
