@@ -296,7 +296,17 @@ class data:
         # calculate average flux for each pixel
         self.averageflux = np.nanmean(self.absdata, axis=2)
         self.histogram = self.averageflux
-
+        px = int(self.n_cols * self.n_rows * 0.98)  # 98% of total pixels
+        fluxmax_limit = np.mean(np.partition(np.ravel(self.averageflux), px)[
+                                :px])  # average brightness of the 2% of pixels with highest flux
+        self.histmin = fluxmax_limit
+        self.histmax = np.max(self.averageflux) + 1
+        histogram_data = np.reshape(self.histogram, (self.n_cols * self.n_rows),
+                                    order='F')
+        histogram_data = histogram_data[~np.isnan(histogram_data)]  # remove non-finite values
+        y, self.hist_data_x = np.histogram(histogram_data, bins=100)
+        y[y < 1] = 1
+        self.hist_data_y = np.log10(y)
         return
 
     # ----------------------------------------------------------------------

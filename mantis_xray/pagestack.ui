@@ -200,7 +200,7 @@
              <enum>QLayout::SetMinimumSize</enum>
             </property>
             <item>
-             <widget class="QPushButton" name="button_i0histogram">
+             <widget class="QPushButton" name="button_i0">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
                 <horstretch>0</horstretch>
@@ -251,19 +251,6 @@
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="button_refimgs">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>24</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Load Reference Images</string>
-              </property>
-             </widget>
-            </item>
-            <item>
              <widget class="QPushButton" name="button_showi0">
               <property name="minimumSize">
                <size>
@@ -289,7 +276,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="button_reseti0">
+             <widget class="QPushButton" name="button_refimgs">
               <property name="minimumSize">
                <size>
                 <width>0</width>
@@ -297,20 +284,7 @@
                </size>
               </property>
               <property name="text">
-               <string>Reset I0</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="button_saveod">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>24</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Save OD data</string>
+               <string>Load Reference Images</string>
               </property>
              </widget>
             </item>
@@ -353,13 +327,6 @@
             <property name="sizeConstraint">
              <enum>QLayout::SetMinimumSize</enum>
             </property>
-            <item>
-             <widget class="QPushButton" name="button_saveROIspectr">
-              <property name="text">
-               <string>Save ROI Spectrum</string>
-              </property>
-             </widget>
-            </item>
             <item>
              <widget class="QPushButton" name="button_ROIdosecalc">
               <property name="text">
@@ -807,7 +774,7 @@
             </widget>
            </item>
            <item row="0" column="1">
-            <widget class="QLabel" name="label_4">
+            <widget class="QLabel" name="label_roitype">
              <property name="minimumSize">
               <size>
                <width>0</width>
@@ -821,7 +788,7 @@
               </size>
              </property>
              <property name="text">
-              <string>ROI shape</string>
+              <string>ROI type</string>
              </property>
             </widget>
            </item>
@@ -1309,12 +1276,12 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>PlotWidget</class>
+   <class>GraphicsLayoutWidget</class>
    <extends>QGraphicsView</extends>
    <header location="global">pyqtgraph</header>
   </customwidget>
   <customwidget>
-   <class>GraphicsLayoutWidget</class>
+   <class>PlotWidget</class>
    <extends>QGraphicsView</extends>
    <header location="global">pyqtgraph</header>
   </customwidget>

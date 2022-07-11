@@ -8977,10 +8977,10 @@ class PageStack(QtWidgets.QWidget):
         #vbox1b = QtWidgets.QVBoxLayout()
         #vbox1b.setSpacing(0)
 
-        #self.button_i0histogram = QtWidgets.QPushButton('Select I0...')
-        self.button_i0histogram.clicked.connect( self.OnI0histogram)
-        self.button_i0histogram.setEnabled(False)
-        #vbox1b.addWidget(self.button_i0histogram)
+        #self.button_i0 = QtWidgets.QPushButton('Select I0...')
+        self.button_i0.clicked.connect( self.OnI0histogram)
+        self.button_i0.setEnabled(False)
+        #vbox1b.addWidget(self.button_i0)
 
         #self.button_i0ffile = QtWidgets.QPushButton('I0 from file...')
         self.button_i0ffile.clicked.connect(self.OnI0FFile)
@@ -9003,13 +9003,13 @@ class PageStack(QtWidgets.QWidget):
         #vbox1b.addWidget(self.button_refimgs)
 
         #self.button_reseti0 = QtWidgets.QPushButton('Reset I0')
-        self.button_reseti0.clicked.connect(self.OnResetI0)
-        self.button_reseti0.setEnabled(False)
+        #self.button_reseti0.clicked.connect(self.OnI0Reset)
+        #self.button_reseti0.setEnabled(False)
         #vbox1b.addWidget(self.button_reseti0)
 
         #self.button_saveod = QtWidgets.QPushButton('Save OD data')
-        self.button_saveod.clicked.connect(self.OnSaveOD)
-        self.button_saveod.setEnabled(False)
+        #self.button_saveod.clicked.connect(self.OnSaveOD)
+        #self.button_saveod.setEnabled(False)
         #vbox1b.addWidget(self.button_saveod)
 
         #sizer1b.setLayout(vbox1b)
@@ -9173,8 +9173,8 @@ class PageStack(QtWidgets.QWidget):
         #vbox3.addWidget(self.button_setROII0)
 
         #self.button_saveROIspectr = QtWidgets.QPushButton( 'Save ROI Spectrum...')
-        self.button_saveROIspectr.clicked.connect( self.OnSaveROISpectrum)
-        self.button_saveROIspectr.setEnabled(False)
+        #self.button_saveROIspectr.clicked.connect( self.OnSaveROISpectrum)
+        #self.button_saveROIspectr.setEnabled(False)
         #vbox3.addWidget(self.button_saveROIspectr)
 
         #self.button_ROIdosecalc = QtWidgets.QPushButton('ROI Dose Calculation...')
@@ -9245,7 +9245,7 @@ class PageStack(QtWidgets.QWidget):
         self.CMMapBox.currentIndexChanged.connect(lambda: self.absimgfig.OnColormapChange(map=self.CMMapBox.currentText(),num_colors=self.StepSpin.value()))
         self.StepSpin.valueChanged.connect(lambda: self.absimgfig.OnColormapChange(map=self.CMMapBox.currentText(),num_colors=self.StepSpin.value()))
 
-        self.ROIShapeBox.addItems(["Rectangle", "Circle", "Ellipse","Polygon","Lasso"])
+        self.ROIShapeBox.addItems(["Lasso", "Rectangle", "Circle", "Ellipse", "Polygon", "Histogram"])
         self.ROIShapeBox.currentTextChanged.connect(self.absimgfig.OnROIShapeChanged)
         self.button_lockspectrum.setEnabled(False)
         self.button_clearlastroi.setEnabled(False)
@@ -9340,10 +9340,11 @@ class PageStack(QtWidgets.QWidget):
 
 #----------------------------------------------------------------------
     def OnI0histogram(self, event):
-        #self.window().Hide()
-        histogram = ShowHistogram(self, self.stk)
-        histogram.show()
+        self.specfig.OnI0Histogram()
 
+# ----------------------------------------------------------------------
+    def OnI0Reset(self, event):
+        self.specfig.OnI0Reset()
 
 #----------------------------------------------------------------------
     def I0histogramCalculated(self):
@@ -9373,15 +9374,19 @@ class PageStack(QtWidgets.QWidget):
 
     # ----------------------------------------------------------------------
     def OnPreNormalizedData(self, event):
-
+        QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
         self.stk.UsePreNormalizedData()
 
         self.com.i0_loaded = 1
         #self.loadSpectrum(self.ix, self.iy)
         self.absimgfig.loadNewImageWithROI()
         self.specfig.ClearandReload()
+        #self.parent.I0histogramCalculated()
+        self.button_i0.disconnect()
+        self.button_i0.setText("Reset I0")
+        self.button_i0.clicked.connect(self.OnI0Reset)
         self.window().refresh_widgets()
-
+        QtWidgets.QApplication.restoreOverrideCursor()
 #-----------------------------------------------------------------------
     def OnRefImgs(self, event):
 
@@ -9424,22 +9429,6 @@ class PageStack(QtWidgets.QWidget):
 
         self.window().refresh_widgets()
 
-
-#----------------------------------------------------------------------
-    def OnResetI0(self):
-
-        self.stk.reset_i0()
-
-        self.com.i0_loaded = 0
-
-        self.showflux = True
-        #self.rb_flux.setChecked(True)
-
-        self.absimgfig.loadNewImageWithROI()
-        self.specfig.ClearandReload()
-        self.window().refresh_widgets()
-
-
 #----------------------------------------------------------------------
     def OnSaveStack(self, event):
 
@@ -9455,45 +9444,6 @@ class PageStack(QtWidgets.QWidget):
     def OnMultiCrop(self, evt):
         multicropwin = MultiCrop(self.window(), self.com, self.stk)
         multicropwin.show()
-#----------------------------------------------------------------------
-    def OnSaveOD(self, event):
-
-        """
-        Browse for tiff
-        """
-
-        #try:
-        if True:
-            wildcard = "TIFF files (.tif)"
-
-            filepath, _filter = QtWidgets.QFileDialog.getSaveFileName(self, 'Save OD', '', wildcard)
-
-            filepath = str(filepath)
-            if filepath == '':
-                return
-
-
-            directory =  os.path.dirname(str(filepath))
-
-            QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
-
-
-            self.stk.write_tif(filepath, self.stk.od3d)
-
-
-
-            QtWidgets.QApplication.restoreOverrideCursor()
-
-        #except:
-
-        #    QtWidgets.QApplication.restoreOverrideCursor()
-
-        #    QtWidgets.QMessageBox.warning(self, 'Error', 'Could not save OD stack file.')
-
-
-
-        return
-
 # ----------------------------------------------------------------------
     def OnAlignImgsDialog(self, event):
 
@@ -9521,7 +9471,7 @@ class PageStack(QtWidgets.QWidget):
         dswin.show()
 
 #----------------------------------------------------------------------
-    def OnShowMean(self, event):
+    def OnShowMean(self):
         if (self.com.stack_loaded == 1):
             if (self.mean_visible == 1):
                 self.mean_visible = 0
@@ -9602,8 +9552,12 @@ class PageStack(QtWidgets.QWidget):
         self.mean_visible = 0
         if self.com.stack_loaded == 1:
             self.slider_theta.setValue(value)
-            self.stk.absdata = self.stk.stack4D[:,:,:,self.itheta].copy()
-            image = self.stk.absdata[:, :, int(self.slider_eng.value())].copy()
+            if self.com.i0_loaded == 0:
+                self.stk.absdata = self.stk.stack4D[:, :, :, self.itheta].copy()
+                image = self.stk.absdata[:, :, int(self.slider_eng.value())].copy()
+            else:
+                self.stk.od3d = self.stk.od4d[:, :, :, self.itheta].copy()
+                image = self.stk.od3d[:, :, int(self.slider_eng.value())].copy()
             #self.tc_imagetheta.setText("4D Data Angle: "+str(self.stk.theta[self.itheta]))
             #self.p1.setTitle("<center>Image at {0:5.2f} eV and {1:5.1f}°</center>".format(float(self.stk.ev[self.iev]),
             #                                                                 float(self.stk.theta[self.itheta])))
@@ -10100,41 +10054,6 @@ class PageStack(QtWidgets.QWidget):
         dosewin = DoseCalculation(self, self.stk, self.ROIspectrum)
         dosewin.show()
 
-
-#----------------------------------------------------------------------
-    def OnSaveROISpectrum(self, event):
-
-
-
-
-        wildcard = "CSV files (*.csv)"
-
-        fileName, _filter = QtWidgets.QFileDialog.getSaveFileName(self, 'Save ROI Spectrum (.csv)', '', wildcard)
-
-        fileName = str(fileName)
-        if fileName == '':
-            return
-
-        path, ext = os.path.splitext(fileName)
-        ext = ext[1:].lower()
-
-        try:
-            if (self.com.i0_loaded == 1):
-                self.stk.write_csv(fileName, self.stk.ev, self.ROIspectrum, cname='from ROI')
-            else:
-                self.CalcROI_I0Spectrum()
-                self.stk.write_csv(fileName, self.stk.ev, self.ROIspectrum, cname='from ROI')
-
-
-        except IOError as e:
-            if e.strerror:
-                err = e.strerror
-            else:
-                err = e
-
-            QtGui.QMessageBox.warning(self,'Error','Could not save file: %s' % err)
-
-
 #----------------------------------------------------------------------
     def OnSpectralROI(self, evt):
         specroiwin = ShowODMap(self.window(), self.com, self.data_struct, self.stk)
@@ -10342,231 +10261,6 @@ class SaveWin(QtWidgets.QDialog):
 
             QtWidgets.QMessageBox.warning(self,'Error','Could not save file: %s' % err)
 
-
-
-#-----------------------------------------------------------------------
-class ShowHistogram(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
-    def __init__(self, parent, stack):
-        QtWidgets.QWidget.__init__(self, parent)
-        dir_path = os.path.dirname(os.path.realpath(__file__))
-        uic.loadUi(os.path.join(dir_path,'showhistogram.ui'), self)
-
-        self.HistoWidget.setBackground("w")
-        self.I0Widget.setBackground("w")
-
-        self.button_ok.clicked.connect(self.OnAccept)
-        self.button_cancel.clicked.connect(self.close)
-
-        self.parent = parent
-        self.setWindowTitle('Select I0')
-
-        self.stack = stack
-        self.stack.calc_histogram()
-
-        self.vb = self.I0Widget.addViewBox()
-        self.vb.setAspectLocked()
-        self.AbsImage = pg.ImageItem(border="k",parent= self)
-        self.lassopoints= []
-        self.vb.setMouseEnabled(x=False, y=False)
-        self.vb.addItem(self.AbsImage, ignoreBounds=False)
-        self.MaskImage = pg.ImageItem(border="k")
-        self.vb.addItem(self.MaskImage)
-        self.redpix = np.zeros([self.stack.n_cols, self.stack.n_rows, 4], dtype=np.uint8)
-        px = int(self.stack.n_cols*self.stack.n_rows * 0.98)  # 98% of total pixels
-        fluxmax_limit = np.mean(np.partition(np.ravel(self.stack.averageflux), px)[:px]) # average brightness of the 2% of pixels with highest flux
-        self.histmin = fluxmax_limit
-        self.histmax = np.max(self.stack.averageflux)+1
-        self.draw_histogram()
-        self.draw_image(self.histmin,self.histmax)
-
-        self.I0box = pg.PolyLineROI([[1, 1], [0, 1], [0, 0], [1, 0]], pen=(5, 8), closed=True, movable=False, resizable=True)
-        self.vb.addItem(self.I0box, ignoreBounds=False)
-        self.I0box.clearPoints()
-
-        self.radioLassoROI.toggled.connect(self.SetupROI)
-        self.SetupROI()
-
-    def SetupROI(self):
-        try:
-            self.proxy.disconnect()
-        except:
-            pass
-        self.I0instructions.setText("Select I0 by dragging the histogram lines or by drawing a ROI.")
-        self.lassopoints = []
-        self.I0box.setZValue(-10)
-        self.MaskImage.setZValue(-10)
-        if self.radioLassoROI.isChecked():
-            self.proxy = pg.SignalProxy(self.vb.scene().sigMouseMoved, rateLimit=15, slot=self.onMouseHover) # rate limit to avoid too many handles
-            self.I0box.handlePen = QtGui.QPen(QtGui.QColor(255, 0, 128, 0))
-        #ToDo:Polygon ROI was deprecated in pyqtgraph. It is currently replaced by a rectangle.
-        elif self.radioPolyROI.isChecked():
-            self.proxy = pg.SignalProxy(self.vb.scene().sigMouseMoved, rateLimit=30, slot=self.onMouseHover)
-            #self.I0box.handlePen = QtGui.QPen(QtGui.QColor(255, 0, 128, 255)) # visible handles
-            self.I0box.handlePen = QtGui.QPen(QtGui.QColor(255, 0, 128, 0)) # invisible handles
-            #self.I0box.sigRegionChangeFinished.connect(self.test)
-        self.I0Widget.mouseReleaseEvent = self.onMouseUp
-        self.I0Widget.mousePressEvent = self.onMouseDown
-        self.proxy.block = True
-
-#----------------------------------------------------------------------
-    def draw_histogram(self):
-        histogram_data =  np.reshape(self.stack.histogram, (self.stack.n_cols*self.stack.n_rows), order='F')
-        histogram_data = histogram_data[~np.isnan(histogram_data)] #remove non-finite values
-
-        y, x = np.histogram(histogram_data, bins=100)
-
-        self.region = pg.LinearRegionItem(brush=[255,0,0,45],bounds=[np.min(x),np.max(x)])
-
-        self.region.setZValue(10)
-
-        plot = self.HistoWidget
-        plot.addItem(self.region, ignoreBounds=False)
-        plot.setMouseEnabled(x=False, y=False)
-        plot.showGrid(y=True)
-
-        plot.showAxis("top", show=True)
-        plot.showAxis("right", show=True)
-        by = plot.getAxis("right")
-        bx = plot.getAxis("top")
-        by.setStyle(showValues=False,tickLength=0)
-        bx.setStyle(showValues=False,tickLength=0)
-        ay = plot.getAxis("left")
-        ax = plot.getAxis("bottom")
-
-        ax.setLabel(text="Average Flux")
-        ## Little hack to display vertical axis as log.
-        plot.getViewBox().setLimits(yMin=0,yMax=np.max(y))
-        ay.setLabel(text="log<sub>10</sub> (Number of pixels)")
-        y[y < 1] = 1
-        y = np.log10(y)
-        plot.setLogMode(x=False, y=False) ## Log mode is not working correctly at the moment.
-        ##
-        plot.plot(x, y, stepMode=True, fillLevel=0, brush=(0, 0, 255, 150))
-        def update(region):
-            self.region.setZValue(10)
-            minX, maxX = region
-            self.draw_image(minX, maxX)
-            self.SetupROI()
-            self.MaskImage.setZValue(10)
-
-        self.region.setRegion((self.histmin,self.histmax))
-        self.region.sigRegionChanged.connect(lambda: update(self.region.getRegion()))
-#-----------------------------------------------------------------------
-    def DrawROI(self):
-        left = int(round(self.vb.itemBoundingRect(self.I0box).left(),0))
-        right = int(round(self.vb.itemBoundingRect(self.I0box).right(),0))
-        top = int(round(self.vb.itemBoundingRect(self.I0box).bottom(),0))
-        bottom = int(round(self.vb.itemBoundingRect(self.I0box).top(),0))
-        #fill the selection polygon with ones and map to image coords
-        io = self.I0box.getArrayRegion(np.ones((self.stack.n_cols,self.stack.n_rows)),self.AbsImage)
-        #fill left and right margins with zeros
-        lzeros = np.zeros((max(0,left),np.shape(io)[1]), dtype=io.dtype)
-        rzeros = np.zeros((max(0,self.stack.n_cols-right), np.shape(io)[1]), dtype=io.dtype)
-        io = np.vstack((lzeros, io,rzeros))
-        # fill bottom and top margins with zeros
-        bzeros = np.zeros((np.shape(io)[0],(max(0,bottom))), dtype=io.dtype)
-        tzeros = np.zeros((np.shape(io)[0],(max(0,self.stack.n_rows-top))), dtype=io.dtype)
-        io = np.hstack((bzeros, io,tzeros))
-        #dilate mask to include border pixels:
-        if left <= 0:
-            io = ndimage.binary_dilation(io,structure=([[0, 1, 0], [0, 1, 0], [0, 0, 0]]))
-        if right >= self.stack.n_cols:
-            io = ndimage.binary_dilation(io,structure=([[0, 0, 0], [0, 1, 0], [0, 1, 0]]))
-        if bottom <= 0:
-            io = ndimage.binary_dilation(io,structure=([[0, 0, 0], [1, 1, 0], [0, 0, 0]]))
-        if top >= self.stack.n_rows:
-            io = ndimage.binary_dilation(io,structure=([[0, 0, 0], [0, 1, 1], [0, 0, 0]]))
-        #crop mask to common region:
-        io = io[abs(min(left,0)):self.stack.n_cols+abs(min(left,0)),abs(min(bottom,0)):self.stack.n_rows+abs(min(bottom,0))]
-        self.i0_indices = np.where(io == 1)
-        self.redpix[:, :] = [0, 0, 0, 0]
-        self.redpix[self.i0_indices] = (255,0,0,255)
-        self.MaskImage.setImage(self.redpix, opacity=0.3)
-        self.MaskImage.setZValue(10)
-
-    def onMouseDown(self,e):
-        self.MaskImage.setZValue(-10)
-        self.I0box.setZValue(10)
-        if self.radioLassoROI.isChecked():
-            self.proxy.block = False
-                #self.clickdetector.start(10)
-        elif self.radioPolyROI.isChecked():
-            #self.I0box.sigRegionChangeFinished.connect(self.test)
-            self.proxy.block = False
-            self.origin = self.vb.mapSceneToView(e.pos())
-
-    def onMouseUp(self,e):
-        #self.clickdetector.stop()
-        self.proxy.block = True
-        self.DrawROI()
-        # self.I0instructions.setText("Drag the polygon or the handles. Add handles by clicking on a line segment.")
-        if self.radioLassoROI.isChecked():
-            self.proxy.block = True
-            self.lassopoints = []
-            #self.I0instructions.setText("")
-            self.I0box.clearPoints()
-            #print("clearpoints")
-        elif self.radioPolyROI.isChecked():
-            self.proxy.block = True
-            self.lassopoints = []
-            #self.I0instructions.setText("")
-            #self.I0Widget.mousePressEvent = None
-            self.I0box.clearPoints()
-            #self.proxy.disconnect()
-            return
-
-    def onMouseHover(self,e):
-        pos = self.vb.mapSceneToView(e[0])
-        roipos = pos-self.vb.mapFromViewToItem(self.I0box,pos)
-        if self.vb.itemBoundingRect(self.AbsImage).contains(pos):
-            if self.radioLassoROI.isChecked():
-                handle = self.I0box.addFreeHandle((np.round(pos.x()-roipos.x(),0),np.round(pos.y()-roipos.y(),0)))
-                self.lassopoints.append(handle)
-                if len(self.lassopoints) > 1:
-                    self.I0box.addSegment(self.lassopoints[0], self.lassopoints[1])
-                    self.lassopoints.pop(0)
-            # Polygon ROI is currently broken in recent pyqtgraph version
-            elif self.radioPolyROI.isChecked():
-                if self.origin.x() < 0:
-                    x0 = 0-roipos.x()
-                elif self.origin.x() > self.stack.n_cols:
-                    x0 = self.stack.n_cols - roipos.x()
-                else:
-                    x0 = np.round(self.origin.x()-roipos.x(),0)
-                if self.origin.y() < 0:
-                    y0 = 0-roipos.y()
-                elif self.origin.y() > self.stack.n_rows:
-                    y0 = self.stack.n_rows - roipos.y()
-                else:
-                    y0 = np.round(self.origin.y()-roipos.y(),0)
-                self.I0box.setPoints([(np.round(pos.x()-roipos.x(),0),np.round(pos.y()-roipos.y(),0)), (x0,np.round(pos.y()-roipos.y(),0)),(x0,y0),(np.round(pos.x()-roipos.x(),0),y0)], closed=True)
-
-    def draw_image(self,fluxmin, fluxmax):
-        self.I0instructions.setText(
-            "Select I0 by dragging the histogram lines or by drawing a ROI.")
-        self.i0_indices = np.where((fluxmin<=self.stack.histogram)&(self.stack.histogram<=fluxmax))
-        self.redpix[:, :] = [0, 0, 0, 0]
-        self.redpix[self.i0_indices] = (255,0,0,255)
-        self.AbsImage.setImage(self.stack.histogram)
-        self.MaskImage.setImage(self.redpix, opacity = 0.3)
-
-#----------------------------------------------------------------------
-    def OnAccept(self, evt):
-        if self.MaskImage.zValue() > 0 and (np.any(self.i0_indices[0]) | np.any(self.i0_indices[1])):
-            try:
-                self.stack.i0_from_histogram(self.i0_indices)
-                self.parent.I0histogramCalculated()
-            except ValueError:
-                QtWidgets.QMessageBox.warning(self, 'Error', 'Stack must have at least two images for I0 calculation'.format(id))
-                pass
-            self.stack.i0_mask = self.redpix
-            self.stack.i0_mask[:, :] = False
-            self.stack.i0_mask[self.i0_indices] = True
-            self.close()
-        else:
-            self.i0_indices = []
-            QtWidgets.QMessageBox.warning(self, 'Error', 'I0 region is empty!')
-
 #----------------------------------------------------------------------
 class ShowArtefacts(QtWidgets.QDialog):
     def __init__(self, parent, common, stack):
@@ -10725,7 +10419,7 @@ class ShowArtefacts(QtWidgets.QDialog):
         if not np.array_equal(self.stack.absdata, a, equal_nan=False):
             self.stack.absdata = a
             self.parent.page0.absimgfig.loadNewImage() # Load new image on PageLoadData
-            self.parent.page1.OnResetI0() # Reset I0 on PageStack
+            self.parent.page1.specfig.OnI0Reset() # Reset I0 on PageStack
         self.close()
 #----------------------------------------------------------------------
 class MultiCrop(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
@@ -15920,22 +15614,20 @@ class SpecFig():
         pi = self.plot.getPlotItem()
         pi.layout.setSpacing(12)
         pi.layout.setContentsMargins(10,10,40,10)
-        self.plot.setMouseEnabled(x=True, y=True)
-        self.plot.showGrid(y=True)
-
-        self.plot.showAxis("top", show=True)
-        self.plot.showAxis("right", show=True)
-        by = self.plot.getAxis("right")
-        bx = self.plot.getAxis("top")
+        pi.showGrid(y=True)
+        pi.showAxis("top", show=True)
+        pi.showAxis("right", show=True)
+        by = pi.getAxis("right")
+        bx = pi.getAxis("top")
         by.setStyle(showValues=False,tickLength=0)
         bx.setStyle(showValues=False,tickLength=0)
-        self.ay = self.plot.getAxis("left")
+        self.ay = pi.getAxis("left")
         self.ay.setLabel(text="counts")
 
-        ax = self.plot.getAxis("bottom")
-        ax.setLabel(text="Photon energy [eV]")
-        self.plot.setTitle("")
-        self.plot.addLegend()
+        self.ax = pi.getAxis("bottom")
+        self.ax.setLabel(text="Photon energy [eV]")
+        pi.setTitle("")
+        pi.addLegend()
         self.LineIndicator = pg.InfiniteLine(angle=90, movable=True, markers=None,
                                               pen=pg.mkPen(color=QtGui.QColor(0, 0, 0, 128), width=1.5, style=QtCore.Qt.DashLine))
         self.LineIndicatorLabel = pg.InfLineLabel(self.LineIndicator, " ")
@@ -15947,17 +15639,52 @@ class SpecFig():
 
     def ClearLast(self):
         #self.plot.blockSignals(True)
+        i = 0
+        if self.parent.ROIShapeBox.currentText() == "Histogram":
+            i = 2
+        roiitems = [image for image in self.parent.absimgfig.imageplot.items if isinstance(image, pg.ImageItem)]
         try:
-            roiitem = self.parent.absimgfig.imageplot.items[-1]
-            if isinstance(roiitem, pg.ImageItem) and len(self.parent.absimgfig.imageplot.items) > 3:
-                self.parent.absimgfig.imageplot.removeItem(roiitem)
-                self.plotitem.removeItem(self.plotitem.items[-1])  # remove spectra
+            if roiitems[-1] != self.parent.absimgfig.ROImask and len(self.parent.absimgfig.imageplot.items) > 2:
+                self.plotitem.removeItem(self.plotitem.items[-1 - i])
+                self.parent.absimgfig.imageplot.removeItem(roiitems[-1])
         except IndexError:  # if previously removed, ignore
             pass
         #self.plot.blockSignals(False)
 
     def ClearandReload(self):
+        self.roicolor = (0, 0, 255, 255)
         self.plot.blockSignals(True)
+        self.plotitem.setMouseEnabled(x=True, y=True)
+        iterator = len(self.plotitem.items)-1
+        # The expression "for item in self.plotitem.items: " does not work! Instead we count the items and iterate through them
+        for i in range(iterator,-1,-1):
+                self.plotitem.removeItem(self.plotitem.items[i])  # remove spectra
+                try:    # remove locked ROIs from imageplot
+                    roiitem = self.parent.absimgfig.imageplot.items[i+1]# +1 because transparent selection "ROImask" exists.
+                    if isinstance(roiitem, pg.ImageItem) and len(self.parent.absimgfig.imageplot.items) > 2:
+                        self.parent.absimgfig.imageplot.removeItem(roiitem)
+                except IndexError:  # if previously removed, ignore
+                    pass
+        try:
+            self.LineIndicator.sigPositionChangeFinished.disconnect()
+            self.LineIndicator.sigPositionChanged.disconnect()
+            self.plot.sigRangeChanged.disconnect()
+            self.plot.scene().sigMouseClicked.disconnect()
+            self.parent.absimgfig.roi.sigRegionChanged.disconnect()
+        except:
+            pass
+        self.plot.blockSignals(False)
+        self.loadNewSpectrum()
+        vb = self.plotitem.items[1].getViewBox()
+        vb.enableAutoRange()
+
+        if self.parent.ROIShapeBox.currentText() != "Lasso":
+            self.parent.absimgfig.OnROIVisibility(self.parent.ROIvisibleCheckBox.checkState())
+
+
+    def ClearforHistogram(self):
+        self.plot.blockSignals(True)
+        self.plotitem.setMouseEnabled(x=False, y=False)
         iterator = len(self.plotitem.items)-1
         # The expression "for item in self.plotitem.items: " does not work! Instead we count the items and iterate through them
         for i in range(iterator,-1,-1):
@@ -15977,73 +15704,186 @@ class SpecFig():
         except:
             pass
         self.plot.blockSignals(False)
-        self.loadNewSpectrum()
-        vb = self.plotitem.items[1].getViewBox()
-        vb.updateAutoRange()
-        #self.plotitem.items[1].hide()
-        #self.plotitem.items[0].hide()
-        if self.parent.ROIShapeBox.currentText() != "Lasso":
-            self.parent.absimgfig.OnROIVisibility(self.parent.ROIvisibleCheckBox.checkState())
+
+    def setPlotItemVisibility(self, show):
+        iterator = len(self.plotitem.items) - 1
+        if show:
+            for i in range(iterator, -1, -1):
+                self.plotitem.items[i].show()
+        else:
+            for i in range(iterator, -1, -1):
+                self.plotitem.items[i].hide()
+
 
     def toggleI0Spectrum(self):
-        #self.clear()
         if self.parent.button_showi0.isChecked():
-            self.loadData(showi0=True)
-            self.parent.absimgfig.roi.setVisible(False)
+            self.formatAxesLabels(type="showi0")
+            self.parent.ROIvisibleCheckBox.setEnabled(False)
+            self.parent.ROIShapeBox.setEnabled(False)
+            self.parent.button_lockspectrum.setEnabled(False)
+            self.parent.button_clearspecfig.setEnabled(False)
+            self.parent.button_clearlastroi.setEnabled(False)
+            self.parent.button_mergeroi.setEnabled(False)
+            self.parent.button_subtractroi.setEnabled(False)
+
+            self.setPlotItemVisibility(False)
+            x, y = (self.parent.stk.evi0, self.parent.stk.i0data)
+            curve = pg.PlotCurveItem(x,y, pen=({'color': "r", 'width': 2}),
+                                     skipFiniteCheck=True, name="I0")
+            self.plotitem.addItem(curve)
+            #vb = self.plotitem.items[-1].getViewBox()
+            #vb.updateAutoRange()
         else:
-            self.loadData()
-            self.parent.absimgfig.roi.setVisible(True)
+            self.setPlotItemVisibility(True)
+            if len(self.plotitem.items) > 2:
+                self.plotitem.removeItem( self.plotitem.items[-1])
+            self.formatAxesLabels()
+            self.parent.ROIvisibleCheckBox.setEnabled(True)
+            self.parent.ROIShapeBox.setEnabled(True)
+            self.parent.button_lockspectrum.setEnabled(True)
+            self.parent.button_clearspecfig.setEnabled(True)
+            self.parent.button_clearlastroi.setEnabled(True)
+            self.parent.button_mergeroi.setEnabled(True)
+            self.parent.button_subtractroi.setEnabled(True)
+
+    def OnI0Histogram(self):
+        self.parent.OnShowMean()
+        self.parent.button_meanflux.setChecked(True)
+        self.parent.ROIvisibleCheckBox.setEnabled(False)
+        self.parent.button_lockspectrum.setEnabled(False)
+        self.parent.button_clearspecfig.setEnabled(False)
+        self.parent.button_clearlastroi.setEnabled(False)
+        self.parent.button_mergeroi.setEnabled(False)
+        self.parent.button_subtractroi.setEnabled(False)
+        self.roicolor = (255,0,0,255)
+        self.parent.absimgfig.OnROIShapeChanged("Histogram")
+        #self.parent.ROIShapeBox.setCurrentText("Histogram")
+        self.parent.ROIShapeBox.setStyleSheet("color: red;");
+        self.parent.label_roitype.setText("I0 type")
+        self.parent.label_roitype.setStyleSheet("color: red;");
+        self.parent.button_i0.disconnect()
+        self.parent.button_i0.setText("Accept I0")
+        self.parent.button_i0.clicked.connect( self.OnI0Accept)
+
+    # ----------------------------------------------------------------------
+    def OnI0Accept(self, evt):
+        QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
+        self.parent.OnShowMean()
+        self.parent.button_meanflux.setChecked(False)
+        self.parent.ROIvisibleCheckBox.setEnabled(True)
+        self.parent.button_lockspectrum.setEnabled(True)
+        self.parent.button_clearspecfig.setEnabled(True)
+        self.parent.button_clearlastroi.setEnabled(True)
+        self.parent.button_mergeroi.setEnabled(True)
+        self.parent.button_subtractroi.setEnabled(True)
+        bool = np.sum(self.parent.absimgfig.ROIrgba, axis=2)[:, :] > 0
+        bool = np.where(bool == True)
+        if np.any(bool):
+            self.parent.stk.i0_from_histogram(bool)
+            self.parent.I0histogramCalculated()
+            self.parent.button_i0.disconnect()
+            self.parent.button_i0.setText("Reset I0")
+            self.parent.ROIShapeBox.setStyleSheet("color: black;");
+            self.parent.button_i0.clicked.connect(self.OnI0Reset)
+            self.parent.label_roitype.setText("ROI type")
+            self.parent.label_roitype.setStyleSheet("color: black;");
+            QtWidgets.QApplication.restoreOverrideCursor()
+        else:
+            QtWidgets.QApplication.restoreOverrideCursor()
+            QtWidgets.QMessageBox.warning(self.parent, 'Error', 'I0 region is empty!')
+
+    # ----------------------------------------------------------------------
+    def OnI0Reset(self):
+
+        self.parent.stk.reset_i0()
+        self.parent.com.i0_loaded = 0
+        self.roicolor = (0,0,255,255)
+        self.parent.showflux = True
+        # self.rb_flux.setChecked(True)
+
+        self.parent.absimgfig.loadNewImageWithROI()
+        self.ClearandReload()
+        self.parent.window().refresh_widgets()
+        self.parent.button_i0.disconnect()
+        self.parent.button_i0.setText("Select I0")
+        self.parent.button_i0.clicked.connect(self.OnI0Histogram)
+
+    def GetNextROINumberandColor(self):
+        if self.parent.ROIShapeBox.currentText() == "Histogram":
+            nplots = len(self.plotitem.items) - 2
+            roi_name = "ROI " + str(nplots - 1)
+            color = pg.intColor(nplots, alpha=150)
+        else:
+            nplots = len(self.plotitem.items)
+            roi_name = "ROI " + str(nplots - 1)
+            color = pg.intColor(nplots, alpha=150)
+        return roi_name, color, nplots
 
     def OnLockSpectrum(self):
-        nplots = len(self.plotitem.items) + 1
-        roi_name = "ROI " + str(nplots-2) # 2 plots are consumed for the lineindicator at pos [0] and the current roi at [-1].
+        name, color, nplots = self.GetNextROINumberandColor()
+        curve = pg.PlotCurveItem(pen=({'color': color, 'width': 2}), skipFiniteCheck=True,
+                                 name=name)
+        curve.hide()
         x = self.plotitem.items[1].xData
         y = self.plotitem.items[1].yData
-        curve = pg.PlotCurveItem(pen=({'color': pg.intColor(nplots,alpha=150), 'width': 2}), skipFiniteCheck=True,name=roi_name)
         self.plotitem.addItem(curve)
-        self.parent.absimgfig.addLockedROI()
-        self.plotitem.items[-1].setData(x,y)
+        if self.parent.ROIShapeBox.currentText() == "Histogram":
+            self.plotitem.items.remove(curve)
+            self.plotitem.items.insert(-2, curve)
+        else:
+            curve.show()
+        self.parent.absimgfig.addLockedROI(nplots)
+        curve.setData(x,y)
+
+    def removeLast2ROI(self,i,roiitems):
+        self.plotitem.removeItem(self.plotitem.items[-1 - i])
+        self.plotitem.removeItem(self.plotitem.items[-1 - i])
+        self.parent.absimgfig.imageplot.removeItem(roiitems[-1])
+        self.parent.absimgfig.imageplot.removeItem(roiitems[-2])
 
     def mergeROI(self):
+        i = 0
+        if self.parent.ROIShapeBox.currentText() == "Histogram":
+            i = 2
         self.plot.blockSignals(True)
-        roiitems = self.parent.absimgfig.imageplot.items
+        roiitems = [image for image in self.parent.absimgfig.imageplot.items if isinstance(image, pg.ImageItem)]
         try:
-            if isinstance(roiitems[-2], pg.ImageItem) and len(self.parent.absimgfig.imageplot.items) > 4:
+            if isinstance(roiitems[-2], pg.ImageItem) and len(roiitems) > 3:
                 b1 = np.sum(roiitems[-1].image, axis = 2)[:,:] > 0
                 b2 = np.sum(roiitems[-2].image, axis = 2)[:,:] > 0
                 boolmask = ~np.logical_or(b1, b2)
                 indices = np.where(boolmask == False)
-                self.plotitem.removeItem(self.plotitem.items[-1])
-                self.parent.absimgfig.imageplot.removeItem(roiitems[-1])
-                self.plotitem.removeItem(self.plotitem.items[-1])
-                self.parent.absimgfig.imageplot.removeItem(roiitems[-1])
-                nrois = len(self.parent.absimgfig.imageplot.items)
+                self.removeLast2ROI(i,roiitems)
                 roi = np.zeros([*boolmask.shape, 4], dtype=np.uint8)
+                name, color, nrois = self.GetNextROINumberandColor()
                 roi[indices] = pg.intColor(nrois, alpha=255).getRgb()
                 lockedroi = pg.ImageItem(image=roi, border="k", opacity=0.3)
                 self.parent.absimgfig.imageplot.addItem(lockedroi, ignoreBounds=True)
 
                 data = self.prefilterData()
-                #mask = self.createROImask()
-                #self.drawROImask(mask)
                 x, y = self.getSpecfromROI(data,boolmask)
-                nplots = len(self.plotitem.items) + 1
-
-                roi_name = "ROI " + str(
-                    nplots - 2)  # 2 plots are consumed for the lineindicator at pos [0] and the current roi at [-1].
-                curve = pg.PlotCurveItem(pen=({'color': pg.intColor(nplots, alpha=150), 'width': 2}),
-                                         skipFiniteCheck=True, name=roi_name)
+                curve = pg.PlotCurveItem(pen=({'color': color, 'width': 2}),
+                                         skipFiniteCheck=True, name=name)
+                curve.hide()
                 self.plotitem.addItem(curve)
-                self.plotitem.items[-1].setData(x, y)
+                if self.parent.ROIShapeBox.currentText() == "Histogram":
+                    self.plotitem.items.remove(curve)
+                    self.plotitem.items.insert(-2, curve)
+                else:
+                    curve.show()
+                curve.setData(x, y)
         except IndexError:
             pass
         self.plot.blockSignals(False)
 
     def subtractROI(self):
+        i = 0
+        if self.parent.ROIShapeBox.currentText() == "Histogram":
+            i = 2
         self.plot.blockSignals(True)
-        roiitems = self.parent.absimgfig.imageplot.items
+        roiitems = [image for image in self.parent.absimgfig.imageplot.items if isinstance(image, pg.ImageItem)]
         try:
-            if isinstance(roiitems[-2], pg.ImageItem) and len(self.parent.absimgfig.imageplot.items) > 4:
+            if roiitems[-2] != self.parent.absimgfig.ROImask and len(self.parent.absimgfig.imageplot.items) > 2:
                 b1 = np.sum(roiitems[-1].image, axis = 2)[:,:] > 0
                 b2 = np.sum(roiitems[-2].image, axis = 2)[:,:] > 0
                 #boolmask = ~np.logical_and(b1, b2) # intersect
@@ -16053,28 +15893,27 @@ class SpecFig():
                     self.ClearLast()
                     return
                 indices = np.where(boolmask == False)
-                self.plotitem.removeItem(self.plotitem.items[-1])
-                self.parent.absimgfig.imageplot.removeItem(roiitems[-1])
-                self.plotitem.removeItem(self.plotitem.items[-1])
-                self.parent.absimgfig.imageplot.removeItem(roiitems[-1])
-                nrois = len(self.parent.absimgfig.imageplot.items)
+                self.removeLast2ROI(i,roiitems)
                 roi = np.zeros([*boolmask.shape, 4], dtype=np.uint8)
+                name, color, nrois = self.GetNextROINumberandColor()
                 roi[indices] = pg.intColor(nrois, alpha=255).getRgb()
                 lockedroi = pg.ImageItem(image=roi, border="k", opacity=0.3)
                 self.parent.absimgfig.imageplot.addItem(lockedroi, ignoreBounds=True)
 
                 data = self.prefilterData()
-                #mask = self.createROImask()
-                #self.drawROImask(mask)
                 x, y = self.getSpecfromROI(data,boolmask)
-                nplots = len(self.plotitem.items) + 1
-
-                roi_name = "ROI " + str(
-                    nplots - 2)  # 2 plots are consumed for the lineindicator at pos [0] and the current roi at [-1].
-                curve = pg.PlotCurveItem(pen=({'color': pg.intColor(nplots, alpha=150), 'width': 2}),
-                                         skipFiniteCheck=True, name=roi_name)
+                curve = pg.PlotCurveItem(pen=({'color': color, 'width': 2}),
+                                         skipFiniteCheck=True, name=name)
+                curve.hide()
                 self.plotitem.addItem(curve)
-                self.plotitem.items[-1].setData(x, y)
+                if self.parent.ROIShapeBox.currentText() == "Histogram":
+                    self.plotitem.items.remove(curve)
+                    self.plotitem.items.insert(-2, curve)
+                else:
+                    curve.show()
+                curve.setData(x, y)
+            elif roiitems[-2] == self.parent.absimgfig.ROImask:
+                self.ClearLast()
         except IndexError:
             pass
         self.plot.blockSignals(False)
@@ -16089,17 +15928,107 @@ class SpecFig():
 
         self.plotitem.addItem(self.LineIndicator, ignoreBounds=True)
         self.plotitem.addItem(curve)
-        self.loadData()
+        try:
+            self.LineIndicator.sigPositionChangeFinished.disconnect()
+            self.LineIndicator.sigPositionChanged.disconnect()
+            self.plot.sigRangeChanged.disconnect()
+            self.plot.scene().sigMouseClicked.disconnect()
+            self.parent.absimgfig.roi.sigRegionChanged.disconnect()
+        except:
+            pass
+        self.parent.ROIvisibleCheckBox.setEnabled(True)
+        self.parent.absimgfig.OnROIShapeChanged(self.parent.ROIShapeBox.currentText())
+
+        if self.parent.ROIShapeBox.currentText() == "Lasso":
+            self.plotitem.items[1].hide()
+            self.parent.absimgfig.OnROIVisibility(self.parent.ROIvisibleCheckBox.checkState())
+
+        self.LineIndicator.addMarker("o")
+        self.dot = self.LineIndicator.markers[0][0]
+        self.LineIndicator.setZValue(10)
+        self.ypos = self.getIntersectionY()
+
+        self.LineIndicator.sigPositionChanged.connect(self.OnUpdateLineIndicator)
+        self.LineIndicator.sigPositionChangeFinished.connect(self.SnapIndicatorToEV)
+        self.plot.sigRangeChanged.connect(self.OnUpdateLineIndicator)
+        self.plot.scene().sigMouseClicked.connect(self.OnMouseClick)
+        self.OnUpdateLineIndicator()
 
     def updatePlotData(self):
         data = self.prefilterData()
         mask = self.createROImask()
-        self.drawROImask(mask)
+        self.drawROImask(mask, color = self.roicolor)
         x, y = self.getSpecfromROI(data,self.parent.absimgfig.boolmask)
         self.plot.blockSignals(True)
         self.plotitem.items[1].setData(x, y)
         self.LineIndicator.setPos(QtCore.QPointF(self.plotitem.items[1].xData[self.parent.iev], self.plotitem.items[1].yData[self.parent.iev]))
         self.plot.blockSignals(False)
+
+    def updatePlotDataOnROIShapeChange(self,type):
+        color = self.roicolor
+        self.plot.blockSignals(True)
+        self.formatAxesLabels(type=type)
+        self.plotitem.removeItem(self.plotitem.items[1])
+        #self.region.sigRegionChanged.disconnect()
+        try:
+            self.plotitem.removeItem(self.region)
+            self.plotitem.removeItem(self.histogram)
+        except:
+            pass
+
+        if type == "Histogram":
+            self.setPlotItemVisibility(False)
+            self.region = pg.LinearRegionItem(brush=color, bounds=[np.min(self.parent.stk.hist_data_x), np.max(self.parent.stk.hist_data_x)])
+            #self.region.setZValue(10)
+            self.region.setOpacity(0.3)
+            self.plotitem.addItem(self.region, ignoreBounds=False)
+            curve = pg.PlotCurveItem(pen=({'color': color, 'width': 2}), skipFiniteCheck=True)
+            self.histogram = pg.PlotCurveItem(self.parent.stk.hist_data_x, self.parent.stk.hist_data_y, pen=({'color': color, 'width': 1}), skipFiniteCheck=True, name="histogram",
+                                     stepMode=True, fillLevel=0, brush=color)
+            self.plotitem.setMouseEnabled(x=False, y=False)
+            self.plotitem.addItem(self.histogram)
+            curve.hide()
+        else:
+            self.setPlotItemVisibility(True)
+            data = self.prefilterData()
+            mask = self.createROImask()
+            self.drawROImask(mask, color=color)
+            x, y = self.getSpecfromROI(data,self.parent.absimgfig.boolmask)
+            curve = pg.PlotCurveItem(x, y, pen=({'color': color, 'width': 2}), skipFiniteCheck=True)
+            self.plotitem.setMouseEnabled(x=True, y=True)
+        self.plotitem.addItem(curve)
+        self.plotitem.items.remove(curve)
+        self.plotitem.items.insert(1, curve)
+        self.plot.blockSignals(False)
+        if hasattr(self, "dot"):
+            self.OnUpdateLineIndicator()
+
+        def update(region):
+            self.region.setZValue(10)
+            minX, maxX = region
+            i0_indices = np.where((minX <= self.parent.stk.histogram) & (self.parent.stk.histogram <= maxX))
+            data = self.prefilterData()
+            self.drawROImask(None,indices = i0_indices, color=color)
+            x, y = self.getSpecfromROI(data,self.parent.absimgfig.boolmask)
+            self.plotitem.items[1].setData(x, y)
+        if type == "Histogram":
+            self.region.sigRegionChanged.connect(lambda: update(self.region.getRegion()))
+            self.region.setRegion((self.parent.stk.histmin, self.parent.stk.histmax))
+
+    def formatAxesLabels(self,type=None):
+        if type == "Histogram":
+            #self.plotitem.getViewBox().setLimits()#yMin=0, yMax=np.max(y))
+            self.ax.setLabel(text="Average Flux")
+            self.ay.setLabel(text="log<sub>10</sub> (Number of pixels)")
+            return
+        elif type == "showi0":
+            self.ay.setLabel(text="Flux in selected I0 area [counts]")
+            return
+        self.ax.setLabel(text="Photon energy [eV]")
+        if self.parent.com.i0_loaded:
+            self.ay.setLabel(text="Optical density per px inside ROI")
+        else:
+            self.ay.setLabel(text="Flux per px inside ROI [counts]")
 
     def getIntersectionY(self):
         x_newgrid = self.plotitem.items[1].xData
@@ -16117,61 +16046,6 @@ class SpecFig():
                     vb.viewRect().bottom() - vb.viewRect().top())
         return ypos
 
-    def loadData(self, showi0=False):
-        try:
-            self.LineIndicator.sigPositionChangeFinished.disconnect()
-            self.LineIndicator.sigPositionChanged.disconnect()
-            self.plot.sigRangeChanged.disconnect()
-            self.plot.scene().sigMouseClicked.disconnect()
-            self.parent.absimgfig.roi.sigRegionChanged.disconnect()
-        except:
-            pass
-        iterator = len(self.plotitem.items) - 1
-        if showi0:
-            self.parent.ROIvisibleCheckBox.setEnabled(False)
-            self.parent.ROIShapeBox.setEnabled(False)
-            self.parent.button_lockspectrum.setEnabled(False)
-            self.parent.button_clearspecfig.setEnabled(False)
-            self.parent.button_clearlastroi.setEnabled(False)
-            self.parent.button_mergeroi.setEnabled(False)
-            self.parent.button_subtractroi.setEnabled(False)
-            self.parent.absimgfig.ROImask.hide()
-            x,y = (self.parent.stk.evi0, self.parent.stk.i0data)
-            self.ay.setLabel(text="Flux in selected I0 area [counts]")
-            self.plotitem.items[1].setPen(pg.mkPen(pg.mkPen(color="r", width=2)))
-            #vb = self.plotitem.items[1].getViewBox()
-            #vb.updateAutoRange()
-            # The expression "for item in self.plotitem.items: " does not work! Instead we count the items and iterate through them
-            for i in range(iterator, -1, -1):
-                self.plotitem.items[i].hide()
-            self.plotitem.items[1].show()
-            #self.plotitem = self.plot.plot(x, y, pen=pg.mkPen(color="r", width=2))
-        else:
-            self.parent.ROIvisibleCheckBox.setEnabled(True)
-            data = self.prefilterData()
-            mask = self.createROImask()
-            self.drawROImask(mask)
-            x, y = self.getSpecfromROI(data, self.parent.absimgfig.boolmask)
-            self.plotitem.items[1].setPen(pg.mkPen(pg.mkPen(color="b", width=2)))
-            for i in range(iterator, -1, -1):
-                self.plotitem.items[i].show()
-            if self.parent.ROIShapeBox.currentText() == "Lasso":
-                self.plotitem.items[1].hide()
-                self.parent.absimgfig.OnROIVisibility(self.parent.ROIvisibleCheckBox.checkState())
-        self.plotitem.items[1].setData(x,y)
-        self.LineIndicator.addMarker("o")
-        self.dot = self.LineIndicator.markers[0][0]
-        self.LineIndicator.setZValue(10)
-
-        self.ypos = self.getIntersectionY()
-
-        self.LineIndicator.sigPositionChanged.connect(self.OnUpdateLineIndicator)
-        self.LineIndicator.sigPositionChangeFinished.connect(self.SnapIndicatorToEV)
-        self.plot.sigRangeChanged.connect(self.OnUpdateLineIndicator)
-        self.plot.scene().sigMouseClicked.connect(self.OnMouseClick)
-        self.parent.absimgfig.roi.sigRegionChanged.connect(self.updatePlotData)
-        self.OnUpdateLineIndicator()
-
     def SnapIndicatorToEV(self):
         diff = np.abs(self.plotitem.items[1].xData - self.LineIndicator.value())
         idx = np.argmin(diff)
@@ -16180,12 +16054,14 @@ class SpecFig():
         self.parent.slider_eng.blockSignals(False)
 
     def OnUpdateLineIndicator(self):
-        #print("onupdateline")
+        if self.parent.absimgfig.currentroishape == "Histogram":
+            return
         self.ypos = self.getIntersectionY()
         self.LineIndicator.markers = [(self.dot, self.ypos, 10)]
         self.LineIndicator.update()
         self.LineIndicatorLabel.setPosition(self.ypos)
         self.LineIndicatorLabel.setFormat(" "+str(round(self.LineIndicator.value(),2)) + " eV ")
+
     def OnMouseClick(self,e):
         if e.double():
             vb = self.plotitem.items[1].getViewBox()
@@ -16207,6 +16083,8 @@ class SpecFig():
         return (left,right,top,bottom)
 
     def createROImask(self):
+        if isinstance(self.parent.absimgfig.roi, type(None)):
+            return None
         cols = self.parent.stk.n_cols
         rows = self.parent.stk.n_rows
         angle = self.parent.absimgfig.roi.angle()
@@ -16254,31 +16132,34 @@ class SpecFig():
         y = [spectrum[i] for i in list(range(ev))]
         return x, y
 
-    def drawROImask(self,boolmask):
-        cols = self.parent.stk.n_cols
-        rows = self.parent.stk.n_rows
-        valid_pixel_count = (cols * rows) - np.count_nonzero(boolmask)
-        roimask = self.parent.absimgfig.ROImask
-        if not valid_pixel_count or boolmask is None:
-            self.parent.absimgfig.boolmask[:,:] = True
-        else:
-            self.parent.absimgfig.boolmask = boolmask
+    def drawROImask(self, boolmask, indices=None, color = (0,0,255,255)):
         roirgba = self.parent.absimgfig.ROIrgba
-        roirgba[:,:] = [0, 0, 0, 0]
-        roirgba[~self.parent.absimgfig.boolmask] = (0,0,255,255)
+        roirgba[:, :] = [0, 0, 0, 0]
+        roimask = self.parent.absimgfig.ROImask
+        if not indices:
+            cols = self.parent.stk.n_cols
+            rows = self.parent.stk.n_rows
+            valid_pixel_count = (cols * rows) - np.count_nonzero(boolmask)
+            if not valid_pixel_count or boolmask is None:
+                self.parent.absimgfig.boolmask[:,:] = True
+            else:
+                self.parent.absimgfig.boolmask = boolmask
+            indices = ~self.parent.absimgfig.boolmask
+        else:
+            self.parent.absimgfig.boolmask[:, :] = True
+            self.parent.absimgfig.boolmask[indices] = False
+        roirgba[indices] = color
         roimask.setImage(roirgba)
 
     def prefilterData(self):
         if self.parent.com.i0_loaded:
             #self.cb_od_per_px.setVisible(True)
             #if self.cb_od_per_px.isChecked():
-            self.ay.setLabel(text="Optical density per px inside ROI")
             if self.parent.com.stack_4d:
                 data = self.parent.stk.od4d[:, :, :, int(self.parent.itheta)].copy()
             else:
                 data = self.parent.stk.od3d
         else:
-            self.ay.setLabel(text="Flux per px inside ROI [counts]")
             if self.parent.com.stack_4d == 1:
                 #t = [self.parent.stk.theta[i] for i in self.parent.itheta]
                 #self.label_theta_range.setText(
@@ -16355,14 +16236,16 @@ class ImgFig():
         self.loadData()
 
     def loadNewImageWithROI(self):
-        defaultshape = "Lasso"
+        self.parent.stk.calc_histogram()
         self.clear()
         self.parent.iev = 0
         self.loadData()
-        self.addROI((0,0),(self.imageitem.boundingRect().width(), self.imageitem.boundingRect().height()), defaultshape)
+        self.currentroishape = "Lasso"
+        self.addROI((0,0),(self.imageitem.boundingRect().width(), self.imageitem.boundingRect().height()), self.currentroishape)
         self.parent.ROIShapeBox.blockSignals(True)
-        self.parent.ROIShapeBox.setCurrentText(defaultshape)
+        self.parent.ROIShapeBox.setCurrentText(self.currentroishape)
         self.parent.ROIShapeBox.blockSignals(False)
+
     def clear(self):
         self.imageplot.removeItem(self.scalebar)
         self.imageplot.removeItem(self.imageitem)
@@ -16370,10 +16253,16 @@ class ImgFig():
 
     def OnROIVisibility(self, state):
         if state == QtCore.Qt.Checked:
-            self.roi.show()
+            if not isinstance(self.roi, type(None)):
+                self.roi.show()
+                self.parent.specfig.plotitem.items[1].show()  # curve
+                self.parent.specfig.plotitem.items[0].show()  # line & dot
+            try:
+                self.parent.specfig.histogram.show()
+                self.parent.specfig.region.show()
+            except:
+                pass
             self.ROImask.show()
-            self.parent.specfig.plotitem.items[1].show() # curve
-            self.parent.specfig.plotitem.items[0].show() # line & dot
             self.parent.ROIShapeBox.setEnabled(True)
             self.parent.button_lockspectrum.setEnabled(True)
             self.parent.button_clearspecfig.setEnabled(True)
@@ -16381,10 +16270,16 @@ class ImgFig():
             self.parent.button_mergeroi.setEnabled(True)
             self.parent.button_subtractroi.setEnabled(True)
         else:
-            self.roi.hide()
+            if not isinstance(self.roi, type(None)):
+                self.roi.hide()
+                self.parent.specfig.plotitem.items[1].hide()
+                self.parent.specfig.plotitem.items[0].hide()
+            try:
+                self.parent.specfig.histogram.hide()
+                self.parent.specfig.region.hide()
+            except:
+                pass
             self.ROImask.hide()
-            self.parent.specfig.plotitem.items[1].hide()
-            self.parent.specfig.plotitem.items[0].hide()
             vb = self.parent.specfig.plotitem.getViewBox()
             vb.updateAutoRange()
             self.parent.ROIShapeBox.setEnabled(False)
@@ -16392,9 +16287,13 @@ class ImgFig():
 
 
 
-    def OnROIShapeChanged(self,shape):
-        pos = np.rint(self.roi.pos())
+    def OnROIShapeChanged(self, shape):
+        self.parent.ROIShapeBox.blockSignals(True)
+        self.parent.ROIShapeBox.setCurrentText(shape)
+        self.parent.ROIShapeBox.blockSignals(False)
+        #self.parent.specfig.plot.blockSignals(True)
         if isinstance(self.roi, pg.PolyLineROI):
+            pos = np.rint(self.roi.pos())
             state = self.roi.getState()
             points = state['points']
             try:
@@ -16410,13 +16309,21 @@ class ImgFig():
                 pos = QtCore.QPointF(0,0)
                 pass
             size = np.rint((x,y))
+        elif isinstance(self.roi, type(None)):
+            pos = QtCore.QPointF(0, 0)
+            size = np.rint((self.imageitem.boundingRect().width(), self.imageitem.boundingRect().height()))
         else:
+            pos = np.rint(self.roi.pos())
             size = np.rint(self.roi.size())
-        self.roi.disconnect()
+        try:
+            self.roi.disconnect()
+        except:
+            pass
         self.imageplot.removeItem(self.ROImask)
         self.imageplot.removeItem(self.roi)
-        self.addROI(pos,size,shape)
-        self.parent.specfig.updatePlotData()
+        self.currentroishape = shape
+        self.addROI(pos, size, shape)
+        self.parent.specfig.updatePlotDataOnROIShapeChange(shape)
 
     def onMousePress(self,e):
         if not self.parent.button_showi0.isChecked() and self.parent.ROIvisibleCheckBox.isChecked():
@@ -16449,16 +16356,17 @@ class ImgFig():
         kwargs= {'pen': (5, 8), 'handlePen' : QtGui.QPen(QtGui.QColor(255, 0, 128, 255)), 'resizable' : True, 'removable' : False, 'movable' : True, 'scaleSnap' : True, 'translateSnap' : True}
         selection = {"Rectangle": pg.RectROI(pos,size,**kwargs), "Circle": pg.CircleROI(pos,size,**kwargs),
                      "Ellipse": pg.EllipseROI(pos,size,**kwargs), "Polygon": pg.PolyLineROI(positions= [(0,0),(0,size[1]),(size[0],size[1]),(size[0],0)], pos=pos, closed=True,**kwargs),
-                     "Lasso": pg.PolyLineROI(positions= [], pos=pos, closed=True,**kwargs)}
+                     "Lasso": pg.PolyLineROI(positions= [], pos=pos, closed=True,**kwargs), "Histogram":None}
         self.roi = selection[shape]
-        self.imageplot.addItem(self.roi, ignoreBounds=True)
+        if not shape == "Histogram":
+            self.imageplot.addItem(self.roi, ignoreBounds=True)
         if shape == "Lasso":
             try:
                 self.parent.specfig.plotitem.items[1].hide()
                 self.parent.specfig.plotitem.items[0].hide()
             except IndexError: # if first roi, spectra are not existing at this point
               pass
-            self.roi.handlePen = QtGui.QPen(QtGui.QColor(255, 0, 128, 0)) # Make handles invisible
+            self.roi.handlePen = QtGui.QPen(QtGui.QColor(0, 0, 0, 0)) # Make handles invisible
             self.imageitem.mousePressEvent = self.onMousePress
             self.imageitem.mouseReleaseEvent = self.onMouseRelease
             self.proxy = pg.SignalProxy(self.vb.scene().sigMouseMoved, rateLimit=15, slot=self.onMouseMoved)
@@ -16473,20 +16381,19 @@ class ImgFig():
         self.ROIrgba = np.zeros([*self.imageitem.image.shape, 4], dtype=np.uint8)
         self.boolmask = np.full((self.parent.stk.n_cols, self.parent.stk.n_rows), True)
         # items are appended to the items list. relocate the two freshly added items, otherwise roi removal fails.
-        items = self.imageplot.items
-        items.remove(self.roi)
-        items.insert(1, self.roi)
-        items.remove(self.ROImask)
-        items.insert(2, self.ROImask)
-        self.roi.setZValue(10)  # make sure ROI is drawn above image
-        self.roi.sigRegionChanged.connect(self.parent.specfig.updatePlotData)
+        self.imageplot.items.remove(self.ROImask)
+        self.imageplot.items.insert(1, self.ROImask)
+        if not shape == "Histogram":
+            self.imageplot.items.remove(self.roi)
+            self.imageplot.items.insert(1, self.roi)
+            self.roi.setZValue(10)  # make sure ROI is drawn above image
+            self.roi.sigRegionChanged.connect(self.parent.specfig.updatePlotData)
 
-    def addLockedROI(self):
-        nrois = len(self.imageplot.items)
+    def addLockedROI(self,intcolor):
         roi = np.zeros([*self.imageitem.image.shape, 4], dtype=np.uint8)
         indices = np.where(self.boolmask == False)
-        roi[indices] = pg.intColor(nrois,alpha=255).getRgb()
-        lockedroi = pg.ImageItem(image=roi,border="k", opacity=0.3)
+        roi[indices] = pg.intColor(intcolor,alpha=77).getRgb()
+        lockedroi = pg.ImageItem(image=roi,border="k")
 
         self.imageplot.addItem(lockedroi, ignoreBounds=True)
         lockedroi.setZValue(11)  # make sure ROI is drawn above image
@@ -17134,7 +17041,7 @@ class MainFrame(QtWidgets.QMainWindow):
 
         if self.common.stack_loaded == 0:
             self.page1.button_i0ffile.setEnabled(False)
-            self.page1.button_i0histogram.setEnabled(False)
+            self.page1.button_i0.setEnabled(False)
             self.page1.button_artefacts.setEnabled(False)
             self.page1.button_prenorm.setEnabled(False)
             self.page1.button_refimgs.setEnabled(False)
@@ -17162,7 +17069,7 @@ class MainFrame(QtWidgets.QMainWindow):
 
         else:
             self.page1.button_i0ffile.setEnabled(True)
-            self.page1.button_i0histogram.setEnabled(True)
+            self.page1.button_i0.setEnabled(True)
             self.page1.button_artefacts.setEnabled(True)
             self.page1.button_prenorm.setEnabled(True)
             self.page1.button_multicrop.setEnabled(True)
@@ -17200,10 +17107,11 @@ class MainFrame(QtWidgets.QMainWindow):
 
         if self.common.i0_loaded == 0:
             self.page1.button_showi0.setEnabled(False)
+            self.page1.button_showi0.setChecked(False)
             #self.page1.rb_flux.setEnabled(False)
             #self.page1.rb_od.setEnabled(False)
-            self.page1.button_reseti0.setEnabled(False)
-            self.page1.button_saveod.setEnabled(False)
+            #self.page1.button_reseti0.setEnabled(False)
+            #self.page1.button_saveod.setEnabled(False)
             self.page2.button_calcpca.setEnabled(False)
             self.page2.button_calcpca4D.setEnabled(False)
             self.page4.button_loadtspec.setEnabled(False)
@@ -17219,8 +17127,8 @@ class MainFrame(QtWidgets.QMainWindow):
             self.page1.button_showi0.setEnabled(True)
             #self.page1.rb_flux.setEnabled(True)
             #self.page1.rb_od.setEnabled(True)
-            self.page1.button_reseti0.setEnabled(True)
-            self.page1.button_saveod.setEnabled(True)
+            #self.page1.button_reseti0.setEnabled(True)
+            #self.page1.button_saveod.setEnabled(True)
             self.page2.button_calcpca.setEnabled(True)
             self.page2.button_calcpca4D.setEnabled(True)
             self.page4.button_loadtspec.setEnabled(True)
@@ -17327,6 +17235,9 @@ class MainFrame(QtWidgets.QMainWindow):
         #self.page0.tc_imagetheta.setVisible(False)
 
         #page 1
+        self.page1.button_i0.disconnect()
+        self.page1.button_i0.setText("Select I0")
+        self.page1.button_i0.clicked.connect(self.page1.specfig.OnI0Histogram)
         #self.page1.rb_flux.setChecked(True)
         #self.page1.rb_od.setChecked(False)
         #self.page1.showflux = True
