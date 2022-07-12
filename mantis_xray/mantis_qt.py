@@ -15809,18 +15809,20 @@ class SpecFig():
         self.parent.button_i0.clicked.connect(self.OnI0Histogram)
 
     def GetNextROINumberandColor(self):
+        hues = 10
+        alpha = 150
+        maxValue= 215
+        index = len(self.plotitem.items)
         if self.parent.ROIShapeBox.currentText() == "Histogram":
-            nplots = len(self.plotitem.items) - 2
-            roi_name = "ROI " + str(nplots - 1)
-            color = pg.intColor(nplots, alpha=150)
-        else:
-            nplots = len(self.plotitem.items)
-            roi_name = "ROI " + str(nplots - 1)
-            color = pg.intColor(nplots, alpha=150)
-        return roi_name, color, nplots
+            index = index - 2
+
+        name = "ROI " + str(index - 1)
+        color = pg.intColor(index, alpha=alpha, hues=hues, maxValue=maxValue)
+
+        return name, color, (index, hues, maxValue)
 
     def OnLockSpectrum(self):
-        name, color, nplots = self.GetNextROINumberandColor()
+        name, color, colortup = self.GetNextROINumberandColor()
         curve = pg.PlotCurveItem(pen=({'color': color, 'width': 2}), skipFiniteCheck=True,
                                  name=name)
         curve.hide()
@@ -15832,7 +15834,7 @@ class SpecFig():
             self.plotitem.items.insert(-2, curve)
         else:
             curve.show()
-        self.parent.absimgfig.addLockedROI(nplots)
+        self.parent.absimgfig.addLockedROI(colortup)
         curve.setData(x,y)
 
     def removeLast2ROI(self,i,roiitems):
@@ -15855,8 +15857,8 @@ class SpecFig():
                 indices = np.where(boolmask == False)
                 self.removeLast2ROI(i,roiitems)
                 roi = np.zeros([*boolmask.shape, 4], dtype=np.uint8)
-                name, color, nrois = self.GetNextROINumberandColor()
-                roi[indices] = pg.intColor(nrois, alpha=255).getRgb()
+                name, color, colortup = self.GetNextROINumberandColor()
+                roi[indices] = pg.intColor(*colortup, maxValue=215).getRgb()
                 lockedroi = pg.ImageItem(image=roi, border="k", opacity=0.3)
                 self.parent.absimgfig.imageplot.addItem(lockedroi, ignoreBounds=True)
 
@@ -15895,8 +15897,8 @@ class SpecFig():
                 indices = np.where(boolmask == False)
                 self.removeLast2ROI(i,roiitems)
                 roi = np.zeros([*boolmask.shape, 4], dtype=np.uint8)
-                name, color, nrois = self.GetNextROINumberandColor()
-                roi[indices] = pg.intColor(nrois, alpha=255).getRgb()
+                name, color, colortup = self.GetNextROINumberandColor()
+                roi[indices] = pg.intColor(*colortup, maxValue=215).getRgb()
                 lockedroi = pg.ImageItem(image=roi, border="k", opacity=0.3)
                 self.parent.absimgfig.imageplot.addItem(lockedroi, ignoreBounds=True)
 
@@ -16389,10 +16391,10 @@ class ImgFig():
             self.roi.setZValue(10)  # make sure ROI is drawn above image
             self.roi.sigRegionChanged.connect(self.parent.specfig.updatePlotData)
 
-    def addLockedROI(self,intcolor):
+    def addLockedROI(self,colortup):
         roi = np.zeros([*self.imageitem.image.shape, 4], dtype=np.uint8)
         indices = np.where(self.boolmask == False)
-        roi[indices] = pg.intColor(intcolor,alpha=77).getRgb()
+        roi[indices] = pg.intColor(*colortup, alpha=70).getRgb()
         lockedroi = pg.ImageItem(image=roi,border="k")
 
         self.imageplot.addItem(lockedroi, ignoreBounds=True)
