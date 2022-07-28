@@ -10345,7 +10345,7 @@ class ShowArtefacts(QtWidgets.QDialog):
         if self.cb_h.isChecked():
             wf = (self.weight_slider.value()) / 100
             if self.rb_median_i0.isChecked():
-                mask = self.stack.i0_mask[:, :, 0]
+                mask = self.stack.i0_mask
                 if final:
                     mask = mask[:, :, None]
             factor_h = self.CorrectionArray(a, 0, float(wf), mask)[None, :]
@@ -10353,7 +10353,7 @@ class ShowArtefacts(QtWidgets.QDialog):
         if self.cb_v.isChecked():
             wf = (self.weight_slider.value()) / 100
             if self.rb_median_i0.isChecked():
-                mask = self.stack.i0_mask[:, :, 0]
+                mask = self.stack.i0_mask[:, :]
                 if final:
                     mask = mask[:, :, None]
             factor_v = self.CorrectionArray(a, 1, float(wf), mask)[: ,None]
@@ -10376,8 +10376,11 @@ class ShowArtefacts(QtWidgets.QDialog):
         x = x_idx[~array.mask]
         y = y_idx[~array.mask]
         z = array[~array.mask]
-        array = griddata((x, y), z.ravel(),(x_idx, y_idx), method='nearest') #interpolate array of counts
-        return (array)
+        try:
+            returnarray = griddata((x, y), z.ravel(),(x_idx, y_idx), method='nearest') #interpolate array of counts
+        except IndexError:
+            pass
+        return (returnarray)
 
 
     def OutlierCalc(self,a,final=False):
@@ -10386,7 +10389,7 @@ class ShowArtefacts(QtWidgets.QDialog):
         #diff_v = 0
         #diff_h = 0
         if self.com.i0_loaded:
-            mask = self.stack.i0_mask[:, :, 0]
+            mask = self.stack.i0_mask
             #if final:
             #    mask = mask[:, :, None]
         if final:
@@ -15777,6 +15780,7 @@ class SpecFig():
         self.parent.button_mergeroi.setEnabled(True)
         self.parent.button_subtractroi.setEnabled(True)
         bool = np.sum(self.parent.absimgfig.ROIrgba, axis=2)[:, :] > 0
+        self.parent.stk.i0_mask = bool
         bool = np.where(bool == True)
         if np.any(bool):
             self.parent.stk.i0_from_histogram(bool)
@@ -15810,7 +15814,7 @@ class SpecFig():
 
     def GetNextROINumberandColor(self):
         hues = 10
-        alpha = 150
+        alpha = 128
         maxValue= 215
         index = len(self.plotitem.items)
         if self.parent.ROIShapeBox.currentText() == "Histogram":
@@ -15819,7 +15823,7 @@ class SpecFig():
         name = "ROI " + str(index - 1)
         color = pg.intColor(index, alpha=alpha, hues=hues, maxValue=maxValue)
 
-        return name, color, (index, hues, maxValue)
+        return name, color, (index, hues)
 
     def OnLockSpectrum(self):
         name, color, colortup = self.GetNextROINumberandColor()
@@ -15858,8 +15862,8 @@ class SpecFig():
                 self.removeLast2ROI(i,roiitems)
                 roi = np.zeros([*boolmask.shape, 4], dtype=np.uint8)
                 name, color, colortup = self.GetNextROINumberandColor()
-                roi[indices] = pg.intColor(*colortup, maxValue=215).getRgb()
-                lockedroi = pg.ImageItem(image=roi, border="k", opacity=0.3)
+                roi[indices] = pg.intColor(*colortup, alpha=128, maxValue= 215).getRgb()
+                lockedroi = pg.ImageItem(image=roi, border="k", opacity=0.5)
                 self.parent.absimgfig.imageplot.addItem(lockedroi, ignoreBounds=True)
 
                 data = self.prefilterData()
@@ -15898,8 +15902,8 @@ class SpecFig():
                 self.removeLast2ROI(i,roiitems)
                 roi = np.zeros([*boolmask.shape, 4], dtype=np.uint8)
                 name, color, colortup = self.GetNextROINumberandColor()
-                roi[indices] = pg.intColor(*colortup, maxValue=215).getRgb()
-                lockedroi = pg.ImageItem(image=roi, border="k", opacity=0.3)
+                roi[indices] = pg.intColor(*colortup, alpha=128, maxValue= 215).getRgb()
+                lockedroi = pg.ImageItem(image=roi, border="k", opacity=0.5)
                 self.parent.absimgfig.imageplot.addItem(lockedroi, ignoreBounds=True)
 
                 data = self.prefilterData()
@@ -16378,7 +16382,7 @@ class ImgFig():
                 self.parent.specfig.plotitem.items[0].show()
             except IndexError: # if first roi, spectra are not existing at this point
               pass
-        self.ROImask = pg.ImageItem(border="k", opacity=0.3)
+        self.ROImask = pg.ImageItem(border="k", opacity=0.5)
         self.imageplot.addItem(self.ROImask)
         self.ROIrgba = np.zeros([*self.imageitem.image.shape, 4], dtype=np.uint8)
         self.boolmask = np.full((self.parent.stk.n_cols, self.parent.stk.n_rows), True)
@@ -16394,8 +16398,8 @@ class ImgFig():
     def addLockedROI(self,colortup):
         roi = np.zeros([*self.imageitem.image.shape, 4], dtype=np.uint8)
         indices = np.where(self.boolmask == False)
-        roi[indices] = pg.intColor(*colortup, alpha=70).getRgb()
-        lockedroi = pg.ImageItem(image=roi,border="k")
+        roi[indices] = pg.intColor(*colortup, alpha=128, maxValue= 215).getRgb()
+        lockedroi = pg.ImageItem(image=roi, border="k", opacity=0.5)
 
         self.imageplot.addItem(lockedroi, ignoreBounds=True)
         lockedroi.setZValue(11)  # make sure ROI is drawn above image
