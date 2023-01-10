@@ -9995,7 +9995,7 @@ class PageStack(QtWidgets.QWidget):
             axes.set_ylabel('Flux')
 
         if self.addroi == 0:
-            self.tc_spec.setText('Spectrum at pixel [{0}, {1}] or position [{2:5.2f}, {3:5.2f}]'.format(str(xpos),  str(ypos), np.float(self.stk.x_dist[int(xpos)]), np.float(self.stk.y_dist[int(ypos)])))
+            self.tc_spec.setText('Spectrum at pixel [{0}, {1}] or position [{2:5.2f}, {3:5.2f}]'.format(str(xpos),  str(ypos), float(self.stk.x_dist[int(xpos)]), float(self.stk.y_dist[int(ypos)])))
             specplot = axes.plot(self.stk.ev,self.spectrum)
         else:
             self.tc_spec.setText("Average ROI Spectrum: ")
@@ -11910,8 +11910,8 @@ class ImageRegistrationManual(QtWidgets.QDialog):
 
         nx = ccorr.shape[0]
         ny = ccorr.shape[1]
-        xcenter = xshift + np.float(nx)/2.0
-        ycenter = yshift + np.float(ny)/2.0
+        xcenter = xshift + float(nx)/2.0
+        ycenter = yshift + float(ny)/2.0
 
         xl = xcenter-10
         if xl<0:

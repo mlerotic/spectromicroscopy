@@ -96,7 +96,7 @@ def read(filename, self, selection=None, *args, **kwargs):
     f.close()
 
     if scale < 0:
-        dataformat = np.float32
+        dataformat = float32
     else:
         dataformat = np.int16
 
@@ -107,10 +107,10 @@ def read(filename, self, selection=None, *args, **kwargs):
     f.close()
 
     if scale > 0 and scale != 1:
-        image_stack = big_array.astype(np.float) / scale
+        image_stack = big_array.astype(float) / scale
         print("data rescaled by ", 1. / scale)
     else:
-        image_stack = big_array.astype(np.float)
+        image_stack = big_array.astype(float)
 
     if (x_start > x_stop):
         image_stack = image_stack[::-1, :, :]
@@ -229,7 +229,7 @@ def read_ncb_data(self, filename):
     f.close()
 
     if scale < 0:
-        dataformat = np.float32
+        dataformat = float32
     else:
         dataformat = np.int16
 
@@ -238,10 +238,10 @@ def read_ncb_data(self, filename):
     f.close()
 
     if scale > 0 and scale != 1:
-        image_stack = big_array.astype(np.float) / scale
+        image_stack = big_array.astype(float) / scale
         if verbose: print("data rescaled by ", 1. / scale)
     else:
-        image_stack = big_array.astype(np.float)
+        image_stack = big_array.astype(float)
 
     if (x_start > x_stop):
         image_stack = image_stack[::-1, :, :]
@@ -356,7 +356,7 @@ def write(filename, stack, data_type):  # ,norm):
         saveddata.astype(np.int16).tofile(f)
     else:
         scale = -1.0
-        image_stack.astype(np.float32).tofile(f)
+        image_stack.astype(float32).tofile(f)
     f.close()
 
     # print 'imagedims', image_stack.shape
@@ -459,7 +459,7 @@ class Cncb:
         f.close()
 
         if scale < 0:
-            dataformat = np.float32
+            dataformat = float32
         else:
             dataformat = np.int16
 
@@ -470,10 +470,10 @@ class Cncb:
         f.close()
 
         if scale > 0 and scale != 1:
-            image_stack = big_array.astype(np.float) / scale
+            image_stack = big_array.astype(float) / scale
             print("data rescaled by ", 1. / scale)
         else:
-            image_stack = big_array.astype(np.float)
+            image_stack = big_array.astype(float)
 
         if (x_start > x_stop):
             image_stack = image_stack[::-1, :, :]
@@ -532,7 +532,7 @@ class Cncb:
             saveddata.astype(np.int16).tofile(f)
         else:
             scale = -1.0
-            image_stack.astype(np.float32).tofile(f)
+            image_stack.astype(float32).tofile(f)
         f.close()
 
         # print 'imagedims', image_stack.shape
@@ -624,7 +624,7 @@ class Cncb:
         f.close()
 
         if scale < 0:
-            dataformat = np.float32
+            dataformat = float32
         else:
             dataformat = np.int16
 
@@ -635,10 +635,10 @@ class Cncb:
         f.close()
 
         if scale > 0 and scale != 1:
-            image_stack = big_array.astype(np.float) / scale
+            image_stack = big_array.astype(float) / scale
             if verbose: print("data rescaled by ", 1. / scale)
         else:
-            image_stack = big_array.astype(np.float)
+            image_stack = big_array.astype(float)
 
         if (x_start > x_stop):
             image_stack = image_stack[::-1, :, :]

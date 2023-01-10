@@ -174,7 +174,7 @@ def _weights_fast(x, dx=1, orig=0, ravel=True, labels=None):
     if ravel:
         x = np.ravel(x)
     floor_x = np.floor((x - orig) / dx).astype(np.int32)
-    alpha = ((x - orig - floor_x * dx) / dx).astype(np.float32)
+    alpha = ((x - orig - floor_x * dx) / dx).astype(float32)
     inds = np.hstack((floor_x, floor_x + 1))
     weights = np.hstack((1 - alpha, alpha))
     data_inds = np.arange(x.size, dtype=np.int32)
@@ -212,7 +212,7 @@ def _weights(x, dx=1, orig=0, ravel=True, labels=None):
     if ravel:
         x = np.ravel(x)
     floor_x = np.floor((x - orig) / dx).astype(np.int32)
-    alpha = ((x - orig - floor_x * dx) / dx).astype(np.float32)
+    alpha = ((x - orig - floor_x * dx) / dx).astype(float32)
     inds = np.hstack((floor_x, floor_x + 1))
     weights = np.hstack((1 - alpha, alpha))
     data_inds = np.arange(x.size, dtype=np.int32)
@@ -233,7 +233,7 @@ def _weights_nn(x, dx=1, orig=0, ravel=True):
     if ravel:
         x = np.ravel(x)
     floor_x = np.floor(x - orig)
-    return floor_x.astype(np.float32)
+    return floor_x.astype(float32)
 
 
 
@@ -277,7 +277,7 @@ def back_projection(projections):
     This function uses ``scipy.ndimage.rotate`` for the rotation.
     """
     n_dir, l_x = projections.shape
-    recons = np.zeros((l_x, l_x), dtype=np.float)
+    recons = np.zeros((l_x, l_x), dtype=float)
     angles = np.linspace(0, 180, n_dir, endpoint=False)
     for angle, line in zip(angles, projections):
         # BP: repeat the detector line along the direction of the beam

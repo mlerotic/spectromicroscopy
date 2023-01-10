@@ -358,8 +358,8 @@ def read_xrm_list(self, filelist, filepath, ds):
     
     
     #Since we do not have a scanning microscope we fill the x_dist and y_dist from pixel_size
-    x_dist = np.arange(np.float(ncols))*pixelsize
-    y_dist = np.arange(np.float(nrows))*pixelsize
+    x_dist = np.arange(float(ncols))*pixelsize
+    y_dist = np.arange(float(nrows))*pixelsize
 
     ds.exchange.x = x_dist
     ds.exchange.x_units = 'um'
@@ -554,8 +554,8 @@ def read_xrm(filename, self):
     
     
     #Since we do not have a scanning microscope we fill the x_dist and y_dist from pixel_size
-    self.x_dist = np.arange(np.float(self.n_cols))*pixelsize
-    self.y_dist = np.arange(np.float(self.n_rows))*pixelsize
+    self.x_dist = np.arange(float(self.n_cols))*pixelsize
+    self.y_dist = np.arange(float(self.n_rows))*pixelsize
 
     ds.exchange.x = self.x_dist
     ds.exchange.x_units = 'um'
@@ -791,8 +791,8 @@ def read_txrm(filename, self):
     
     
     #Since we do not have a scanning microscope we fill the x_dist and y_dist from pixel_size
-    self.x_dist = np.arange(np.float(self.n_cols))*pixelsize
-    self.y_dist = np.arange(np.float(self.n_rows))*pixelsize
+    self.x_dist = np.arange(float(self.n_cols))*pixelsize
+    self.y_dist = np.arange(float(self.n_rows))*pixelsize
 
     ds.exchange.x = self.x_dist
     ds.exchange.x_units = 'um'

@@ -41,8 +41,8 @@ def read_bim(self, filename):
     angles = np.fromfile(f, np.float64, 1)
     pixelsize = np.fromfile(f, np.float32, 1)
     
-    self.x_dist = np.arange(np.float(self.n_cols))*pixelsize
-    self.y_dist = np.arange(np.float(self.n_rows))*pixelsize
+    self.x_dist = np.arange(float(self.n_cols))*pixelsize
+    self.y_dist = np.arange(float(self.n_rows))*pixelsize
     
     data = np.fromfile(f, np.uint32, 2)
     
@@ -128,8 +128,8 @@ def read_bim_list(self, filelist, filepath, ds):
     angles = np.fromfile(f, np.float64, 1)
     pixelsize = np.fromfile(f, np.float32, 1)
     
-    x_dist = np.arange(np.float(ncols))*pixelsize
-    y_dist = np.arange(np.float(nrows))*pixelsize
+    x_dist = np.arange(float(ncols))*pixelsize
+    y_dist = np.arange(float(nrows))*pixelsize
     
     data = np.fromfile(f, np.uint32, 2)
     
@@ -213,8 +213,8 @@ def read_bim_list(self, filelist, filepath, ds):
     
     
     #Since we do not have a scanning microscope we fill the x_dist and y_dist from pixel_size
-    x_dist = np.arange(np.float(ncols))*pixelsize
-    y_dist = np.arange(np.float(nrows))*pixelsize
+    x_dist = np.arange(float(ncols))*pixelsize
+    y_dist = np.arange(float(nrows))*pixelsize
 
     ds.exchange.x = x_dist
     ds.exchange.x_units = 'um'
