@@ -9847,7 +9847,7 @@ class PageStack(QtWidgets.QWidget):
         self.SpectrumPanel.draw()
 
 
-        self.tc_spec.setText('Spectrum at pixel [{0}, {1}] or position [{2:5.2f}, {3:5.2f}]'.format(str(xpos),  str(ypos), np.float(self.stk.x_dist[int(xpos)]), np.float(self.stk.y_dist[int(ypos)])))
+        self.tc_spec.setText('Spectrum at pixel [{0}, {1}] or position [{2:5.2f}, {3:5.2f}]'.format(str(xpos),  str(ypos), float(self.stk.x_dist[int(xpos)]), float(self.stk.y_dist[int(ypos)])))
 
 #----------------------------------------------------------------------
     def ResetDisplaySettings(self):
@@ -11568,8 +11568,8 @@ class ImageRegistrationManual(QtWidgets.QDialog):
 
         nx = ccorr.shape[0]
         ny = ccorr.shape[1]
-        xcenter = xshift + np.float(nx)/2.0
-        ycenter = yshift + np.float(ny)/2.0
+        xcenter = xshift + float(nx)/2.0
+        ycenter = yshift + float(ny)/2.0
 
         xl = xcenter-10
         if xl<0:
@@ -12854,8 +12854,8 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
     def MaskScatterDotsAboveErrorThreshold(self, errorvals=None):
         errors, errorthreshold, itheta = errorvals
         if self.cb_autoerror.isChecked():
-            self.stack.shiftsdict[itheta]["errormaskedx"] = (errors > np.float64(errorthreshold))
-            self.stack.shiftsdict[itheta]["errormaskedy"] = (errors > np.float64(errorthreshold))
+            self.stack.shiftsdict[itheta]["errormaskedx"] = (errors > float64(errorthreshold))
+            self.stack.shiftsdict[itheta]["errormaskedy"] = (errors > float64(errorthreshold))
         else:
             self.stack.shiftsdict[itheta]["errormaskedx"] = [False] * len(errors)
             self.stack.shiftsdict[itheta]["errormaskedy"] = [False] * len(errors)

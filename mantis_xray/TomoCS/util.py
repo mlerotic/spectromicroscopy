@@ -70,7 +70,7 @@ def generate_synthetic_data(l_x=128, seed=None, crop=True, n_pts=25):
         mask = np.logical_and(mask > mask.mean(), mask_outer)
     else:
         mask = mask > mask.mean()
-    return mask.astype(np.float32)
+    return mask.astype(float32)
 
 def tv_l0_norm(im):
     """Compute the (isotropic) TV norm of an image"""

@@ -143,7 +143,7 @@ def tv_denoise_fista(im, weight=50, eps=5.e-5, n_iter_max=200,
     (2009).
     """
     if not im.dtype.kind == 'f':
-        im = im.astype(np.float)
+        im = im.astype(float)
     shape = [im.ndim, ] + list(im.shape)
     grad_im = np.zeros(shape)
     grad_aux = np.zeros(shape)
@@ -174,7 +174,7 @@ if __name__ == '__main__':
     from scipy.misc import face
     import matplotlib.pyplot as plt
     from time import time
-    l = face().astype(np.float)
+    l = face().astype(float)
     # normalize image between 0 and 1
     l /= l.max()
     l += 0.1 * l.std() * np.random.randn(*l.shape)

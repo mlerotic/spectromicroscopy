@@ -67,8 +67,8 @@ def read(filename, self, selection=None, *args, **kwargs):
 
     pixelsize = 1
     #Since we do not have a scanning microscope we fill the x_dist and y_dist from pixel_size
-    self.x_dist = np.arange(np.float(self.n_cols))*pixelsize
-    self.y_dist = np.arange(np.float(self.n_rows))*pixelsize
+    self.x_dist = np.arange(float(self.n_cols))*pixelsize
+    self.y_dist = np.arange(float(self.n_rows))*pixelsize
 
     #Read energies from file
     basename, extension = os.path.splitext(filename)

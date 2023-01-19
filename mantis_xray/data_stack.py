@@ -212,8 +212,8 @@ class data:
 
         pixelsize = 1
         # Since we do not have a scanning microscope we fill the x_dist and y_dist from pixel_size
-        self.x_dist = np.arange(np.float(self.n_cols)) * pixelsize
-        self.y_dist = np.arange(np.float(self.n_rows)) * pixelsize
+        self.x_dist = np.arange(float(self.n_cols)) * pixelsize
+        self.y_dist = np.arange(float(self.n_rows)) * pixelsize
 
         self.ev = np.array(elist)
 
@@ -859,8 +859,8 @@ class data:
         ypts = fr[xc, xpts]
         yf, fit = self.peak_fit(xpts, ypts)
 
-        xshift = xf - np.float(shape[0]) / 2.0
-        yshift = yf - np.float(shape[1]) / 2.0
+        xshift = xf - float(shape[0]) / 2.0
+        yshift = yf - float(shape[1]) / 2.0
 
         return xshift, yshift, fr
 
@@ -913,10 +913,10 @@ class data:
 
         y1y0 = y[1] - y[0]
         y2y0 = y[2] - y[0]
-        x1x0 = np.float(x[1] - x[0])
-        x2x0 = np.float(x[2] - x[0])
-        x1x0sq = np.float(x[1] * x[1] - x[0] * x[0])
-        x2x0sq = np.float(x[2] * x[2] - x[0] * x[0])
+        x1x0 = float(x[1] - x[0])
+        x2x0 = float(x[2] - x[0])
+        x1x0sq = float(x[1] * x[1] - x[0] * x[0])
+        x2x0sq = float(x[2] * x[2] - x[0] * x[0])
 
         c_num = y2y0 * x1x0 - y1y0 * x2x0
         c_denom = x2x0sq * x1x0 - x1x0sq * x2x0
@@ -925,12 +925,12 @@ class data:
             print('Divide by zero error')
             return
 
-        c = c_num / np.float(c_denom)
+        c = c_num / float(c_denom)
         if x1x0 == 0:
             print('Divide by zero error')
             return
 
-        b = (y1y0 - c * x1x0sq) / np.float(x1x0)
+        b = (y1y0 - c * x1x0sq) / float(x1x0)
         a = y[0] - b * x[0] - c * x[0] * x[0]
 
         fit = [a, b, c]
@@ -942,9 +942,9 @@ class data:
             # Constrain the fit to be within these three points.
             xpeak = -b / (2.0 * c)
             if xpeak < x[0]:
-                xpeak = np.float(x[0])
+                xpeak = float(x[0])
             if xpeak > x[2]:
-                xpeak = np.float(x[2])
+                xpeak = float(x[2])
 
         return xpeak, fit
 
