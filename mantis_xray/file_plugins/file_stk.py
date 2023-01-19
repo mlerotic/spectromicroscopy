@@ -106,7 +106,7 @@ def read_stk_i0_xas(self, filename):
         if line.startswith("*"):
             pass
         else:
-            e, i = [float (x) for x in line.split()] 
+            e, i = [float(x) for x in line.split()]
             elist.append(e)
             ilist.append(i)
             
@@ -133,7 +133,7 @@ def read_stk_i0_csv(self, filename):
         if line.startswith("*"):
             pass
         else:
-            e, i = [float (x) for x in line.split(',')] 
+            e, i = [float(x) for x in line.split(',')]
             elist.append(e)
             ilist.append(i)
             
@@ -209,7 +209,7 @@ class x1astk:
             if line.startswith("*"):
                 pass
             else:
-                e, i = [float (x) for x in line.split()] 
+                e, i = [float(x) for x in line.split()]
                 elist.append(e)
                 ilist.append(i)
                 
@@ -237,7 +237,7 @@ class x1astk:
             if line.startswith("*"):
                 pass
             else:
-                e, i = [float (x) for x in line.split(',')] 
+                e, i = [float(x) for x in line.split(',')]
                 elist.append(e)
                 ilist.append(i)
                 

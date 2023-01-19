@@ -12854,8 +12854,8 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
     def MaskScatterDotsAboveErrorThreshold(self, errorvals=None):
         errors, errorthreshold, itheta = errorvals
         if self.cb_autoerror.isChecked():
-            self.stack.shiftsdict[itheta]["errormaskedx"] = (errors > float64(errorthreshold))
-            self.stack.shiftsdict[itheta]["errormaskedy"] = (errors > float64(errorthreshold))
+            self.stack.shiftsdict[itheta]["errormaskedx"] = (errors > np.float64(errorthreshold))
+            self.stack.shiftsdict[itheta]["errormaskedy"] = (errors > np.float64(errorthreshold))
         else:
             self.stack.shiftsdict[itheta]["errormaskedx"] = [False] * len(errors)
             self.stack.shiftsdict[itheta]["errormaskedy"] = [False] * len(errors)

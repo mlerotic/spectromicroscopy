@@ -143,8 +143,8 @@ def read_tif_list(self, filelist, filepath, ds):
         absdata[:, :, i] = np.reshape(imagestack, (n_cols, n_rows), order='C')
     # Since we do not know the pixel size, x_dist and y_dist is derived from pixel number
     pixelsize = 1
-    x_dist = np.arange(np.float(n_cols))*pixelsize
-    y_dist = np.arange(np.float(n_rows))*pixelsize
+    x_dist = np.arange(float(n_cols))*pixelsize
+    y_dist = np.arange(float(n_rows))*pixelsize
     # Since unknown, set dwell time to 1
     msec = 1
     data_dwell = np.ones((n_ev))*msec
