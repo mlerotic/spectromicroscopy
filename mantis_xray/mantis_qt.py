@@ -11657,14 +11657,17 @@ class ImageRegistrationManual(QtWidgets.QDialog):
             self.iev = 0
 
 
-        self.slider_eng.setRange(0, self.stack.n_ev-1)
+        #self.slider_eng.setRange(0, self.stack.n_ev-1)
 
-        self.parent.page1.slider_eng.setRange(0, self.stack.n_ev-1)
-        self.parent.page1.iev = self.stack.n_ev/2
-        self.parent.page1.slider_eng.setValue(self.parent.page1.iev)
+        #self.parent.page1.slider_eng.setRange(0, self.stack.n_ev-1)
+        #self.parent.page1.iev = self.stack.n_ev/2
+        #self.parent.page1.slider_eng.setValue(self.parent.page1.iev)
 
-        self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
-        self.parent.page1.loadImage()
+        #self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
+        #self.parent.page1.loadImage()
+        self.parent.page1.absimgfig.loadNewImageWithROI()
+        self.parent.page0.absimgfig.loadNewImage()
+        self.parent.page1.specfig.ClearandReload()
 
         self.ShowImage()
 
@@ -12107,16 +12110,19 @@ class ImageRegistrationManual(QtWidgets.QDialog):
         self.stack.data_struct.spectromicroscopy.yshifts = self.yshifts
 
 
-        self.parent.page1.slider_eng.setRange(0,self.stack.n_ev-1)
-        self.parent.page1.iev = int(self.stack.n_ev/2)
-        self.parent.page1.slider_eng.setValue(self.parent.page1.iev)
+        #self.parent.page1.slider_eng.setRange(0,self.stack.n_ev-1)
+        #self.parent.page1.iev = int(self.stack.n_ev/2)
+        #self.parent.page1.slider_eng.setValue(self.parent.page1.iev)
 
-        self.parent.page1.ix = int(self.stack.n_cols/2)
-        self.parent.page1.iy = int(self.stack.n_rows/2)
+        #self.parent.page1.ix = int(self.stack.n_cols/2)
+        #self.parent.page1.iy = int(self.stack.n_rows/2)
 
-        self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
-        self.parent.page1.loadImage()
+        #self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
+        #self.parent.page1.loadImage()
         #self.parent.page9.loadImage()
+        self.parent.page1.absimgfig.loadNewImageWithROI()
+        self.parent.page0.absimgfig.loadNewImage()
+        self.parent.page1.specfig.ClearandReload()
 
         self.close()
 
@@ -14009,9 +14015,10 @@ class DarkSignal(QtWidgets.QDialog):
             self.stack.fill_h5_struct_normalization()
 
 
-        self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
-        self.parent.page1.loadImage()
 
+        self.parent.page1.absimgfig.loadNewImageWithROI()
+        self.parent.page0.absimgfig.loadNewImage()
+        self.parent.page1.specfig.ClearandReload()
 
 
         QtWidgets.QApplication.restoreOverrideCursor()
