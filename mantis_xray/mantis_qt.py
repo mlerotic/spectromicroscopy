@@ -6989,9 +6989,10 @@ class PageCluster(QtWidgets.QWidget):
             self.com.cluster_calculated = 1
             QtWidgets.QApplication.restoreOverrideCursor()
 
-        except:
+        except Exception as e:
             self.com.cluster_calculated = 0
             QtWidgets.QApplication.restoreOverrideCursor()
+            print(e)
 
         self.window().refresh_widgets()
 
@@ -16287,7 +16288,7 @@ http://www.gnu.org/licenses/.''')
         hbox.addStretch(1)
         vbox2 = QtWidgets.QVBoxLayout()
         vbox2.addWidget(text1)
-        vbox2.addStretch(0.5)
+        vbox2.addStretch(1)
         vbox2.addWidget(text2)
         vbox2.addWidget(text3)
         vbox2.addWidget(text4)
@@ -16299,7 +16300,7 @@ http://www.gnu.org/licenses/.''')
         button_close = QtWidgets.QPushButton('Close')
         button_close.clicked.connect( self.close)
         vbox.addWidget(button_close)
-        vbox.addStretch(0.5)
+        vbox.addStretch(1)
 
 
 
