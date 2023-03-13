@@ -7516,7 +7516,7 @@ class PageCluster(QtWidgets.QWidget):
                 err = e.strerror
             else:
                 err = e
-
+            print(e)
             QtGui.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % err)
 
 
@@ -7757,7 +7757,7 @@ class SaveWinP3(QtWidgets.QDialog):
 
         pal = QtGui.QPalette()
         self.setAutoFillBackground(True)
-        pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
+        #pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
         self.setPalette(pal)
 
 
@@ -8555,7 +8555,7 @@ class PagePCA(QtWidgets.QWidget):
                 err = e.strerror
             else:
                 err = e
-
+            print(err)
             QtGui.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % err)
 
 

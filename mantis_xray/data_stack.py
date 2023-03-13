@@ -662,7 +662,7 @@ class data:
         print('* Address: ', file=f)
         print('*--------------------------------------------------------------', file=f)
         for ie in range(self.n_ev):
-            print('{0:06.2f}, {1:06f}'.format(evdata[ie], data[ie]), file=f)
+            print('{0:06.2f}, {1:012g}'.format(evdata[ie], data[ie]), file=f)
 
         f.close()
 
