@@ -2847,9 +2847,9 @@ class SaveWinP5(QtWidgets.QDialog):
         gridtop.addWidget(self.cb32, 3, 2)
         gridtop.addWidget(self.cb33, 3, 3)
 
-        vboxtop.addStretch(0.5)
-        vboxtop.addLayout(gridtop)
         vboxtop.addStretch(1)
+        vboxtop.addLayout(gridtop)
+        vboxtop.addStretch(2)
 
 
         hbox0 = QtWidgets.QHBoxLayout()
@@ -2889,7 +2889,7 @@ class SaveWinP5(QtWidgets.QDialog):
 
         vboxtop.addLayout(hbox0)
         vboxtop.addLayout(hbox1)
-        vboxtop.addStretch(1.0)
+        vboxtop.addStretch(1)
         vboxtop.addLayout(hbox2)
 
 
@@ -6575,9 +6575,9 @@ class SaveWinP4(QtWidgets.QDialog):
 
 
 
-        vboxtop.addStretch(0.5)
-        vboxtop.addLayout(gridtop)
         vboxtop.addStretch(1)
+        vboxtop.addLayout(gridtop)
+        vboxtop.addStretch(2)
 
 
         hbox0 = QtWidgets.QHBoxLayout()
@@ -6617,7 +6617,7 @@ class SaveWinP4(QtWidgets.QDialog):
 
         vboxtop.addLayout(hbox0)
         vboxtop.addLayout(hbox1)
-        vboxtop.addStretch(1.0)
+        vboxtop.addStretch(1)
         vboxtop.addLayout(hbox2)
 
 
@@ -7868,9 +7868,9 @@ class SaveWinP3(QtWidgets.QDialog):
         gridtop.addWidget(self.cb43, 4, 3)
 
 
-        vboxtop.addStretch(0.5)
-        vboxtop.addLayout(gridtop)
         vboxtop.addStretch(1)
+        vboxtop.addLayout(gridtop)
+        vboxtop.addStretch(2)
 
 
         hbox0 = QtWidgets.QHBoxLayout()
@@ -7910,7 +7910,7 @@ class SaveWinP3(QtWidgets.QDialog):
 
         vboxtop.addLayout(hbox0)
         vboxtop.addLayout(hbox1)
-        vboxtop.addStretch(1.0)
+        vboxtop.addStretch(1)
         vboxtop.addLayout(hbox2)
 
 
@@ -8743,9 +8743,9 @@ class SaveWinP2(QtWidgets.QDialog):
         gridtop.addWidget(self.cb32, 3, 2)
         gridtop.addWidget(self.cb33, 3, 3)
 
-        vboxtop.addStretch(0.5)
-        vboxtop.addLayout(gridtop)
         vboxtop.addStretch(1)
+        vboxtop.addLayout(gridtop)
+        vboxtop.addStretch(2)
 
 
         hbox0 = QtWidgets.QHBoxLayout()
@@ -8785,7 +8785,7 @@ class SaveWinP2(QtWidgets.QDialog):
 
         vboxtop.addLayout(hbox0)
         vboxtop.addLayout(hbox1)
-        vboxtop.addStretch(1.0)
+        vboxtop.addStretch(1)
         vboxtop.addLayout(hbox2)
 
 
@@ -10350,9 +10350,9 @@ class SaveWinP1(QtWidgets.QDialog):
         gridtop.addWidget(self.cb32, 3, 2)
         gridtop.addWidget(self.cb34, 3, 5)
 
-        vboxtop.addStretch(0.5)
-        vboxtop.addLayout(gridtop)
         vboxtop.addStretch(1)
+        vboxtop.addLayout(gridtop)
+        vboxtop.addStretch(2)
 
 
         hbox0 = QtWidgets.QHBoxLayout()
@@ -10392,7 +10392,7 @@ class SaveWinP1(QtWidgets.QDialog):
 
         vboxtop.addLayout(hbox0)
         vboxtop.addLayout(hbox1)
-        vboxtop.addStretch(1.0)
+        vboxtop.addStretch(1)
         vboxtop.addLayout(hbox2)
 
 
@@ -11666,11 +11666,11 @@ class ImageRegistrationManual(QtWidgets.QDialog):
         hboxRB.addLayout(vbox2)
         hboxRB.addStretch(1)
 
-        vboxR.addStretch(0.2)
+        vboxR.addStretch(1)
         vboxR.addLayout(hboxRT)
-        vboxR.addStretch(1)
+        vboxR.addStretch(5)
         vboxR.addLayout(hboxRB)
-        vboxR.addStretch(1)
+        vboxR.addStretch(5)
 
         hboxtop.addLayout(vboxL)
         hboxtop.addStretch(1)
@@ -14053,7 +14053,7 @@ class SpectralROI(QtWidgets.QDialog):
         fbox.addWidget(self.ODMImagePanel, stretch=0)
         frame.setLayout(fbox)
         hbox2.addWidget(frame, stretch=0)
-        hbox2.addStretch(0.5)
+        hbox2.addStretch(1)
         hbox2.addWidget(sizer2)
 
         vbox.addLayout(hbox2)
@@ -15955,7 +15955,7 @@ class StackListFrame(QtWidgets.QDialog):
 
         vbox.addLayout(hbox)
 
-        vbox.addStretch(0.5)
+        vbox.addStretch(1)
 
 
         self.setLayout(vbox)
