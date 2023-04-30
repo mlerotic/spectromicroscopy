@@ -1225,7 +1225,7 @@ class PageTomo(QtWidgets.QWidget):
         lineprops = dict(color='red', linestyle='-', linewidth = 1, alpha=1)
 
 
-        self.lasso = LassoSelector(self.axes, onselect=self.OnSelectLasso, useblit=False, lineprops=lineprops)
+        self.lasso = LassoSelector(self.axes, onselect=self.OnSelectLasso, useblit=False, props=lineprops)
 
 #----------------------------------------------------------------------
     def OnROIHistogram(self, event):
@@ -10043,7 +10043,7 @@ class PageStack(QtWidgets.QWidget):
 
         lineprops = dict(color='red', linestyle='-', linewidth = 1, alpha=1)
 
-        self.lasso = LassoSelector(self.axes, onselect=self.OnSelectLasso, useblit=False, lineprops=lineprops)
+        self.lasso = LassoSelector(self.axes, onselect=self.OnSelectLasso, useblit=False, props=lineprops)
 
         fig = self.specfig
         fig.clf()
