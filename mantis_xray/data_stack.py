@@ -564,6 +564,7 @@ class data:
         self.i0_dwell = self.data_dwell
 
         return
+
     # ----------------------------------------------------------------------
     def calc_px_size(self,distances,n):
         start = np.min(distances)
@@ -704,7 +705,7 @@ class data:
                 return
             else:
                 for ie in range(self.n_ev):
-                    writer.writerow(['{0:06.2f}, {1:06f}'.format(evdata[ie], data[ie])])
+                    writer.writerow(['{0:06.2f}, {1:012g}'.format(evdata[ie], data[ie])])
                 return
 
     # ----------------------------------------------------------------------

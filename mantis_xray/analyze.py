@@ -491,7 +491,7 @@ class analyze:
                     
      
         indx = np.reshape(indx, (self.stack.n_cols, self.stack.n_rows), order='F')
-        self.clustersizes = np.zeros((nclusters,), dtype=np.int)
+        self.clustersizes = np.zeros((nclusters,), dtype=int)
        
         for i in range(nclusters):
             clind = np.where(indx == i)
@@ -501,7 +501,7 @@ class analyze:
         count_indices = np.argsort(self.clustersizes)
         count_indices = count_indices[::-1]
                
-        self.cluster_indices = np.zeros((self.stack.n_cols, self.stack.n_rows), dtype=np.int)
+        self.cluster_indices = np.zeros((self.stack.n_cols, self.stack.n_rows), dtype=int)
              
         self.clusterspectra = np.zeros((nclusters, self.stack.n_ev))
                
@@ -540,7 +540,7 @@ class analyze:
                 maxsse = np.max(self.sse[clind])
                 if (maxsse > sigma9): 
                     recalc_clusters = True
-                    sse_helper = np.zeros((self.stack.n_cols, self.stack.n_rows), dtype=np.int)
+                    sse_helper = np.zeros((self.stack.n_cols, self.stack.n_rows), dtype=int)
                     sse_helper[clind] = self.sse[clind]
                     newcluster_ind = np.where(sse_helper > sigma9)
                     new_cluster_indices[newcluster_ind] = new_nclusters
@@ -551,7 +551,7 @@ class analyze:
                 nclusters = new_nclusters
                 self.cluster_indices = new_cluster_indices
                 self.clusterspectra = np.zeros((nclusters, self.stack.n_ev))
-                self.clustersizes = np.zeros((nclusters,), dtype=np.int)
+                self.clustersizes = np.zeros((nclusters,), dtype=int)
                 for i in range(nclusters):
                     clind = np.where(self.cluster_indices == i)
                     self.clustersizes[i] = self.cluster_indices[clind].shape[0]
@@ -636,7 +636,7 @@ class analyze:
                     
      
         indx = np.reshape(indx, (self.stack.n_cols, self.stack.n_rows), order='F')
-        self.clustersizes = np.zeros((nclusters,), dtype=np.int)
+        self.clustersizes = np.zeros((nclusters,), dtype=int)
        
         for i in range(nclusters):
             clind = np.where(indx == i)
@@ -646,7 +646,7 @@ class analyze:
         count_indices = np.argsort(self.clustersizes)
         count_indices = count_indices[::-1]
                
-        self.cluster_indices = np.zeros((self.stack.n_cols, self.stack.n_rows), dtype=np.int)
+        self.cluster_indices = np.zeros((self.stack.n_cols, self.stack.n_rows), dtype=int)
              
         self.clusterspectra = np.zeros((nclusters, self.stack.n_ev))
                
@@ -685,7 +685,7 @@ class analyze:
                 maxsse = np.max(self.sse[clind])
                 if (maxsse > sigma9): 
                     recalc_clusters = True
-                    sse_helper = np.zeros((self.stack.n_cols, self.stack.n_rows), dtype=np.int)
+                    sse_helper = np.zeros((self.stack.n_cols, self.stack.n_rows), dtype=int)
                     sse_helper[clind] = self.sse[clind]
                     newcluster_ind = np.where(sse_helper > sigma9)
                     new_cluster_indices[newcluster_ind] = new_nclusters
@@ -696,7 +696,7 @@ class analyze:
                 nclusters = new_nclusters
                 self.cluster_indices = new_cluster_indices
                 self.clusterspectra = np.zeros((nclusters, self.stack.n_ev))
-                self.clustersizes = np.zeros((nclusters,), dtype=np.int)
+                self.clustersizes = np.zeros((nclusters,), dtype=int)
                 for i in range(nclusters):
                     clind = np.where(self.cluster_indices == i)
                     self.clustersizes[i] = self.cluster_indices[clind].shape[0]
@@ -910,7 +910,7 @@ class analyze:
         count_indices = count_indices[::-1]
                  
         cluster_histogram = cluster_histogram[count_indices]
-        self.cluster_indices = np.zeros((npixels), dtype=np.int)
+        self.cluster_indices = np.zeros((npixels), dtype=int)
         ClustersFound = 0
         for i_cluster in range(nclusters):
             i_temp_cluster = count_indices[i_cluster]
@@ -983,7 +983,7 @@ class analyze:
                 maxsse = np.max(self.sse[clind])
                 if (maxsse > sigma9): 
                     recalc_clusters = True
-                    sse_helper = np.zeros((self.stack.n_cols, self.stack.n_rows), dtype=np.int)
+                    sse_helper = np.zeros((self.stack.n_cols, self.stack.n_rows), dtype=int)
                     sse_helper[clind] = self.sse[clind]
                     newcluster_ind = np.where(sse_helper > sigma9)
                     new_cluster_indices[newcluster_ind] = new_nclusters
@@ -994,7 +994,7 @@ class analyze:
                 nclusters = new_nclusters
                 self.cluster_indices = new_cluster_indices
                 self.clusterspectra = np.zeros((nclusters, self.stack.n_ev))
-                self.clustersizes = np.zeros((nclusters,), dtype=np.int)
+                self.clustersizes = np.zeros((nclusters,), dtype=int)
                 for i in range(nclusters):
                     clind = np.where(self.cluster_indices == i)
                     self.clustersizes[i] = self.cluster_indices[clind].shape[0]

@@ -1228,7 +1228,7 @@ class PageTomo(QtWidgets.QWidget):
         lineprops = dict(color='red', linestyle='-', linewidth = 1, alpha=1)
 
 
-        self.lasso = LassoSelector(self.axes, onselect=self.OnSelectLasso, useblit=False, lineprops=lineprops)
+        self.lasso = LassoSelector(self.axes, onselect=self.OnSelectLasso, useblit=False, props=lineprops)
 
 #----------------------------------------------------------------------
     def OnROIHistogram(self, event):
@@ -1898,7 +1898,7 @@ class PageNNMA(QtWidgets.QWidget):
 
         self.initUI(common, data_struct, stack, anlz, nnma)
 
-#-----------------------------------------------------------------------
+#----------------------------------------------------------------------
     def initUI(self, common, data_struct, stack, anlz, nnma):
 
 
@@ -2225,7 +2225,7 @@ class PageNNMA(QtWidgets.QWidget):
         self.setLayout(vboxtop)
 
 
-#-----------------------------------------------------------------------
+#----------------------------------------------------------------------
     def OnLoadClusterSpectra(self, event):
 
         self.nnma.setClusterSpectra(self.anlz.clusterspectra)
@@ -2236,7 +2236,7 @@ class PageNNMA(QtWidgets.QWidget):
 
         self.tc_initspectra.setText('Initial Spectra: ' + self.initMatrices)
 
-#-----------------------------------------------------------------------
+#----------------------------------------------------------------------
     def OnLoadRandomSpectra(self, event):
 
         self.initMatrices = 'Random'
@@ -2246,7 +2246,7 @@ class PageNNMA(QtWidgets.QWidget):
 
         self.tc_initspectra.setText('Initial Spectra: ' + self.initMatrices)
 
-#-----------------------------------------------------------------------
+#----------------------------------------------------------------------
     def OnLoadStandardSpectra(self, event):
 
         if True:
@@ -2299,7 +2299,7 @@ class PageNNMA(QtWidgets.QWidget):
 
         self.window().refresh_widgets()
 
-#-----------------------------------------------------------------------
+#----------------------------------------------------------------------
     def OnCalcNNMA(self, event):
 
         QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
@@ -2342,26 +2342,26 @@ class PageNNMA(QtWidgets.QWidget):
 
 
 
-#-----------------------------------------------------------------------
+#----------------------------------------------------------------------
     def OnNNMAspin(self, value):
         num = value
         self.nComponents = num
 
-#-----------------------------------------------------------------------
+#----------------------------------------------------------------------
     def OnScroll(self, value):
         self.i_map = value
         if self.nnmacalculated == 1:
             self.ShowMaps()
             self.ShowSpectrum()
 
-#-----------------------------------------------------------------------
+#----------------------------------------------------------------------
     def OnSave(self, event):
 
         savewin = SaveWinP5(self.window())
         savewin.show()
 
 
-#-----------------------------------------------------------------------
+#----------------------------------------------------------------------
     def Save(self, filename, path, spec_png = True, spec_pdf = False, spec_svg = False, spec_csv = False,
              map_png = True, map_pdf = False, map_svg = False, map_tif = False,
              costf_png = True, costf_pdf = False, costf_svg = False):
@@ -2861,9 +2861,9 @@ class SaveWinP5(QtWidgets.QDialog):
         gridtop.addWidget(self.cb32, 3, 2)
         gridtop.addWidget(self.cb33, 3, 3)
 
-        vboxtop.addStretch(0.5)
-        vboxtop.addLayout(gridtop)
         vboxtop.addStretch(1)
+        vboxtop.addLayout(gridtop)
+        vboxtop.addStretch(2)
 
 
         hbox0 = QtWidgets.QHBoxLayout()
@@ -2903,7 +2903,7 @@ class SaveWinP5(QtWidgets.QDialog):
 
         vboxtop.addLayout(hbox0)
         vboxtop.addLayout(hbox1)
-        vboxtop.addStretch(1.0)
+        vboxtop.addStretch(1)
         vboxtop.addLayout(hbox2)
 
 
@@ -6589,9 +6589,9 @@ class SaveWinP4(QtWidgets.QDialog):
 
 
 
-        vboxtop.addStretch(0.5)
-        vboxtop.addLayout(gridtop)
         vboxtop.addStretch(1)
+        vboxtop.addLayout(gridtop)
+        vboxtop.addStretch(2)
 
 
         hbox0 = QtWidgets.QHBoxLayout()
@@ -6631,7 +6631,7 @@ class SaveWinP4(QtWidgets.QDialog):
 
         vboxtop.addLayout(hbox0)
         vboxtop.addLayout(hbox1)
-        vboxtop.addStretch(1.0)
+        vboxtop.addStretch(1)
         vboxtop.addLayout(hbox2)
 
 
@@ -7003,9 +7003,10 @@ class PageCluster(QtWidgets.QWidget):
             self.com.cluster_calculated = 1
             QtWidgets.QApplication.restoreOverrideCursor()
 
-        except:
+        except Exception as e:
             self.com.cluster_calculated = 0
             QtWidgets.QApplication.restoreOverrideCursor()
+            print(e)
 
         self.window().refresh_widgets()
 
@@ -7529,7 +7530,7 @@ class PageCluster(QtWidgets.QWidget):
                 err = e.strerror
             else:
                 err = e
-
+            print(e)
             QtWidgets.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % err)
 
 
@@ -7770,7 +7771,7 @@ class SaveWinP3(QtWidgets.QDialog):
 
         pal = QtGui.QPalette()
         self.setAutoFillBackground(True)
-        pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
+        #pal.setColor(QtGui.QPalette.Window,QtGui.QColor('white'))
         self.setPalette(pal)
 
 
@@ -7881,9 +7882,9 @@ class SaveWinP3(QtWidgets.QDialog):
         gridtop.addWidget(self.cb43, 4, 3)
 
 
-        vboxtop.addStretch(0.5)
-        vboxtop.addLayout(gridtop)
         vboxtop.addStretch(1)
+        vboxtop.addLayout(gridtop)
+        vboxtop.addStretch(2)
 
 
         hbox0 = QtWidgets.QHBoxLayout()
@@ -7923,7 +7924,7 @@ class SaveWinP3(QtWidgets.QDialog):
 
         vboxtop.addLayout(hbox0)
         vboxtop.addLayout(hbox1)
-        vboxtop.addStretch(1.0)
+        vboxtop.addStretch(1)
         vboxtop.addLayout(hbox2)
 
 
@@ -8568,7 +8569,7 @@ class PagePCA(QtWidgets.QWidget):
                 err = e.strerror
             else:
                 err = e
-
+            print(err)
             QtWidgets.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % err)
 
 
@@ -8756,9 +8757,9 @@ class SaveWinP2(QtWidgets.QDialog):
         gridtop.addWidget(self.cb32, 3, 2)
         gridtop.addWidget(self.cb33, 3, 3)
 
-        vboxtop.addStretch(0.5)
-        vboxtop.addLayout(gridtop)
         vboxtop.addStretch(1)
+        vboxtop.addLayout(gridtop)
+        vboxtop.addStretch(2)
 
 
         hbox0 = QtWidgets.QHBoxLayout()
@@ -8798,7 +8799,7 @@ class SaveWinP2(QtWidgets.QDialog):
 
         vboxtop.addLayout(hbox0)
         vboxtop.addLayout(hbox1)
-        vboxtop.addStretch(1.0)
+        vboxtop.addStretch(1)
         vboxtop.addLayout(hbox2)
 
 
@@ -11323,11 +11324,11 @@ class ImageRegistrationManual(QtWidgets.QDialog):
         hboxRB.addLayout(vbox2)
         hboxRB.addStretch(1)
 
-        vboxR.addStretch(0.2)
+        vboxR.addStretch(1)
         vboxR.addLayout(hboxRT)
-        vboxR.addStretch(1)
+        vboxR.addStretch(5)
         vboxR.addLayout(hboxRB)
-        vboxR.addStretch(1)
+        vboxR.addStretch(5)
 
         hboxtop.addLayout(vboxL)
         hboxtop.addStretch(1)
@@ -12556,7 +12557,6 @@ class GeneralPurposeProcessor(QtCore.QRunnable):
             self.parent.stack.shiftsdict[itheta]["xdots"][data[0]]= drift_x[0]
             self.parent.stack.shiftsdict[itheta]["ydots"][data[0]]= drift_y[0]
 
-
     def ShiftImg(self, row,x,y,itheta):
         shifted = ndimage.fourier_shift(np.fft.fft2(self.parent.stack.absdata4d[:, :, row,itheta]), [float(-x),float(-y)])
         shifted = np.fft.ifft2(shifted)
@@ -13590,7 +13590,7 @@ class SpectralROI(QtWidgets.QDialog):
         fbox.addWidget(self.ODMImagePanel, stretch=0)
         frame.setLayout(fbox)
         hbox2.addWidget(frame, stretch=0)
-        hbox2.addStretch(0.5)
+        hbox2.addStretch(1)
         hbox2.addWidget(sizer2)
 
         vbox.addLayout(hbox2)
@@ -15210,7 +15210,7 @@ class StackListFrame(QtWidgets.QDialog):
 
         vbox.addLayout(hbox)
 
-        vbox.addStretch(0.5)
+        vbox.addStretch(1)
 
 
         self.setLayout(vbox)
@@ -15597,7 +15597,7 @@ http://www.gnu.org/licenses/.''')
         hbox.addStretch(1)
         vbox2 = QtWidgets.QVBoxLayout()
         vbox2.addWidget(text1)
-        vbox2.addStretch(0.5)
+        vbox2.addStretch(1)
         vbox2.addWidget(text2)
         vbox2.addWidget(text3)
         vbox2.addWidget(text4)
@@ -15609,7 +15609,7 @@ http://www.gnu.org/licenses/.''')
         button_close = QtWidgets.QPushButton('Close')
         button_close.clicked.connect( self.close)
         vbox.addWidget(button_close)
-        vbox.addStretch(0.5)
+        vbox.addStretch(1)
 
 
 
