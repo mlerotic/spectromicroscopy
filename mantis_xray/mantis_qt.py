@@ -13053,7 +13053,7 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
             xshifts = self.ApplyApproximationFunction(self.xregion)
             yshifts = self.ApplyApproximationFunction(self.yregion)
             # if empty arrays, i.e., if less than 2 dots selected, do nothing
-            if [] in (xshifts, yshifts):
+            if not any(xshifts) or not any(yshifts):
                 return
             for ev in range(self.stack.n_ev):
                 # Only enqueue if new shift val is different to previous shift
