@@ -40,13 +40,11 @@ if hasattr(Qt, "HighDpiScaleFactorRoundingPolicy"):
 from PIL import Image
 from scipy import ndimage
 from scipy.stats import linregress
-from scipy.interpolate import interp1d, griddata, RegularGridInterpolator
-# from skimage.feature import register_translation ## deprecated
+from scipy.interpolate import interp1d, griddata
 from skimage.registration import phase_cross_correlation
-from skimage import img_as_ubyte, exposure
+from skimage import img_as_ubyte, exposure, filters
 from importlib.metadata import version as version_check
 from packaging.version import parse as parse_version
-#from skimage.segmentation import watershed, mark_boundaries
 from queue import SimpleQueue, Empty
 import threading
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -9505,7 +9503,7 @@ class PageStack(QtWidgets.QWidget):
             self.button_slideshow.setText("Stop stack movie")
             self.movie_playing = 1
             # #self.loadSpectrum(self.ix, self.iy)
-            self.updateRate = max((2,5000/self.stk.n_ev)) # 5ms min update rate or approximately 5 seconds total duration
+            self.updateRate = int(max((2,np.rint(5000/self.stk.n_ev)))) # 5ms min update rate or approximately 5 seconds total duration
             def displayNextImage():
                 QtWidgets.qApp.processEvents()
                 if self.movie_playing == 0:
@@ -12523,7 +12521,9 @@ class GeneralPurposeProcessor(QtCore.QRunnable):
         if self.current_itheta != itheta:
             self.current_itheta = itheta
             self.signals.ithetaprogress.emit(itheta)
-        drift, error, _ = phase_cross_correlation(self.Gauss(self.parent.stack.absdata_cropped[:, :, data[0],itheta]), self.Gauss(self.parent.stack.absdata_cropped[:, :, data[1],itheta]),upsample_factor=self.upsampling,normalization=None)
+        ref_img = self.EdgeDetect(self.Gauss(self.parent.stack.absdata_cropped[:, :, data[0],itheta]))
+        mov_img = self.EdgeDetect(self.Gauss(self.parent.stack.absdata_cropped[:, :, data[1],itheta]))
+        drift, error, _ = phase_cross_correlation(ref_img, mov_img,upsample_factor=self.upsampling,normalization=None)
         self.parent.stack.shiftsdict[itheta]["errors"][data[0]] = round(error,4)
         self.parent.stack.shiftsdict[itheta]["xdots"][data[0]] = round(drift[0],2)
         self.parent.stack.shiftsdict[itheta]["ydots"][data[0]] = round(drift[1],2)
@@ -12536,6 +12536,10 @@ class GeneralPurposeProcessor(QtCore.QRunnable):
     def Gauss(self, im):
         gaussed = ndimage.gaussian_filter(im, self.parent.spinBoxGauss.value())
         return gaussed
+    def EdgeDetect(self, im):
+        if self.parent.cb_edgedetect.isChecked():
+            im = filters.farid(im)
+        return im
 # ----------------------------------------------------------------------
 class TaskDispatcher(QtCore.QObject):
     def __init__(self,parent):
@@ -12600,7 +12604,6 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
             self.stack.absdata_cropped = self.stack.absdata4d.copy() # This image stack is used by the alignment/shift routine and cropped to the ROI rectangle
             self.stack.absdata4d_shifted = self.stack.absdata4d.copy() # This is the full-sized output of the alignment/shift routine
             self.stack.absdata4d_shifted_cropped = self.stack.absdata4d.copy() # This is the output cropped to the common region
-        #self.stack.absdata_unaligned = self.stack.absdata_shifted_cropped
         self.poolthread = QtCore.QThread()
         self.aligned = False
         self.SetupUI()
@@ -12608,6 +12611,8 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
     def SetupUI(self):
         self.button_ok.setEnabled(False)
         self.button_rstroi.setEnabled(False)
+        self.button_rstalign.setEnabled(False)
+        self.button_preview.setEnabled(True)
         self.slider_theta.setVisible(False)
         self.setWindowTitle('Align Stack v2')
         self.pglayout = pg.GraphicsLayout(border=None)
@@ -12623,7 +12628,7 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
         self.DriftsWidget.setBackground("w")
 
         self.py = self.DriftsWidget.addPlot(row=0, col=0, rowspan=1, colspan=1)
-        self.py.setMouseEnabled(x=False, y=True)
+        self.py.setMouseEnabled(x=True, y=True)
         #self.i_item = pg.ImageItem(border="k")
         #self.py.setAspectLocked(lock=True, ratio=1)
         self.py.showAxis("top", show=True)
@@ -12648,7 +12653,7 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
 
         self.px = self.DriftsWidget.addPlot(row=1, col=0, rowspan=1, colspan=1)
         self.px.setXLink(self.py)
-        self.px.setMouseEnabled(x=False, y=True)
+        self.px.setMouseEnabled(x=True, y=True)
         #self.i_item = pg.ImageItem(border="k")
         #self.px.setAspectLocked(lock=True, ratio=1)
         self.px.showAxis("top", show=True)
@@ -12681,6 +12686,9 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
             self.spinBoxError.setEnabled(False)
             self.slider_eng.sliderPressed.connect(self.ShowImage)
             self.slider_eng.sliderReleased.connect(self.ShowImage)
+            self.button_preview.clicked.connect(self.ShowImage)
+            self.spinBoxGauss.valueChanged.connect(self.ShowImage)
+            self.cb_edgedetect.toggled.connect(self.ShowImage)
             self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
             self.slider_eng.setRange(0, self.stack.n_ev - 1)
             self.refmarkerx = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen(color="b", width=2, style=QtCore.Qt.DashLine))
@@ -12921,7 +12929,6 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
         ydata = ydata[~boolarray]
         #print(selected)
         if selected < 2:
-            QtWidgets.QMessageBox.warning(self, 'Error', 'Select at least two images in {}-direction!'.format(selectscatter[region][1]))
             return []
         if self.comboBox_approx.currentIndex() == 0: # moving average
             self.spinBoxFiltersize.setEnabled(True)
@@ -12972,6 +12979,7 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
         elif self.aligned and self.pool.pool.activeThreadCount() == 0:
             self.OnAutoCrop()
             print("-------------")
+        QtWidgets.QApplication.restoreOverrideCursor()
 
     def ComposeAlignQueue(self):
         self.button_align.setEnabled(False)
@@ -13022,6 +13030,7 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
             itheta = itheta + 1
         if not self.pool.queue.empty():
             print("1 - Task queue composed. Starting poolthread for displacement estimation.")
+            QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
             self.poolthread.start()
         
     def ComposeShiftQueue(self, init=False):
@@ -13055,6 +13064,7 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
                     self.pool.enqueuetask("ShiftImg", ev, xshifts[ev], yshifts[ev],itheta)
         if not self.pool.queue.empty():
             print("1 - Task queue composed. Starting poolthread for image shifting.")
+            QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
             self.poolthread.start()
 
     # ----------------------------------------------------------------------
@@ -13064,12 +13074,15 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
     # ----------------------------------------------------------------------
     def OnAutoCrop(self):
         if self.aligned:
+            self.button_preview.blockSignals(True)
+            self.button_preview.setChecked(False)
+            self.button_preview.blockSignals(False)
             self.cb_autocrop.blockSignals(True)
             self.CropStack4D()
             self.cb_autocrop.blockSignals(False)
             self.OnScrollEng(self.iev)
-            #self.button_align.setEnabled(False)
             self.button_rstroi.setEnabled(True)
+            self.button_rstalign.setEnabled(True)
             self.button_ok.setEnabled(True)
 
     def CropStack4D(self):
@@ -13080,6 +13093,8 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
             globalmaxx = max([j for i in [self.stack.shiftsdict[theta]["xshifts"] for theta in ntheta] for j in i])
             globalminy = min([j for i in [self.stack.shiftsdict[theta]["yshifts"] for theta in ntheta] for j in i])
             globalmaxy = max([j for i in [self.stack.shiftsdict[theta]["yshifts"] for theta in ntheta] for j in i])
+            if globalminx == globalmaxx == globalminy == globalmaxy == False:
+                return
             #if not self.com.stack_4d:
             self.box.hide()
             l = -int(np.floor(globalminx))
@@ -13147,7 +13162,12 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
 
     def ShowImage(self):
         self.stack.absdata_shifted_cropped = self.stack.absdata4d_shifted_cropped[:, :, :, int(self.itheta)]
-        self.i_item.setImage(self.stack.absdata_shifted_cropped[:, :, int(self.iev)])
+        im = self.stack.absdata_shifted_cropped[:, :, int(self.iev)]
+        if self.button_preview.isChecked():
+            im = ndimage.gaussian_filter(im, self.spinBoxGauss.value())
+            if self.cb_edgedetect.isChecked():
+                im = filters.farid(im)
+        self.i_item.setImage(im)
         if self.com.stack_4d == 1:
             self.groupBox.setTitle(str('Stack Browser | Image at {0:5.2f} eV and {1:5.1f}°').format(float(self.stack.ev[self.iev]),float(self.stack.theta[self.itheta]), ))
         else:
@@ -13162,7 +13182,8 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
         self.vb.addItem(self.box, ignoreBounds=False)
         self.box.sigRegionChangeFinished.connect(self.OnBoxChanged)
         self.box.sigRegionChangeStarted.connect(self.OnBoxChanging)
-        self.button_rstroi.clicked.connect(self.OnResetROI)
+        self.button_rstroi.clicked.connect(self.OnResetAlignROI)
+        self.button_rstalign.clicked.connect(self.OnResetAlign)
     ## The ROI is limited to the visible image area. OnMouseMoveOutside handles the behavior when
     def ClearShifts(self):
         self.aligned = False
@@ -13172,7 +13193,7 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
         self.InitShiftsDict()
         self.button_align.setEnabled(True)
         self.MakeNewScatterPlots()
-    def OnResetROI(self):
+    def OnResetAlignROI(self):
         self.ClearShifts()
         self.stack.absdata4d_shifted_cropped = self.stack.absdata4d.copy()
         self.OnScrollEng(self.iev)
@@ -13180,6 +13201,14 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
         self.box.setSize(self.i_item.boundingRect().bottomRight() - self.box.pos(), update=True, snap=True, finish=True)
         self.box.show()
         self.button_rstroi.setEnabled(False)
+        self.button_rstalign.setEnabled(False)
+        self.button_ok.setEnabled(False)
+    def OnResetAlign(self):
+        self.ClearShifts()
+        self.stack.absdata4d_shifted_cropped = self.stack.absdata4d.copy()
+        self.OnScrollEng(self.iev)
+        self.box.show()
+        self.button_rstalign.setEnabled(False)
         self.button_ok.setEnabled(False)
     def OnBoxChanging(self):
         self.boxsize = self.box.size()
