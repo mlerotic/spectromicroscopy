@@ -13052,7 +13052,7 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
             xshifts = self.ApplyApproximationFunction(self.xregion)
             yshifts = self.ApplyApproximationFunction(self.yregion)
             # if empty arrays, i.e., if less than 2 dots selected, do nothing
-            if not any(xshifts) or not any(yshifts):
+            if not any(xshifts) and not any(yshifts):
                 return
             for ev in range(self.stack.n_ev):
                 # Only enqueue after reset or if new shift value is different to previous shift value
@@ -14628,6 +14628,9 @@ class ShowODMap(QtWidgets.QWidget):
 
         self.filterSpinBox.valueChanged.connect(lambda: self.ShowMap(self.prelst, self.postlst))
         self.filterSpinBox.setEnabled(False)
+        self.rb_filterlee.setEnabled(False)
+        self.rb_filteruniform.setEnabled(False)
+        self.rb_filterlee.toggled.connect(lambda: self.ShowMap(self.prelst, self.postlst))
         self.MapSelectWidget1.mousePressEvent = self.mouseEventOnQList
         self.MapSelectWidget1.mouseMoveEvent = self.mouseEventOnQList
 
@@ -14693,7 +14696,7 @@ class ShowODMap(QtWidgets.QWidget):
                 self.pbClrSel.setEnabled(True)
 
             #self.odimgfig.loadData()
-            self.odimgfig.OnColormapChange(map="gray", num_colors=self.StepSpin.value())
+            self.odimgfig.OnColormapChange()
             self.OnScrollEng(self.MapSelectWidget1.currentRow())
             #            self.cm.clear()
             self.odimgfig.imageplot.titleLabel.setText("<center>Select at least one pre- and post-edge image!</center>",size='10pt')
@@ -14703,6 +14706,8 @@ class ShowODMap(QtWidgets.QWidget):
             #self.ODLowSpinBox.setEnabled(False)
             self.pbRSTOD.setEnabled(False)
             self.filterSpinBox.setEnabled(False)
+            self.rb_filterlee.setEnabled(False)
+            self.rb_filteruniform.setEnabled(False)
             self.pbExpData.setEnabled(False)
             self.pbExpImg.setEnabled(False)
 
@@ -14939,6 +14944,8 @@ class ShowODMap(QtWidgets.QWidget):
             self.MapSelectWidget1.addItem(item)
         #self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
         self.qlistchanged.connect(self.qListChangeHandler)
+        self.odimgfig.OnColormapChange()
+
         #self.OnScrollEng(0) # Plot first image & set Scrollbar
         #self.OnMetricScale(self.MetricCheckBox.isChecked(), True, False)
         self.pbSelfromSpec.setEnabled(True)
@@ -15116,7 +15123,10 @@ class ShowODMap(QtWidgets.QWidget):
                                            size='10pt')
             self.OD = self.CalcODMap(preidx, postidx)
             if self.filterSpinBox.value() > 1:
-                self.OD = ndimage.filters.uniform_filter(self.OD, size=self.filterSpinBox.value(), mode='nearest')
+                if self.rb_filteruniform.isChecked():
+                    self.OD = ndimage.filters.uniform_filter(self.OD, size=self.filterSpinBox.value(), mode='nearest')
+                elif self.rb_filterlee.isChecked():
+                    self.OD = self.leeFilter(self.OD, size=self.filterSpinBox.value())
             self.ODmin = np.min(self.OD)
             self.ODmax = np.max(self.OD)
             #self.ODHighSpinBox.setEnabled(True)
@@ -15134,6 +15144,8 @@ class ShowODMap(QtWidgets.QWidget):
             #self.ODLowSpinBox.blockSignals(False)
             self.pbRSTOD.setEnabled(True)
             self.filterSpinBox.setEnabled(True)
+            self.rb_filterlee.setEnabled(True)
+            self.rb_filteruniform.setEnabled(True)
             self.pbExpData.setEnabled(True)
             self.pbExpImg.setEnabled(True)
         #     #self.pglayout.layout.setColumnMaximumWidth(1, self.p1.width())
@@ -15143,6 +15155,16 @@ class ShowODMap(QtWidgets.QWidget):
         #     self.cm.clear()
             #self.p2.setTitle("Please select a second image!")
             #print("Select a second image!")
+
+    def leeFilter(self, img, size):
+        mean = ndimage.filters.uniform_filter(img, (size, size),mode='nearest')
+        sqrmean = ndimage.filters.uniform_filter(img ** 2, (size, size),mode='nearest')
+        var = sqrmean - mean ** 2
+        totvar = np.var(img)
+
+        weights = var / (var + totvar)
+        img = mean + weights * (img - mean)
+        return img
 
     def closeEvent(self, event):
         #self.Clear()
