@@ -13112,7 +13112,7 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
             if 0 in self.stack.absdata4d_shifted_cropped[l:cr,b:ct,:,self.itheta].shape:
                 QtWidgets.QMessageBox.warning(self, 'Error', 'The alignment failed. Cropping would result in a zero-dimensional image. Please check your settings. Auto-crop has been disabled. You can re-enable it manually.')
                 self.cb_autocrop.setChecked(False)
-                self.OnResetROI()
+                self.OnResetAlignROI()
             else:
                 self.stack.absdata4d_shifted_cropped = self.stack.absdata4d_shifted_cropped[l:cr,b:ct,:,:]
                 print("4 - Stack cropped to common region: ", globalminx, globalmaxx, globalminy, globalmaxy)

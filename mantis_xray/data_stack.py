@@ -582,11 +582,15 @@ class data:
         if np.isnan(self.x_pxsize) and np.isnan(self.y_pxsize):
             print("Point spectra are currently not supported.")
             return
-        else:
+        else: #In line scans when one dimension is not known, assume square pixels:
             if np.isnan(self.y_pxsize): # horizontal line
                 self.y_pxsize = self.x_pxsize
+                self.y_start = 0
+                self.y_stop = self.y_pxsize
             elif np.isnan(self.x_pxsize): # vertical line
                 self.x_pxsize = self.y_pxsize
+                self.x_start = 0
+                self.x_stop = self.x_pxsize
 
         if self.x_pxsize == self.y_pxsize:
             self.squarepx = True
