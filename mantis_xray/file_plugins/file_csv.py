@@ -16,20 +16,20 @@ from __future__ import print_function
 #   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #   GNU General Public License for more details <http://www.gnu.org/licenses/>.
 
-import numpy as np
+import numpy
 import os
 
 
-title = 'text spectrum'
+title = 'text table'
 extension = ['*.csv','*.txt','*.xas']
-read_types = ['spectrum']
+read_types = ['spectrum','stack']
 write_types = ['spectrum','stack']
 
 
 def identify(filename):
     try:
-        with open(file_name, 'tr') as check_file:  # try open file in text mode
-            check_file.read()
+        with open(filename, 'tr') as check_file:  # try open file in text mode and read a single line
+            check_file.readline()
             return True
     except:
         return False
@@ -40,6 +40,57 @@ def GetFileStructure(FileName):
 
 #----------------------------------------------------------------------
 def read(filename, self, selection=None, *args, **kwargs):
+
+    with open(str(filename),'r') as f:
+        Line = f.readline().split()
+    if Line == ['#X', '#Y', '#Wave', '#Intensity']:
+        read_stack(filename, self, **kwargs)
+    else:
+        read_spectrum(filename, self, **kwargs)
+    
+    return
+
+def read_stack(filename, self, selection=None, *args, **kwargs):
+    """
+    This reads the text version of an SPC hyperspectral map from a Raman measurement.
+    """
+
+    f = open(str(filename),'r')
+    
+    xlist = []
+    ylist = []    
+    wlist = []
+    ilist = []    
+
+    for line in f:
+        if line.startswith(("*","%","#")):
+            pass
+        else:
+            x, y, w, i = [float (x) for x in line.split()] 
+            xlist.append(x)
+            ylist.append(y)
+            wlist.append(w)
+            ilist.append(i)
+    
+    self.x_dist = numpy.unique(xlist)
+    self.y_dist = numpy.unique(ylist)
+    self.ev = numpy.unique(wlist)
+
+    self.n_cols = len(self.x_dist)
+    self.n_rows = len(self.y_dist)
+    self.n_ev = len(self.ev)
+
+    self.data_dwell = numpy.ones((self.n_ev))*1.0
+    self.absdata = numpy.empty((self.n_cols,self.n_rows, self.n_ev))
+
+    self.absdata = numpy.flip(numpy.transpose(numpy.reshape(ilist, (self.n_rows, self.n_cols, self.n_ev), order='C'), axes=[1,0,2]), axis=2)
+
+    self.fill_h5_struct_from_stk()
+
+
+    return
+
+def read_spectrum(filename, self, selection=None, *args, **kwargs):
 
     f = open(str(filename),'r')
     
@@ -54,8 +105,8 @@ def read(filename, self, selection=None, *args, **kwargs):
             elist.append(e)
             ilist.append(i)
             
-    self.evi0 = np.array(elist)
-    self.i0data = np.array(ilist) 
+    self.evi0 = numpy.array(elist)
+    self.i0data = numpy.array(ilist) 
             
     f.close()
     
@@ -69,7 +120,7 @@ def write(filename, data_object, data_type):
     if data_type in ['spectrum']:
         write_spectrum(filename, data_object.absdata, data_object.ev)
     elif data_type in ['stack']:
-        write_spectrum(filename, np.average(data_object.absdata,axis=(0,1)), energies=data_object.ev, title='I0 Spectrum')
+        write_spectrum(filename, numpy.average(data_object.absdata,axis=(0,1)), energies=data_object.ev, title='I0 Spectrum')
 
 #----------------------------------------------------------------------
 def write_spectrum(filename, data, energies, title=None ):
