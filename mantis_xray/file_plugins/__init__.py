@@ -37,7 +37,7 @@ read(filename,stack_object,..)  : Loads data from the URL 'filename' into the ob
 """
 from __future__ import print_function
 
-import pkgutil, imp, os, sys
+import pkgutil, importlib, os, sys
 import numpy
 from .. import data_stack
 
@@ -53,10 +53,13 @@ plugins = []
 for m in pkgutil.iter_modules(path=__path__):
     if verbose: print("Loading file plugin:", m[1], ".", end=' ')
     try:
-        details = imp.find_module(m[1],__path__)
+        spec = importlib.util.spec_from_file_location(m.name, os.path.join(__path__[0],m.name+'.py'))
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[m.name] = module
+        spec.loader.exec_module(module)
         # check if there is a read() function in plugin
-        if 'read' in dir(imp.load_module(m[1],*details)):
-            plugins.append(imp.load_module(m[1],*details))
+        if 'read' in dir(module):
+            plugins.append(module)
             if verbose: print("("+plugins[-1].title+") Success!")
         else:
             if verbose: print('Not a valid plugin - skipping.')
