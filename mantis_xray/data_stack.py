@@ -709,7 +709,7 @@ class data:
                 return
             else:
                 for ie in range(self.n_ev):
-                    writer.writerow(['{0:06.2f}, {1:012g}'.format(evdata[ie], data[ie])])
+                    writer.writerow([f'{evdata[ie]:06.2f}', f'{data[ie]:012g}'])
                 return
 
     # ----------------------------------------------------------------------
