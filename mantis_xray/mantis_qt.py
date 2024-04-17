@@ -15782,7 +15782,7 @@ class SpecFig():
 
             self.setPlotItemVisibility(False)
             x, y = (self.parent.stk.evi0, self.parent.stk.i0data)
-            curve = pg.PlotCurveItem(x,y, pen=({'color': "r", 'width': 2}),
+            curve = pg.PlotCurveItem(x,y, pen=({'color': "#ff7700", 'width': 2}),
                                      skipFiniteCheck=True, name="I0")
             self.plotitem.addItem(curve)
             #vb = self.plotitem.items[-1].getViewBox()
@@ -15809,14 +15809,15 @@ class SpecFig():
         self.parent.button_clearlastroi.setEnabled(False)
         self.parent.button_mergeroi.setEnabled(False)
         self.parent.button_subtractroi.setEnabled(False)
-        self.roicolor = (255,0,0,255)
+        self.roicolor = (255,119,0,255)
         self.parent.absimgfig.OnROIShapeChanged("Histogram")
         #self.parent.ROIShapeBox.setCurrentText("Histogram")
-        self.parent.ROIShapeBox.setStyleSheet("color: red;");
+        self.parent.ROIShapeBox.setStyleSheet("color: #ff7700;");
         self.parent.label_roitype.setText("I0 type")
-        self.parent.label_roitype.setStyleSheet("color: red;");
+        self.parent.label_roitype.setStyleSheet("color: #ff7700;");
         self.parent.button_i0.disconnect()
         self.parent.button_i0.setText("Accept I0")
+        self.parent.button_i0.setStyleSheet("color: #ff7700;");
         self.parent.button_i0.clicked.connect( self.OnI0Accept)
 
     # ----------------------------------------------------------------------
@@ -15838,6 +15839,7 @@ class SpecFig():
             self.parent.I0histogramCalculated()
             self.parent.button_i0.disconnect()
             self.parent.button_i0.setText("Reset I0")
+            self.parent.button_i0.setStyleSheet("color: black;");
             self.parent.ROIShapeBox.setStyleSheet("color: black;");
             self.parent.button_i0.clicked.connect(self.OnI0Reset)
             self.parent.label_roitype.setText("ROI type")
@@ -15864,20 +15866,20 @@ class SpecFig():
         self.parent.button_i0.clicked.connect(self.OnI0Histogram)
 
     def GetNextROINumberandColor(self):
-        hues = 10
-        alpha = 128
-        maxValue= 215
+        #Light qualitative color scheme for color-blind vision (https://personal.sron.nl/~pault/#sec:qualitative)
+        lut = ['#6699DD', '#99DDFF', '#44BB99','#ABCB33', '#AAAA00','#EEDD88','#EE8866','#FFAABB']
+        hues = len(lut)
         index = len(self.plotitem.items)
         if self.parent.ROIShapeBox.currentText() == "Histogram":
             index = index - 2
 
         name = "ROI " + str(index - 1)
-        color = pg.intColor(index, alpha=alpha, hues=hues, maxValue=maxValue)
-
-        return name, color, (index, hues)
+        color = QtGui.QColor(lut[(index - 2) % hues])
+        return name, color
 
     def OnLockSpectrum(self):
-        name, color, colortup = self.GetNextROINumberandColor()
+        name, color = self.GetNextROINumberandColor()
+        color.setAlpha(200)
         curve = pg.PlotCurveItem(pen=({'color': color, 'width': 2}), skipFiniteCheck=True,
                                  name=name)
         curve.hide()
@@ -15889,7 +15891,7 @@ class SpecFig():
             self.plotitem.items.insert(-2, curve)
         else:
             curve.show()
-        self.parent.absimgfig.addLockedROI(colortup)
+        self.parent.absimgfig.addLockedROI(color)
         curve.setData(x,y)
 
     def removeLast2ROI(self,i,roiitems):
@@ -15912,8 +15914,9 @@ class SpecFig():
                 indices = np.where(boolmask == False)
                 self.removeLast2ROI(i,roiitems)
                 roi = np.zeros([*boolmask.shape, 4], dtype=np.uint8)
-                name, color, colortup = self.GetNextROINumberandColor()
-                roi[indices] = pg.intColor(*colortup, alpha=128, maxValue= 215).getRgb()
+                name, color = self.GetNextROINumberandColor()
+                color.setAlpha(200)
+                roi[indices] = color.getRgb()
                 lockedroi = pg.ImageItem(image=roi, border="k", opacity=0.5)
                 self.parent.absimgfig.imageplot.addItem(lockedroi, ignoreBounds=True)
 
@@ -15952,8 +15955,9 @@ class SpecFig():
                 indices = np.where(boolmask == False)
                 self.removeLast2ROI(i,roiitems)
                 roi = np.zeros([*boolmask.shape, 4], dtype=np.uint8)
-                name, color, colortup = self.GetNextROINumberandColor()
-                roi[indices] = pg.intColor(*colortup, alpha=128, maxValue= 215).getRgb()
+                name, color = self.GetNextROINumberandColor()
+                color.setAlpha(200)
+                roi[indices] = color.getRgb()
                 lockedroi = pg.ImageItem(image=roi, border="k", opacity=0.5)
                 self.parent.absimgfig.imageplot.addItem(lockedroi, ignoreBounds=True)
 
@@ -16446,10 +16450,10 @@ class ImgFig():
             self.roi.setZValue(10)  # make sure ROI is drawn above image
             self.roi.sigRegionChanged.connect(self.parent.specfig.updatePlotData)
 
-    def addLockedROI(self,colortup):
+    def addLockedROI(self,color):
         roi = np.zeros([*self.imageitem.image.shape, 4], dtype=np.uint8)
         indices = np.where(self.boolmask == False)
-        roi[indices] = pg.intColor(*colortup, alpha=128, maxValue= 215).getRgb()
+        roi[indices] = color.getRgb()
         lockedroi = pg.ImageItem(image=roi, border="k", opacity=0.5)
 
         self.imageplot.addItem(lockedroi, ignoreBounds=True)
@@ -16694,7 +16698,12 @@ class MainFrame(QtWidgets.QMainWindow):
 #                 self.page7 = PageNNMA(self.common, self.data_struct, self.stk, self.anlz, self.nnma)
 #                 tabs.addTab(self.page7, "NNMA Analysis")
 
-
+        for role in dir(self.palette()):
+            try:
+                BGcolor = self.palette().color(getattr(self.palette(),role))
+                print(role, (BGcolor.red(),BGcolor.green(),BGcolor.blue()))
+            except TypeError:
+                pass
         layout = QtWidgets.QVBoxLayout()
 
         layout.addWidget(tabs)
