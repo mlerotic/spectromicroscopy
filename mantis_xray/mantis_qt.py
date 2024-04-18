@@ -12994,7 +12994,11 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
             return
 
         itheta = 0
-        ntheta = max(self.stack.n_theta,1) # necessary work around for 3d stacks and if 4d stack is loaded with LoadStack()
+        #necessary work around for 3d stacks and if 4d stack is loaded with LoadStack()
+        if self.com.stack_4d != 1:
+            ntheta = 1
+        else:
+            ntheta = max(self.stack.n_theta, 1)
         while itheta < ntheta:
             idx = copy.copy(self.stack.n_ev)
             while idx: # Generate pairs of indices starting at reference image index.
@@ -13040,7 +13044,10 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
         if not init:
             ntheta = [self.itheta]
         else:
-            ntheta = range(max(self.stack.n_theta,1)) # necessary work around for 3d stacks and if 4d stack is loaded with LoadStack()
+            if self.com.stack_4d != 1:
+                ntheta = range(1)
+            else:
+                ntheta = range(max(self.stack.n_theta,1)) # necessary work around for 3d stacks and if 4d stack is loaded with LoadStack()
             for itheta in ntheta:
                 self.initParams(itheta)
         for itheta in ntheta:
@@ -15866,8 +15873,8 @@ class SpecFig():
         self.parent.button_i0.clicked.connect(self.OnI0Histogram)
 
     def GetNextROINumberandColor(self):
-        #Light qualitative color scheme for color-blind vision (https://personal.sron.nl/~pault/#sec:qualitative)
-        lut = ['#6699DD', '#99DDFF', '#44BB99','#ABCB33', '#AAAA00','#EEDD88','#EE8866','#FFAABB']
+        #MANTiS unique Light qualitative color scheme
+        lut = ['#6699DD','#EE7733','#ABCC44','#99DDFF','#FFAABB','#BAAA00','#AB2622','#44BB99','#AA4499','#EEDD89']
         hues = len(lut)
         index = len(self.plotitem.items)
         if self.parent.ROIShapeBox.currentText() == "Histogram":
@@ -16698,12 +16705,6 @@ class MainFrame(QtWidgets.QMainWindow):
 #                 self.page7 = PageNNMA(self.common, self.data_struct, self.stk, self.anlz, self.nnma)
 #                 tabs.addTab(self.page7, "NNMA Analysis")
 
-        for role in dir(self.palette()):
-            try:
-                BGcolor = self.palette().color(getattr(self.palette(),role))
-                print(role, (BGcolor.red(),BGcolor.green(),BGcolor.blue()))
-            except TypeError:
-                pass
         layout = QtWidgets.QVBoxLayout()
 
         layout.addWidget(tabs)
