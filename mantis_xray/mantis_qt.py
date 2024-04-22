@@ -16296,7 +16296,7 @@ class ImgFig():
         self.map = "gray"
         # Future syntax: cm = pg.colormap.get(map, source="matplotlib")
         cm = pg.colormap.getFromMatplotlib(self.map)
-        self.bar = pg.ColorBarItem(values=(0, 1), cmap=cm, rounding=0.0001)  # init color bar
+        self.bar = pg.ColorBarItem(values=(0, 1), colorMap=cm, rounding=0.0001)  # init color bar
         self.mousepressed = False
 
     def loadNewImage(self):
