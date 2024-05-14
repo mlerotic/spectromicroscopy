@@ -9285,7 +9285,7 @@ class PageStack(QtWidgets.QWidget):
                 self.stk.read_sdf_i0(filepath)
                 self.com.i0_loaded = 1
                 #self.loadSpectrum(self.ix, self.iy)
-                self.loadNewImage()
+                self.absimgfig.loadNewImage()
 
                 QtWidgets.QApplication.restoreOverrideCursor()
 
@@ -9304,7 +9304,7 @@ class PageStack(QtWidgets.QWidget):
 
                 self.com.i0_loaded = 1
                 #self.loadSpectrum(self.ix, self.iy)
-                self.loadNewImage()
+                self.absimgfig.loadNewImage()
 
                 QtWidgets.QApplication.restoreOverrideCursor()
 
@@ -9322,7 +9322,7 @@ class PageStack(QtWidgets.QWidget):
 
                 self.com.i0_loaded = 1
                 #self.loadSpectrum(self.ix, self.iy)
-                self.loadNewImage()
+                self.absimgfig.loadNewImage()
 
                 QtWidgets.QApplication.restoreOverrideCursor()
 
