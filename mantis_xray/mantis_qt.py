@@ -93,7 +93,6 @@ print("\nPlease report issues to https://github.com/mlerotic/spectromicroscopy/i
 
 ## Global Stylesheet
 qsspath = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'stylesheet_global.qss')
-
 Winsizex = 1620
 Winsizey = 920
 
@@ -9286,7 +9285,7 @@ class PageStack(QtWidgets.QWidget):
                 self.stk.read_sdf_i0(filepath)
                 self.com.i0_loaded = 1
                 #self.loadSpectrum(self.ix, self.iy)
-                self.loadNewImage()
+                self.absimgfig.loadNewImage()
 
                 QtWidgets.QApplication.restoreOverrideCursor()
 
@@ -9305,7 +9304,7 @@ class PageStack(QtWidgets.QWidget):
 
                 self.com.i0_loaded = 1
                 #self.loadSpectrum(self.ix, self.iy)
-                self.loadNewImage()
+                self.absimgfig.loadNewImage()
 
                 QtWidgets.QApplication.restoreOverrideCursor()
 
@@ -9323,7 +9322,7 @@ class PageStack(QtWidgets.QWidget):
 
                 self.com.i0_loaded = 1
                 #self.loadSpectrum(self.ix, self.iy)
-                self.loadNewImage()
+                self.absimgfig.loadNewImage()
 
                 QtWidgets.QApplication.restoreOverrideCursor()
 
@@ -15616,7 +15615,7 @@ class AboutFrame(QtWidgets.QDialog):
         #font2 = wx.Font(12, wx.SWISS, wx.NORMAL, wx.NORMAL)
         text2 = QtWidgets.QLabel(self)
         text2.setText('Mantis '+version)
-        text2.setStyleSheet('font-size: 12pt')
+        text2.setStyleSheet('color: rgb(0,0,0);font-size: 12pt')
         #text2.SetFont(font2)
 
         #font3 = wx.Font(8, wx.SWISS, wx.NORMAL, wx.NORMAL)
@@ -15625,6 +15624,7 @@ class AboutFrame(QtWidgets.QDialog):
 Developed by Mirna Lerotic, based on earlier programs by Mirna
 Lerotic and Chris Jacobsen. Initial development supported by
 Argonne National Laboratory LDRD 2010-193-R1 9113. ''')
+        text3.setStyleSheet('color: rgb(0,0,0)')
         #text3.SetFont(font3)
 
 
@@ -15641,6 +15641,7 @@ but WITHOUT ANY WARRANTY; without even the implied warranty
 of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 See the GNU General Public License for more details
 http://www.gnu.org/licenses/.''')
+        text4.setStyleSheet('color: rgb(0,0,0)')
         #text4.SetFont(font4)
 
         vbox.addStretch(1)
@@ -15846,11 +15847,11 @@ class SpecFig():
             self.parent.I0histogramCalculated()
             self.parent.button_i0.disconnect()
             self.parent.button_i0.setText("Reset I0")
-            self.parent.button_i0.setStyleSheet("color: black;");
-            self.parent.ROIShapeBox.setStyleSheet("color: black;");
+            self.parent.button_i0.setStyleSheet(""); #pass an empty string to return to default style
+            self.parent.ROIShapeBox.setStyleSheet("");
             self.parent.button_i0.clicked.connect(self.OnI0Reset)
             self.parent.label_roitype.setText("ROI type")
-            self.parent.label_roitype.setStyleSheet("color: black;");
+            self.parent.label_roitype.setStyleSheet("");
             QtWidgets.QApplication.restoreOverrideCursor()
         else:
             QtWidgets.QApplication.restoreOverrideCursor()
@@ -16644,7 +16645,6 @@ class MainFrame(QtWidgets.QMainWindow):
 
         tabs = QtWidgets.QTabWidget()
 
-
         # create the page windows as tabs
         self.page0 = PageLoadData(self.common, self.data_struct, self.stk)
         self.page1 = PageStack(self.common, self.data_struct, self.stk)
@@ -16678,16 +16678,32 @@ class MainFrame(QtWidgets.QMainWindow):
         else:
             tabs.setMinimumHeight(400)
 
-        tabs.tabBar().setTabTextColor(0, QtGui.QColor('green'))
-        tabs.tabBar().setTabTextColor(1, QtGui.QColor('green'))
-        tabs.tabBar().setTabTextColor(2, QtGui.QColor('darkRed'))
-        tabs.tabBar().setTabTextColor(3, QtGui.QColor('darkRed'))
-        tabs.tabBar().setTabTextColor(4, QtGui.QColor('darkRed'))
-        tabs.tabBar().setTabTextColor(5, QtGui.QColor('darkRed'))
-        tabs.tabBar().setTabTextColor(6, QtGui.QColor('purple'))
-        tabs.tabBar().setTabTextColor(7, QtGui.QColor('purple'))
-        if showtomotab:
-            tabs.tabBar().setTabTextColor(8, QtGui.QColor('darkblue'))
+
+        # print Qt colours
+        BackgroundColour = self.palette().color(self.palette().Background)
+        DarkBackgroundFlag = (BackgroundColour.red()+BackgroundColour.green()+BackgroundColour.blue()) < 375
+        if DarkBackgroundFlag:
+            tabs.tabBar().setTabTextColor(0, QtGui.QColor('lightgreen'))
+            tabs.tabBar().setTabTextColor(1, QtGui.QColor('lightgreen'))
+            tabs.tabBar().setTabTextColor(2, QtGui.QColor('tomato'))
+            tabs.tabBar().setTabTextColor(3, QtGui.QColor('tomato'))
+            tabs.tabBar().setTabTextColor(4, QtGui.QColor('tomato'))
+            tabs.tabBar().setTabTextColor(5, QtGui.QColor('tomato'))
+            tabs.tabBar().setTabTextColor(6, QtGui.QColor('orchid'))
+            tabs.tabBar().setTabTextColor(7, QtGui.QColor('orchid'))
+            if showtomotab:
+                tabs.tabBar().setTabTextColor(8, QtGui.QColor('dodgerblue'))
+        else:
+            tabs.tabBar().setTabTextColor(0, QtGui.QColor('green'))
+            tabs.tabBar().setTabTextColor(1, QtGui.QColor('green'))
+            tabs.tabBar().setTabTextColor(2, QtGui.QColor('darkRed'))
+            tabs.tabBar().setTabTextColor(3, QtGui.QColor('darkRed'))
+            tabs.tabBar().setTabTextColor(4, QtGui.QColor('darkRed'))
+            tabs.tabBar().setTabTextColor(5, QtGui.QColor('darkRed'))
+            tabs.tabBar().setTabTextColor(6, QtGui.QColor('purple'))
+            tabs.tabBar().setTabTextColor(7, QtGui.QColor('purple'))
+            if showtomotab:
+                tabs.tabBar().setTabTextColor(8, QtGui.QColor('darkblue'))
         #if showmaptab:
         #    tabs.tabBar().setTabTextColor(9, QtGui.QColor('darkblue'))
 
