@@ -16293,9 +16293,8 @@ class ImgFig():
         bx1.setStyle(showValues=False,tickLength=0)
         self.imageplot.setTitle("No data loaded")
         self.map = "gray"
-        # Future syntax: cm = pg.colormap.get(map, source="matplotlib")
-        cm = pg.colormap.getFromMatplotlib(self.map)
-        self.bar = pg.ColorBarItem(values=(0, 1), cmap=cm, rounding=0.0001)  # init color bar
+        cm = pg.colormap.get(self.map, source="matplotlib")
+        self.bar = pg.ColorBarItem(values=(0, 1), colorMap=cm, rounding=0.0001)  # init color bar
         self.mousepressed = False
 
     def loadNewImage(self):
@@ -16557,12 +16556,14 @@ class ImgFig():
 
     def OnColormapChange(self, map="gray", num_colors=256):
         self.map = map
-        # Future syntax: cm = pg.colormap.get(map, source="matplotlib")
-        cm = pg.colormap.getFromMatplotlib(self.map)
+        cm = pg.colormap.get(self.map, source="matplotlib")
         lut = cm.getLookupTable(0, 1, num_colors)
         if self.parent.com.stack_loaded == 1:
-            self.bar.bar.setLookupTable(lut)
+            lut = np.ascontiguousarray(lut)
             self.imageitem.setLookupTable(lut)
+            lut = np.expand_dims(lut, axis=1)
+            qimg = pg.functions.ndarray_to_qimage(lut, QtGui.QImage.Format.Format_RGB888)
+            self.bar.bar.setPixmap(QtGui.QPixmap.fromImage(qimg).scaled(1, 256))
 
     def OnShowScale(self):
         suffix = "m"
