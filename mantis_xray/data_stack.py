@@ -665,7 +665,7 @@ class data:
     # ----------------------------------------------------------------------
     def write_csv(self, filename, evdata, data, cname=''):
         with open(filename, 'w', ) as f:
-            writer = csv.writer(f, quoting=csv.QUOTE_ALL)
+            writer = csv.writer(f, quoting=csv.QUOTE_MINIMAL)
             header = [['*********************  X-ray Absorption Data  ********************'],
                       ['*'],
                       ['* Formula: '],
@@ -673,7 +673,7 @@ class data:
                       ['* Edge: '],
                       ['* Acquisition mode: '],
                       ['* Source and purity: '],
-                      ['* Comments: Stack list ROI ""'],
+                      ['* Comments: '],
                       ['* Delta eV: '],
                       ['* Min eV: '],
                       ['* Max eV: '],
@@ -709,7 +709,7 @@ class data:
                 return
             else:
                 for ie in range(self.n_ev):
-                    writer.writerow([f'{evdata[ie]:06.6f}', f'{data[ie]:012g}'])
+                    writer.writerow([f'{evdata[ie]:06.6f}', f'{data[ie]:09.6f}'])
                 return
 
     # ----------------------------------------------------------------------

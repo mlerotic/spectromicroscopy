@@ -9321,9 +9321,14 @@ class PageStack(QtWidgets.QWidget):
                 self.stk.read_stk_i0(filepath, extension)
 
                 self.com.i0_loaded = 1
-                #self.loadSpectrum(self.ix, self.iy)
-                self.absimgfig.loadNewImage()
-
+                self.absimgfig.loadNewImageWithROI()
+                self.specfig.ClearandReload()
+                self.button_i0.disconnect()
+                self.button_i0.setText("Reset I0")
+                self.button_i0.clicked.connect(self.OnI0Reset)
+                self.window().refresh_widgets()
+                self.button_i0ffile.setEnabled(False)
+                self.button_prenorm.setEnabled(False)
                 QtWidgets.QApplication.restoreOverrideCursor()
 
         except:
@@ -9333,7 +9338,6 @@ class PageStack(QtWidgets.QWidget):
             QtWidgets.QMessageBox.warning(self,'Error',"I0 file not loaded.")
             import sys; print(sys.exc_info())
 
-        self.window().refresh_widgets()
 
 
 #----------------------------------------------------------------------
@@ -9384,6 +9388,9 @@ class PageStack(QtWidgets.QWidget):
         self.button_i0.setText("Reset I0")
         self.button_i0.clicked.connect(self.OnI0Reset)
         self.window().refresh_widgets()
+        self.button_showi0.setEnabled(False)
+        self.button_i0ffile.setEnabled(False)
+        self.button_prenorm.setEnabled(False)
         QtWidgets.QApplication.restoreOverrideCursor()
 #-----------------------------------------------------------------------
     def OnRefImgs(self, event):
@@ -10213,13 +10220,18 @@ class SaveWin(QtWidgets.QDialog):
                 fig.SaveFig(fileName_img)
 
             if sp_csv:
-                fileName_spec = self.SaveFileName+"_spectrum.csv"
-                plot_num = len(self.parent.specfig.plotitem.items)
                 evdata = self.parent.specfig.plotitem.items[1].xData.tolist()
-                data = []
-                for i in range(plot_num - 1):
-                    data.append(self.parent.specfig.plotitem.items[i+1].yData.tolist())
-                self.stk.write_csv(fileName_spec, evdata, data, cname="ROI spectra")
+                fileName_spec = self.SaveFileName + "_spectrum.csv"
+                if self.parent.button_showi0.isChecked():
+                    name = "I0 data"
+                    data = (self.parent.specfig.plotitem.items[-1].yData.tolist())
+                else:
+                    name = "ROI spectra"
+                    plot_num = len(self.parent.specfig.plotitem.items)
+                    data = []
+                    for i in range(plot_num - 1):
+                        data.append(self.parent.specfig.plotitem.items[i+1].yData.tolist())
+                self.stk.write_csv(fileName_spec, evdata, data, cname=name)
 
             ext = 'svg'
             suffix = "." + ext
@@ -14199,7 +14211,7 @@ class PlotFrame(QtWidgets.QDialog):
         print('* Edge: ', file=f)
         print('* Acquisition mode: ', file=f)
         print('* Source and purity: ', file=f)
-        print('* Comments: Stack list ROI ""', file=f)
+        print('* Comments: ', file=f)
         print('* Delta eV: ', file=f)
         print('* Min eV: ', file=f)
         print('* Max eV: ', file=f)
@@ -15878,6 +15890,8 @@ class SpecFig():
             self.parent.button_i0.setStyleSheet(""); #pass an empty string to return to default style
             self.parent.ROIShapeBox.setStyleSheet("");
             self.parent.button_i0.clicked.connect(self.OnI0Reset)
+            self.parent.button_i0ffile.setEnabled(False)
+            self.parent.button_prenorm.setEnabled(False)
             self.parent.label_roitype.setText("ROI type")
             self.parent.label_roitype.setStyleSheet("");
             QtWidgets.QApplication.restoreOverrideCursor()
@@ -15900,6 +15914,8 @@ class SpecFig():
         self.parent.button_i0.disconnect()
         self.parent.button_i0.setText("Select I0")
         self.parent.button_i0.clicked.connect(self.OnI0Histogram)
+        self.parent.button_i0ffile.setEnabled(True)
+        self.parent.button_prenorm.setEnabled(True)
 
     def GetNextROINumberandColor(self):
         #MANTiS unique Light qualitative color scheme
