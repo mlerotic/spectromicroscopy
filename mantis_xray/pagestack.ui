@@ -225,6 +225,31 @@
              </widget>
             </item>
             <item>
+             <widget class="QPushButton" name="button_showi0">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Show I0</string>
+              </property>
+              <property name="checkable">
+               <bool>true</bool>
+              </property>
+              <property name="checked">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
              <widget class="QPushButton" name="button_i0ffile">
               <property name="minimumSize">
                <size>
@@ -251,31 +276,6 @@
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="button_showi0">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>24</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>24</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Show I0</string>
-              </property>
-              <property name="checkable">
-               <bool>true</bool>
-              </property>
-              <property name="checked">
-               <bool>false</bool>
-              </property>
-             </widget>
-            </item>
-            <item>
              <widget class="QPushButton" name="button_refimgs">
               <property name="minimumSize">
                <size>
@@ -284,7 +284,7 @@
                </size>
               </property>
               <property name="text">
-               <string>Load Reference Images</string>
+               <string>Load reference images [.xrm]</string>
               </property>
              </widget>
             </item>
@@ -330,7 +330,7 @@
             <item>
              <widget class="QPushButton" name="button_ROIdosecalc">
               <property name="text">
-               <string>ROI Dose Calculation</string>
+               <string>ROI dose calculation</string>
               </property>
              </widget>
             </item>

@@ -8887,9 +8887,6 @@ class PageStack(QtWidgets.QWidget):
 #----------------------------------------------------------------------
     def initUI(self, common, data_struct, stack):
 
-        #self.pglayout = pg.GraphicsLayout(border=None)
-        #self.canvas.setBackground("w") # canvas is a pg.GraphicsView widget
-        #self.canvas.setCentralWidget(self.pglayout)
         self.spectrum_plotwidget.setBackground("w")
 
         self.data_struct = data_struct
@@ -8928,122 +8925,56 @@ class PageStack(QtWidgets.QWidget):
         self.mean_visible = 0
 
 
-        #panel 1
-        #sizer1 = QtWidgets.QGroupBox('Preprocess')
-        #vbox1 = QtWidgets.QVBoxLayout()
-        #vbox1.setSpacing(0)
+        #Panel Preprocess
 
-        #self.button_align = QtWidgets.QPushButton('Align stack...')
+        #Align stack...
         self.button_align.clicked.connect(self.OnAlignImgsDialog)
         self.button_align.setEnabled(False)
-        #vbox1.addWidget(self.button_align)
 
-        # self.button_align2 = QtWidgets.QPushButton('Align stack v2...')
-        # self.button_align2.clicked.connect( self.OnAlignImgs2)
-        # self.button_align2.setEnabled(False)
-        # vbox1.addWidget(self.button_align2)
-
-        #self.button_multicrop = QtWidgets.QPushButton('Crop stack 3D/4D...')
+        #Crop stack 3D/4D...
         self.button_multicrop.clicked.connect( self.OnMultiCrop)
         self.button_multicrop.setEnabled(False)
-        #vbox1.addWidget(self.button_multicrop)
 
-        #self.button_artefacts = QtWidgets.QPushButton('Artefacts && Leveling')
+        #Artefacts && Leveling
         self.button_artefacts.clicked.connect( self.OnArtefacts)
         self.button_artefacts.setEnabled(False)
-        #vbox1.addWidget(self.button_artefacts)
 
-        #self.button_darksig = QtWidgets.QPushButton('Dark signal subtraction...')
+        #Dark signal subtraction...
         self.button_darksig.clicked.connect(self.OnDarkSignal)
         self.button_darksig.setEnabled(False)
-        #vbox1.addWidget(self.button_darksig)
 
-
-        #self.button_savestack = QtWidgets.QPushButton('Save processed stack')
+        #Save processed stack
         self.button_savestack.clicked.connect(self.OnSaveStack)
         self.button_savestack.setEnabled(False)
-        #vbox1.addWidget(self.button_savestack)
 
-        #self.cb_normthick = QtWidgets.QCheckBox('Prenormalize thickness and make OD', self)
-        #self.cb_normthick.setChecked(False)
-        #vbox1.addWidget(self.cb_normthick)
-
-        #sizer1.setLayout(vbox1)
-
-        #panel 1B
-        #sizer1b = QtWidgets.QGroupBox('Normalize')
-        #vbox1b = QtWidgets.QVBoxLayout()
-        #vbox1b.setSpacing(0)
-
-        #self.button_i0 = QtWidgets.QPushButton('Select I0...')
+        #Panel Normalize
+        #Select I0...
         self.button_i0.clicked.connect( self.OnI0histogram)
         self.button_i0.setEnabled(False)
-        #vbox1b.addWidget(self.button_i0)
 
-        #self.button_i0ffile = QtWidgets.QPushButton('I0 from file...')
+        #I0 from file...
         self.button_i0ffile.clicked.connect(self.OnI0FFile)
         self.button_i0ffile.setEnabled(False)
-        #vbox1b.addWidget(self.button_i0ffile)
 
-        #self.button_showi0 = QtWidgets.QPushButton('Show I0...')
+        #Show I0...
         self.button_showi0.clicked.connect( self.OnShowI0)
         self.button_showi0.setEnabled(False)
-        #vbox1b.addWidget(self.button_showi0)
 
-        #self.button_prenorm = QtWidgets.QPushButton('Use pre-normalized data')
+        #Use pre-normalized data
         self.button_prenorm.clicked.connect(self.OnPreNormalizedData)
         self.button_prenorm.setEnabled(False)
-        #vbox1b.addWidget(self.button_prenorm)
 
-        #self.button_refimgs = QtWidgets.QPushButton('Load Reference Images')
+        #Load Reference Images
         self.button_refimgs.clicked.connect(self.OnRefImgs)
         self.button_refimgs.setEnabled(False)
-        #vbox1b.addWidget(self.button_refimgs)
 
-        #self.button_reseti0 = QtWidgets.QPushButton('Reset I0')
-        #self.button_reseti0.clicked.connect(self.OnI0Reset)
-        #self.button_reseti0.setEnabled(False)
-        #vbox1b.addWidget(self.button_reseti0)
-
-        #self.button_saveod = QtWidgets.QPushButton('Save OD data')
-        #self.button_saveod.clicked.connect(self.OnSaveOD)
-        #self.button_saveod.setEnabled(False)
-        #vbox1b.addWidget(self.button_saveod)
-
-        #sizer1b.setLayout(vbox1b)
-
-
-        #panel 2
-        #sizer2 = QtWidgets.QGroupBox('Display')
-        #vbox2 = QtWidgets.QVBoxLayout()
-        #vbox2.setSpacing(0)
-
-        #hbox20 = QtWidgets.QHBoxLayout()
-
-        #sizer21 = QtWidgets.QGroupBox('File')
-        #vbox21 = QtWidgets.QVBoxLayout()
-
-        #self.textctrl = QtWidgets.QLabel(self)
-        #vbox21.addWidget(self.textctrl)
-        #self.textctrl.setText('File name')
-
-        #sizer21.setLayout(vbox21)
-
-        #hbox20.addWidget(sizer21)
-        #hbox20.addSpacing(15)
-
-        #vbox22 = QtWidgets.QVBoxLayout()
-        #self.button_slideshow = QtWidgets.QPushButton('Play stack movie')
-        #self.button_slideshow.setMaximumSize (150 , 150)
         self.button_meanflux.clicked.connect( self.OnShowMean)
         self.button_meanflux.setEnabled(False)
         self.button_meanflux.setChecked(False)
         self.button_slideshow.clicked.connect( self.OnSlideshow)
         self.button_slideshow.setEnabled(False)
-        #vbox22.addWidget(self.button_slideshow)
 
-        #self.button_save = QtWidgets.QPushButton( 'Save images...')
-        #self.button_save.setMaximumSize (150 , 150)
+        #Save images...
         self.button_save.clicked.connect( self.OnSave)
         self.button_save.setEnabled(False)
         #vbox22.addWidget(self.button_save)
@@ -9146,48 +9077,14 @@ class PageStack(QtWidgets.QWidget):
         #hbox21.addWidget(sizer23)
         #sizer2.setLayout(vbox2)
 
-
-
-        #panel 3
-        sizer3 = QtWidgets.QGroupBox('Region of Interest')
-        vbox3 = QtWidgets.QVBoxLayout()
-        vbox3.setSpacing(0)
-
-        #self.button_acceptROI = QtWidgets.QPushButton('Accept ROI')
-        #self.button_acceptROI.clicked.connect( self.OnAcceptROI)
-        #self.button_acceptROI.setEnabled(False)
-        #self.button_acceptROI.setVisible(False)
-        #vbox3.addWidget(self.button_acceptROI)
-
-        #self.button_resetROI = QtWidgets.QPushButton('Reset ROI')
-        #self.button_resetROI.clicked.connect( self.OnResetROI)
-        #self.button_resetROI.setEnabled(False)
-        #vbox3.addWidget(self.button_resetROI)
-
-        #self.button_setROII0 = QtWidgets.QPushButton('Set ROI As I0')
-        #self.button_setROII0.clicked.connect( self.OnSetROII0)
-        #self.button_setROII0.setHidden(True)
-        #self.button_setROII0.setEnabled(False)
-        #vbox3.addWidget(self.button_setROII0)
-
-        #self.button_saveROIspectr = QtWidgets.QPushButton( 'Save ROI Spectrum...')
-        #self.button_saveROIspectr.clicked.connect( self.OnSaveROISpectrum)
-        #self.button_saveROIspectr.setEnabled(False)
-        #vbox3.addWidget(self.button_saveROIspectr)
-
-        #self.button_ROIdosecalc = QtWidgets.QPushButton('ROI Dose Calculation...')
+        #Panel Region of Interest
+        #ROI Dose Calculation...
         self.button_ROIdosecalc.clicked.connect( self.OnROI_DoseCalc)
         self.button_ROIdosecalc.setEnabled(False)
-        #vbox3.addWidget(self.button_ROIdosecalc)
 
-        #self.button_spectralROI = QtWidgets.QPushButton('Spectral ROI...')
+        #Spectral ROI...
         self.button_spectralROI.clicked.connect( self.OnSpectralROI)
         self.button_spectralROI.setEnabled(False)
-        #vbox3.addWidget(self.button_spectralROI)
-        #sizer3.setLayout(vbox3)
-
-
-
 
         #panel 4
         #vbox4 = QtWidgets.QVBoxLayout()
@@ -9329,6 +9226,7 @@ class PageStack(QtWidgets.QWidget):
                 self.window().refresh_widgets()
                 self.button_i0ffile.setEnabled(False)
                 self.button_prenorm.setEnabled(False)
+                self.button_refimgs.setEnabled(False)
                 QtWidgets.QApplication.restoreOverrideCursor()
 
         except:
@@ -9391,6 +9289,7 @@ class PageStack(QtWidgets.QWidget):
         self.button_showi0.setEnabled(False)
         self.button_i0ffile.setEnabled(False)
         self.button_prenorm.setEnabled(False)
+        self.button_refimgs.setEnabled(False)
         QtWidgets.QApplication.restoreOverrideCursor()
 #-----------------------------------------------------------------------
     def OnRefImgs(self, event):
@@ -9418,9 +9317,16 @@ class PageStack(QtWidgets.QWidget):
             self.ix = int(x/2)
             self.iy = int(y/2)
 
-            #self.loadSpectrum(self.ix, self.iy)
-            self.loadNewImage()
             self.com.i0_loaded = 1
+            self.absimgfig.loadNewImageWithROI()
+            self.specfig.ClearandReload()
+            self.button_i0.disconnect()
+            self.button_i0.setText("Reset I0")
+            self.button_i0.clicked.connect(self.OnI0Reset)
+            self.window().refresh_widgets()
+            self.button_i0ffile.setEnabled(False)
+            self.button_prenorm.setEnabled(False)
+            self.button_refimgs.setEnabled(False)
             QtWidgets.QApplication.restoreOverrideCursor()
 
 
@@ -9430,9 +9336,6 @@ class PageStack(QtWidgets.QWidget):
             QtWidgets.QApplication.restoreOverrideCursor()
             QtWidgets.QMessageBox.warning(self,'Error',"Reference image file not loaded.")
             import sys; print(sys.exc_info())
-
-
-        self.window().refresh_widgets()
 
 #----------------------------------------------------------------------
     def OnSaveStack(self, event):
@@ -15892,6 +15795,7 @@ class SpecFig():
             self.parent.button_i0.clicked.connect(self.OnI0Reset)
             self.parent.button_i0ffile.setEnabled(False)
             self.parent.button_prenorm.setEnabled(False)
+            self.parent.button_refimgs.setEnabled(False)
             self.parent.label_roitype.setText("ROI type")
             self.parent.label_roitype.setStyleSheet("");
             QtWidgets.QApplication.restoreOverrideCursor()
@@ -15916,6 +15820,7 @@ class SpecFig():
         self.parent.button_i0.clicked.connect(self.OnI0Histogram)
         self.parent.button_i0ffile.setEnabled(True)
         self.parent.button_prenorm.setEnabled(True)
+        self.parent.button_refimgs.setEnabled(True)
 
     def GetNextROINumberandColor(self):
         #MANTiS unique Light qualitative color scheme
