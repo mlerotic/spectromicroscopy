@@ -704,7 +704,7 @@
               <item>
                <widget class="QCheckBox" name="cb_upsampling">
                 <property name="text">
-                 <string>subpixel accuracy</string>
+                 <string>high accuracy</string>
                 </property>
                 <property name="checked">
                  <bool>true</bool>

@@ -12524,11 +12524,18 @@ class GeneralPurposeProcessor(QtCore.QRunnable):
         upsampling = self.UpsamplingFactor()
         drift, error, _ = phase_cross_correlation(ref_img, mov_img,upsample_factor=upsampling,normalization=None)
         self.parent.stack.shiftsdict[itheta]["errors"][data[0]] = round(error,4)
-        self.parent.stack.shiftsdict[itheta]["xdots"][data[0]] = round(drift[0],2)
-        self.parent.stack.shiftsdict[itheta]["ydots"][data[0]] = round(drift[1],2)
+        if self.parent.cb_upsampling.isChecked():
+            self.parent.stack.shiftsdict[itheta]["xdots"][data[0]] = round(drift[0],2)
+            self.parent.stack.shiftsdict[itheta]["ydots"][data[0]] = round(drift[1],2)
+        else:
+            self.parent.stack.shiftsdict[itheta]["xdots"][data[0]] = round(drift[0],0)
+            self.parent.stack.shiftsdict[itheta]["ydots"][data[0]] = round(drift[1],0)
     def ShiftImg(self, row,x,y,itheta):
         borders, padded = self.PadImg(self.parent.stack.absdata4d[:, :, row,itheta],-x,-y)
-        shifted = ndimage.fourier_shift(np.fft.fft2(padded), [float(-x),float(-y)])
+        if self.parent.cb_upsampling.isChecked():
+            shifted = ndimage.fourier_shift(np.fft.fft2(padded), [float(-x),float(-y)])
+        else:
+            shifted = ndimage.fourier_shift(np.fft.fft2(padded), [int(round(-x,0)),int(round(-y,0))])
         shifted = np.fft.ifft2(shifted)
         self.parent.stack.absdata4d_shifted[:, :, row, itheta] = shifted.real[borders[0]:padded.shape[0]-borders[1],borders[2]:padded.shape[1]-borders[3]]
         return
@@ -12555,9 +12562,9 @@ class GeneralPurposeProcessor(QtCore.QRunnable):
         return im
     def UpsamplingFactor(self):
         if self.parent.cb_upsampling.isChecked():
-            fac = 20 ## equals 0.05 px precision
+            fac = 20 ## equal to 0.05 px precision
         else:
-            fac = 1
+            fac = 5 ## equal to 0.2 px precision
         return fac
 
 # ----------------------------------------------------------------------
@@ -12634,7 +12641,7 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
         self.button_rstalign.setEnabled(False)
         self.button_preview.setEnabled(True)
         self.slider_theta.setVisible(False)
-        self.setWindowTitle('Align Stack v2')
+        self.setWindowTitle('FFT Stack Alignment')
         self.pglayout = pg.GraphicsLayout(border=None)
         self.canvas.setBackground("w") # canvas is a pg.GraphicsView widget
         self.canvas.setCentralWidget(self.pglayout)
