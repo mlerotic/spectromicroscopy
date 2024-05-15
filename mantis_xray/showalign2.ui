@@ -700,7 +700,17 @@
              </layout>
             </item>
             <item row="0" column="3">
-             <layout class="QHBoxLayout" name="horizontalLayout_10">
+             <layout class="QVBoxLayout" name="verticalLayout_4">
+              <item>
+               <widget class="QCheckBox" name="cb_upsampling">
+                <property name="text">
+                 <string>subpixel accuracy</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
               <item>
                <widget class="QCheckBox" name="cb_edgedetect">
                 <property name="text">

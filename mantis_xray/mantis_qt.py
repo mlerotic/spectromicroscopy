@@ -12501,7 +12501,6 @@ class GeneralPurposeProcessor(QtCore.QRunnable):
         self.parent = parent
         self.queue = queue
         self.current_itheta = 0
-        self.upsampling = 20 ## equals 0.05 px precision
 
     @pyqtSlot()
     def run(self):
@@ -12522,7 +12521,8 @@ class GeneralPurposeProcessor(QtCore.QRunnable):
             self.signals.ithetaprogress.emit(itheta)
         ref_img = self.EdgeDetect(self.Gauss(self.parent.stack.absdata_cropped[:, :, data[0],itheta]))
         mov_img = self.EdgeDetect(self.Gauss(self.parent.stack.absdata_cropped[:, :, data[1],itheta]))
-        drift, error, _ = phase_cross_correlation(ref_img, mov_img,upsample_factor=self.upsampling,normalization=None)
+        upsampling = self.UpsamplingFactor()
+        drift, error, _ = phase_cross_correlation(ref_img, mov_img,upsample_factor=upsampling,normalization=None)
         self.parent.stack.shiftsdict[itheta]["errors"][data[0]] = round(error,4)
         self.parent.stack.shiftsdict[itheta]["xdots"][data[0]] = round(drift[0],2)
         self.parent.stack.shiftsdict[itheta]["ydots"][data[0]] = round(drift[1],2)
@@ -12539,6 +12539,13 @@ class GeneralPurposeProcessor(QtCore.QRunnable):
         if self.parent.cb_edgedetect.isChecked():
             im = filters.farid(im)
         return im
+    def UpsamplingFactor(self):
+        if self.parent.cb_upsampling.isChecked():
+            fac = 20 ## equals 0.05 px precision
+        else:
+            fac = 1
+        return fac
+
 # ----------------------------------------------------------------------
 class TaskDispatcher(QtCore.QObject):
     def __init__(self,parent):
