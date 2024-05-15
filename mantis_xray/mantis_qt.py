@@ -12527,11 +12527,25 @@ class GeneralPurposeProcessor(QtCore.QRunnable):
         self.parent.stack.shiftsdict[itheta]["xdots"][data[0]] = round(drift[0],2)
         self.parent.stack.shiftsdict[itheta]["ydots"][data[0]] = round(drift[1],2)
     def ShiftImg(self, row,x,y,itheta):
-        shifted = ndimage.fourier_shift(np.fft.fft2(self.parent.stack.absdata4d[:, :, row,itheta]), [float(-x),float(-y)])
+        borders, padded = self.PadImg(self.parent.stack.absdata4d[:, :, row,itheta],-x,-y)
+        shifted = ndimage.fourier_shift(np.fft.fft2(padded), [float(-x),float(-y)])
         shifted = np.fft.ifft2(shifted)
-        self.parent.stack.absdata4d_shifted[:, :, row, itheta] = shifted.real
+        self.parent.stack.absdata4d_shifted[:, :, row, itheta] = shifted.real[borders[0]:padded.shape[0]-borders[1],borders[2]:padded.shape[1]-borders[3]]
         return
 
+    def PadImg(self, img, x, y):
+        default = 10 # minimum expansion of image
+        borders = 4*[default]
+        if x<0:
+            borders[1] = abs(int(np.floor(x)))+default
+        elif x>0:
+            borders[0] = abs(int(np.ceil(x)))+default
+        if y<0:
+            borders[3] = abs(int(np.floor(y)))+default
+        elif y>0:
+            borders[2] = abs(int(np.ceil(y)))+default
+        padded = np.pad(img,((borders[0],borders[1]),(borders[2],borders[3])),mode = "edge")
+        return (borders, padded)
     def Gauss(self, im):
         gaussed = ndimage.gaussian_filter(im, self.parent.spinBoxGauss.value())
         return gaussed
