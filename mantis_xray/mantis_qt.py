@@ -16509,11 +16509,15 @@ class ImgFig():
         cm = pg.colormap.get(self.map, source="matplotlib")
         lut = cm.getLookupTable(0, 1, num_colors)
         if self.parent.com.stack_loaded == 1:
-            lut = np.ascontiguousarray(lut)
-            self.imageitem.setLookupTable(lut)
-            lut = np.expand_dims(lut, axis=1)
-            qimg = pg.functions.ndarray_to_qimage(lut, QtGui.QImage.Format.Format_RGB888)
-            self.bar.bar.setPixmap(QtGui.QPixmap.fromImage(qimg).scaled(1, 256))
+            try:
+                lut = np.ascontiguousarray(lut)
+                self.imageitem.setLookupTable(lut)
+                lut = np.expand_dims(lut, axis=1)
+                qimg = pg.functions.ndarray_to_qimage(lut, QtGui.QImage.Format.Format_RGB888)
+                self.bar.bar.setPixmap(QtGui.QPixmap.fromImage(qimg).scaled(1, 256))
+            except AttributeError:
+                self.bar.bar.setLookupTable(lut)
+                self.imageitem.setLookupTable(lut)
 
     def OnShowScale(self):
         suffix = "m"
