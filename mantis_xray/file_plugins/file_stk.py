@@ -106,9 +106,12 @@ def read_stk_i0_xas(self, filename):
         if line.startswith("*"):
             pass
         else:
-            e, i = [float(x) for x in line.split()]
-            elist.append(e)
-            ilist.append(i)
+            try:
+                e, i = [float(x) for x in line.split()]
+                elist.append(e)
+                ilist.append(i)
+            except ValueError:
+                pass
             
     self.evi0 = np.array(elist)
     self.i0data = np.array(ilist) 
@@ -133,9 +136,12 @@ def read_stk_i0_csv(self, filename):
         if line.startswith("*"):
             pass
         else:
-            e, i = [float(x) for x in line.split(',')]
-            elist.append(e)
-            ilist.append(i)
+            try:
+                e, i = [float(x) for x in line.split(',')]
+                elist.append(e)
+                ilist.append(i)
+            except ValueError:
+                pass
             
     self.evi0 = np.array(elist)
     self.i0data = np.array(ilist) 
