@@ -1,6 +1,10 @@
 import numpy as np
 import scipy as sp
-from scipy.integrate import trapz
+try:
+    from scipy.integrate import trapezoid as trapz
+except ImportError:
+    # Fallback for scipy < 1.6
+    from scipy.integrate import trapz
 import sys, time
 
 from . import analyze
