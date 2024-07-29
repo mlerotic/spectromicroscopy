@@ -17,7 +17,7 @@ setuptools.setup(
         "Code": "https://github.com/mlerotic/spectromicroscopy",
         "Documentation": "https://docs.spectromicroscopy.com",
     },
-    install_requires=['PyQt5','numpy', 'scipy', 'matplotlib', 'h5py', 'Pillow', 'lxml', 'pyqtgraph<=0.12.4', "scikit-image"],
+    install_requires=['PyQt5','numpy', 'scipy', 'matplotlib', 'h5py', 'Pillow', 'lxml', 'pyqtgraph<=0.12.4', "scikit-image", "pymdown-extensions"],        
     extras_require={
         "netCDF":  "netcdf4-python"},
     entry_points={
