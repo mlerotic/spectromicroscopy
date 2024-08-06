@@ -10,6 +10,22 @@ The [paper](http://dx.doi.org/10.1016/j.ultramic.2004.01.008)  of Lerotic _et al
 MANTiS presents the user with a sequence of panels to guide the analysis workflow.  This sequence is illustrated in the following schematic:
 
 ![WorkflowSchematic](images/workflow_schematic.png)
+```mermaid
+flowchart TD
+    A[Load Data] --> B[Preprocessing (I0, subset of data, etc.)]
+    B --> C[Optical Density stack D_{NxP}]
+    C --> D[PCA (find eigenspectra, eigenimages)]
+    C --> E[NNMA (non-negative matrix approx.)]
+    D --> F[Cluster (pixels with similar spectra)]
+    F --> G[Spectra μ_{NxS}]
+    G --> H[Spectral Maps (images from spectra)]
+    H --> I[Maps f_{SxP}]
+    G --> J[Maps f_{SxP}]
+    E --> K[Spectra μ_{NxS}]
+    E --> L[Maps f_{SxP}]
+    L --> M[Peak IDs (label spectral peaks)]
+    M --> N[Peak Fitting (analyze spectra)]
+```
 
 **Figure 0** Workflow Schematic
 
