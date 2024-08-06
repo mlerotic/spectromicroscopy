@@ -56,7 +56,6 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.widgets import LassoSelector
 matplotlib.interactive( True )
 matplotlib.rcParams['svg.fonttype'] = 'none'
-from matplotlib import cm
 import pyqtgraph as pg
 import pyqtgraph.exporters
 from lxml import etree
@@ -1290,11 +1289,11 @@ class PageTomo(QtWidgets.QWidget):
         axes = fig.gca()
         fig.patch.set_alpha(1.0)
 
-        im = axes.imshow(np.rot90(image), cmap=matplotlib.cm.get_cmap("gray"))
+        im = axes.imshow(np.rot90(image), cmap=matplotlib.colormaps["gray"])
 
         if self.haveROI == 1:
             if len(self.ROIvol[self.islice]) > 0:
-                im_red = axes.imshow(np.rot90(self.ROIvol[self.islice]), cmap=matplotlib.cm.get_cmap("autumn"))
+                im_red = axes.imshow(np.rot90(self.ROIvol[self.islice]), cmap=matplotlib.colormaps["autumn"])
 
 #         if self.window().page1.show_scale_bar == 1:
 #             #Show Scale Bar
@@ -1331,7 +1330,7 @@ class PageTomo(QtWidgets.QWidget):
         axes2 = fig.gca()
         fig.patch.set_alpha(1.0)
 
-        im = axes2.imshow(np.rot90(image2), cmap=matplotlib.cm.get_cmap("gray"))
+        im = axes2.imshow(np.rot90(image2), cmap=matplotlib.colormaps["gray"])
 
         axes2.axis("off")
         self.AbsImagePanel2.draw()
@@ -1345,7 +1344,7 @@ class PageTomo(QtWidgets.QWidget):
         axes3 = fig.gca()
         fig.patch.set_alpha(1.0)
 
-        im = axes3.imshow(np.rot90(image3), cmap=matplotlib.cm.get_cmap("gray"))
+        im = axes3.imshow(np.rot90(image3), cmap=matplotlib.colormaps["gray"])
 
         axes3.axis("off")
         self.AbsImagePanel3.draw()
@@ -1576,9 +1575,9 @@ class ROIHistogram(QtWidgets.QDialog):
         axes = fig.gca()
         fig.patch.set_alpha(1.0)
 
-        im = axes.imshow(np.rot90(image), cmap=matplotlib.cm.get_cmap("gray"))
+        im = axes.imshow(np.rot90(image), cmap=matplotlib.colormaps["gray"])
 
-        im_red = axes.imshow(np.rot90(redpix_masked),cmap=matplotlib.cm.get_cmap("autumn"))
+        im_red = axes.imshow(np.rot90(redpix_masked),cmap=matplotlib.colormaps["autumn"])
 
         axes.axis("off")
         self.AbsImagePanel.draw()
@@ -4755,7 +4754,7 @@ class PagePeakID(QtWidgets.QWidget):
         axes = fig.gca()
         fig.patch.set_alpha(1.0)
 
-        im = axes.imshow(np.rot90(image), cmap=matplotlib.cm.get_cmap("gray"))
+        im = axes.imshow(np.rot90(image), cmap=matplotlib.colormaps["gray"])
 
         #Show Scale Bar
         startx = int(self.stk.n_rows*0.05)
@@ -7193,7 +7192,7 @@ class PageCluster(QtWidgets.QWidget):
 
 
 
-        im = axes.imshow(np.rot90(mapimage), cmap=matplotlib.cm.get_cmap('gray'))
+        im = axes.imshow(np.rot90(mapimage), cmap=matplotlib.colormaps["gray"])
 
         #cbar = axes.figure.colorbar(im, orientation='vertical',cax=axcb)
 
@@ -8191,18 +8190,19 @@ class PagePCA(QtWidgets.QWidget):
         scrollmax = np.min([self.stk.n_ev, 20])
         self.slidershow.setMaximum(scrollmax)
 
-        try:
-            self.CalcPCA()
-            self.calcpca = True
-            self.loadPCAImage()
-            self.loadPCASpectrum()
-            self.showEvals()
-            self.com.pca_calculated = 1
-            QtWidgets.QApplication.restoreOverrideCursor()
-        except:
-            self.com.pca_calculated = 0
-            QtWidgets.QApplication.restoreOverrideCursor()
-            QtWidgets.QMessageBox.warning(self, 'Error', 'PCA not calculated.')
+        #try:
+        self.CalcPCA()
+        self.calcpca = True
+        self.loadPCAImage()
+        self.loadPCASpectrum()
+        self.showEvals()
+        self.com.pca_calculated = 1
+        QtWidgets.QApplication.restoreOverrideCursor()
+        #except:
+        #    pass
+        #    self.com.pca_calculated = 0
+        #    QtWidgets.QApplication.restoreOverrideCursor()
+         #   QtWidgets.QMessageBox.warning(self, 'Error', 'PCA not calculated.')
 
         self.window().refresh_widgets()
 
@@ -8443,7 +8443,7 @@ class PagePCA(QtWidgets.QWidget):
                     axes.set_position([0.03,0.03,0.8,0.94])
                     bound = self.anlz.pcaimagebounds[i]
 
-                    im = axes.imshow(np.rot90(self.pcaimage), cmap=matplotlib.cm.get_cmap("seismic_r"), vmin = -bound, vmax = bound)
+                    im = axes.imshow(np.rot90(self.pcaimage), cmap=matplotlib.colormaps["seismic_r"], vmin = -bound, vmax = bound)
                     cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)
                     axes.axis("off")
 
@@ -8490,7 +8490,7 @@ class PagePCA(QtWidgets.QWidget):
                     axes.set_position([0.03,0.03,0.8,0.94])
                     bound = self.anlz.pcaimagebounds[i]
 
-                    im = axes.imshow(np.rot90(self.pcaimage), cmap=matplotlib.cm.get_cmap("seismic_r"), vmin = -bound, vmax = bound)
+                    im = axes.imshow(np.rot90(self.pcaimage), cmap=matplotlib.colormaps["seismic_r"], vmin = -bound, vmax = bound)
                     cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)
                     axes.axis("off")
 
@@ -8529,7 +8529,7 @@ class PagePCA(QtWidgets.QWidget):
                     axes.set_position([0.03,0.03,0.8,0.94])
                     bound = self.anlz.pcaimagebounds[i]
 
-                    im = axes.imshow(np.rot90(self.pcaimage), cmap=matplotlib.cm.get_cmap("seismic_r"), vmin = -bound, vmax = bound)
+                    im = axes.imshow(np.rot90(self.pcaimage), cmap=matplotlib.colormaps["seismic_r"], vmin = -bound, vmax = bound)
                     cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)
                     axes.axis("off")
 
@@ -8618,7 +8618,7 @@ class PagePCA(QtWidgets.QWidget):
         bound = self.anlz.pcaimagebounds[self.selpca-1]
 
 
-        im = axes.imshow(np.rot90(self.pcaimage), cmap=matplotlib.cm.get_cmap("seismic_r"), vmin = -bound, vmax = bound)
+        im = axes.imshow(np.rot90(self.pcaimage), cmap=matplotlib.colormaps["seismic_r"], vmin = -bound, vmax = bound)
         cbar = axes.figure.colorbar(im, orientation='vertical',cax=ax_cb)
 
         axes.axis("off")
@@ -9700,7 +9700,7 @@ class PageStack(QtWidgets.QWidget):
     #
     #
     #     if (self.showROImask == 1) and (self.addroi == 1):
-    #         im_red = axes.imshow(np.rot90( self.ROIpix_masked), cmap=matplotlib.cm.get_cmap("autumn"))
+    #         im_red = axes.imshow(np.rot90( self.ROIpix_masked), cmap=matplotlib.colormaps["autumn"])
     #
     #
     #
@@ -11270,7 +11270,7 @@ class ImageRegistrationManual(QtWidgets.QDialog):
         axes = fig.gca()
 
 
-        _im = axes.imshow(np.rot90(image), cmap=matplotlib.cm.get_cmap('gray'))
+        _im = axes.imshow(np.rot90(image), cmap=matplotlib.colormaps["gray"])
         axes.autoscale(False)
 #         if self.man_align == 2:
 #             lx=matplotlib.lines.Line2D([self.man_yref-self.man_ys[self.iev],
@@ -11386,7 +11386,7 @@ class ImageRegistrationManual(QtWidgets.QDialog):
         axes = fig.gca()
 
 
-        _im = axes.imshow(np.rot90(self.ref_image), cmap=matplotlib.cm.get_cmap('gray'))
+        _im = axes.imshow(np.rot90(self.ref_image), cmap=matplotlib.colormaps["gray"])
 
         if (self.subregion == 1):
 
@@ -11477,7 +11477,7 @@ class ImageRegistrationManual(QtWidgets.QDialog):
         fig.add_axes(((0.0,0.0,1.0,1.0)))
         axes = fig.gca()
 
-        im = axes.imshow(np.rot90(ccorr), cmap=matplotlib.cm.get_cmap('gray'))
+        im = axes.imshow(np.rot90(ccorr), cmap=matplotlib.colormaps["gray"])
 
         nx = ccorr.shape[0]
         ny = ccorr.shape[1]
@@ -13627,7 +13627,7 @@ class SpectralROI(QtWidgets.QDialog):
         axes.set_position([0.03,0.03,0.8,0.94])
 
 
-        im = axes.imshow(np.rot90(self.odthickmap), cmap=matplotlib.cm.get_cmap("gray"))
+        im = axes.imshow(np.rot90(self.odthickmap), cmap=matplotlib.colormaps["gray"])
 
         cbar = axes.figure.colorbar(im, orientation='vertical',cax=axcb)
 

@@ -1,6 +1,6 @@
 import numpy as np
 import scipy as sp
-from scipy.integrate import trapz
+from scipy.integrate import trapezoid
 import sys, time
 
 from . import analyze
@@ -107,7 +107,7 @@ class nnma():
     # Calculate integral of each column in mu for normalization
     def calcMuColNorm(self, mu, muRefNorm):
         for k in range(self.kNNMA):
-            muNorm = trapz(mu[:, k], x=self.energies)
+            muNorm = trapezoid(mu[:, k], x=self.energies)
             mu[:, k] =  (mu[:, k] / muNorm) * muRefNorm[k]
         return mu
  

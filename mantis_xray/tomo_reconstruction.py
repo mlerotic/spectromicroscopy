@@ -31,9 +31,6 @@ try:
 except:
     print ('SIRT reconstruction requires skimage library.')
 
-import warnings
-warnings.simplefilter('ignore', DeprecationWarning)
-
 from .TomoCS.forward_backward_tv import fista_tv,gfb_tv, gfb_tv_weng
 from .TomoCS.projections import build_projection_operator
 from .TomoCS.util import generate_synthetic_data

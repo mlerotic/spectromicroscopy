@@ -483,7 +483,7 @@ def save_pca(odir, filename, stk, anlz, png, pdf, svg):
         axes.set_position([0.03,0.03,0.8,0.94])
         bound = anlz.pcaimagebounds[i]
 
-        im = axes.imshow(pcaimage, cmap=matplotlib.cm.get_cmap("seismic_r"), vmin = -bound, vmax = bound)
+        im = axes.imshow(pcaimage, cmap=matplotlib.colormaps["seismic_r"], vmin = -bound, vmax = bound)
 
         cbar = colorbar(im, orientation='vertical', cax=ax_cb)
         axes.axis("off")
