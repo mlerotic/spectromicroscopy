@@ -10761,6 +10761,7 @@ class MultiCrop(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
             self.stack.stack4D = self.stack.stack4D[left:right, bottom:top, selection, :]
             self.stack.stack4D = self.stack.stack4D[:,:, :, thetas]
         if self.com.i0_loaded:
+            self.stack.i0_mask = self.stack.i0_mask[left:right,bottom:top]
             if self.com.stack_4d:
                 self.stack.od4d = self.stack.od4d[left:right,bottom:top,selection, thetas]
             else:
@@ -10768,6 +10769,7 @@ class MultiCrop(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
                 self.stack.od = self.stack.od3d.copy()
                 self.stack.od = np.reshape(self.stack.od, (self.stack.n_rows * self.stack.n_cols, self.stack.n_ev),
                                        order='F')
+            self.parent.page1.specfig.I0Update()
 
         self.stack.fill_h5_struct_from_stk()
         if self.com.i0_loaded == 1:
@@ -15777,7 +15779,7 @@ class SpecFig():
     # ----------------------------------------------------------------------
     def I0Update(self):
         bool = np.where(self.parent.stk.i0_mask == True)
-        if np.any(bool):
+        if bool[0].size and bool[1].size:
             self.parent.stk.i0_from_histogram(bool)
             self.parent.I0histogramCalculated()
             self.parent.button_i0.disconnect()
@@ -15878,7 +15880,7 @@ class SpecFig():
                 boolmask = ~np.logical_and(~b1, b2)  # subtract
                 if not np.any(~boolmask):
                     self.ClearLast()
-                    self.ClearLast()
+                    self.ClearLast() #!
                     return
                 indices = np.where(boolmask == False)
                 self.removeLast2ROI(i,roiitems)
