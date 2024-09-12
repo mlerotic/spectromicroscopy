@@ -15708,8 +15708,12 @@ class SpecFig():
             curve = pg.PlotCurveItem(x,y, pen=({'color': "#ff7700", 'width': 2}),
                                      skipFiniteCheck=True, name="I0")
             self.plotitem.addItem(curve)
-            #vb = self.plotitem.items[-1].getViewBox()
-            #vb.updateAutoRange()
+            #Show I0 region and hide roi selection
+            indices = np.where(self.parent.stk.i0_mask)
+            self.drawROImask(None,indices= indices,color=(255,119,0,255))
+            self.parent.absimgfig.OnROIVisibility(QtCore.Qt.Unchecked)
+            self.parent.absimgfig.ROImask.show()
+
         else:
             self.setPlotItemVisibility(True)
             if len(self.plotitem.items) > 2:
@@ -15722,6 +15726,11 @@ class SpecFig():
             self.parent.button_clearlastroi.setEnabled(True)
             self.parent.button_mergeroi.setEnabled(True)
             self.parent.button_subtractroi.setEnabled(True)
+
+            # Restore ROI
+            self.parent.absimgfig.OnROIVisibility(self.parent.ROIvisibleCheckBox.checkState())
+            self.updatePlotData()
+
 
     def OnI0Histogram(self):
         self.parent.OnShowMean()
