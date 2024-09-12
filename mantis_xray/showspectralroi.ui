@@ -74,32 +74,7 @@
         </spacer>
        </item>
        <item>
-        <widget class="QPushButton" name="button_ok">
-         <property name="minimumSize">
-          <size>
-           <width>140</width>
-           <height>0</height>
-          </size>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>140</width>
-           <height>16777215</height>
-          </size>
-         </property>
-         <property name="font">
-          <font>
-           <family>Ubuntu</family>
-           <pointsize>8</pointsize>
-          </font>
-         </property>
-         <property name="text">
-          <string>Accept</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="button_cancel">
+        <widget class="QPushButton" name="button_close">
          <property name="minimumSize">
           <size>
            <width>140</width>
@@ -119,7 +94,7 @@
           </font>
          </property>
          <property name="text">
-          <string>Cancel</string>
+          <string>Close</string>
          </property>
         </widget>
        </item>

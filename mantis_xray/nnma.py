@@ -1,10 +1,10 @@
 import numpy as np
 import scipy as sp
 try:
-    from scipy.integrate import trapezoid as trapz
+    from scipy.integrate import trapezoid
 except ImportError:
     # Fallback for scipy < 1.6
-    from scipy.integrate import trapz
+    from scipy.integrate import trapz as trapezoid
 import sys, time
 
 from . import analyze
@@ -55,9 +55,9 @@ class nnma():
         
         self.standspectra = standspectra
 
-#---------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------
 # Define some helper functions for NNMA
-#---------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------
 
     # Fill initial matrices depending on user-specified initialization method
     def fillInitMatrices(self):
@@ -111,7 +111,7 @@ class nnma():
     # Calculate integral of each column in mu for normalization
     def calcMuColNorm(self, mu, muRefNorm):
         for k in range(self.kNNMA):
-            muNorm = trapz(mu[:, k], x=self.energies)
+            muNorm = trapezoid(mu[:, k], x=self.energies)
             mu[:, k] =  (mu[:, k] / muNorm) * muRefNorm[k]
         return mu
  
@@ -133,9 +133,9 @@ class nnma():
         return costTotal, deltaError
 
 
-#---------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------
 # Calculate NNMA
-#---------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------
     def calcNNMA(self, initmatrices = 'Random'):
       
         print ('calculating nnma')

@@ -7,7 +7,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>900</width>
+    <width>913</width>
     <height>500</height>
    </rect>
   </property>
@@ -210,7 +210,7 @@
           </font>
          </property>
          <property name="title">
-          <string>Drift approximation &amp;&amp; stack shifting adjustment</string>
+          <string>Displacement approximation &amp;&amp; refinements</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_3">
           <property name="spacing">
@@ -236,6 +236,30 @@
             <property name="verticalSpacing">
              <number>0</number>
             </property>
+            <item row="1" column="5">
+             <layout class="QHBoxLayout" name="horizontalLayout_6">
+              <item>
+               <widget class="QCheckBox" name="cb_autocrop">
+                <property name="text">
+                 <string>Auto-crop stack</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="cb_extrapolate">
+                <property name="text">
+                 <string>Fit extrapolation</string>
+                </property>
+                <property name="checked">
+                 <bool>false</bool>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
             <item row="1" column="1">
              <widget class="QLabel" name="label_7">
               <property name="text">
@@ -262,6 +286,16 @@
               </property>
              </widget>
             </item>
+            <item row="1" column="4">
+             <widget class="Line" name="line_2">
+              <property name="frameShadow">
+               <enum>QFrame::Plain</enum>
+              </property>
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+             </widget>
+            </item>
             <item row="1" column="2">
              <widget class="QSpinBox" name="spinBoxFiltersize">
               <property name="maximumSize">
@@ -274,11 +308,35 @@
                <number>1</number>
               </property>
               <property name="value">
-               <number>2</number>
+               <number>1</number>
               </property>
              </widget>
             </item>
+            <item row="0" column="2">
+             <widget class="QComboBox" name="comboBox_approx">
+              <item>
+               <property name="text">
+                <string>Moving average</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Linear regression</string>
+               </property>
+              </item>
+             </widget>
+            </item>
             <item row="0" column="4">
+             <widget class="Line" name="line">
+              <property name="frameShadow">
+               <enum>QFrame::Plain</enum>
+              </property>
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="5">
              <layout class="QHBoxLayout" name="horizontalLayout_5">
               <property name="spacing">
                <number>0</number>
@@ -351,63 +409,18 @@
               </item>
              </layout>
             </item>
-            <item row="0" column="2">
-             <widget class="QComboBox" name="comboBox_approx">
-              <item>
-               <property name="text">
-                <string>Moving average</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>Linear regression</string>
-               </property>
-              </item>
-             </widget>
-            </item>
-            <item row="1" column="4">
-             <layout class="QHBoxLayout" name="horizontalLayout_6">
-              <item>
-               <widget class="QCheckBox" name="cb_autocrop">
-                <property name="text">
-                 <string>Auto-crop stack</string>
-                </property>
-                <property name="checked">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QCheckBox" name="cb_extrapolate">
-                <property name="text">
-                 <string>Fit extrapolation</string>
-                </property>
-                <property name="checked">
-                 <bool>false</bool>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
             <item row="0" column="3">
-             <widget class="Line" name="line">
-              <property name="frameShadow">
-               <enum>QFrame::Plain</enum>
-              </property>
+             <spacer name="horizontalSpacer_3">
               <property name="orientation">
-               <enum>Qt::Vertical</enum>
+               <enum>Qt::Horizontal</enum>
               </property>
-             </widget>
-            </item>
-            <item row="1" column="3">
-             <widget class="Line" name="line_2">
-              <property name="frameShadow">
-               <enum>QFrame::Plain</enum>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
               </property>
-              <property name="orientation">
-               <enum>Qt::Vertical</enum>
-              </property>
-             </widget>
+             </spacer>
             </item>
            </layout>
           </item>
@@ -448,7 +461,7 @@
           </font>
          </property>
          <property name="title">
-          <string>Pre-alignment filter</string>
+          <string>Pre-alignment settings</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_2">
           <property name="spacing">
@@ -474,73 +487,6 @@
             <property name="verticalSpacing">
              <number>0</number>
             </property>
-            <item row="1" column="0">
-             <widget class="QLabel" name="label_2">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>25</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>25</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Correlation anchor:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="1">
-             <widget class="QRadioButton" name="rB_referenced">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>25</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>reference image</string>
-              </property>
-              <property name="checked">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="0">
-             <widget class="QLabel" name="label">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>20</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>25</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Noise ruggedness:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="2">
-             <widget class="QRadioButton" name="rB_consecutive">
-              <property name="enabled">
-               <bool>false</bool>
-              </property>
-              <property name="text">
-               <string>neighbor</string>
-              </property>
-              <property name="checked">
-               <bool>false</bool>
-              </property>
-             </widget>
-            </item>
             <item row="0" column="1">
              <layout class="QHBoxLayout" name="horizontalLayout_7">
               <property name="rightMargin">
@@ -572,6 +518,22 @@
                </widget>
               </item>
               <item>
+               <spacer name="horizontalSpacer">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeType">
+                 <enum>QSizePolicy::Maximum</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>5</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item>
                <widget class="QLabel" name="label_3">
                 <property name="minimumSize">
                  <size>
@@ -592,6 +554,195 @@
               </item>
              </layout>
             </item>
+            <item row="1" column="3">
+             <widget class="QPushButton" name="button_preview">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>95</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Filter preview</string>
+              </property>
+              <property name="checkable">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="0">
+             <widget class="QLabel" name="label">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>18</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Noise ruggedness:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="label_2">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>18</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Correlation anchor:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <layout class="QHBoxLayout" name="horizontalLayout_11">
+              <property name="sizeConstraint">
+               <enum>QLayout::SetDefaultConstraint</enum>
+              </property>
+              <item>
+               <widget class="QRadioButton" name="rB_referenced">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>200</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>reference image</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QRadioButton" name="rB_consecutive">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>16777215</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>neighbor</string>
+                </property>
+                <property name="checked">
+                 <bool>false</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_2">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </item>
+            <item row="0" column="3">
+             <layout class="QVBoxLayout" name="verticalLayout_4">
+              <item>
+               <widget class="QCheckBox" name="cb_upsampling">
+                <property name="text">
+                 <string>high accuracy</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="cb_edgedetect">
+                <property name="text">
+                 <string>edge detection</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item row="0" column="2">
+             <widget class="Line" name="line_3">
+              <property name="frameShadow">
+               <enum>QFrame::Plain</enum>
+              </property>
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="2">
+             <widget class="Line" name="line_4">
+              <property name="frameShadow">
+               <enum>QFrame::Plain</enum>
+              </property>
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+             </widget>
+            </item>
            </layout>
           </item>
          </layout>
@@ -606,12 +757,24 @@
           <widget class="QPushButton" name="button_rstroi">
            <property name="font">
             <font>
-             <family>Ubuntu</family>
              <pointsize>8</pointsize>
             </font>
            </property>
            <property name="text">
             <string>Reset alignment &amp;&amp; ROI</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="button_rstalign">
+           <property name="font">
+            <font>
+             <family>Ubuntu</family>
+             <pointsize>8</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Reset alignment</string>
            </property>
           </widget>
          </item>

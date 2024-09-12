@@ -174,7 +174,7 @@ def _weights_fast(x, dx=1, orig=0, ravel=True, labels=None):
     if ravel:
         x = np.ravel(x)
     floor_x = np.floor((x - orig) / dx).astype(np.int32)
-    alpha = ((x - orig - floor_x * dx) / dx).astype(float32)
+    alpha = ((x - orig - floor_x * dx) / dx).astype("float32")
     inds = np.hstack((floor_x, floor_x + 1))
     weights = np.hstack((1 - alpha, alpha))
     data_inds = np.arange(x.size, dtype=np.int32)
@@ -212,7 +212,7 @@ def _weights(x, dx=1, orig=0, ravel=True, labels=None):
     if ravel:
         x = np.ravel(x)
     floor_x = np.floor((x - orig) / dx).astype(np.int32)
-    alpha = ((x - orig - floor_x * dx) / dx).astype(float32)
+    alpha = ((x - orig - floor_x * dx) / dx).astype("float32")
     inds = np.hstack((floor_x, floor_x + 1))
     weights = np.hstack((1 - alpha, alpha))
     data_inds = np.arange(x.size, dtype=np.int32)

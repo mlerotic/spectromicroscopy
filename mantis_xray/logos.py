@@ -2139,7 +2139,7 @@ getMantis_logo_aboutData = Mantis_logo_about.GetData
 getMantis_logo_aboutImage = Mantis_logo_about.GetImage
 getMantis_logo_aboutBitmap = Mantis_logo_about.GetBitmap
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 Mantis_logo_splash = PyEmbeddedImage(
     "iVBORw0KGgoAAAANSUhEUgAAAlgAAAHeCAYAAABHZ3WEAAAACXBIWXMAAC4jAAAuIwF4pT92"
     "AAAKT2lDQ1BQaG90b3Nob3AgSUNDIHByb2ZpbGUAAHjanVNnVFPpFj333vRCS4iAlEtvUhUI"
@@ -5969,7 +5969,7 @@ getMantis_logo_splashImage = Mantis_logo_splash.GetImage
 getMantis_logo_splashBitmap = Mantis_logo_splash.GetBitmap
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 sl = PyEmbeddedImage(
     "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsTAAALEwEAmpwY"
     "AAAKT2lDQ1BQaG90b3Nob3AgSUNDIHByb2ZpbGUAAHjanVNnVFPpFj333vRCS4iAlEtvUhUI"

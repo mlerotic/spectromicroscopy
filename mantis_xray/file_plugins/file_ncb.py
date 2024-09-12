@@ -96,7 +96,7 @@ def read(filename, self, selection=None, *args, **kwargs):
     f.close()
 
     if scale < 0:
-        dataformat = float32
+        dataformat = np.float32
     else:
         dataformat = np.int16
 
@@ -229,7 +229,7 @@ def read_ncb_data(self, filename):
     f.close()
 
     if scale < 0:
-        dataformat = float32
+        dataformat = np.float32
     else:
         dataformat = np.int16
 
@@ -356,7 +356,7 @@ def write(filename, stack, data_type):  # ,norm):
         saveddata.astype(np.int16).tofile(f)
     else:
         scale = -1.0
-        image_stack.astype(float32).tofile(f)
+        image_stack.astype(np.float32).tofile(f)
     f.close()
 
     # print 'imagedims', image_stack.shape
@@ -459,7 +459,7 @@ class Cncb:
         f.close()
 
         if scale < 0:
-            dataformat = float32
+            dataformat = np.float32
         else:
             dataformat = np.int16
 
@@ -532,7 +532,7 @@ class Cncb:
             saveddata.astype(np.int16).tofile(f)
         else:
             scale = -1.0
-            image_stack.astype(float32).tofile(f)
+            image_stack.astype(np.float32).tofile(f)
         f.close()
 
         # print 'imagedims', image_stack.shape
@@ -624,7 +624,7 @@ class Cncb:
         f.close()
 
         if scale < 0:
-            dataformat = float32
+            dataformat = np.float32
         else:
             dataformat = np.int16
 

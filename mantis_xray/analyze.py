@@ -25,18 +25,10 @@ import scipy.interpolate
 import scipy.spatial
 import scipy.ndimage
 from scipy.cluster.vq import  kmeans2, whiten
-from scipy import optimize
 import scipy.signal
 
-import scipy as sp
-mmult = np.dot
 
-import warnings
-warnings.simplefilter('ignore', DeprecationWarning)
-
-
-
-#-----------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 def erf(x):
     # save the sign of x
     sign = 1
@@ -120,7 +112,7 @@ def model_error(p, nsteps, npeaks, x, y):
     return err
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 class Cfitparams:
     def __init__(self):
        
@@ -132,10 +124,9 @@ class Cfitparams:
         
         
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 class analyze:
     def __init__(self, stkdata):
-
         self.stack = stkdata
         
         self.pca_calculated = 0
@@ -169,7 +160,7 @@ class analyze:
 
         
         
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
 # Calculate pca 
     def delete_data(self):
         
@@ -188,7 +179,7 @@ class analyze:
         self.cluster_indices = 0
         self.clusterspectra = 0
                     
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
 # Calculate pca 
     def calculate_pca(self):
         #covariance matrix
@@ -269,7 +260,7 @@ class analyze:
 
         return    
 
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
 # Calculate pca 
     def calculate_pca_4D(self):
         #covariance matrix
@@ -370,7 +361,7 @@ class analyze:
 
         return  
     
-#---------------------------------------------------------------------- 
+#----------------------------------------------------------------------- 
 # Move PC up
     def move_pc_up(self, ipc):
         
@@ -431,7 +422,7 @@ class analyze:
                 self.calculate_targetmaps_4D()
                     
 
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
 # Find clusters 
     def calculate_clusters(self, nclusters, remove1stpca = 0, sigmasplit = 0, pcscalingfactor = 0.0):
         #Reduced data matrix od_reduced(n_pixels,n_significant_components)
@@ -576,7 +567,7 @@ class analyze:
         
         return int(nclusters)
         
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
 # Find clusters 
     def calculate_clusters_4D(self, nclusters, remove1stpca = 0, sigmasplit = 0, pcscalingfactor = 0.0):
         #Reduced data matrix od_reduced(n_pixels,n_significant_components)
@@ -721,7 +712,7 @@ class analyze:
         
         return int(nclusters)
        
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
 # Find clusters 
     def calculate_clusters_kmeansangle(self, nclusters, remove1stpca = 0, sigmasplit = 0, 
                                        cosinemeasure = False):
@@ -1023,7 +1014,7 @@ class analyze:
     
 
 
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
 # Find clusters using EM clustering
     def calculate_clusters_em(self, nclusters):
         #Reduced data matrix od_reduced(n_pixels,n_significant_components)
@@ -1048,7 +1039,7 @@ class analyze:
         self.indx = np.reshape(self.indx, (self.stack.n_cols, self.stack.n_rows), order='F')  
         
         
-#-----------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Spectral analysis
 # This routine reads in a mu spectrum in units of inverse microns.
 # The spectrum is interpolated onto the energy range of the stack,
@@ -1102,7 +1093,7 @@ class analyze:
         
         
             
-#-----------------------------------------------------------------------------          
+#------------------------------------------------------------------------------          
     def add_cluster_target_spectra(self):
         # Load spectrum from a file or cluster spectra 
 
@@ -1123,7 +1114,7 @@ class analyze:
         self.fit_target_spectra()
         self.calc_svd_maps()  
         
-#-----------------------------------------------------------------------------          
+#------------------------------------------------------------------------------          
     def remove_spectrum(self, i_spec):   
         
         if self.n_target_spectra > 1:
@@ -1147,7 +1138,7 @@ class analyze:
             self.target_pcafit_coeffs4D = []
             self.target_pcafit_spectra4D = []
             
-#-----------------------------------------------------------------------------          
+#------------------------------------------------------------------------------          
     def move_spectrum(self, old_position, new_position):   
         
         temp_target_spectra = self.target_spectra.copy()
@@ -1163,7 +1154,7 @@ class analyze:
         self.calc_svd_maps()  
 
         
-#-----------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # This routine calculates:
 #   - the transformation matrix T as target_spectrumfit_coeffs, and
 #     the fits to the target spectra as target_fittedspectra
@@ -1222,7 +1213,7 @@ class analyze:
         return
 
     
-#-----------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # This routine calculates the SVD composition maps
 #   1. The optical density is calculated from the stack, and the
 #      data matrix D of dimensions (pixels,energies) is formed
@@ -1247,7 +1238,7 @@ class analyze:
         
         
         
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
 # Calculate composition maps for 4D data 
     def calculate_targetmaps_4D(self):
         
@@ -1288,7 +1279,7 @@ class analyze:
         self.stack.od = tempod   
             
             
-#-----------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Apply threshold on SVD or PCA maps
     def svd_map_threshold(self, cutoff1, cutoff2 = None, svd = False, pca = False):
         
@@ -1323,7 +1314,7 @@ class analyze:
 
               
 
-#-----------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Find key energies by finding peaks and valleys in significant pca spectra
     def calc_key_engs(self, threshold):
  
@@ -1347,7 +1338,7 @@ class analyze:
 
 
 
-#-----------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 #Peakfinder
     def find_peaks(self, v, delta, x = None):
         """
@@ -1414,7 +1405,7 @@ class analyze:
 
        
 
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
     def load_xraypeakfit_spectrum(self, filename):
 
         # Load spectrum from a file
@@ -1459,7 +1450,7 @@ class analyze:
         #Find peaks:
         self.init_fit_params(self.n_xrayfitsp-1)
 
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
 #Load spectra from cluster analysis
     def load_xraypeakfit_clusterspectrum(self, i_cluster):
 
@@ -1485,7 +1476,7 @@ class analyze:
         self.init_fit_params(self.n_xrayfitsp-1)
         
         
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
     def init_fit_params(self, index):
         
         
@@ -1523,7 +1514,7 @@ class analyze:
         return fp.base, fp.stepfitparams, fp.gauss_fp_a, fp.gauss_fp_m, fp.gauss_fp_s
 
 
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
     def set_init_fit_params(self, index, base, stepfitparams, peak_a, peak_m, peak_s):
         
         
@@ -1541,7 +1532,7 @@ class analyze:
             
         return
 
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
     def fit_spectrum(self, i_spec, nsteps, npeaks):
         
         
@@ -1616,7 +1607,7 @@ class analyze:
         return y, separate_y
 
 
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
 # Calculate Fast Independent Component Analysis; FASTICA uses Hyvarinen's 
 # fixed-point algorithm 
 # A. Hyvarinen. Fast and Robust Fixed-Point Algorithms for Independent 
@@ -1700,8 +1691,8 @@ class analyze:
            
         # Calculate the whitening and dewhitening matrices (these handle
         # dimensionality simultaneously).
-        whiteningMatrix = mmult(np.linalg.inv (np.sqrt(D)), E.transpose())
-        dewhiteningMatrix = mmult(E, np.sqrt(D))
+        whiteningMatrix = np.dot(np.linalg.inv (np.sqrt(D)), E.transpose())
+        dewhiteningMatrix = np.dot(E, np.sqrt(D))
         
         print ('wd=', whiteningMatrix.shape, dewhiteningMatrix.shape)
         
@@ -1748,7 +1739,7 @@ class analyze:
             if b_verbose:
                 print ('Adding the mean back to the data.')
     
-            icasig = mmult(W, mixedsig) + mmult(mmult(W, mixedmean), np.ones((1, NumOfSampl)))
+            icasig = np.dot(W, mixedsig) + np.dot(np.dot(W, mixedmean), np.ones((1, NumOfSampl)))
 
    
         else:
@@ -1757,12 +1748,12 @@ class analyze:
 
         return icasig
 
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
     def getSamples(self, max, percentage):
         Samples = (np.random.random((max,)) < percentage).nonzero()
         return Samples
         
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
 # Fixed point ICA
 # This function is adapted from Hyvarinen's fixed point algorithm Matlab version
 # [A, W] = fpica(whitesig, whiteningMatrix, dewhiteningMatrix, approach,
@@ -2016,11 +2007,11 @@ class analyze:
                     w = np.random.standard_normal((vectorSize,))
                     
                 elif initialStateMode == 1:
-                    w=mmult(whiteningMatrix,guess[:,round])
+                    w=np.dot(whiteningMatrix,guess[:,round])
                     
        
-                w = w - mmult(mmult(B, B.T), w) 
-                norm =  sp.sqrt((w*w).sum())
+                w = w - np.dot(np.dot(B, B.T), w)
+                norm =  np.sqrt((w*w).sum())
                 w = w / norm
                 
         
@@ -2040,8 +2031,8 @@ class analyze:
                     # spanned by the earlier found basis vectors. Note that we can do
                     # the projection with matrix B, since the zero entries do not
                     # contribute to the projection.
-                    w =  w - mmult(mmult(B, B.T), w)
-                    norm =  sp.sqrt((w*w).sum())
+                    w =  w - np.dot(np.dot(B, B.T), w)
+                    norm =  np.sqrt((w*w).sum())
                     w = w / norm
     
                     if notFine:
@@ -2072,8 +2063,8 @@ class analyze:
                     # Test for termination condition. Note that the algorithm has
                     # converged if the direction of w and wOld is the same, this
                     # is why we test the two cases.
-                    normm = sp.sqrt(((w - wOld)*(w - wOld)).sum())
-                    normp = sp.sqrt(((w + wOld)*(w + wOld)).sum())
+                    normm = np.sqrt(((w - wOld)*(w - wOld)).sum())
+                    normp = np.sqrt(((w + wOld)*(w + wOld)).sum())
                     conv = min((normm), normp)
                     if  (conv < epsilon):
                         if finetuningEnabled and notFine:
@@ -2134,120 +2125,120 @@ class analyze:
                                 
                     # pow3
                     if usedNlinearity == 10:
-                        u = mmult(X.T, w)
-                        w = mmult(X, u*u*u)/numSamples - 3.*w          
+                        u = np.dot(X.T, w)
+                        w = np.dot(X, u*u*u)/numSamples - 3.*w
 
                     elif usedNlinearity == 11:
-                        u = mmult(X.T, w)
-                        EXGpow3 = mmult(X, u*u*u)/numSamples
-                        Beta = mmult(w.T, EXGpow3)
+                        u = np.dot(X.T, w)
+                        EXGpow3 = np.dot(X, u*u*u)/numSamples
+                        Beta = np.dot(w.T, EXGpow3)
                         w = w - myy * (EXGpow3 - Beta*w)/(3-Beta)         
                                        
                     elif usedNlinearity == 12:
                         Xsub = self._get_rsamples(X)
-                        u = mmult(Xsub.T, w)
-                        w = mmult(Xsub, u*u*u)/Xsub.shape[1] - 3.*w                        
+                        u = np.dot(Xsub.T, w)
+                        w = np.dot(Xsub, u*u*u)/Xsub.shape[1] - 3.*w
 
                     elif usedNlinearity == 13:
                         Xsub=X[:,self.getSamples(numSamples, sampleSize)]                        
-                        u = mmult(Xsub.T, w)
-                        EXGpow3 = mmult(Xsub, u*u*u)/Xsub.shape[1]
-                        Beta = mmult(w.T, EXGpow3)
+                        u = np.dot(Xsub.T, w)
+                        EXGpow3 = np.dot(Xsub, u*u*u)/Xsub.shape[1]
+                        Beta = np.dot(w.T, EXGpow3)
                         w = w - myy * (EXGpow3 - Beta*w)/(3-Beta)
                         
                     # tanh
                     elif usedNlinearity == 20:
-                        u = mmult(X.T, w)
-                        tang = sp.tanh(a1 * u)
-                        temp = mmult((1. - tang*tang).sum(axis=0), w)
-                        w = (mmult(X, tang) - a1*temp)/numSamples
+                        u = np.dot(X.T, w)
+                        tang = np.tanh(a1 * u)
+                        temp = np.dot((1. - tang*tang).sum(axis=0), w)
+                        w = (np.dot(X, tang) - a1*temp)/numSamples
                         
                     elif usedNlinearity == 21:
-                        u = mmult(X.T, w)
-                        tang = sp.tanh(a1 * u)
-                        Beta = mmult(u.T, tang)
+                        u = np.dot(X.T, w)
+                        tang = np.tanh(a1 * u)
+                        Beta = np.dot(u.T, tang)
                         temp = (1. - tang*tang).sum(axis=0)
-                        w = w-myy*((mmult(X, tang)-Beta*w)/(a1*temp-Beta))
+                        w = w-myy*((np.dot(X, tang)-Beta*w)/(a1*temp-Beta))
                                                 
                     elif usedNlinearity == 22:
                         Xsub=X[:,self.getSamples(numSamples, sampleSize)]
-                        u = mmult(Xsub.T, w)
-                        tang = sp.tanh(a1 * u)
-                        temp = mmult((1. - tang*tang).sum(axis=0), w)
-                        w = (mmult(Xsub, tang) - a1*temp)/Xsub.shape[1]
+                        u = np.dot(Xsub.T, w)
+                        tang = np.tanh(a1 * u)
+                        temp = np.dot((1. - tang*tang).sum(axis=0), w)
+                        w = (np.dot(Xsub, tang) - a1*temp)/Xsub.shape[1]
                                                 
                     elif usedNlinearity == 23:
                         Xsub=X[:,self.getSamples(numSamples, sampleSize)]
-                        u = mmult(Xsub.T, w)
-                        tang = sp.tanh(a1 * u)
-                        Beta = mmult(u.T, tang)
-                        w = w - myy * ((mmult(Xsub, tang)-Beta*w) /
+                        u = np.dot(Xsub.T, w)
+                        tang = np.tanh(a1 * u)
+                        Beta = np.dot(u.T, tang)
+                        w = w - myy * ((np.dot(Xsub, tang)-Beta*w) /
                                       (a1*(1. - tang*tang).sum(axis=0) -
                                        Beta))                        
 
                     # gauss
                     elif usedNlinearity == 30:
                         # This has been split for performance reasons.
-                        u = mmult(X.T, w)
+                        u = np.dot(X.T, w)
                         u2 = u*u
-                        ex = sp.exp(-a2*u2*0.5)
+                        ex = np.exp(-a2*u2*0.5)
                         gauss =  u*ex
                         dgauss = (1. - a2 *u2)*ex
-                        w = (mmult(X, gauss)-mmult(dgauss.sum(axis=0), w))/numSamples                        
+                        w = (np.dot(X, gauss)-np.dot(dgauss.sum(axis=0), w))/numSamples
                         
 
                     elif usedNlinearity == 31:
-                        u = mmult(X.T, w)
+                        u = np.dot(X.T, w)
                         u2 = u*u
-                        ex = sp.exp(-a2*u2*0.5)
+                        ex = np.exp(-a2*u2*0.5)
                         gauss =  u*ex
                         dgauss = (1. - a2 *u2)*ex
-                        Beta = mmult(u.T, gauss)
-                        w = w - myy*((mmult(X, gauss)-Beta*w)/
+                        Beta = np.dot(u.T, gauss)
+                        w = w - myy*((np.dot(X, gauss)-Beta*w)/
                                     (dgauss.sum(axis=0)-Beta))                        
                         
                     elif usedNlinearity == 32:
                         Xsub=X[:,self.getSamples(numSamples, sampleSize)]
-                        u = mmult(Xsub.T, w)
+                        u = np.dot(Xsub.T, w)
                         u2 = u*u
-                        ex = sp.exp(-a2*u2*0.5)
+                        ex = np.exp(-a2*u2*0.5)
                         gauss =  u*ex
                         dgauss = (1. - a2 *u2)*ex
-                        w = (mmult(Xsub, gauss)-
-                             mmult(dgauss.sum(axis=0), w))/Xsub.shape[1]                        
+                        w = (np.dot(Xsub, gauss)-
+                             np.dot(dgauss.sum(axis=0), w))/Xsub.shape[1]
                         
                     elif usedNlinearity == 33:
                         Xsub=X[:,self.getSamples(numSamples, sampleSize)]
-                        u = mmult(Xsub.T, w)
+                        u = np.dot(Xsub.T, w)
                         u2 = u*u
-                        ex = sp.exp(-a2*u2*0.5)
+                        ex = np.exp(-a2*u2*0.5)
                         gauss =  u*ex
                         dgauss = (1. - a2 *u2)*ex
-                        Beta = mmult(u.T, gauss)
-                        w = w - myy*((mmult(Xsub, gauss)-Beta*w)/
+                        Beta = np.dot(u.T, gauss)
+                        w = w - myy*((np.dot(Xsub, gauss)-Beta*w)/
                                     (dgauss.sum(axis=0)-Beta))                        
                         
                     # skew
                     elif usedNlinearity == 40:
-                        u = mmult(X.T, w)
-                        w = mmult(X, u*u)/numSamples                       
+                        u = np.dot(X.T, w)
+                        w = np.dot(X, u*u)/numSamples
                         
                     elif usedNlinearity == 41:
-                        u = mmult(X.T, w)
-                        EXGskew = mmult(X, u*u) / numSamples
-                        Beta = mmult(w.T, EXGskew)
-                        w = w - myy * (EXGskew - mmult(Beta, w))/(-Beta)                        
+                        u = np.dot(X.T, w)
+                        EXGskew = np.dot(X, u*u) / numSamples
+                        Beta = np.dot(w.T, EXGskew)
+                        w = w - myy * (EXGskew - np.dot(Beta, w))/(-Beta)
                         
                     elif usedNlinearity == 42:                 
                         Xsub=X[:,self.getSamples(numSamples, sampleSize)]
-                        u = mmult(Xsub.T, w)
-                        w = mmult(Xsub, u*u)/Xsub.shape[1]
+                        u = np.dot(Xsub.T, w)
+                        w = np.dot(Xsub, u*u)/Xsub.shape[1]
 
                     elif usedNlinearity == 43:
                         Xsub=X[:,self.getSamples(numSamples, sampleSize)]
-                        u = mmult(Xsub.T, w)
-                        EXGskew = mmult(Xsub, u*u) / Xsub.shape[1]
-                        Beta = mmult(w.T, EXGskew)
+                        u = np.dot(Xsub.T, w)
+                        EXGskew = np.dot(Xsub, u*u) / Xsub.shape[1]
+                        Beta = np.dot(w.T, EXGskew)
                         w = w - myy * (EXGskew - Beta*w)/(-Beta)
                         
                     else:
@@ -2255,7 +2246,7 @@ class analyze:
                         return
                                  
                     # Normalize the new w.
-                    norm = sp.sqrt((w*w).sum())
+                    norm = np.sqrt((w*w).sum())
                     w = w / norm
                     i = i + 1  
                 round = round + 1

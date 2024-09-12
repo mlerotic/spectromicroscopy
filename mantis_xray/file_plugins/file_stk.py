@@ -52,7 +52,7 @@ def GetFileStructure(FileName):
     return None
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def read(filename, self, selection=None, *args, **kwargs):
     f = open(str(filename),'rb')
     data = np.fromfile(f, np.int32, 3)
@@ -94,7 +94,7 @@ def read(filename, self, selection=None, *args, **kwargs):
   
     return
 
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
 def read_stk_i0_xas(self, filename):
 
     f = open(str(filename),'r')
@@ -106,9 +106,12 @@ def read_stk_i0_xas(self, filename):
         if line.startswith("*"):
             pass
         else:
-            e, i = [float (x) for x in line.split()] 
-            elist.append(e)
-            ilist.append(i)
+            try:
+                e, i = [float(x) for x in line.split()]
+                elist.append(e)
+                ilist.append(i)
+            except ValueError:
+                pass
             
     self.evi0 = np.array(elist)
     self.i0data = np.array(ilist) 
@@ -121,7 +124,7 @@ def read_stk_i0_xas(self, filename):
     return
     
 
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
 def read_stk_i0_csv(self, filename):
 
     f = open(str(filename),'r')
@@ -133,9 +136,12 @@ def read_stk_i0_csv(self, filename):
         if line.startswith("*"):
             pass
         else:
-            e, i = [float (x) for x in line.split(',')] 
-            elist.append(e)
-            ilist.append(i)
+            try:
+                e, i = [float(x) for x in line.split(',')]
+                elist.append(e)
+                ilist.append(i)
+            except ValueError:
+                pass
             
     self.evi0 = np.array(elist)
     self.i0data = np.array(ilist) 
@@ -147,12 +153,12 @@ def read_stk_i0_csv(self, filename):
 
     return    
     
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 class x1astk:
     def __init__(self):
         pass
     
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
     def read_stk(self, filename):
         f = open(str(filename),'rb')
         data = np.fromfile(f, np.int32, 3)
@@ -197,7 +203,7 @@ class x1astk:
       
         return
 
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
     def read_stk_i0_xas(self, filename):
 
         f = open(str(filename),'r')
@@ -209,7 +215,7 @@ class x1astk:
             if line.startswith("*"):
                 pass
             else:
-                e, i = [float (x) for x in line.split()] 
+                e, i = [float(x) for x in line.split()]
                 elist.append(e)
                 ilist.append(i)
                 
@@ -224,7 +230,7 @@ class x1astk:
         return
     
 
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
     def read_stk_i0_csv(self, filename):
 
         f = open(str(filename),'r')
@@ -237,7 +243,7 @@ class x1astk:
             if line.startswith("*"):
                 pass
             else:
-                e, i = [float (x) for x in line.split(',')] 
+                e, i = [float(x) for x in line.split(',')]
                 elist.append(e)
                 ilist.append(i)
                 

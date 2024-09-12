@@ -26,6 +26,7 @@ import scipy.ndimage
 import h5py
 import datetime
 import os
+import csv
 
 from .file_plugins import file_stk
 from .file_plugins import file_sdf
@@ -82,7 +83,7 @@ class data:
         self.stack4D = None
         self.n_theta = 0
         self.theta = 0
-        self.od4D = 0
+        self.od4d = 0
 
         self.data_struct.spectromicroscopy.normalization.white_spectrum = None
         self.data_struct.spectromicroscopy.normalization.white_spectrum_energy = None
@@ -123,7 +124,7 @@ class data:
             self.calculate_optical_density()
             self.fill_h5_struct_normalization()
 
-        self.scale_bar()
+        self.setScale()
 
     # ----------------------------------------------------------------------
     def read_ncb4D(self, filenames):
@@ -147,7 +148,7 @@ class data:
         self.data_struct.exchange.x = self.x_dist
         self.data_struct.exchange.y = self.y_dist
 
-        self.scale_bar()
+        self.setScale()
 
     # ----------------------------------------------------------------------
     def read_ncb4Denergy(self, filename):
@@ -241,7 +242,7 @@ class data:
 
         self.fill_h5_struct_from_stk()
 
-        self.scale_bar()
+        self.setScale()
 
         # Fix the normalization
         self.evi0 = self.ev.copy()
@@ -288,14 +289,24 @@ class data:
         if self.stack4D is None:
             self.data_struct.spectromicroscopy.optical_density = self.od
         else:
-            self.data_struct.spectromicroscopy.optical_density = self.od4D
+            self.data_struct.spectromicroscopy.optical_density = self.od4d
 
     # ----------------------------------------------------------------------
     def calc_histogram(self):
         # calculate average flux for each pixel
         self.averageflux = np.nanmean(self.absdata, axis=2)
         self.histogram = self.averageflux
-
+        px = int(self.n_cols * self.n_rows * 0.98)  # 98% of total pixels
+        fluxmax_limit = np.mean(np.partition(np.ravel(self.averageflux), px)[
+                                :px])  # average brightness of the 2% of pixels with highest flux
+        self.histmin = fluxmax_limit
+        self.histmax = np.max(self.averageflux) + 1
+        histogram_data = np.reshape(self.histogram, (self.n_cols * self.n_rows),
+                                    order='F')
+        histogram_data = histogram_data[~np.isnan(histogram_data)]  # remove non-finite values
+        y, self.hist_data_x = np.histogram(histogram_data, bins=100)
+        y[y < 1] = 1
+        self.hist_data_y = np.log10(y)
         return
 
     # ----------------------------------------------------------------------
@@ -328,7 +339,7 @@ class data:
         else:
             self.i0datahist = np.zeros((self.n_ev, self.n_theta))
             self.i0data = self.i0datahist
-            self.od4D = np.zeros((self.n_cols, self.n_rows, self.n_ev, self.n_theta))
+            self.od4d = np.zeros((self.n_cols, self.n_rows, self.n_ev, self.n_theta))
 
             if np.any(i0_indices):
                 invnumel = 1. / self.averageflux[i0_indices].shape[0]
@@ -363,9 +374,8 @@ class data:
         n_pixels = self.n_cols * self.n_rows
         # Optical density matrix is rearranged into n_pixelsxn_ev
         self.od = np.reshape(self.od, (n_pixels, self.n_ev), order='F')
-
         if self.stack4D is not None:
-            self.od4D = self.stack4D.copy()
+            self.od4d = self.stack4D.copy()
 
         self.fill_h5_struct_normalization()
 
@@ -455,7 +465,7 @@ class data:
     def calculate_optical_density_4D(self):
 
         n_pixels = self.n_cols * self.n_rows
-        self.od4D = np.zeros((self.n_cols, self.n_rows, self.n_ev, self.n_theta))
+        self.od4d = np.zeros((self.n_cols, self.n_rows, self.n_ev, self.n_theta))
 
         # little hack to deal with rounding errors
         self.evi0[self.evi0.size - 1] += 0.001
@@ -492,7 +502,7 @@ class data:
             if nan_indices:
                 self.od[nan_indices] = 0
 
-            self.od4D[:, :, :, ith] = self.od[:, :, :]
+            self.od4d[:, :, :, ith] = self.od[:, :, :]
 
         self.od3d = self.od.copy()
 
@@ -556,45 +566,65 @@ class data:
         return
 
     # ----------------------------------------------------------------------
-    def scale_bar(self):
-        self.x_start = np.min(self.x_dist)
-        self.x_stop = np.max(self.x_dist)
-        self.x_pxsize = np.round(np.abs(self.x_stop - self.x_start) / (self.n_cols - 1),
-                                 5)  # um per px in y direction, "-1" because stop-start is 1 px shorter than n_rows
-
-        self.y_start = np.min(self.y_dist)
-        self.y_stop = np.max(self.y_dist)
-        self.y_pxsize = np.round(np.abs(self.y_stop - self.y_start) / (self.n_rows - 1),
-                                 5)  # um per px in y direction, "-1" because stop-start is 1 px shorter than n_rows
+    def calc_px_size(self,distances,n):
+        start = np.min(distances)
+        stop = np.max(distances)
+        diff = stop - start
+        if diff != 0:
+            pxsize = np.round(np.abs(diff) / (n - 1), 5)  # um per px, "-1" because stop-start is 1 px shorter than n
+        else:
+            pxsize = np.nan
+        return pxsize, start, stop
+    # ----------------------------------------------------------------------
+    def setScale(self):
+        self.x_pxsize, self.x_start, self.x_stop = self.calc_px_size(self.x_dist,self.n_cols)
+        self.y_pxsize, self.y_start, self.y_stop = self.calc_px_size(self.y_dist,self.n_rows)
+        if np.isnan(self.x_pxsize) and np.isnan(self.y_pxsize):
+            print("Point spectra are currently not supported.")
+            return
+        else: #In line scans when one dimension is not known, assume square pixels:
+            if np.isnan(self.y_pxsize): # horizontal line
+                self.y_pxsize = self.x_pxsize
+                self.y_start = 0
+                self.y_stop = self.y_pxsize
+            elif np.isnan(self.x_pxsize): # vertical line
+                self.x_pxsize = self.y_pxsize
+                self.x_start = 0
+                self.x_stop = self.x_pxsize
 
         if self.x_pxsize == self.y_pxsize:
             self.squarepx = True
         else:
             self.squarepx = False
-        bar_microns = 0.2 * np.abs(self.x_stop - self.x_start)
 
-        if bar_microns >= 10.:
-            bar_microns = 10. * int(0.5 + 0.1 * int(0.5 + bar_microns))
-            bar_string = str(int(0.01 + bar_microns)).strip()
-        elif bar_microns >= 1.:
-            bar_microns = float(int(0.5 + bar_microns))
-            if bar_microns == 1.:
-                bar_string = '1'
-            else:
-                bar_string = str(int(0.01 + bar_microns)).strip()
-        else:
-            bar_microns = np.maximum(0.1 * int(0.5 + 10 * bar_microns), 0.1)
-            bar_string = str(bar_microns).strip()
+        # Set scale_bar as well
+        self.scale_bar()
 
-        self.scale_bar_string = bar_string
+    def scale_bar(self):
+         bar_microns = 0.2 * self.n_cols * self.x_pxsize
 
-        self.scale_bar_pixels_x = int(0.5 + float(self.n_cols) *
-                                      float(bar_microns) / float(abs(self.x_stop - self.x_start)))
+         if bar_microns >= 10.:
+             bar_microns = 10. * int(0.5 + 0.1 * int(0.5 + bar_microns))
+             bar_string = str(int(0.01 + bar_microns)).strip()
+         elif bar_microns >= 1.:
+             bar_microns = float(int(0.5 + bar_microns))
+             if bar_microns == 1.:
+                 bar_string = '1'
+             else:
+                 bar_string = str(int(0.01 + bar_microns)).strip()
+         else:
+             bar_microns = np.maximum(0.1 * int(0.5 + 10 * bar_microns), 0.1)
+             bar_string = str(bar_microns).strip()
 
-        self.scale_bar_pixels_y = int(0.01 * self.n_rows)
+         self.scale_bar_string = bar_string
 
-        if self.scale_bar_pixels_y < 2:
-            self.scale_bar_pixels_y = 2
+         self.scale_bar_pixels_x = int(0.5 + float(self.n_cols) *
+                                       float(bar_microns) / float(abs(self.x_stop - self.x_start)))
+
+         self.scale_bar_pixels_y = int(0.01 * self.n_rows)
+
+         if self.scale_bar_pixels_y < 2:
+             self.scale_bar_pixels_y = 2
 
     # ----------------------------------------------------------------------
     def write_xas(self, filename, evdata, data):
@@ -626,7 +656,7 @@ class data:
         print('* Address: ', file=f)
         print('*--------------------------------------------------------------', file=f)
         for ie in range(self.n_ev):
-            print('\t {0:06.2f}, {1:06f}'.format(evdata[ie], data[ie]), file=f)
+            print('\t {0:06.6f}, {1:06f}'.format(evdata[ie], data[ie]), file=f)
 
         f.close()
 
@@ -634,39 +664,53 @@ class data:
 
     # ----------------------------------------------------------------------
     def write_csv(self, filename, evdata, data, cname=''):
-        f = open(filename, 'w')
-        print('*********************  X-ray Absorption Data  ********************', file=f)
-        print('*', file=f)
-        print('* Formula: ', file=f)
-        print('* Common name: {0}'.format(cname), file=f)
-        print('* Edge: ', file=f)
-        print('* Acquisition mode: ', file=f)
-        print('* Source and purity: ', file=f)
-        print('* Comments: Stack list ROI ""', file=f)
-        print('* Delta eV: ', file=f)
-        print('* Min eV: ', file=f)
-        print('* Max eV: ', file=f)
-        print('* Y axis: ', file=f)
-        print('* Contact person: ', file=f)
-        print('* Write date: ', file=f)
-        print('* Journal: ', file=f)
-        print('* Authors: ', file=f)
-        print('* Title: ', file=f)
-        print('* Volume: ', file=f)
-        print('* Issue number: ', file=f)
-        print('* Year: ', file=f)
-        print('* Pages: ', file=f)
-        print('* Booktitle: ', file=f)
-        print('* Editors: ', file=f)
-        print('* Publisher: ', file=f)
-        print('* Address: ', file=f)
-        print('*--------------------------------------------------------------', file=f)
-        for ie in range(self.n_ev):
-            print('{0:06.2f}, {1:012g}'.format(evdata[ie], data[ie]), file=f)
-
-        f.close()
-
-        return
+        with open(filename, 'w', ) as f:
+            writer = csv.writer(f, quoting=csv.QUOTE_MINIMAL)
+            header = [['*********************  X-ray Absorption Data  ********************'],
+                      ['*'],
+                      ['* Formula: '],
+                      ['* Common name: {0}'.format(cname)],
+                      ['* Edge: '],
+                      ['* Acquisition mode: '],
+                      ['* Source and purity: '],
+                      ['* Comments: '],
+                      ['* Delta eV: '],
+                      ['* Min eV: '],
+                      ['* Max eV: '],
+                      ['* Y axis: '],
+                      ['* Contact person: '],
+                      ['* Write date: '],
+                      ['* Journal: '],
+                      ['* Authors: '],
+                      ['* Title: '],
+                      ['* Volume: '],
+                      ['* Issue number: '],
+                      ['* Year: '],
+                      ['* Pages: '],
+                      ['* Booktitle: '],
+                      ['* Editors: '],
+                      ['* Publisher: '],
+                      ['* Address: '],
+                      ['*--------------------------------------------------------------']]
+            for line in header:
+                writer.writerows([line])
+            if cname == "ROI spectra":
+                l = ["photon energy"]
+                for i in range(len(data)):
+                    if i == 0:
+                        l.append("current ROI")
+                    else:
+                        l.append("ROI "+ str(i))
+                writer.writerow(l)
+                data.insert(0,evdata)
+                data = [list(i) for i in zip(*data)]
+                for row in data:
+                    writer.writerows([row])
+                return
+            else:
+                for ie in range(self.n_ev):
+                    writer.writerow([f'{evdata[ie]:06.6f}', f'{data[ie]:09.6f}'])
+                return
 
     # ----------------------------------------------------------------------
     # Read x-ray absorption spectrum

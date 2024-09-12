@@ -23,8 +23,8 @@ import matplotlib
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 #from matplotlib.backends.backend_qt5agg import FigureCanvas
 from matplotlib.figure import Figure
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-from matplotlib import colorbar
+from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
+import matplotlib.colorbar as colorbar
 
 #Internal imports
 from . import data_struct
@@ -43,7 +43,7 @@ from .file_plugins import file_json
 from .file_plugins import file_tif
 from .file_plugins import file_stk
 from .file_plugins import file_csv
-    
+
 
 PlotH = 4.0
 PlotW = PlotH*1.61803
@@ -483,7 +483,7 @@ def save_pca(odir, filename, stk, anlz, png, pdf, svg):
         axes.set_position([0.03,0.03,0.8,0.94])
         bound = anlz.pcaimagebounds[i]
 
-        im = axes.imshow(pcaimage, cmap=matplotlib.cm.get_cmap("seismic_r"), vmin = -bound, vmax = bound)
+        im = axes.imshow(pcaimage, cmap=matplotlib.colormaps["seismic_r"], vmin = -bound, vmax = bound)
 
         cbar = colorbar(im, orientation='vertical', cax=ax_cb)
         axes.axis("off")

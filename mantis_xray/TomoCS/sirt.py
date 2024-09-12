@@ -24,7 +24,7 @@ import numpy as np
 M_PI = 3.14159265358979323846264338327
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def preprocessing(ry, rz, num_pixels, center, gridx, gridy) :
 
     for i in range(ry):
@@ -40,7 +40,7 @@ def preprocessing(ry, rz, num_pixels, center, gridx, gridy) :
     return mov, gridx, gridy
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def calc_quadrant(theta_p) :
 
     if ((theta_p >= 0 and theta_p < M_PI/2) or (theta_p >= M_PI and theta_p < 3*M_PI/2)) :
@@ -51,7 +51,7 @@ def calc_quadrant(theta_p) :
     
     return quadrant
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def calc_coords(ry, rz, xi, yi, sin_p, cos_p,
                 gridx, gridy, coordx, coordy):
 
@@ -72,7 +72,7 @@ def calc_coords(ry, rz, xi, yi, sin_p, cos_p,
 
     return coordx, coordy
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def trim_coords( ry, rz, coordx, coordy, 
                  gridx, gridy, ax, ay, 
                  bx, by):
@@ -96,7 +96,7 @@ def trim_coords( ry, rz, coordx, coordy,
     return asize, ax, ay, bsize, bx, by
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def sort_intersections( ind_condition, asize, ax, ay, 
                         bsize, bx, by, 
                         coorx, coory) :
@@ -141,7 +141,7 @@ def sort_intersections( ind_condition, asize, ax, ay,
     return csize
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def calc_dist( ry, rz, csize, coorx, coory, indi, dist):
 
     for n in range(csize-1): 
@@ -163,7 +163,7 @@ def calc_dist( ry, rz, csize, coorx, coory, indi, dist):
 
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def calc_simdata( p, s, c, ry, rz, num_slices, num_pixels, 
                   csize, indi, dist, model, simdata):
 
@@ -180,7 +180,7 @@ def calc_simdata( p, s, c, ry, rz, num_slices, num_pixels,
 
 
     
-#----------------------------------------------------------------------   
+#-----------------------------------------------------------------------   
 #     Calculate sirt
 #     tomo : ndarray
 #         3D tomographic data.

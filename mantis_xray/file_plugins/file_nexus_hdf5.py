@@ -23,7 +23,7 @@ from collections import OrderedDict
 
 title = 'NXstxm'
 extension = ['*.hdf','*.hdf5','*.nxs']
-read_types = ['spectrum','image','stack']
+read_types = ['spectrum','image','stack','sample line spectrum']
 write_types = []#'spectrum','image','stack']
 
 def perhaps_decode(value):
@@ -47,8 +47,8 @@ def identify(filename):
     except:
         return False
 
-def read(FileName,stack_object,selection=(0,0), *args, **kwargs):
-    """Todo: Add support for single images!"""
+def read(FileName,stack_object,selection=(0,0), json=None, inorm=None, *args, **kwargs):
+    #print(inorm)
     D = GetFileStructure(FileName)
     entry = list(D.keys())[selection[0]]
     detector = list(D[entry].keys())[selection[1]] #[counter0, ...]
@@ -61,6 +61,11 @@ def read(FileName,stack_object,selection=(0,0), *args, **kwargs):
         print("Can't find photon energy!")
     stack_object.x_dist = numpy.array(F[entry][detector]['sample_x'])
     stack_object.y_dist = numpy.array(F[entry][detector]['sample_y'])
+    # if line scan, 1 dimenson has only one pixel/position!
+    if numpy.all(stack_object.x_dist == stack_object.x_dist[0]):
+        stack_object.x_dist = numpy.array([stack_object.x_dist[0]])
+    if numpy.all(stack_object.y_dist == stack_object.y_dist[0]):
+        stack_object.y_dist = numpy.array([stack_object.y_dist[0]])
     stack_object.data_dwell = numpy.array(F[entry][detector]['count_time'])
     stack_object.n_cols = len(stack_object.x_dist)
     stack_object.n_rows = len(stack_object.y_dist)
@@ -89,11 +94,19 @@ def read(FileName,stack_object,selection=(0,0), *args, **kwargs):
         signal_name = perhaps_decode(F[entry][detector].attrs['signal'])
     if axes_order[0] == axes_order[1]: #i.e. if linescan
         temp = numpy.transpose(numpy.array(F[entry][detector][signal_name]),axes=axes_order[1:])
-        stack_object.absdata = numpy.tile(temp,(temp.shape[0],1,1))
-    elif len(axes_order)<3: #i.e. if image
-        stack_object.absdata = numpy.expand_dims(numpy.transpose(numpy.array(F[entry][detector][signal_name]),axes=axes_order),2)
+        temp = numpy.expand_dims(temp, axis=0)
+        if stack_object.n_rows == 1: # if horizontal line scan
+            stack_object.absdata = numpy.transpose(temp,axes=[1,0,2])
     else:
         stack_object.absdata = numpy.transpose(numpy.array(F[entry][detector][signal_name]),axes=axes_order)
+        if len(axes_order) < 3: # for single images add one more dimension
+            stack_object.absdata = numpy.expand_dims(stack_object.absdata, axis=2)
+    if inorm and ('ringcurrent' in list(F[entry])):
+        ringcurrent = numpy.transpose(numpy.array(F[entry]['ringcurrent']['data']),axes=axes_order)
+        if len(axes_order) < 3: # for single images add one more dimension
+            ringcurrent = numpy.expand_dims(ringcurrent, axis=2)
+        ringcurrent_median = numpy.nanmedian(ringcurrent, keepdims=False)
+        stack_object.absdata = stack_object.absdata / (ringcurrent/ringcurrent_median)
 
     F.close()
 

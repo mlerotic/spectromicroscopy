@@ -52,7 +52,7 @@ def GetFileStructure(FileName):
     return None
 
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def read(filename, self, selection=None, *args, **kwargs):
 
     basename, extension = os.path.splitext(filename)
@@ -67,7 +67,7 @@ def read(filename, self, selection=None, *args, **kwargs):
     return
     
  
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def read_xrm_fileinfo(filename, readimgdata = False): 
     
     if not isOleFile(filename):
@@ -175,7 +175,7 @@ def read_xrm_fileinfo(filename, readimgdata = False):
         return n_cols, n_rows, eV, imgdata
 
         
-#----------------------------------------------------------------------    
+#-----------------------------------------------------------------------    
 def read_xrm_list(self, filelist, filepath, ds): 
     
     #Fill the common stack data 
@@ -377,7 +377,7 @@ def read_xrm_list(self, filelist, filepath, ds):
     
     return
 
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def read_xrm(filename, self):
         
     if not isOleFile(filename):
@@ -572,7 +572,7 @@ def read_xrm(filename, self):
 
          
     
-#----------------------------------------------------------------------
+#-----------------------------------------------------------------------
 def read_txrm(filename, self):
         
     if not isOleFile(filename):
@@ -897,7 +897,7 @@ def read_txrm(filename, self):
 # OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 
-#-----------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # CHANGELOG: (only olefile/OleFileIO_PL changes compared to PIL 1.1.6)
 # 2005-05-11 v0.10 PL: - a few fixes for Python 2.4 compatibility
 #                        (all changes flagged with [PL])
@@ -990,7 +990,7 @@ def read_txrm(filename, self):
 #                      - added path_encoding option to override the default
 #                      - fixed a bug in _list when a storage is empty
 
-#-----------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # TODO (for version 1.0):
 # + get rid of print statements, to simplify Python 2.x and 3.x support
 # + add is_stream and is_storage
@@ -1034,7 +1034,7 @@ def read_txrm(filename, self):
 # see issue #6 on Bitbucket:
 # https://bitbucket.org/decalage/olefileio_pl/issue/6/improve-olefileio_pl-to-write-ole-files
 
-#-----------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # NOTES from PIL 1.1.6:
 
 # History:
@@ -1059,7 +1059,7 @@ def read_txrm(filename, self):
 #  the actual functionality of the Software represents the correct
 #  functionality" -- Microsoft, in the OLE format specification
 
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 
 
 import io
