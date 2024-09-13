@@ -10761,6 +10761,7 @@ class MultiCrop(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
             self.stack.stack4D = self.stack.stack4D[left:right, bottom:top, selection, :]
             self.stack.stack4D = self.stack.stack4D[:,:, :, thetas]
         if self.com.i0_loaded:
+            self.stack.i0_mask = self.stack.i0_mask[left:right,bottom:top]
             if self.com.stack_4d:
                 self.stack.od4d = self.stack.od4d[left:right,bottom:top,selection, thetas]
             else:
@@ -10768,6 +10769,7 @@ class MultiCrop(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
                 self.stack.od = self.stack.od3d.copy()
                 self.stack.od = np.reshape(self.stack.od, (self.stack.n_rows * self.stack.n_cols, self.stack.n_ev),
                                        order='F')
+            self.parent.page1.specfig.I0Update()
 
         self.stack.fill_h5_struct_from_stk()
         if self.com.i0_loaded == 1:
@@ -13064,6 +13066,10 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
                 self.OnResetAlignROI()
             else:
                 self.stack.absdata4d_shifted_cropped = self.stack.absdata4d_shifted_cropped[l:cr,b:ct,:,:]
+                if self.com.i0_loaded == 1:
+                    self.stack.i0_mask = self.stack.i0_mask[l: cr, b: ct]
+                    print("4 - Stack & I0 mask cropped to common region: ", globalminx, globalmaxx, globalminy, globalmaxy)
+                    return
                 print("4 - Stack cropped to common region: ", globalminx, globalmaxx, globalminy, globalmaxy)
         else:
             self.box.show()
@@ -13242,47 +13248,13 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
 
         self.stack.n_cols = datadim[0].copy()
         self.stack.n_rows =  datadim[1].copy()
-        #ToDo: Handshake data
-        #self.stack.xshifts = self.x_shiftstemp
-        #self.stack.yshifts = self.y_shiftstemp
 
-        #ToDo: How to handle aligned i0 data?
-
-        # if self.com.i0_loaded == 1:
-        #     if self.com.stack_4d == 0:
-        #         #Resize optical density
-        #         for i in range(self.stack.n_ev):
-        #
-        #             img = self.stack.od3d[:,:,i]
-        #             shifted_img = self.stack.apply_image_registration(img, self.xshifts[i], self.yshifts[i])
-        #             self.stack.od3d[:,:,i] = shifted_img
-        #
-        #
-        #         self.stack.od3d = self.stack.od3d[self.xleft:self.xright, self.ybottom:self.ytop, :]
-        #
-        #         self.stack.od = self.stack.od3d.copy()
-        #         self.stack.od = np.reshape(self.stack.od, (self.stack.n_cols*self.stack.n_rows, self.stack.n_ev), order='F')
-        #
-        #     else:
-        #         #Resize optical density for 4D stack
-        #
-        #         for i in range(self.stack.n_ev):
-        #             for j in range(self.stack.n_theta):
-        #                 img = self.stack.od4d[:,:,i,j]
-        #                 shifted_img = self.stack.apply_image_registration(img, self.xshifts[i,j], self.yshifts[i,j])
-        #                 self.stack.od4d[:,:,i,j] = shifted_img
-        #
-        #         self.stack.od4d = self.stack.od4d[self.xleft:self.xright, self.ybottom:self.ytop, :, :]
-        #
-        #         self.stack.od3d = self.stack.od4d[:,:,:,self.itheta]
-        #         self.stack.od = self.stack.od3d.copy()
-        #         n_pixels = self.stack.n_cols*self.stack.n_rows
-        #         self.stack.od = np.reshape(self.stack.od, (n_pixels, self.stack.n_ev), order='F')
-        #
-        #     self.stack.data_struct.spectromicroscopy.optical_density = self.stack.od
+        if self.com.i0_loaded == 1:
+            self.parent.page1.specfig.I0Update()
 
         self.stack.data_struct.exchange.energy = self.stack.ev
-        #ToDo: Handshake shift data
+
+        #ToDo: Handshake shift data for spectral roi
         #self.stack.data_struct.spectromicroscopy.xshifts = self.x_shiftstemp
         #self.stack.data_struct.spectromicroscopy.yshifts = self.y_shiftstemp
 
@@ -15736,8 +15708,12 @@ class SpecFig():
             curve = pg.PlotCurveItem(x,y, pen=({'color': "#ff7700", 'width': 2}),
                                      skipFiniteCheck=True, name="I0")
             self.plotitem.addItem(curve)
-            #vb = self.plotitem.items[-1].getViewBox()
-            #vb.updateAutoRange()
+            #Show I0 region and hide roi selection
+            indices = np.where(self.parent.stk.i0_mask)
+            self.drawROImask(None,indices= indices,color=(255,119,0,255))
+            self.parent.absimgfig.OnROIVisibility(QtCore.Qt.Unchecked)
+            self.parent.absimgfig.ROImask.show()
+
         else:
             self.setPlotItemVisibility(True)
             if len(self.plotitem.items) > 2:
@@ -15750,6 +15726,11 @@ class SpecFig():
             self.parent.button_clearlastroi.setEnabled(True)
             self.parent.button_mergeroi.setEnabled(True)
             self.parent.button_subtractroi.setEnabled(True)
+
+            # Restore ROI
+            self.parent.absimgfig.OnROIVisibility(self.parent.ROIvisibleCheckBox.checkState())
+            self.updatePlotData()
+
 
     def OnI0Histogram(self):
         self.parent.OnShowMean()
@@ -15782,26 +15763,8 @@ class SpecFig():
         self.parent.button_clearlastroi.setEnabled(True)
         self.parent.button_mergeroi.setEnabled(True)
         self.parent.button_subtractroi.setEnabled(True)
-        bool = np.sum(self.parent.absimgfig.ROIrgba, axis=2)[:, :] > 0
-        self.parent.stk.i0_mask = bool
-        bool = np.where(bool == True)
-        if np.any(bool):
-            self.parent.stk.i0_from_histogram(bool)
-            self.parent.I0histogramCalculated()
-            self.parent.button_i0.disconnect()
-            self.parent.button_i0.setText("Reset I0")
-            self.parent.button_i0.setStyleSheet(""); #pass an empty string to return to default style
-            self.parent.ROIShapeBox.setStyleSheet("");
-            self.parent.button_i0.clicked.connect(self.OnI0Reset)
-            self.parent.button_i0ffile.setEnabled(False)
-            self.parent.button_prenorm.setEnabled(False)
-            self.parent.button_refimgs.setEnabled(False)
-            self.parent.label_roitype.setText("ROI type")
-            self.parent.label_roitype.setStyleSheet("");
-            QtWidgets.QApplication.restoreOverrideCursor()
-        else:
-            QtWidgets.QApplication.restoreOverrideCursor()
-            QtWidgets.QMessageBox.warning(self.parent, 'Error', 'I0 region is empty!')
+        self.parent.stk.i0_mask = np.sum(self.parent.absimgfig.ROIrgba, axis=2)[:, :] > 0
+        self.I0Update()
 
     # ----------------------------------------------------------------------
     def OnI0Reset(self):
@@ -15822,6 +15785,25 @@ class SpecFig():
         self.parent.button_prenorm.setEnabled(True)
         self.parent.button_refimgs.setEnabled(True)
 
+    # ----------------------------------------------------------------------
+    def I0Update(self):
+        bool = np.where(self.parent.stk.i0_mask == True)
+        if bool[0].size and bool[1].size:
+            self.parent.stk.i0_from_histogram(bool)
+            self.parent.I0histogramCalculated()
+            self.parent.button_i0.disconnect()
+            self.parent.button_i0.setText("Reset I0")
+            self.parent.button_i0.setStyleSheet("");  # pass an empty string to return to default style
+            self.parent.ROIShapeBox.setStyleSheet("");
+            self.parent.button_i0.clicked.connect(self.OnI0Reset)
+            self.parent.label_roitype.setText("ROI type")
+            self.parent.label_roitype.setStyleSheet("");
+            QtWidgets.QApplication.restoreOverrideCursor()
+        else:
+            QtWidgets.QApplication.restoreOverrideCursor()
+            QtWidgets.QMessageBox.warning(self.parent, 'Error', 'I0 region is empty!')
+
+    # ----------------------------------------------------------------------
     def GetNextROINumberandColor(self):
         #MANTiS unique Light qualitative color scheme
         lut = ['#6699DD','#EE7733','#ABCC44','#99DDFF','#FFAABB','#BAAA00','#AB2622','#44BB99','#AA4499','#EEDD89']
@@ -15907,7 +15889,7 @@ class SpecFig():
                 boolmask = ~np.logical_and(~b1, b2)  # subtract
                 if not np.any(~boolmask):
                     self.ClearLast()
-                    self.ClearLast()
+                    self.ClearLast() #!
                     return
                 indices = np.where(boolmask == False)
                 self.removeLast2ROI(i,roiitems)
