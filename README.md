@@ -21,7 +21,7 @@ It is recommended that you also upgrade the dependencies with: `pip3 install man
 Installation via pip provides the `mantis-xray` command (alternatively `python3 -m mantis_xray`) to start the Mantis GUI.
 
 ## User Guide ##
-Mantis User Guide can be found on the project Wiki pages [Home](https://github.com/mlerotic/spectromicroscopy/wiki).
+Mantis User Guide can be found at [https://docs.spectromicroscopy.com/](https://docs.spectromicroscopy.com/).
 
 ## References ##
 
