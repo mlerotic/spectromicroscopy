@@ -46,7 +46,7 @@ def erf(x):
 
     # A&S formula 7.1.26
     t = 1.0/(1.0 + p*x)
-    y = 1.0 - (((((a5*t + a4)*t) + a3)*t + a2)*t + a1)*t*np.math.exp(-x*x)
+    y = 1.0 - (((((a5*t + a4)*t) + a3)*t + a2)*t + a1)*t*np.exp(-x*x)
     return sign*y # erf(-x) = -erf(x)
 
 def stepfunc(p, x):
@@ -195,10 +195,9 @@ class analyze:
             
        
         covmatrix = np.dot(od.T,od)
-  
+
         self.pcaimages = np.zeros((self.stack.n_cols, self.stack.n_rows, self.stack.n_ev))
         self.pcaimagebounds = np.zeros((self.stack.n_ev))
-        
 
         try:
 
@@ -208,7 +207,7 @@ class analyze:
             perm = np.argsort(-np.abs(self.eigenvals))
             self.eigenvals = self.eigenvals[perm]
             self.eigenvecs = self.eigenvecs[:,perm]
-            
+
             self.pcaimages = np.dot(od,self.eigenvecs)
 
             #calculate eigenimages
@@ -235,14 +234,13 @@ class analyze:
             x2 = maxpoints
             y1 = np.log(self.eigenvals[0])
             x1 = 0
-            
+
             #Calculate distances between all the points and the line x1 and x2 are points on the line and x0 are eigenvals
             distance = np.zeros((maxpoints))
             for i in range(maxpoints):
                 y0 = np.log(self.eigenvals[i])
                 x0=i
-                distance[i] = np.abs((x2-x1)*(y1-y0)-(x1-x0)*(y2-y1))/np.math.sqrt((x2-x1)**2+(y2-y1)**2)  
-            
+                distance[i] = np.abs((x2-x1)*(y1-y0)-(x1-x0)*(y2-y1))/np.sqrt((x2-x1)**2+(y2-y1)**2)
             #Point with the largest distance is the "elbow"
             sigpca = np.argmax(distance)
 
@@ -335,7 +333,7 @@ class analyze:
                 for i in range(maxpoints):
                     y0 = np.log(self.eigenvals[i])
                     x0=i
-                    distance[i] = np.abs((x2-x1)*(y1-y0)-(x1-x0)*(y2-y1))/np.math.sqrt((x2-x1)**2+(y2-y1)**2)  
+                    distance[i] = np.abs((x2-x1)*(y1-y0)-(x1-x0)*(y2-y1))/np.sqrt((x2-x1)**2+(y2-y1)**2)
                 
                 #Point with the largest distance is the "elbow"
                 sigpca = np.argmax(distance)

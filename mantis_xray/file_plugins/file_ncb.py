@@ -346,7 +346,7 @@ def write(filename, stack, data_type):  # ,norm):
     test = np.amax([abs(tmin), abs(tmax)])
     scale = 1.
     if test > 3e4 or test < 1e3:
-        scale = 10. ** (3 - np.fix(np.math.log10(test)))
+        scale = 10. ** (3 - np.fix(np.log10(test)))
 
     # Save image stack to a binary .dat file
     f = open(str(filename), 'wb')
@@ -522,7 +522,7 @@ class Cncb:
         test = np.amax([abs(tmin), abs(tmax)])
         scale = 1.
         if test > 3e4 or test < 1e3:
-            scale = 10. ** (3 - np.fix(np.math.log10(test)))
+            scale = 10. ** (3 - np.fix(np.log10(test)))
 
         # Save image stack to a binary .dat file
         f = open(str(filename), 'wb')

@@ -570,11 +570,11 @@ class henke:
         wavelength_angstroms = HC_ANGSTROMS/energies
         # This constant has wavelength in angstroms and then
         # they are converted to centimeters.
-        constant = RE * (1.0e-16 * wavelength_angstroms * wavelength_angstroms) * molecules_per_cc / (2.0 * np.math.pi)
+        constant = RE * (1.0e-16 * wavelength_angstroms * wavelength_angstroms) * molecules_per_cc / (2.0 * np.pi)
         delta = constant * f1
         beta = constant * f2
         # Alpha is in inverse meters squared
-        alpha = 1.e4 * density * AVOGADRO * RE / (2.*np.math.pi*atwt)
+        alpha = 1.e4 * density * AVOGADRO * RE / (2.*np.pi*atwt)
         #alpha = alpha[0]
 
   
@@ -601,7 +601,7 @@ class henke:
             reflect= 50.0 * i_sigma * (1 + piosig)
 
 
-        denom = energies*4.*np.math.pi*beta
+        denom = energies*4.*np.pi*beta
 
         zeroes = np.where(denom == 0.)
         nonzeroes = np.where(denom != 0.)  
