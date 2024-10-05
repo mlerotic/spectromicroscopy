@@ -63,8 +63,8 @@ class HDR_FileParser:
   def __init__(self, fileName,identify=False):
     if not HDR_FileParser.hdr or HDR_FileParser.f != fileName: # prevent class from fetching and parsing the *.hdr file multiple times. Use the class attribute "hdr" instead if available and check if a new file (not "f") is loaded.
         # compile some regular expressions
-        self.MatchReStruct = re.compile('[\s\{\}\(\)=";]')
-        self.MatchReArray = re.compile('[,\s\{\(\);]')
+        self.MatchReStruct = re.compile(r'[\s\{\}\(\)=";]')
+        self.MatchReArray = re.compile(r'[,\s\{\(\);]')
         self.__file = open(fileName)
         # Parse the HDR file
         HDR_FileParser.hdr = self.parseStructure()
