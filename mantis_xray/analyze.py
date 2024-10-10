@@ -1360,12 +1360,14 @@ class analyze:
         % Eli Billauer, 3.4.05 (Explicitly not copyrighted).
         % This function is released to the public domain; Any use is allowed.
         """
+        print("init_peak_find")
         maxtab = []
         mintab = []
         
         if x is None:
             x = np.arange(len(v))
         v = np.asarray(v)
+
         if len(v) != len(x):
             print ('Input vectors v and x must have same length')
             return -1
@@ -1375,8 +1377,8 @@ class analyze:
         if delta <= 0:
             print ('Input argument delta must be positive')
             return -1
-        mn, mx = np.Inf, -np.Inf
-        mnpos, mxpos = np.NaN, np.NaN
+        mn, mx = np.inf, -np.inf
+        mnpos, mxpos = np.nan, np.nan
         lookformax = True
         for i in np.arange(len(v)):
             this = v[i]
@@ -1398,7 +1400,7 @@ class analyze:
                     mx = this
                     mxpos = x[i]
                     lookformax = True
-     
+        print("end_peak_fit")
         return np.array(maxtab), np.array(mintab)
 
        
@@ -1456,8 +1458,7 @@ class analyze:
         xfit_spectrum = self.clusterspectra[i_cluster,:].copy()
         xfit_spectrum = np.reshape(xfit_spectrum, (1,self.stack.n_ev)) 
         spectrum_common_name = 'Cluster '+str(i_cluster+1)
-         
-     
+
         if self.xrayfitsp_loaded == 0:
             self.xrayfitspectra = xfit_spectrum.copy()
             self.xrayfitsp_loaded = 1
@@ -1469,10 +1470,10 @@ class analyze:
         self.xfspec_names.append(spectrum_common_name)
         
         self.xfitpars.append(Cfitparams())
-        
+        print("cluster")
         #Find peaks:
         self.init_fit_params(self.n_xrayfitsp-1)
-        
+        print("cluster_fit")
         
 #-----------------------------------------------------------------------   
     def init_fit_params(self, index):
@@ -1481,8 +1482,7 @@ class analyze:
         pmax,pmin = self.find_peaks(self.xrayfitspectra[index], 0.03, x = self.stack.ev)
         
         fp = self.xfitpars[index]
-        
-        
+
         peakengs = []
         if len(pmax) > 0:
             for i in range(12):
