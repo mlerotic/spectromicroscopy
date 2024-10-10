@@ -11,45 +11,65 @@ def check_for_updates(current_version):
     from urllib.error import URLError
     from importlib.metadata import version as version_check
     from packaging.version import parse as parse_version
-    timeout=5
+    timeout=.06
     message = 'Socket timed out. Check your internet connection.\nVersion checks skipped.'
-    # Scrape the version string from the PyPI:mantis-xray RSS feed
-    try:
-        with urllib.request.urlopen("https://pypi.org/rss/project/mantis_xray/releases.xml", timeout=timeout) as init_file:
-            pypi_rss = init_file.read()
-        #print(pypi_rss)
-        pypi_list = re.findall(r"(?:\<title\>\s*)([\d\.]+)(?:\s*\</title\>)", pypi_rss.decode())[0]
-        print("Latest package on PyPI is version {0}".format(pypi_list))
-    except URLError:
-        print(message)
-        return
-    except:
-        pass
+    attempt = 0
+    max_attempt = 3
+    while attempt < max_attempt:
+        # Scrape the version string from the PyPI:mantis-xray RSS feed
+        try:
+            with urllib.request.urlopen("https://pypi.org/rss/project/mantis_xray/releases.xml", timeout=timeout) as init_file:
+                pypi_rss = init_file.read()
+            #print(pypi_rss)
+            pypi_list = re.findall(r"(?:\<title\>\s*)([\d\.]+)(?:\s*\</title\>)", pypi_rss.decode())[0]
+            print("Latest package on PyPI is version {0}".format(pypi_list))
+            attempt = 0
+            break
+        except URLError:
+            attempt+=1
+            print("Connection attempt " + str(attempt)+"/"+str(max_attempt)+" unsuccessful.")
+            if attempt == 3:
+                print(message)
+                return
+        except:
+            pass
     
     # Scrape version string from the code in the github repository
-    try:
-        with urllib.request.urlopen("https://raw.githubusercontent.com/mlerotic/spectromicroscopy/master/mantis_xray/__init__.py", timeout=timeout) as init_file:
-            github_init = init_file.read()
-        #print(github_init)
-        github_latest = re.search(r"(?:__version__*\s=*\s)['|\"]+([\d\.]+)", github_init.decode()).group(1)
-        print("Current default (master) code is version {0}".format(github_latest))
-    except URLError:
-        print(message)
-        return
-    except:
-        pass
-    try:
-        with urllib.request.urlopen(
-                "https://raw.githubusercontent.com/mlerotic/spectromicroscopy/development/mantis_xray/__init__.py", timeout=timeout) as init_file:
-            github_init = init_file.read()
-        # print(github_init)
-        github_latest = re.search(r"(?:__version__*\s=*\s)['|\"]+([\d\.]+)", github_init.decode()).group(1)
-        print("Current development code is version {0}".format(github_latest))
-    except URLError:
-        print(message)
-        return
-    except:
-        pass
+    while attempt < max_attempt:
+        try:
+            with urllib.request.urlopen("https://raw.githubusercontent.com/mlerotic/spectromicroscopy/master/mantis_xray/__init__.py", timeout=timeout) as init_file:
+                github_init = init_file.read()
+            #print(github_init)
+            github_latest = re.search(r"(?:__version__*\s=*\s)['|\"]+([\d\.]+)", github_init.decode()).group(1)
+            print("Current default (master) code is version {0}".format(github_latest))
+            attempt = 0
+            break
+        except URLError:
+            attempt+=1
+            print("Connection attempt " + str(attempt)+"/"+str(max_attempt)+" unsuccessful.")
+            if attempt == 3:
+                print(message)
+                return
+        except:
+            pass
+    while attempt < max_attempt:
+        try:
+            with urllib.request.urlopen(
+                    "https://raw.githubusercontent.com/mlerotic/spectromicroscopy/development/mantis_xray/__init__.py", timeout=timeout) as init_file:
+                github_init = init_file.read()
+            # print(github_init)
+            github_latest = re.search(r"(?:__version__*\s=*\s)['|\"]+([\d\.]+)", github_init.decode()).group(1)
+            print("Current development code is version {0}".format(github_latest))
+            attempt = 0
+            break
+        except URLError:
+            attempt+=1
+            print("Connection attempt " + str(attempt)+"/"+str(max_attempt)+" unsuccessful.")
+            if attempt == 3:
+                print(message)
+                return
+        except:
+            pass
     # PyQt5 & pyqtgraph version check
     if parse_version(version_check('pyqt5')) >= parse_version('5.15.6'):
         print("PyQt version in use is {0}".format(version_check("pyqt5")))
