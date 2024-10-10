@@ -46,7 +46,7 @@ from __future__ import division
 
 import numpy as np
 import scipy.interpolate
-from xdrlib import *
+from xdrlib3 import *
 import string
 
 #------------------------------------------------------------------------------
