@@ -10332,10 +10332,13 @@ class ShowArtefacts(QtWidgets.QDialog):
         a, wf = self.LevelCalc(self.stack.absdata.astype('float64'),final=True)
         if self.remove_outliers.isChecked():
             a, wf = self.OutlierCalc(a,final=True)
+            self.parent.page1.specfig.OnI0Reset()  # Reset I0 on PageStack
+            self.parent.window().refresh_widgets()
         if not np.array_equal(self.stack.absdata, a, equal_nan=False):
             self.stack.absdata = a
             self.parent.page0.absimgfig.loadNewImage() # Load new image on PageLoadData
             self.parent.page1.specfig.OnI0Reset() # Reset I0 on PageStack
+            self.parent.window().refresh_widgets()
         self.close()
 #----------------------------------------------------------------------
 class MultiCrop(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
@@ -10802,6 +10805,7 @@ class MultiCrop(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
         self.parent.page1.absimgfig.loadNewImageWithROI()
         self.parent.page0.absimgfig.loadNewImage()
         self.parent.page1.specfig.ClearandReload()
+        self.parent.window().refresh_widgets()
         #if showmaptab:
         #    self.parent.page9.Clear()
         #    self.parent.page9.loadData()
@@ -13264,6 +13268,7 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
         self.parent.page0.absimgfig.loadNewImage()
         self.parent.page1.absimgfig.loadNewImageWithROI()
         self.parent.page1.specfig.ClearandReload()
+        self.parent.window().refresh_widgets()
         #self.parent.page1.ix = int(self.stack.n_cols/2)
         #self.parent.page1.iy = int(self.stack.n_rows/2)
 
@@ -13962,6 +13967,8 @@ class DarkSignal(QtWidgets.QDialog):
         self.parent.page1.absimgfig.loadNewImageWithROI()
         self.parent.page0.absimgfig.loadNewImage()
         self.parent.page1.specfig.ClearandReload()
+        self.parent.window().refresh_widgets()
+
 
 
         QtWidgets.QApplication.restoreOverrideCursor()
@@ -15778,12 +15785,6 @@ class SpecFig():
         self.parent.absimgfig.loadNewImageWithROI()
         self.ClearandReload()
         self.parent.window().refresh_widgets()
-        self.parent.button_i0.disconnect()
-        self.parent.button_i0.setText("Select I0")
-        self.parent.button_i0.clicked.connect(self.OnI0Histogram)
-        self.parent.button_i0ffile.setEnabled(True)
-        self.parent.button_prenorm.setEnabled(True)
-        self.parent.button_refimgs.setEnabled(True)
 
     # ----------------------------------------------------------------------
     def I0Update(self):
@@ -15802,6 +15803,21 @@ class SpecFig():
         else:
             QtWidgets.QApplication.restoreOverrideCursor()
             QtWidgets.QMessageBox.warning(self.parent, 'Error', 'I0 region is empty!')
+
+    # ----------------------------------------------------------------------
+    def I0Cancel(self):
+        self.parent.button_i0.disconnect()
+        self.roicolor = (0,0,255,255)
+        self.parent.showflux = True
+        self.parent.button_i0.setStyleSheet("");  # pass an empty string to return to default style
+        self.parent.ROIShapeBox.setStyleSheet("");
+        self.parent.label_roitype.setText("ROI type")
+        self.parent.label_roitype.setStyleSheet("");
+        self.parent.button_i0.setText("Select I0")
+        self.parent.button_i0.clicked.connect(self.OnI0Histogram)
+        self.parent.button_i0ffile.setEnabled(True)
+        self.parent.button_prenorm.setEnabled(True)
+        self.parent.button_refimgs.setEnabled(True)
 
     # ----------------------------------------------------------------------
     def GetNextROINumberandColor(self):
@@ -17056,7 +17072,7 @@ class MainFrame(QtWidgets.QMainWindow):
 #----------------------------------------------------------------------
     def refresh_widgets(self):
 
-
+        print("refresh")
 
         if self.common.stack_loaded == 0:
             self.page1.button_i0ffile.setEnabled(False)
@@ -17125,6 +17141,7 @@ class MainFrame(QtWidgets.QMainWindow):
 
 
         if self.common.i0_loaded == 0:
+            self.page1.specfig.I0Cancel()
             self.page1.button_showi0.setEnabled(False)
             self.page1.button_showi0.setChecked(False)
             #self.page1.rb_flux.setEnabled(False)

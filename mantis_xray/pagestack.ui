@@ -149,7 +149,7 @@
             <item>
              <widget class="QPushButton" name="button_darksig">
               <property name="text">
-               <string>Dark signal substraction</string>
+               <string>Dark signal subtraction</string>
               </property>
              </widget>
             </item>
