@@ -343,7 +343,7 @@ class analyze:
     
                             
             except:
-                print ("pca not converging")
+                print("pca not converging")
                 
             self.pca_calculated = 1
             
@@ -1049,47 +1049,44 @@ class analyze:
         spectrum_evdata = 0
         spectrum_data = 0
         spectrum_common_name = ' '
-        if flat == False:
-            
+        if flat == True:
+            spectrum_evdata = self.stack.ev
+            spectrum_data = np.ones((1,self.stack.n_ev))
+            spectrum_common_name= ['Flat']
+        else:
             fn =  os.path.basename(str(filename))                                      
             basename, extension = os.path.splitext(fn)      
             if extension == '.csv':
                 spectrum_evdata, spectrum_data, spectrum_common_name = self.stack.read_csv(filename)
-            elif extension == '.xas':
-                spectrum_evdata, spectrum_data, spectrum_common_name = self.stack.read_xas(filename)
-            elif extension == '.txt':
-                spectrum_evdata, spectrum_data, spectrum_common_name = self.stack.read_txt(filename)
-                                    
-            # Map this spectrum onto our energy range - interpolate to ev
-            ftspec = scipy.interpolate.interp1d(spectrum_evdata, spectrum_data, kind='cubic', bounds_error=False)      
-            target_spectrum = np.reshape(ftspec(self.stack.ev), (1,self.stack.n_ev))
-            
-            #fix the edges if needed 
-            if self.stack.ev[0]<spectrum_evdata[0]:
-                indx = np.where(self.stack.ev<spectrum_evdata[0])
-                target_spectrum[0,indx] = spectrum_data[0]
-            if self.stack.ev[-1]>spectrum_evdata[-1]:
-                indx = np.where(self.stack.ev>spectrum_evdata[-1])
-                target_spectrum[0,indx] = spectrum_data[-1]
-                
-        else:
-            target_spectrum = np.ones((1,self.stack.n_ev))
-            spectrum_common_name = 'Flat'
+            #Todo: enable xas and txt support
+            #elif extension == '.xas':
+            #    spectrum_evdata, spectrum_data, spectrum_common_name = self.stack.read_xas(filename)
+            #elif extension == '.txt':
+            #    spectrum_evdata, spectrum_data, spectrum_common_name = self.stack.read_txt(filename)
+        for i, spec in enumerate(spectrum_data):
+            if not np.any(spec): # exclude spectra with only zeros
+                continue
+            fitspectrum = self.remap_spectrum(spectrum_evdata, spec)
 
-     
-        if self.tspectrum_loaded == 0:
-            self.target_spectra = target_spectrum
-            self.tspectrum_loaded = 1
-            self.n_target_spectra += 1
-        else:
-            self.target_spectra = np.vstack((self.target_spectra,target_spectrum))
-            self.n_target_spectra += 1
-        self.tspec_names.append(spectrum_common_name)
-        
+            if self.tspectrum_loaded == 0:
+                self.target_spectra = fitspectrum
+                self.tspectrum_loaded = 1
+                self.n_target_spectra += 1
+            else:
+                self.target_spectra = np.vstack((self.target_spectra,fitspectrum))
+                self.n_target_spectra += 1
+            name = spectrum_common_name[i].strip()
+            if name == ' ':
+                name = 'Cluster %d' % (self.n_target_spectra)
+            if name in self.tspec_names:
+                self.tspec_names.count(name)
+                name = name +'_'+ str(self.tspec_names.count(name))
+            self.tspec_names.append(name)
+
         self.fit_target_spectra()
         self.calc_svd_maps()
         
-        
+
             
 #------------------------------------------------------------------------------          
     def add_cluster_target_spectra(self):
@@ -1360,7 +1357,6 @@ class analyze:
         % Eli Billauer, 3.4.05 (Explicitly not copyrighted).
         % This function is released to the public domain; Any use is allowed.
         """
-        print("init_peak_find")
         maxtab = []
         mintab = []
         
@@ -1369,13 +1365,13 @@ class analyze:
         v = np.asarray(v)
 
         if len(v) != len(x):
-            print ('Input vectors v and x must have same length')
+            print('Input vectors v and x must have same length')
             return -1
         if not np.isscalar(delta):
-            print ('Input argument delta must be a scalar')
+            print('Input argument delta must be a scalar')
             return -1
         if delta <= 0:
-            print ('Input argument delta must be positive')
+            print('Input argument delta must be positive')
             return -1
         mn, mx = np.inf, -np.inf
         mnpos, mxpos = np.nan, np.nan
@@ -1400,10 +1396,27 @@ class analyze:
                     mx = this
                     mxpos = x[i]
                     lookformax = True
-        print("end_peak_fit")
         return np.array(maxtab), np.array(mintab)
 
-       
+# ----------------------------------------------------------------------
+    def remap_spectrum(self, spec_ev, spec):
+        if self.stack.n_ev > 0:
+            # Map this spectrum onto our energy range - interpolate to ev
+            ftspec = scipy.interpolate.interp1d(spec_ev, spec, kind='cubic', bounds_error=False)
+            fit_spectrum = np.reshape(ftspec(self.stack.ev), (1, self.stack.n_ev))
+        else:
+            self.stack.ev = spec_ev
+            self.stack.n_ev = len(self.stack.ev)
+            fit_spectrum = np.reshape(spec, (1, self.stack.n_ev))
+
+        # fix the edges if needed
+        if self.stack.ev[0] < spec_ev[0]:
+            indx = np.where(self.stack.ev < spec_ev[0])
+            fit_spectrum[0, indx] = spec[0]
+        if self.stack.ev[-1] > spec_ev[-1]:
+            indx = np.where(self.stack.ev > spec_ev[-1])
+            fit_spectrum[0, indx] = spec[-1]
+        return fit_spectrum
 
 #-----------------------------------------------------------------------   
     def load_xraypeakfit_spectrum(self, filename):
@@ -1414,41 +1427,27 @@ class analyze:
         spectrum_common_name = ' '
 
         spectrum_evdata, spectrum_data, spectrum_common_name = self.stack.read_csv(filename)
-                                
-        if self.stack.n_ev > 0:
-            # Map this spectrum onto our energy range - interpolate to ev
-            ftspec = scipy.interpolate.interp1d(spectrum_evdata, spectrum_data, kind='cubic', bounds_error=False)      
-            xfit_spectrum = np.reshape(ftspec(self.stack.ev), (1,self.stack.n_ev))
-        else:
-            self.stack.ev = spectrum_evdata
-            self.stack.n_ev = len(self.stack.ev)
-            xfit_spectrum = np.reshape(spectrum_data, (1,self.stack.n_ev)) 
-        
-        #fix the edges if needed 
-        if self.stack.ev[0]<spectrum_evdata[0]:
-            indx = np.where(self.stack.ev<spectrum_evdata[0])
-            xfit_spectrum[0,indx] = spectrum_data[0]
-        if self.stack.ev[-1]>spectrum_evdata[-1]:
-            indx = np.where(self.stack.ev>spectrum_evdata[-1])
-            xfit_spectrum[0,indx] = spectrum_data[-1]
-            
-     
-        if self.xrayfitsp_loaded == 0:
-            self.xrayfitspectra = xfit_spectrum
-            self.xrayfitsp_loaded = 1
-            self.n_xrayfitsp = 1
-        else:
-            self.xrayfitspectra = np.vstack((self.xrayfitspectra,xfit_spectrum))
-            self.n_xrayfitsp += 1
-            
-        if spectrum_common_name == ' ':
-            spectrum_common_name = 'Spectrum %d' % (self.n_xrayfitsp)
-        self.xfspec_names.append(spectrum_common_name)
-        
-        self.xfitpars.append(Cfitparams())
-        
-        #Find peaks:
-        self.init_fit_params(self.n_xrayfitsp-1)
+        self.xrayfitsp_to_add = len(spectrum_data)
+        for i, spec in enumerate(spectrum_data):
+            fitspectrum = self.remap_spectrum(spectrum_evdata, spec)
+            if self.xrayfitsp_loaded == 0:
+                self.xrayfitspectra = fitspectrum
+                self.xrayfitsp_loaded = 1
+                self.n_xrayfitsp = 1
+            else:
+                self.xrayfitspectra = np.vstack((self.xrayfitspectra,fitspectrum))
+                self.n_xrayfitsp += 1
+            name = spectrum_common_name[i].strip()
+            if name == ' ':
+                name = 'Spectrum %d' % (self.n_xrayfitsp)
+            if name in self.xfspec_names:
+                self.xfspec_names.count(name)
+                name = name +'_'+ str(self.xfspec_names.count(name))
+            self.xfspec_names.append(name)
+            self.xfitpars.append(Cfitparams())
+
+            #Find peaks:
+            self.init_fit_params(self.n_xrayfitsp-1)
 
 #-----------------------------------------------------------------------   
 #Load spectra from cluster analysis
@@ -1470,10 +1469,8 @@ class analyze:
         self.xfspec_names.append(spectrum_common_name)
         
         self.xfitpars.append(Cfitparams())
-        print("cluster")
         #Find peaks:
         self.init_fit_params(self.n_xrayfitsp-1)
-        print("cluster_fit")
         
 #-----------------------------------------------------------------------   
     def init_fit_params(self, index):
@@ -1615,7 +1612,7 @@ class analyze:
 
         mixedsig = mixedsig.transpose()
         
-        print ('msig', mixedsig.shape)
+        print('msig', mixedsig.shape)
 
         # Remove the mean and check the data
         mixedmean = np.mean(mixedsig, axis=1)
@@ -1624,7 +1621,7 @@ class analyze:
         Dim = mixedsig.shape[0]
         NumOfSampl = mixedsig.shape[1]
         
-        print ('Dim, NumOfSampl',Dim,NumOfSampl)
+        print('Dim, NumOfSampl',Dim,NumOfSampl)
 
 
         # Default values for optional parameters
@@ -1659,8 +1656,8 @@ class analyze:
 
         # print information about data
         if b_verbose:
-            print ('Number of signals:', Dim)
-            print ('Number of samples: ', NumOfSampl)
+            print('Number of signals:', Dim)
+            print('Number of samples: ', NumOfSampl)
 
 
         # Check if the data has been entered the wrong way,
@@ -1668,17 +1665,17 @@ class analyze:
 
         if (Dim > NumOfSampl):
             if b_verbose:
-                print ('Warning: ')
-                print ('The signal matrix may be oriented in the wrong way.')
-                print ('In that case transpose the matrix.')
+                print('Warning: ')
+                print('The signal matrix may be oriented in the wrong way.')
+                print('In that case transpose the matrix.')
 
     
         # Calculating PCA
         # We already have the PCA data
 
         if b_verbose:
-            print ('Values for PCA calculations supplied.\n')
-            print ('PCA calculations not needed.\n')
+            print('Values for PCA calculations supplied.\n')
+            print('PCA calculations not needed.\n')
     
         # PCA was already calculated:
         D = np.identity(self.numsigpca)*self.eigenvals[0:self.numsigpca] 
@@ -1692,18 +1689,18 @@ class analyze:
         whiteningMatrix = np.dot(np.linalg.inv (np.sqrt(D)), E.transpose())
         dewhiteningMatrix = np.dot(E, np.sqrt(D))
         
-        print ('wd=', whiteningMatrix.shape, dewhiteningMatrix.shape)
+        print('wd=', whiteningMatrix.shape, dewhiteningMatrix.shape)
         
         # Project to the eigenvectors of the covariance matrix.
         # Whiten the samples and reduce dimension simultaneously.
         if b_verbose:
-            print ('Whitening...')
+            print('Whitening...')
             whitesig =  np.dot(whiteningMatrix,mixedsig)
-            print ('whitesig', whitesig.shape)
+            print('whitesig', whitesig.shape)
             
         # Just some security...
         if np.sum(np.imag(whitesig)) != 0:
-            print ('Whitened vectors have imaginary values.')
+            print('Whitened vectors have imaginary values.')
             
 
         # Calculating the ICA
@@ -1730,12 +1727,12 @@ class analyze:
           maxNumIterations, maxFinetune, initState, guess, sampleSize, 
           displayMode, displayInterval, verbose)
         
-        print ('A,W', A.shape, W.shape)
+        print('A,W', A.shape, W.shape)
         # Check for valid return
         if W.any():
             # Add the mean back in.
             if b_verbose:
-                print ('Adding the mean back to the data.')
+                print('Adding the mean back to the data.')
     
             icasig = np.dot(W, mixedsig) + np.dot(np.dot(W, mixedmean), np.ones((1, NumOfSampl)))
 
@@ -1801,31 +1798,31 @@ class analyze:
         elif approach == 'defl':
             approachMode = 2    
         else:
-            print ('Illegal value for parameter approach:', approach)
+            print('Illegal value for parameter approach:', approach)
             return
         if b_verbose:
-            print ('Used approach:', approach)
+            print('Used approach:', approach)
             
         #Checking the value for numOfIC
         if vectorSize < numOfIC:
-            print ('Must have numOfIC <= Dimension!')
+            print('Must have numOfIC <= Dimension!')
             return
         
         # Checking the sampleSize
         if sampleSize > 1:
             sampleSize = 1
             if b_verbose:
-                print ('Warning: Setting sampleSize to 1.\n')
+                print('Warning: Setting sampleSize to 1.\n')
    
         elif sampleSize < 1:
             if (sampleSize * numSamples) < 1000:
                 sampleSize = np.min(1000/numSamples, 1)
                 if b_verbose:
-                    print ('Warning: Setting ampleSize to ',sampleSize,' samples=', np.floor(sampleSize * numSamples))
+                    print('Warning: Setting ampleSize to ',sampleSize,' samples=', np.floor(sampleSize * numSamples))
 
-        print ('sample size', sampleSize)
+        print('sample size', sampleSize)
         if  b_verbose and (sampleSize < 1):
-            print ('Using about  ',sampleSize*100,' of the samples in random order in every step.')
+            print('Using about  ',sampleSize*100,' of the samples in random order in every step.')
        
         
         # Checking the value for nonlinearity.
@@ -1839,7 +1836,7 @@ class analyze:
         elif g == 'skew':
             gOrig = 40
         else:
-            print ('Illegal value for parameter g: ', g)
+            print('Illegal value for parameter g: ', g)
 
         if sampleSize != 1:
             gOrig = gOrig + 2
@@ -1849,7 +1846,7 @@ class analyze:
 
 
         if b_verbose:
-            print ('Used nonlinearity: ', g)
+            print('Used nonlinearity: ', g)
 
 
         finetuningEnabled = 1
@@ -1869,11 +1866,11 @@ class analyze:
   
             finetuningEnabled = 0
         else:
-            print ('Illegal value for parameter finetune :', finetune)
+            print('Illegal value for parameter finetune :', finetune)
             return
 
         if b_verbose and finetuningEnabled:
-            print ('Finetuning enabled, nonlinearity: ', finetune)
+            print('Finetuning enabled, nonlinearity: ', finetune)
 
 
         if stabilization == 'on':
@@ -1885,11 +1882,11 @@ class analyze:
                 stabilizationEnabled = 0
 
         else:
-            print ('Illegal value for parameter stabilization: ', stabilization)
+            print('Illegal value for parameter stabilization: ', stabilization)
 
 
         if b_verbose and stabilizationEnabled:
-            print ('Using stabilized algorithm.')
+            print('Using stabilized algorithm.')
        
         # Some other parameters
         myyOrig = myy
@@ -1913,24 +1910,24 @@ class analyze:
             if guess.shape[0] != whiteningMatrix.shape[1]:
                 initialStateMode = 0
                 if b_verbose:
-                    print ('Warning: size of initial guess is incorrect. Using random initial guess.')
+                    print('Warning: size of initial guess is incorrect. Using random initial guess.')
     
             else:
                 initialStateMode = 1
                 if guess.shape[0] < numOfIC:
                     if b_verbose:
-                        print ('Warning: initial guess only for first ',guess.shape[0],' components. Using random initial guess for others.')
+                        print('Warning: initial guess only for first ',guess.shape[0],' components. Using random initial guess for others.')
     
                     guess[:, guess.shape[0] + 1:numOfIC] = np.random.uniform(-0.5,0.5,(vectorSize,numOfIC-guess.shape[0]))
                 elif guess.shape[0]>numOfIC:
                     guess=guess[:,1:numOfIC]
-                    print ('Warning: Initial guess too large. The excess column are dropped.')
+                    print('Warning: Initial guess too large. The excess column are dropped.')
   
                 if b_verbose:
                     print( 'Using initial guess.')
 
         else:
-            print ('Illegal value for parameter initState:', initState)
+            print('Illegal value for parameter initState:', initState)
             return        
         
         
@@ -1941,10 +1938,10 @@ class analyze:
         elif (displayMode =='on') or (displayMode == 'signals'):
             usedDisplay = 1
             if (b_verbose and (numSamples > 10000)):
-                print ('Warning: Data vectors are very long. Plotting may take long time.')
+                print('Warning: Data vectors are very long. Plotting may take long time.')
  
             if (b_verbose and (numOfIC > 25)):
-                print ('Warning: There are too many signals to plot. Plot may not look good.')
+                print('Warning: There are too many signals to plot. Plot may not look good.')
  
         elif (displayMode =='basis'):
             usedDisplay = 2
@@ -1954,7 +1951,7 @@ class analyze:
         elif (displayMode =='filters'):
             usedDisplay = 3
             if (b_verbose and (vectorSize > 25)):
-                print ('Warning: There are too many signals to plot. Plot may not look good.')
+                print('Warning: There are too many signals to plot. Plot may not look good.')
 
         else:
             print( 'Illegal value for parameter displayMode:', displayMode)
@@ -1967,12 +1964,12 @@ class analyze:
 
         # Start ICA calculation
         if b_verbose:
-            print ('Starting ICA calculation...')
+            print('Starting ICA calculation...')
             
             
         # SYMMETRIC APPROACH
         if approachMode == 1:
-            print ('Symmetric approach under construction')
+            print('Symmetric approach under construction')
             return
         
         
@@ -1997,7 +1994,7 @@ class analyze:
                 
                 # Show the progress...
                 if b_verbose:
-                    print ('IC :', round)
+                    print('IC :', round)
         
                 # Take a random initial vector of length 1 and orthogonalize it
                 # with respect to the other vectors.
@@ -2023,7 +2020,7 @@ class analyze:
                 gabba = 1
                 while (i <= (maxNumIterations + gabba)):
                     if (usedDisplay > 0):
-                        print ('display')
+                        print('display')
           
                     #Project the vector into the space orthogonal to the space
                     # spanned by the earlier found basis vectors. Note that we can do
@@ -2036,13 +2033,13 @@ class analyze:
                     if notFine:
                         if i == (maxNumIterations + 1):   
                             if b_verbose:
-                                print ('Component number',round,'  did not converge in ',maxNumIterations, 'iterations.')
+                                print('Component number',round,'  did not converge in ',maxNumIterations, 'iterations.')
           
                             round = round - 1
                             numFailures = numFailures + 1
                             if numFailures > failureLimit:
                                 if b_verbose:
-                                    print ('Too many failures to converge ', numFailures,' Giving up.')
+                                    print('Too many failures to converge ', numFailures,' Giving up.')
             
                                 if round == 0:
                                     A=[]
@@ -2067,7 +2064,7 @@ class analyze:
                     if  (conv < epsilon):
                         if finetuningEnabled and notFine:
                             if b_verbose:
-                                print ('Initial convergence, fine-tuning: ')
+                                print('Initial convergence, fine-tuning: ')
                             notFine = 0
                             gabba = maxFinetune
                             wOld = np.zeros(w.shape)
@@ -2090,7 +2087,7 @@ class analyze:
                             
                             # Show the progress...
                             if b_verbose:
-                                print ('computed ( ',i,' steps ) ')
+                                print('computed ( ',i,' steps ) ')
                                 
                             break
                     elif stabilizationEnabled:
@@ -2098,7 +2095,7 @@ class analyze:
                         if (not stroke) and (np.linalg.norm(w - wOld2) < epsilon or np.linalg.norm(w + wOld2) < epsilon):
                             stroke = myy
                             if b_verbose:
-                                print ('Stroke!')
+                                print('Stroke!')
                             myy = .5*myy
                             if np.mod(usedNlinearity,2) == 0:
                                 usedNlinearity = usedNlinearity + 1
@@ -2240,7 +2237,7 @@ class analyze:
                         w = w - myy * (EXGskew - Beta*w)/(-Beta)
                         
                     else:
-                        print ('Code for desired nonlinearity not found!')
+                        print('Code for desired nonlinearity not found!')
                         return
                                  
                     # Normalize the new w.
@@ -2250,13 +2247,13 @@ class analyze:
                 round = round + 1
             
             if b_verbose:
-                print ('Done.')
+                print('Done.')
             
 
         # In the end let's check the data for some security
         if A.imag.any():
             if b_verbose:
-                print ('Warning: removing the imaginary part from the result.')
+                print('Warning: removing the imaginary part from the result.')
             A = A.real
             W = W.imag
 

@@ -694,7 +694,7 @@ class data:
                       ['*--------------------------------------------------------------']]
             for line in header:
                 writer.writerows([line])
-            if cname == "ROI spectra":
+            if cname == "ROI spectrum":
                 l = ["photon energy"]
                 for i in range(len(data)):
                     if i == 0:
@@ -718,20 +718,18 @@ class data:
 
         spectrum_common_name = ' '
 
-        f = open(str(filename), 'rU')
-
         elist = []
         ilist = []
+        with open(str(filename), 'r') as f:
+            for line in f:
+                if line.startswith('*'):
+                    if 'Common name' in line:
+                        spectrum_common_name = [line.split(':')[-1].strip()]
 
-        for line in f:
-            if line.startswith('*'):
-                if 'Common name' in line:
-                    spectrum_common_name = line.split(':')[-1].strip()
-
-            else:
-                e, i = [float(x) for x in line.split()]
-                elist.append(e)
-                ilist.append(i)
+                else:
+                    e, i = [float(x) for x in line.split()]
+                    elist.append(e)
+                    ilist.append(i)
 
         spectrum_evdata = np.array(elist)
         spectrum_data = np.array(ilist)
@@ -753,20 +751,18 @@ class data:
 
         spectrum_common_name = os.path.splitext(os.path.basename(str(filename)))[0]
 
-        f = open(str(filename), 'rU')
-
         elist = []
         ilist = []
+        with open(str(filename), 'r') as f:
+            for line in f:
+                if line.startswith('%'):
+                    pass
+                else:
+                    e, i = [x for x in line.split()]
+                    elist.append(e)
+                    ilist.append(i)
 
-        for line in f:
-            if line.startswith('%'):
-                pass
-            else:
-                e, i = [float(x) for x in line.split()]
-                elist.append(e)
-                ilist.append(i)
-
-        spectrum_evdata = np.array(elist)
+        spectrum_evdata = np.array([float(ev) for ev in elist])
         spectrum_data = np.array(ilist)
 
         f.close()
@@ -781,38 +777,39 @@ class data:
     # Read x-ray absorption spectrum
     def read_csv(self, filename):
 
-        spectrum_common_name = ' '
-
-        f = open(str(filename), 'rU')
-
+        spectrum_common_name = [' ']
         elist = []
         ilist = []
-
+        names = []
         # Check the first character of the line and skip if not a number
         allowedchars = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-', '.']
-
-        for line in f:
-            if line.startswith('*'):
-                if 'Common name' in line:
-                    spectrum_common_name = line.split(':')[-1].strip()
-            elif line[0] not in allowedchars:
-                continue
-            else:
-                e, i = [float(x) for x in line.split(',')]
-                elist.append(e)
-                ilist.append(i)
-
-        spectrum_evdata = np.array(elist)
-        spectrum_data = np.array(ilist)
-
-        f.close()
+        with open(str(filename), 'r') as f:
+            for line in f:
+                if line.startswith('*'):
+                    if 'Common name' in line:
+                        spectrum_common_name = [line.split(':')[-1].strip()]
+                elif line[0] not in allowedchars:
+                    names = line.split(',')
+                    if names[0] == "photon energy":
+                        names = names[1:]
+                        #print(names)
+                    continue
+                else:
+                    e, i = [x for x in line.split(',',1)]
+                    elist.append(e)
+                    ilist.append([float(a) for a in i.split(',')])
+        spectrum_evdata = np.array([float(ev) for ev in elist])
+        spectrum_data = np.transpose(np.array(ilist))
 
         if spectrum_evdata[-1] < spectrum_evdata[0]:
             spectrum_evdata = spectrum_evdata[::-1]
-            spectrum_data = spectrum_data[::-1]
+            spectrum_data = np.flip(spectrum_data,1)
 
-        if spectrum_common_name == ' ':
-            spectrum_common_name = os.path.splitext(os.path.basename(str(filename)))[0]
+        if spectrum_common_name[0] == ' ':
+            spectrum_common_name = [os.path.splitext(os.path.basename(str(filename)))[0]]
+        elif spectrum_common_name[0] == 'ROI spectrum' and len(names) > 1:
+            spectrum_common_name = names
+            #print(spectrum_common_name)
 
         return spectrum_evdata, spectrum_data, spectrum_common_name
 

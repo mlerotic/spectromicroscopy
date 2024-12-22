@@ -29,7 +29,7 @@ from functools import partial
 try:
     from skimage.transform import iradon, radon
 except:
-    print ('SIRT reconstruction requires skimage library.')
+    print('SIRT reconstruction requires skimage library.')
 
 from .TomoCS.forward_backward_tv import fista_tv,gfb_tv, gfb_tv_weng
 from .TomoCS.projections import build_projection_operator
@@ -130,23 +130,23 @@ class Ctomo:
     def calc_tomo_cs_multi(self, tomodata, theta, maxiter, beta, samplethickness, nonnegconst=1, nprocessors=6):
         
 
-        print ('Compressed sensing TV regression')
-        #print ('Angles ', theta)
-        print ('TV beta ', beta)
-        print ('MAX iterations ', maxiter)
-        print ("Sample thickness ", samplethickness)
+        print('Compressed sensing TV regression')
+        #print('Angles ', theta)
+        print('TV beta ', beta)
+        print('MAX iterations ', maxiter)
+        print("Sample thickness ", samplethickness)
         
         #Check if we have negative angles, if yes convert to 0-360deg
         for i in range(len(theta)):
             if theta[i] < 0:
                 theta[i] = theta[i] + 360
-        #print ('Angles in 0-360 range: ', theta)
+        #print('Angles in 0-360 range: ', theta)
                       
         nang = len(theta)
-        #print ('Number of angles ', nang)
+        #print('Number of angles ', nang)
                 
         dims = tomodata.shape
-        print ('Dimensions ', dims, tomodata.dtype)
+        print('Dimensions ', dims, tomodata.dtype)
     
         stack = np.swapaxes(tomodata, 0, 1)
 
@@ -198,12 +198,12 @@ class Ctomo:
         recondata = res
             
         t2 = time()
-        print ("reconstruction done in %f s" %(t2 - t1))
+        print("reconstruction done in %f s" %(t2 - t1))
                 
         #Save the 3D tomo reconstruction to a HDF5 file
         recondata=np.array(recondata)
         dims = recondata.shape
-        print ('final dims', dims)
+        print('final dims', dims)
         
         #Crop the data is sample thickness is defined
         if (samplethickness > 0) and (samplethickness<dims[2]-2):
@@ -225,23 +225,23 @@ class Ctomo:
     def calc_tomo_cs(self, tomodata, theta, maxiter, beta, samplethickness, nonnegconst = 1):
 
 
-        print ('Compressed sensing TV regression')
-        #print ('Angles ', theta)
-        print ('TV beta ', beta)
-        print ('MAX iterations ', maxiter)
-        print ("Sample thickness ", samplethickness)
+        print('Compressed sensing TV regression')
+        #print('Angles ', theta)
+        print('TV beta ', beta)
+        print('MAX iterations ', maxiter)
+        print("Sample thickness ", samplethickness)
 
         #Check if we have negative angles, if yes convert to 0-360deg
         for i in range(len(theta)):
             if theta[i] < 0:
                 theta[i] = theta[i] + 360
-        #print ('Angles in 0-360 range: ', theta)
+        #print('Angles in 0-360 range: ', theta)
 
         nang = len(theta)
-        #print ('Number of angles ', nang)
+        #print('Number of angles ', nang)
 
         dims = tomodata.shape
-        print ('Dimensions ', dims, tomodata.dtype)
+        print('Dimensions ', dims, tomodata.dtype)
 
         stack = np.swapaxes(tomodata, 0, 1)
 
@@ -262,7 +262,7 @@ class Ctomo:
         t1 = time()
 
         for j in range(ncols):
-            print (j, ' of ', ncols)
+            print(j, ' of ', ncols)
         #             for j in range(1):
             #j=ncols/2
             R = stack[j,:, :].T
@@ -279,12 +279,12 @@ class Ctomo:
             initx0 = res[-1]
 
         t2 = time()
-        print ("reconstruction done in %f s" %(t2 - t1))
+        print("reconstruction done in %f s" %(t2 - t1))
 
         #Save the 3D tomo reconstruction to a HDF5 file
         recondata=np.array(recondata)
         dims = recondata.shape
-        print ('final dims', dims)
+        print('final dims', dims)
 
         #Crop the data is sample thickness is defined
         if (samplethickness > 0) and (samplethickness<dims[2]-2):
@@ -308,16 +308,16 @@ class Ctomo:
         except:
             return
 
-        print ('SIRT')
-        #print ('Angles ', theta)
-        print ('MAX iterations ', maxiter)
-        print ("Sample thickness ", samplethickness)
+        print('SIRT')
+        #print('Angles ', theta)
+        print('MAX iterations ', maxiter)
+        print("Sample thickness ", samplethickness)
         
         #Check if we have negative angles, if yes convert to 0-360deg
         for i in range(len(theta)):
             if theta[i] < 0:
                 theta[i] = theta[i] + 360
-        #print ('Angles in 0-360 range: ', theta)
+        #print('Angles in 0-360 range: ', theta)
                       
         nang = len(theta)
         print( 'Number of angles ', nang)
@@ -325,7 +325,7 @@ class Ctomo:
         tomodata = np.swapaxes(tomodata, 0, 1)
                 
         dims = tomodata.shape
-        print ('Dimensions ', dims, tomodata.dtype)
+        print('Dimensions ', dims, tomodata.dtype)
      
         stack = tomodata.astype(np.float32)
 
@@ -337,8 +337,8 @@ class Ctomo:
 
         t1 = time()
 
-        print ('Calculating SIRT reconstruction')
-        print ('Number of iterations: ', maxiter)
+        print('Calculating SIRT reconstruction')
+        print('Number of iterations: ', maxiter)
         #N Iterations
         error = []
         recondata = np.zeros((ncols, nrows, nrows))
@@ -361,7 +361,7 @@ class Ctomo:
         recondata = res
             
         t2 = time()
-        print ("reconstruction done in %f s" %(t2 - t1))
+        print("reconstruction done in %f s" %(t2 - t1))
 
         recondata = np.array(recondata)
 
@@ -369,7 +369,7 @@ class Ctomo:
 
         #Crop the data is sample thickness is defined
         if (samplethickness > 0) and (samplethickness<dims[2]-2):
-            print ('Cropping the data')
+            print('Cropping the data')
             recondata = recondata[:,:,dims[2]/2-samplethickness/2:dims[2]/2+samplethickness/2]
 
         recondata = np.swapaxes(recondata, 0, 1)
@@ -383,24 +383,24 @@ class Ctomo:
 # Calculate tomo - SIRT reconstruction for 1 dataset
     def calc_tomo_sirt_singleprocessor(self, tomodata, theta, maxiter, beta, samplethickness, nonnegconst = 1):
 
-        print ('SIRT')
-        #print ('Angles ', theta)
-        print ('MAX iterations ', maxiter)
-        print ("Sample thickness ", samplethickness)
+        print('SIRT')
+        #print('Angles ', theta)
+        print('MAX iterations ', maxiter)
+        print("Sample thickness ", samplethickness)
 
         #Check if we have negative angles, if yes convert to 0-360deg
         for i in range(len(theta)):
             if theta[i] < 0:
                 theta[i] = theta[i] + 360
-        #print ('Angles in 0-360 range: ', theta
+        #print('Angles in 0-360 range: ', theta
 
         nang = len(theta)
-        print ('Number of angles ', nang)
+        print('Number of angles ', nang)
 
         tomodata = np.swapaxes(tomodata, 0, 1)
 
         dims = tomodata.shape
-        print ('Dimensions ', dims, tomodata.dtype)
+        print('Dimensions ', dims, tomodata.dtype)
 
         stack = tomodata.astype(np.float32)
 
@@ -412,8 +412,8 @@ class Ctomo:
 
         t1 = time()
 
-        print ('Calculating SIRT reconstruction')
-        print ('Number of iterations: ', maxiter)
+        print('Calculating SIRT reconstruction')
+        print('Number of iterations: ', maxiter)
         #N Iterations
         n = maxiter
         error = []
@@ -477,24 +477,24 @@ class Ctomo:
     def calc_tomo_cs_tveng(self, tomodata, theta, maxiter, beta, samplethickness, initrecs, comp, beta2, nonnegconst = 1):
         
 
-        print ('Compressed sensing TV regression with Energy Regularization')
-        #print ('Angles ', theta)
-        print ('TV beta ', beta)
-        print ('TV beta2', beta2)
-        print ('MAX iterations ', maxiter)
-        print ("Sample thickness ", samplethickness)
+        print('Compressed sensing TV regression with Energy Regularization')
+        #print('Angles ', theta)
+        print('TV beta ', beta)
+        print('TV beta2', beta2)
+        print('MAX iterations ', maxiter)
+        print("Sample thickness ", samplethickness)
         
         #Check if we have negative angles, if yes convert to 0-360deg
         for i in range(len(theta)):
             if theta[i] < 0:
                 theta[i] = theta[i] + 360
-        #print ('Angles in 0-360 range: ', theta)
+        #print('Angles in 0-360 range: ', theta)
                       
         nang = len(theta)
-        #print ('Number of angles ', nang)
+        #print('Number of angles ', nang)
                 
         dims = tomodata.shape
-        #print ('Dimensions ', dims, tomodata.dtype  )
+        #print('Dimensions ', dims, tomodata.dtype  )
     
         stack = np.swapaxes(tomodata, 0, 1)
 
@@ -551,12 +551,12 @@ class Ctomo:
             recondata.append(res[-1])
             
         t2 = time()
-        print ("reconstruction done in %f s" %(t2 - t1))
+        print("reconstruction done in %f s" %(t2 - t1))
                 
         #Save the 3D tomo reconstruction to a HDF5 file
         recondata=np.array(recondata)
         dims = recondata.shape
-        #print ('final dims', dims)
+        #print('final dims', dims)
         
         #Crop the data is sample thickness is defined
         if (samplethickness > 0) and (samplethickness<dims[2]-2):

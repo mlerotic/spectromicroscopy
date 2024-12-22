@@ -637,7 +637,7 @@ def batch_mode():
     action = 'read'
     data_type = 'stack'
 
-    print (filter_list[action][data_type])
+    print(filter_list[action][data_type])
 
     plugin = file_plugins.identify(filepath)
 

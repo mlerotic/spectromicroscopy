@@ -195,7 +195,7 @@ def calc_simdata( p, s, c, ry, rz, num_slices, num_pixels,
 def calculate_sirt(tomo, theta, num_iter):
     
     dx, dy, dz = tomo.shape
-    print ('Calculate SIRT reconstruction')
+    print('Calculate SIRT reconstruction')
     center = np.ones(dy, dtype='float32') * dz / 2.
     ngridx = dz
     ngridy = dz
@@ -203,7 +203,7 @@ def calculate_sirt(tomo, theta, num_iter):
     #recon = 1e-6 * np.ones((dy, ngridx, ngridy), dtype='float32')
     recon = 1e-6 * np.ones((dy*ngridx*ngridy), dtype='float32')
     
-    print ('tomoshape', tomo.shape)
+    print('tomoshape', tomo.shape)
     
         
     data = tomo
@@ -226,12 +226,12 @@ def calculate_sirt(tomo, theta, num_iter):
 
           
     for i in range(num_iter): 
-        print ('Iteration ', i)
+        print('Iteration ', i)
         simdata = np.zeros((dx*dy*dz), dtype='float32')
 
         #For each slice
         for s in range(dy): 
-            print ('Slice', s)
+            print('Slice', s)
 
             mov, gridx, gridy = preprocessing(ngridx, ngridy, dz, center[s], gridx, gridy) 
 
@@ -307,7 +307,7 @@ def calculate_sirt(tomo, theta, num_iter):
 
     recon = np.reshape(recon,(dy, ngridx, ngridy), order='C')
     
-    print ('SIRT Reconstruction Done')
+    print('SIRT Reconstruction Done')
     return recon
         
             

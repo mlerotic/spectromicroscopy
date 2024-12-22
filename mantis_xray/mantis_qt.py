@@ -1928,6 +1928,9 @@ class PageNNMA(QtWidgets.QWidget):
         self.button_calcnnma.clicked.connect( self.OnCalcNNMA)
         self.button_calcnnma.setEnabled(False)
         vbox1.addWidget(self.button_calcnnma)
+        self.button_muroi = QtWidgets.QPushButton('Load initial ROI spectra')
+        self.button_muroi.clicked.connect( self.OnLoadROISpectra)
+        self.button_muroi.setEnabled(False)
         self.button_mucluster = QtWidgets.QPushButton('Load initial cluster spectra')
         self.button_mucluster.clicked.connect( self.OnLoadClusterSpectra)
         self.button_mucluster.setEnabled(False)
@@ -2062,6 +2065,7 @@ class PageNNMA(QtWidgets.QWidget):
         vbox1.addWidget(line)
         vbox1.addStretch(1)
         vbox1.addWidget(self.button_mucluster)
+        vbox1.addWidget(self.button_muroi)
         vbox1.addWidget(self.button_mufile)
         vbox1.addWidget(self.button_murand)
         vbox1.addWidget(self.tc_initspectra)
@@ -2220,10 +2224,38 @@ class PageNNMA(QtWidgets.QWidget):
         vboxtop.addStretch(1)
         self.setLayout(vboxtop)
 
+    # ----------------------------------------------------------------------
+    def OnLoadROISpectra(self, event):
+        #self.ncompspin.setValue(xxxx n rois)
+        self.ncompspin.setEnabled(False)
+        plot_num = len(self.window().page1.specfig.plotitem.items)
+        kNNMA = 0
+        for i in range(plot_num - 1):
+            spec = self.window().page1.specfig.plotitem.items[i + 1].yData
+            if not np.any(spec):  # exclude spectra with only zeros
+                continue
+            kNNMA += 1
+            if kNNMA == 1:
+                muInit = spec
+            elif kNNMA > 1:
+                muInit = np.vstack((muInit, spec))
+        if kNNMA < 2:
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Select at least two ROIs.')
+            return
+        self.ncompspin.setValue(kNNMA)
+        self.ncompspin.setEnabled(False)
+        self.nnma.setROISpectra(muInit.transpose())
 
-#----------------------------------------------------------------------
+        self.window().refresh_widgets()
+
+        self.initMatrices = 'ROI'
+
+        self.tc_initspectra.setText('Initial Spectra: ' + self.initMatrices)
+
+    #----------------------------------------------------------------------
     def OnLoadClusterSpectra(self, event):
-
+        self.ncompspin.setValue(self.window().page3.numclusters)
+        self.ncompspin.setEnabled(False)
         self.nnma.setClusterSpectra(self.anlz.clusterspectra)
 
         self.window().refresh_widgets()
@@ -2234,7 +2266,7 @@ class PageNNMA(QtWidgets.QWidget):
 
 #----------------------------------------------------------------------
     def OnLoadRandomSpectra(self, event):
-
+        self.ncompspin.setEnabled(True)
         self.initMatrices = 'Random'
 
         self.lambdaClusterSim = 0.0
@@ -2245,13 +2277,11 @@ class PageNNMA(QtWidgets.QWidget):
 #----------------------------------------------------------------------
     def OnLoadStandardSpectra(self, event):
 
-        if True:
-        #try:
-
+        #if True:
+        try:
             wildcard = "Spectrum files (*.csv);;Spectrum files (*.xas);;"
-
-            filepath, _filter = QtWidgets.QFileDialog.getOpenFileNames(self, 'Choose Spectra files', '', wildcard)
-
+            filepath, _filter = QtWidgets.QFileDialog.getOpenFileNames(self, 'Choose files containing Spectra', '', wildcard,
+                                                                       None, QtWidgets.QFileDialog.DontUseNativeDialog)
             if filepath == '':
                 return
 
@@ -2259,25 +2289,33 @@ class PageNNMA(QtWidgets.QWidget):
             for name in filepath:
                 self.filenames.append(str(name))
 
+            kNNMA = 0
 
-            kNNMA = len(self.filenames)
-            muInit = np.zeros((self.stk.n_ev, kNNMA))
-
-            for i in range(kNNMA):
-                thisfn = os.path.basename(str(self.filenames[i]))
+            for f in self.filenames:
+                thisfn = os.path.basename(f)
                 _basename, extension = os.path.splitext(thisfn)
                 if extension == '.csv':
-                    spectrum_evdata, spectrum_data, _spectrum_common_name = self.stk.read_csv(self.filenames[i])
-                elif extension == '.xas':
-                    spectrum_evdata, spectrum_data, _spectrum_common_name = self.stk.read_xas(self.filenames[i])
+                    spectrum_evdata, spectrum_data, _spectrum_common_name = self.stk.read_csv(f)
+                #Todo: fix xas support
+                #elif extension == '.xas':
+                #    spectrum_evdata, spectrum_data, _spectrum_common_name = self.stk.read_xas(f)
+                for k, spec in enumerate(spectrum_data):
+                    if not np.any(spec):  # exclude spectra with only zeros
+                        continue
+                    fitspectrum = self.anlz.remap_spectrum(spectrum_evdata, spec)
 
-                # Map this spectrum onto our energy range - interpolate to ev
-                init_spectrum = np.interp(self.stk.ev, spectrum_evdata, spectrum_data)
+                    kNNMA += 1
+                    if kNNMA == 1:
+                        muInit = fitspectrum
+                    elif kNNMA > 1:
+                        muInit = np.vstack((muInit, fitspectrum))
 
-                muInit[:, i] = init_spectrum[:]
-
-
-            self.nnma.setStandardsSpectra(muInit)
+            if kNNMA < 2:
+                QtWidgets.QMessageBox.warning(self, 'Error', 'Select at least two spectra.')
+                return
+            self.ncompspin.setValue(kNNMA)
+            self.ncompspin.setEnabled(False)
+            self.nnma.setStandardsSpectra(muInit.transpose())
             self.initMatrices = 'Standards'
             self.lambdaClusterSim = 0.0
             self.ntc_lamsim.setText(str(self.lambdaClusterSim))
@@ -2285,12 +2323,12 @@ class PageNNMA(QtWidgets.QWidget):
 
             QtWidgets.QApplication.restoreOverrideCursor()
 
-#         except:
-#             QtWidgets.QApplication.restoreOverrideCursor()
-#             QtWidgets.QMessageBox.warning(self, 'Error', 'Spectra files not loaded.')
+        except:
+            QtWidgets.QApplication.restoreOverrideCursor()
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Spectra files not loaded.')
 
 
-            self.tc_initspectra.setText('Initial Spectra: ' + self.initMatrices)
+        self.tc_initspectra.setText('Initial Spectra: ' + self.initMatrices)
 
 
         self.window().refresh_widgets()
@@ -3565,31 +3603,30 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
 
             self.anlz.load_xraypeakfit_spectrum(filename=filepath)
 
-            self.com.xpf_loaded = 1
-            self.spectrumfitted.append(0)
-            self.firstinit.append(1)
-            self.initdone.append(0)
-            self.nsteps.append(1)
-            self.npeaks.append(4)
-            self.fits.append(0)
-            self.fits_sep.append(0)
+            for i in range(self.anlz.xrayfitsp_to_add):
+                self.com.xpf_loaded = 1
+                self.spectrumfitted.append(0)
+                self.firstinit.append(1)
+                self.initdone.append(0)
+                self.nsteps.append(1)
+                self.npeaks.append(4)
+                self.fits.append(0)
+                self.fits_sep.append(0)
+            curr_idx = self.anlz.n_xrayfitsp - 1
+            self.i_spec = curr_idx + 1
+            self.slider_spec.setMaximum(self.i_spec)
 
-            self.i_spec = self.anlz.n_xrayfitsp
-            self.slider_spec.setMaximum(self.anlz.n_xrayfitsp)
-            self.slider_spec.setValue(self.i_spec)
             self.nstepsspin.setValue(self.nsteps[self.i_spec-1])
             self.ngaussspin.setValue(self.npeaks[self.i_spec-1])
 
             self.loadSpectrum()
             self.updatewidgets()
-
+            self.slider_spec.setValue(self.i_spec)
             QtWidgets.QApplication.restoreOverrideCursor()
 
         except:
             QtWidgets.QApplication.restoreOverrideCursor()
             QtWidgets.QMessageBox.warning(self, 'Error', 'Spectrum file not loaded.')
-
-
 
         self.window().refresh_widgets()
 
@@ -3847,7 +3884,6 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
 
 #----------------------------------------------------------------------
     def loadSpectrum(self):
-
 
         spectrum = self.anlz.xrayfitspectra[self.i_spec-1, :]
 
@@ -4978,10 +5014,11 @@ class PageSpectral(QtWidgets.QWidget):
         self.button_showrgb.setEnabled(False)
         vbox3.addWidget(self.button_showrgb)
 
-        self.button_histogram = QtWidgets.QPushButton('Histogram Value Cutoff...')
-        self.button_histogram.clicked.connect(self.OnHistogram)
-        self.button_histogram.setEnabled(False)
-        vbox3.addWidget(self.button_histogram)
+        #ToDo: Repair Histogram Value Cutoff if needed.
+        #self.button_histogram = QtWidgets.QPushButton('Histogram Value Cutoff...')
+        #self.button_histogram.clicked.connect(self.OnHistogram)
+        #self.button_histogram.setEnabled(False)
+        #vbox3.addWidget(self.button_histogram)
 
         self.button_save = QtWidgets.QPushButton('Save Images...')
         self.button_save.clicked.connect(self.OnSave)
@@ -5757,13 +5794,14 @@ class PageSpectral(QtWidgets.QWidget):
 
         line1 = axes.plot(self.stk.ev,tspectrum, color='black', label = 'Raw data')
 
-        if self.com.pca_calculated == 1:
+        if self.com.pca_calculated == 1 and hasattr(self.anlz, 'target_pcafit_spectra'):
             tspectrumfit = self.anlz.target_pcafit_spectra[self.i_tspec-1, :]
             diff = np.abs(tspectrum-tspectrumfit)
             line2 = axes.plot(self.stk.ev,tspectrumfit, color='green', label = 'Fit')
 
             line3 = axes.plot(self.stk.ev,diff, color='grey', label = 'Abs(Raw-Fit)')
-
+        else:
+            QtWidgets.QMessageBox.warning(self, 'Error', 'No PCA conducted. Calculate PCA!')
 
         fontP = matplotlib.font_manager.FontProperties()
         fontP.set_size('small')
@@ -5781,7 +5819,7 @@ class PageSpectral(QtWidgets.QWidget):
 
         self.textctrl_sp1.setText('Common Name: '+
                                     self.anlz.tspec_names[self.i_tspec-1])
-        if self.com.pca_calculated == 1:
+        if self.com.pca_calculated == 1 and hasattr(self.anlz, 'target_pcafit_spectra'):
             self.textctrl_sp2.setText('RMS Error: '+ str('{0:7.5f}').format(self.anlz.target_rms[self.i_tspec-1]))
 
             self.ShowFitWeights()
@@ -10129,7 +10167,7 @@ class SaveWin(QtWidgets.QDialog):
                     name = "I0 data"
                     data = (self.parent.specfig.plotitem.items[-1].yData.tolist())
                 else:
-                    name = "ROI spectra"
+                    name = "ROI spectrum"
                     plot_num = len(self.parent.specfig.plotitem.items)
                     data = []
                     for i in range(plot_num - 1):
@@ -15430,7 +15468,7 @@ class StackListFrame(QtWidgets.QDialog):
         # self.page1.ResetDisplaySettings()
         self.parent.page1.absimgfig.loadNewImageWithROI()
         self.parent.page1.button_multicrop.setText('Crop stack 3D...')
-        # print (x,y), (self.ix,self.iy), self.stk.absdata.shape
+        # print(x,y), (self.ix,self.iy), self.stk.absdata.shape
         self.parent.page1.specfig.ClearandReload()
 
         # self.parent.refresh_widgets()
@@ -16811,7 +16849,7 @@ class MainFrame(QtWidgets.QMainWindow):
             #self.page1.ResetDisplaySettings()
             self.page1.absimgfig.loadNewImageWithROI()
             self.page1.button_multicrop.setText('Crop stack 3D...')
-            #print (x,y), (self.ix,self.iy), self.stk.absdata.shape
+            #print(x,y), (self.ix,self.iy), self.stk.absdata.shape
             self.page1.specfig.ClearandReload()
             #self.page1.textctrl.setText(self.page1.filename)
 
@@ -17072,8 +17110,6 @@ class MainFrame(QtWidgets.QMainWindow):
 #----------------------------------------------------------------------
     def refresh_widgets(self):
 
-        print("refresh")
-
         if self.common.stack_loaded == 0:
             self.page1.button_i0ffile.setEnabled(False)
             self.page1.button_i0.setEnabled(False)
@@ -17155,6 +17191,7 @@ class MainFrame(QtWidgets.QMainWindow):
             self.page5.button_save.setEnabled(False)
             if self.page7:
                 self.page7.button_calcnnma.setEnabled(False)
+                self.page7.button_muroi.setEnabled(False)
                 self.page7.button_mufile.setEnabled(False)
                 self.page7.button_murand.setEnabled(False)
             if showtomotab:
@@ -17172,6 +17209,7 @@ class MainFrame(QtWidgets.QMainWindow):
             self.page5.button_save.setEnabled(True)
             if self.page7:
                 self.page7.button_calcnnma.setEnabled(True)
+                self.page7.button_muroi.setEnabled(True)
                 self.page7.button_mufile.setEnabled(True)
                 self.page7.button_murand.setEnabled(True)
             if showtomotab:
@@ -17214,7 +17252,7 @@ class MainFrame(QtWidgets.QMainWindow):
             self.page4.button_movespup.setEnabled(False)
             self.page4.button_save.setEnabled(False)
             self.page4.button_showrgb.setEnabled(False)
-            self.page4.button_histogram.setEnabled(False)
+            #self.page4.button_histogram.setEnabled(False)
             self.page4.button_calc4d.setEnabled(False)
 
         else:
@@ -17223,7 +17261,7 @@ class MainFrame(QtWidgets.QMainWindow):
             self.page4.button_movespup.setEnabled(True)
             self.page4.button_save.setEnabled(True)
             self.page4.button_showrgb.setEnabled(True)
-            self.page4.button_histogram.setEnabled(True)
+            #self.page4.button_histogram.setEnabled(True)
             self.page4.button_calc4d.setEnabled(True)
 
 
