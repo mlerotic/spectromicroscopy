@@ -26,6 +26,7 @@ import scipy.spatial
 import scipy.ndimage
 from scipy.cluster.vq import  kmeans2, whiten
 import scipy.signal
+from .file_plugins import file_stk
 
 
 #------------------------------------------------------------------------------
@@ -1392,8 +1393,7 @@ class analyze:
         fn = os.path.basename(str(filename))
         _, extension = os.path.splitext(fn)
         if extension in ['.csv', '.txt', '.xas']:
-            spectrum_evdata, spectrum_data, spectrum_common_names = self.stack.read_ascii(filename)
-
+            spectrum_evdata, spectrum_data, spectrum_common_names = file_stk.read_ascii(self, filename)
         for i, spec in enumerate(spectrum_data):
             if not np.any(spec):  # exclude spectra with only zeros
                 spectrum_common_names.pop(i)

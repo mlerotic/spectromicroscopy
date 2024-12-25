@@ -93,11 +93,12 @@ class data:
 
     # ----------------------------------------------------------------------
     def read_stk_i0(self, filename, extension):
-        if extension == '.xas':
-            file_stk.read_stk_i0_xas(self, filename)
-        elif extension == '.csv':
-            file_stk.read_stk_i0_csv(self, filename)
-
+        if extension in ['.txt','.xas','.csv']:
+            ev, data, *_ = file_stk.read_ascii(self, filename)
+            self.evi0 = np.array(ev)
+            self.i0data = np.array(data[0])
+            self.i0_dwell = None
+            self.i0_mask = np.full((self.n_cols , self.n_rows), False)
         self.calculate_optical_density()
         self.fill_h5_struct_normalization()
 
@@ -399,7 +400,8 @@ class data:
     def reset_i0(self):
 
         self.i0_dwell = None
-
+        if hasattr(self, 'i0_mask'):
+            self.i0_mask.fill(False)
         self.i0data = 0
         self.evi0 = 0
 
@@ -711,47 +713,6 @@ class data:
                 for ie in range(self.n_ev):
                     writer.writerow([f'{evdata[ie]:06.6f}', f'{data[ie]:09.6f}'])
                 return
-
-    # ----------------------------------------------------------------------
-    # Read x-ray absorption spectrum
-    def read_ascii(self, filename):
-
-        spectrum_common_names = [' ']
-        elist = []
-        ilist = []
-        names = []
-        # Check the first character of the line and skip if not a number
-        allowedchars = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-', '.']
-        with open(str(filename), 'r') as f:
-            for line in f:
-                if line.startswith('*'):
-                    if 'Common name' in line:
-                        spectrum_common_names = [line.split(':')[-1].strip()]
-                elif line[0] not in allowedchars:
-                    names = line.split(',')
-                    if names[0] == "photon energy":
-                        names = names[1:]
-                        #print(names)
-                    continue
-                else:
-                    e, i = [x for x in line.split(',',1)]
-                    elist.append(e)
-                    ilist.append([float(a) for a in i.split(',')])
-        if not elist:
-            return
-        spectrum_evdata = np.array([float(ev) for ev in elist])
-        spectrum_data = np.transpose(np.array(ilist))
-        if spectrum_evdata[-1] < spectrum_evdata[0]:
-            spectrum_evdata = spectrum_evdata[::-1]
-            spectrum_data = np.flip(spectrum_data,1)
-
-        if spectrum_common_names[0] == ' ':
-            spectrum_common_names = [os.path.splitext(os.path.basename(str(filename)))[0]]
-        elif spectrum_common_names[0] == 'ROI spectrum' and len(names) > 1:
-            spectrum_common_names = names
-            #print(spectrum_common_name)
-
-        return spectrum_evdata, spectrum_data, spectrum_common_names
 
     # ----------------------------------------------------------------------
     # Register images using Fourier Shift Theorem

@@ -9185,78 +9185,33 @@ class PageStack(QtWidgets.QWidget):
 
 
         try:
-            wildcard = "I0 CSV files (*.csv);; I0 files (*.xas);;SDF I0 files (*.hdr)"
-
-            filepath, _filter = QtWidgets.QFileDialog.getOpenFileName(self, 'Open file', '', wildcard)
+            directory = self.com.path
+            wildcard = "I0 spectra (*.csv *.txt *.xas *.hdr);;CSV I0 files (*.csv);;TXT I0 files (*.txt);;XAS I0 files (*.xas);;SDF I0 files (*.hdr)"
+            filepath, _filter = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose I0 spectrum file', directory, wildcard)
 
 
             filepath = str(filepath)
             if filepath == '':
                 return
 
-            filepath_i0 =  os.path.dirname(str(filepath))
             self.filename =  os.path.basename(str(filepath))
 
             basename, extension = os.path.splitext(self.filename)
 
+            QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
+
+            x = self.stk.n_cols
+            y = self.stk.n_rows
+            z = self.iev
+
+            self.ix = int(x / 2)
+            self.iy = int(y / 2)
+
             if extension == '.hdr':
-                QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
-
-                x=self.stk.n_cols
-                y=self.stk.n_rows
-                z=self.iev
-
-                self.ix = int(x/2)
-                self.iy = int(y/2)
                 self.stk.read_sdf_i0(filepath)
-                self.com.i0_loaded = 1
-                #self.loadSpectrum(self.ix, self.iy)
-                self.absimgfig.loadNewImage()
 
-                QtWidgets.QApplication.restoreOverrideCursor()
-
-
-            elif extension == '.xas':
-                QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
-
-                x=self.stk.n_cols
-                y=self.stk.n_rows
-                z=self.iev
-
-                self.ix = int(x/2)
-                self.iy = int(y/2)
-
+            elif extension in ['.csv', '.txt', '.xas']:
                 self.stk.read_stk_i0(filepath, extension)
-
-                self.com.i0_loaded = 1
-                #self.loadSpectrum(self.ix, self.iy)
-                self.absimgfig.loadNewImage()
-
-                QtWidgets.QApplication.restoreOverrideCursor()
-
-            elif extension == '.csv':
-                QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
-
-                x=self.stk.n_cols
-                y=self.stk.n_rows
-                z=self.iev
-
-                self.ix = int(x/2)
-                self.iy = int(y/2)
-
-                self.stk.read_stk_i0(filepath, extension)
-
-                self.com.i0_loaded = 1
-                self.absimgfig.loadNewImageWithROI()
-                self.specfig.ClearandReload()
-                self.button_i0.disconnect()
-                self.button_i0.setText("Reset I0")
-                self.button_i0.clicked.connect(self.OnI0Reset)
-                self.window().refresh_widgets()
-                self.button_i0ffile.setEnabled(False)
-                self.button_prenorm.setEnabled(False)
-                self.button_refimgs.setEnabled(False)
-                QtWidgets.QApplication.restoreOverrideCursor()
 
         except:
             QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
@@ -9264,6 +9219,18 @@ class PageStack(QtWidgets.QWidget):
             QtWidgets.QApplication.restoreOverrideCursor()
             QtWidgets.QMessageBox.warning(self,'Error',"I0 file not loaded.")
             import sys; print(sys.exc_info())
+        else:
+            QtWidgets.QApplication.restoreOverrideCursor()
+            self.com.i0_loaded = 1
+            self.absimgfig.loadNewImageWithROI()
+            self.specfig.ClearandReload()
+            self.button_i0.disconnect()
+            self.button_i0.setText("Reset I0")
+            self.button_i0.clicked.connect(self.OnI0Reset)
+            self.window().refresh_widgets()
+            self.button_i0ffile.setEnabled(False)
+            self.button_prenorm.setEnabled(False)
+            self.button_refimgs.setEnabled(False)
 
 
 
@@ -9951,37 +9918,37 @@ class PageStack(QtWidgets.QWidget):
             thiseng_abs = self.stk.absdata[:,:,ie]
             self.ROIspectrum[ie] = np.sum(thiseng_abs[indices])/numroipix
 
-#----------------------------------------------------------------------
-    def OnSetROII0(self, evt):
-        self.CalcROI_I0Spectrum()
-
-        self.stk.set_i0(self.ROIspectrum, self.stk.ev)
-
-        plot = PlotFrame(self, self.stk.evi0,self.stk.i0data)
-        plot.show()
-
-        x=self.stk.n_cols
-        y=self.stk.n_rows
-
-        self.ix = int(x/2)
-        self.iy = int(y/2)
-
-        self.com.i0_loaded = 1
-
-        self.addroi = 0
-        self.showROImask = 0
-        self.ROIpix = None
-
-        self.loadSpectrum(self.ix, self.iy)
-        self.loadImage()
-
-        self.button_acceptROI.setEnabled(False)
-        self.button_setROII0.setEnabled(False)
-        self.button_resetROI.setEnabled(False)
-        self.button_saveROIspectr.setEnabled(False)
-        self.button_ROIdosecalc.setEnabled(False)
-
-        self.window().refresh_widgets()
+# #----------------------------------------------------------------------
+#     def OnSetROII0(self, evt):
+#         self.CalcROI_I0Spectrum()
+#
+#         self.stk.set_i0(self.ROIspectrum, self.stk.ev)
+#
+#         plot = PlotFrame(self, self.stk.evi0,self.stk.i0data)
+#         plot.show()
+#
+#         x=self.stk.n_cols
+#         y=self.stk.n_rows
+#
+#         self.ix = int(x/2)
+#         self.iy = int(y/2)
+#
+#         self.com.i0_loaded = 1
+#
+#         self.addroi = 0
+#         self.showROImask = 0
+#         self.ROIpix = None
+#
+#         self.loadSpectrum(self.ix, self.iy)
+#         self.loadImage()
+#
+#         self.button_acceptROI.setEnabled(False)
+#         self.button_setROII0.setEnabled(False)
+#         self.button_resetROI.setEnabled(False)
+#         self.button_saveROIspectr.setEnabled(False)
+#         self.button_ROIdosecalc.setEnabled(False)
+#
+#         self.window().refresh_widgets()
 
 #----------------------------------------------------------------------
     def OnROI_DoseCalc(self, event):

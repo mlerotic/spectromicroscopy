@@ -94,65 +94,47 @@ def read(filename, self, selection=None, *args, **kwargs):
   
     return
 
-#-----------------------------------------------------------------------   
-def read_stk_i0_xas(self, filename):
+#-----------------------------------------------------------------------
+# Read x-ray absorption spectrum
+def read_ascii(self, filename):
 
-    f = open(str(filename),'r')
-    
+    spectrum_common_names = [' ']
     elist = []
-    ilist = []    
-
-    for line in f:
-        if line.startswith("*"):
-            pass
-        else:
-            try:
-                e, i = [float(x) for x in line.split()]
+    ilist = []
+    names = []
+    # Check the first character of the line and skip if not a number
+    allowedchars = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-', '.']
+    with open(str(filename), 'r') as f:
+        for line in f:
+            if line.startswith('*'):
+                if 'Common name' in line:
+                    spectrum_common_names = [line.split(':')[-1].strip()]
+            elif line[0] not in allowedchars:
+                names = line.split(',')
+                if names[0] == "photon energy":
+                    names = names[1:]
+                    #print(names)
+                continue
+            else:
+                e, i = [x for x in line.split(',',1)]
                 elist.append(e)
-                ilist.append(i)
-            except ValueError:
-                pass
-            
-    self.evi0 = np.array(elist)
-    self.i0data = np.array(ilist) 
-            
-    f.close()
-    
-    self.i0_dwell = None
-       
+                ilist.append([float(a) for a in i.split(',')])
+    if not elist:
+        return
+    spectrum_evdata = np.array([float(ev) for ev in elist])
+    spectrum_data = np.transpose(np.array(ilist))
+    if spectrum_evdata[-1] < spectrum_evdata[0]:
+        spectrum_evdata = spectrum_evdata[::-1]
+        spectrum_data = np.flip(spectrum_data,1)
 
-    return
-    
+    if spectrum_common_names[0] == ' ':
+        spectrum_common_names = [os.path.splitext(os.path.basename(str(filename)))[0]]
+    elif spectrum_common_names[0] == 'ROI spectrum' and len(names) > 1:
+        spectrum_common_names = names
+        #print(spectrum_common_name)
 
-#-----------------------------------------------------------------------   
-def read_stk_i0_csv(self, filename):
+    return spectrum_evdata, spectrum_data, spectrum_common_names
 
-    f = open(str(filename),'r')
-    
-    elist = []
-    ilist = []    
-
-    for line in f:
-        if line.startswith("*"):
-            pass
-        else:
-            try:
-                e, i = [float(x) for x in line.split(',')]
-                elist.append(e)
-                ilist.append(i)
-            except ValueError:
-                pass
-            
-    self.evi0 = np.array(elist)
-    self.i0data = np.array(ilist) 
-            
-    f.close()
-    
-    self.i0_dwell = None
-       
-
-    return    
-    
 #-----------------------------------------------------------------------
 class x1astk:
     def __init__(self):
@@ -202,67 +184,3 @@ class x1astk:
 #         self.original_absdata = self.absdata.copy()
       
         return
-
-#-----------------------------------------------------------------------   
-    def read_stk_i0_xas(self, filename):
-
-        f = open(str(filename),'r')
-        
-        elist = []
-        ilist = []    
-    
-        for line in f:
-            if line.startswith("*"):
-                pass
-            else:
-                e, i = [float(x) for x in line.split()]
-                elist.append(e)
-                ilist.append(i)
-                
-        self.evi0 = np.array(elist)
-        self.i0data = np.array(ilist) 
-                
-        f.close()
-        
-        self.i0_dwell = None
-           
-    
-        return
-    
-
-#-----------------------------------------------------------------------   
-    def read_stk_i0_csv(self, filename):
-
-        f = open(str(filename),'r')
-        
-        elist = []
-        ilist = []    
-    
-        for line in f:
-            print(line)
-            if line.startswith("*"):
-                pass
-            else:
-                e, i = [float(x) for x in line.split(',')]
-                elist.append(e)
-                ilist.append(i)
-                
-        self.evi0 = np.array(elist)
-        self.i0data = np.array(ilist) 
-                
-        f.close()
-        
-        self.i0_dwell = None
-           
-    
-        return            
-        
-        
-        
-        
-        
-        
-        
-       
-            
-    
