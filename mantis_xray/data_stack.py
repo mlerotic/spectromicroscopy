@@ -714,70 +714,9 @@ class data:
 
     # ----------------------------------------------------------------------
     # Read x-ray absorption spectrum
-    def read_xas(self, filename):
+    def read_ascii(self, filename):
 
-        spectrum_common_name = ' '
-
-        elist = []
-        ilist = []
-        with open(str(filename), 'r') as f:
-            for line in f:
-                if line.startswith('*'):
-                    if 'Common name' in line:
-                        spectrum_common_name = [line.split(':')[-1].strip()]
-
-                else:
-                    e, i = [float(x) for x in line.split()]
-                    elist.append(e)
-                    ilist.append(i)
-
-        spectrum_evdata = np.array(elist)
-        spectrum_data = np.array(ilist)
-
-        f.close()
-
-        if spectrum_evdata[-1] < spectrum_evdata[0]:
-            spectrum_evdata = spectrum_evdata[::-1]
-            spectrum_data = spectrum_data[::-1]
-
-        if spectrum_common_name == ' ':
-            spectrum_common_name = os.path.splitext(os.path.basename(str(filename)))[0]
-
-        return spectrum_evdata, spectrum_data, spectrum_common_name
-
-    # ----------------------------------------------------------------------
-    # Read x-ray absorption spectrum
-    def read_txt(self, filename):
-
-        spectrum_common_name = os.path.splitext(os.path.basename(str(filename)))[0]
-
-        elist = []
-        ilist = []
-        with open(str(filename), 'r') as f:
-            for line in f:
-                if line.startswith('%'):
-                    pass
-                else:
-                    e, i = [x for x in line.split()]
-                    elist.append(e)
-                    ilist.append(i)
-
-        spectrum_evdata = np.array([float(ev) for ev in elist])
-        spectrum_data = np.array(ilist)
-
-        f.close()
-
-        if spectrum_evdata[-1] < spectrum_evdata[0]:
-            spectrum_evdata = spectrum_evdata[::-1]
-            spectrum_data = spectrum_data[::-1]
-
-        return spectrum_evdata, spectrum_data, spectrum_common_name
-
-    # ----------------------------------------------------------------------
-    # Read x-ray absorption spectrum
-    def read_csv(self, filename):
-
-        spectrum_common_name = [' ']
+        spectrum_common_names = [' ']
         elist = []
         ilist = []
         names = []
@@ -787,7 +726,7 @@ class data:
             for line in f:
                 if line.startswith('*'):
                     if 'Common name' in line:
-                        spectrum_common_name = [line.split(':')[-1].strip()]
+                        spectrum_common_names = [line.split(':')[-1].strip()]
                 elif line[0] not in allowedchars:
                     names = line.split(',')
                     if names[0] == "photon energy":
@@ -798,20 +737,21 @@ class data:
                     e, i = [x for x in line.split(',',1)]
                     elist.append(e)
                     ilist.append([float(a) for a in i.split(',')])
+        if not elist:
+            return
         spectrum_evdata = np.array([float(ev) for ev in elist])
         spectrum_data = np.transpose(np.array(ilist))
-
         if spectrum_evdata[-1] < spectrum_evdata[0]:
             spectrum_evdata = spectrum_evdata[::-1]
             spectrum_data = np.flip(spectrum_data,1)
 
-        if spectrum_common_name[0] == ' ':
-            spectrum_common_name = [os.path.splitext(os.path.basename(str(filename)))[0]]
-        elif spectrum_common_name[0] == 'ROI spectrum' and len(names) > 1:
-            spectrum_common_name = names
+        if spectrum_common_names[0] == ' ':
+            spectrum_common_names = [os.path.splitext(os.path.basename(str(filename)))[0]]
+        elif spectrum_common_names[0] == 'ROI spectrum' and len(names) > 1:
+            spectrum_common_names = names
             #print(spectrum_common_name)
 
-        return spectrum_evdata, spectrum_data, spectrum_common_name
+        return spectrum_evdata, spectrum_data, spectrum_common_names
 
     # ----------------------------------------------------------------------
     # Register images using Fourier Shift Theorem

@@ -2279,36 +2279,29 @@ class PageNNMA(QtWidgets.QWidget):
 
         #if True:
         try:
-            wildcard = "Spectrum files (*.csv);;Spectrum files (*.xas);;"
-            filepath, _filter = QtWidgets.QFileDialog.getOpenFileNames(self, 'Choose files containing Spectra', '', wildcard,
-                                                                       None, QtWidgets.QFileDialog.DontUseNativeDialog)
+            wildcard = "ASCII files (*.csv *.txt *.xas);;CSV spectrum (*.csv);;TXT spectrum (*.txt);;XAS spectrum (*.xas)"
+            directory = self.com.path
+            filepath, _filter = QtWidgets.QFileDialog.getOpenFileNames(self, 'Choose Spectrum file(s)', directory, wildcard)
+
+            #filepath, _filter = QtWidgets.QFileDialog.getOpenFileNames(self, 'Choose files containing Spectra', '', wildcard,
+            #                                                           None, QtWidgets.QFileDialog.DontUseNativeDialog)
             if filepath == '':
                 return
 
             self.filenames = []
             for name in filepath:
                 self.filenames.append(str(name))
-
+            muInit = []
             kNNMA = 0
 
             for f in self.filenames:
-                thisfn = os.path.basename(f)
-                _basename, extension = os.path.splitext(thisfn)
-                if extension == '.csv':
-                    spectrum_evdata, spectrum_data, _spectrum_common_name = self.stk.read_csv(f)
-                #Todo: fix xas support
-                #elif extension == '.xas':
-                #    spectrum_evdata, spectrum_data, _spectrum_common_name = self.stk.read_xas(f)
-                for k, spec in enumerate(spectrum_data):
-                    if not np.any(spec):  # exclude spectra with only zeros
-                        continue
-                    fitspectrum = self.anlz.remap_spectrum(spectrum_evdata, spec)
+                spectrum_common_names, fitspectra = self.anlz.load_filter_remap_spectra(f)
 
-                    kNNMA += 1
-                    if kNNMA == 1:
-                        muInit = fitspectrum
-                    elif kNNMA > 1:
-                        muInit = np.vstack((muInit, fitspectrum))
+                try:
+                    muInit = np.vstack((muInit, fitspectra))
+                except ValueError:
+                    muInit  = fitspectra
+                kNNMA += len(spectrum_common_names)
 
             if kNNMA < 2:
                 QtWidgets.QMessageBox.warning(self, 'Error', 'Select at least two spectra.')
@@ -2320,16 +2313,12 @@ class PageNNMA(QtWidgets.QWidget):
             self.lambdaClusterSim = 0.0
             self.ntc_lamsim.setText(str(self.lambdaClusterSim))
 
-
+            self.tc_initspectra.setText('Initial Spectra: ' + self.initMatrices)
             QtWidgets.QApplication.restoreOverrideCursor()
 
         except:
             QtWidgets.QApplication.restoreOverrideCursor()
-            QtWidgets.QMessageBox.warning(self, 'Error', 'Spectra files not loaded.')
-
-
-        self.tc_initspectra.setText('Initial Spectra: ' + self.initMatrices)
-
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Spectra not loaded.')
 
         self.window().refresh_widgets()
 
@@ -3478,19 +3467,19 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
 
 
         #panel 3
-        sizer3 = QtWidgets.QGroupBox('Load Spectrum')
+        sizer3 = QtWidgets.QGroupBox('Load spectra')
         vbox3 = QtWidgets.QVBoxLayout()
 
-        self.button_addclspec = QtWidgets.QPushButton('Add Cluster Spectra')
+        self.button_addclspec = QtWidgets.QPushButton('Add cluster spectra')
         self.button_addclspec.clicked.connect( self.OnAddClusterSpectra)
         self.button_addclspec.setEnabled(False)
         vbox3.addWidget(self.button_addclspec)
 
-        self.button_loadtspec = QtWidgets.QPushButton('Load Spectrum')
+        self.button_loadtspec = QtWidgets.QPushButton('Load spectra')
         self.button_loadtspec.clicked.connect(self.OnSpecFromFile)
         vbox3.addWidget(self.button_loadtspec)
 
-        self.button_save = QtWidgets.QPushButton('Save Images...')
+        self.button_save = QtWidgets.QPushButton('Save images...')
         self.button_save.clicked.connect( self.OnSave)
         self.button_save.setEnabled(False)
         vbox3.addWidget(self.button_save)
@@ -3500,7 +3489,7 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
 
 
         #panel 4
-        sizer4 = QtWidgets.QGroupBox('Fit Settings')
+        sizer4 = QtWidgets.QGroupBox('Fit settings')
         vbox4 = QtWidgets.QVBoxLayout()
 
 
@@ -3583,26 +3572,23 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
 
 #----------------------------------------------------------------------
     def OnSpecFromFile(self, event):
+        #ToDo: Clean-up needed. One dialog for all pages is sufficient.
 
         try:
-
-            wildcard = "Spectrum files (*.csv)"
-
-            filepath, _filter = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', self.com.path, wildcard)
-
+        #if True:
+            wildcard = "ASCII files (*.csv *.txt *.xas);;CSV spectrum (*.csv);;TXT spectrum (*.txt);;XAS spectrum (*.xas)"
+            directory = self.com.path
+            filepath, _filter = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', directory, wildcard)
 
             filepath = str(filepath)
             if filepath == '':
                 return
 
-            self.filename =  os.path.basename(str(filepath))
-            directory =  os.path.dirname(str(filepath))
-            self.com.path = directory
-
             QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
 
-            self.anlz.load_xraypeakfit_spectrum(filename=filepath)
-
+            self.anlz.load_xraypeakfit_spectra(filename=filepath)
+            if not self.anlz.xrayfitsp_to_add:
+                raise IndexError
             for i in range(self.anlz.xrayfitsp_to_add):
                 self.com.xpf_loaded = 1
                 self.spectrumfitted.append(0)
@@ -3612,21 +3598,28 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
                 self.npeaks.append(4)
                 self.fits.append(0)
                 self.fits_sep.append(0)
+
             curr_idx = self.anlz.n_xrayfitsp - 1
-            self.i_spec = curr_idx + 1
-            self.slider_spec.setMaximum(self.i_spec)
+            self.i_spec = self.anlz.n_xrayfitsp
 
             self.nstepsspin.setValue(self.nsteps[self.i_spec-1])
             self.ngaussspin.setValue(self.npeaks[self.i_spec-1])
-
+            self.slider_spec.setMaximum(self.i_spec)
             self.loadSpectrum()
             self.updatewidgets()
             self.slider_spec.setValue(self.i_spec)
             QtWidgets.QApplication.restoreOverrideCursor()
-
-        except:
+        except IndexError:
             QtWidgets.QApplication.restoreOverrideCursor()
-            QtWidgets.QMessageBox.warning(self, 'Error', 'Spectrum file not loaded.')
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Spectrum file not loaded. Data invalid or zero.')
+
+        except TypeError:
+            QtWidgets.QApplication.restoreOverrideCursor()
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Spectrum file not loaded. Unknown format.')
+
+        except Exception as error:
+            QtWidgets.QApplication.restoreOverrideCursor()
+            QtWidgets.QMessageBox.warning(self, 'Error', "Unexpected Error: "+ str(error) +" "+ str(type(error)))
 
         self.window().refresh_widgets()
 
@@ -4462,21 +4455,21 @@ class PagePeakID(QtWidgets.QWidget):
 
 
         #panel 2
-        sizer2 = QtWidgets.QGroupBox('Load Spectrum')
+        sizer2 = QtWidgets.QGroupBox('Load spectra')
         vbox2 = QtWidgets.QVBoxLayout()
 
-        self.button_addclspec = QtWidgets.QPushButton('Add Cluster Spectra')
+        self.button_addclspec = QtWidgets.QPushButton('Add cluster spectra')
         self.button_addclspec.clicked.connect( self.OnAddClusterSpectra)
         self.button_addclspec.setEnabled(False)
         vbox2.addWidget(self.button_addclspec)
 
 
-        self.button_loadtspec = QtWidgets.QPushButton('Load Spectrum')
+        self.button_loadtspec = QtWidgets.QPushButton('Load spectra')
         self.button_loadtspec.clicked.connect(self.OnSpecFromFile)
         vbox2.addWidget(self.button_loadtspec)
 
 
-        self.button_save = QtWidgets.QPushButton('Save Images...')
+        self.button_save = QtWidgets.QPushButton('Save images...')
         self.button_save.clicked.connect( self.OnSave)
         self.button_save.setEnabled(False)
         vbox2.addWidget(self.button_save)
@@ -4562,36 +4555,33 @@ class PagePeakID(QtWidgets.QWidget):
 
 #----------------------------------------------------------------------
     def OnSpecFromFile(self, event):
-
+        #ToDo: Clean-up needed. One dialog for all pages is sufficient.
 
         try:
-
-            wildcard = "Spectrum files (*.csv)"
-
-            filepath, _filter = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', self.com.path, wildcard)
-
+        #if True:
+            wildcard = "ASCII files (*.csv *.txt *.xas);;CSV spectrum (*.csv);;TXT spectrum (*.txt);;XAS spectrum (*.xas)"
+            directory = self.com.path
+            filepath, _filter = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', directory, wildcard)
 
             filepath = str(filepath)
             if filepath == '':
                 return
 
-            self.filename =  os.path.basename(str(filepath))
-            directory =  os.path.dirname(str(filepath))
-            self.com.path = directory
-
             QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
 
-            self.anlz.load_xraypeakfit_spectrum(filename=filepath)
-
-            self.com.xpf_loaded = 1
+            self.anlz.load_xraypeakfit_spectra(filename=filepath)
+            if not self.anlz.xrayfitsp_to_add:
+                raise IndexError
             if self.window().page6 != None:
-                self.window().page6.spectrumfitted.append(0)
-                self.window().page6.firstinit.append(1)
-                self.window().page6.initdone.append(0)
-                self.window().page6.nsteps.append(1)
-                self.window().page6.npeaks.append(4)
-                self.window().page6.fits.append(0)
-                self.window().page6.fits_sep.append(0)
+                self.com.xpf_loaded = 1
+                for i in range(self.anlz.xrayfitsp_to_add):
+                    self.window().page6.spectrumfitted.append(0)
+                    self.window().page6.firstinit.append(1)
+                    self.window().page6.initdone.append(0)
+                    self.window().page6.nsteps.append(1)
+                    self.window().page6.npeaks.append(4)
+                    self.window().page6.fits.append(0)
+                    self.window().page6.fits_sep.append(0)
 
                 self.window().page6.i_spec = self.anlz.n_xrayfitsp
                 self.window().page6.slider_spec.setMaximum(self.anlz.n_xrayfitsp)
@@ -4606,12 +4596,17 @@ class PagePeakID(QtWidgets.QWidget):
 
 
             QtWidgets.QApplication.restoreOverrideCursor()
-
-        except:
+        except IndexError:
             QtWidgets.QApplication.restoreOverrideCursor()
-            QtWidgets.QMessageBox.warning(self, 'Error', 'Spectrum file not loaded.')
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Spectrum file not loaded. Data invalid or zero.')
 
+        except TypeError:
+            QtWidgets.QApplication.restoreOverrideCursor()
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Spectrum file not loaded. Unknown format.')
 
+        except Exception as error:
+            QtWidgets.QApplication.restoreOverrideCursor()
+            QtWidgets.QMessageBox.warning(self, 'Error', "Unexpected Error: "+ str(error) +" "+ str(type(error)))
 
         self.window().refresh_widgets()
 
@@ -4990,20 +4985,20 @@ class PageSpectral(QtWidgets.QWidget):
 
 
         #panel 3
-        sizer3 = QtWidgets.QGroupBox('Target Spectra')
+        sizer3 = QtWidgets.QGroupBox('Target spectra')
         vbox3 = QtWidgets.QVBoxLayout()
 
 
-        self.button_addclspec = QtWidgets.QPushButton('Add Cluster Spectra')
+        self.button_addclspec = QtWidgets.QPushButton('Add cluster spectra')
         self.button_addclspec.setMinimumSize (180 , 0)
         self.button_addclspec.clicked.connect( self.OnAddClusterSpectra)
         self.button_addclspec.setEnabled(False)
         vbox3.addWidget(self.button_addclspec)
-        self.button_loadtspec = QtWidgets.QPushButton('Load Spectrum')
+        self.button_loadtspec = QtWidgets.QPushButton('Load spectra')
         self.button_loadtspec.clicked.connect(self.OnTSpecFromFile)
         self.button_loadtspec.setEnabled(False)
         vbox3.addWidget(self.button_loadtspec)
-        self.button_addflat = QtWidgets.QPushButton('Add Flat Spectrum')
+        self.button_addflat = QtWidgets.QPushButton('Add flat spectrum')
         self.button_addflat.clicked.connect(self.OnFlatTSpec)
         self.button_addflat.setEnabled(False)
         vbox3.addWidget(self.button_addflat)
@@ -5014,13 +5009,13 @@ class PageSpectral(QtWidgets.QWidget):
         self.button_showrgb.setEnabled(False)
         vbox3.addWidget(self.button_showrgb)
 
-        #ToDo: Repair Histogram Value Cutoff if needed.
+        #ToDo: Repair Histogram Value Cutoff if needed. This is covered by "Spectral ROI"
         #self.button_histogram = QtWidgets.QPushButton('Histogram Value Cutoff...')
         #self.button_histogram.clicked.connect(self.OnHistogram)
         #self.button_histogram.setEnabled(False)
         #vbox3.addWidget(self.button_histogram)
 
-        self.button_save = QtWidgets.QPushButton('Save Images...')
+        self.button_save = QtWidgets.QPushButton('Save images...')
         self.button_save.clicked.connect(self.OnSave)
         self.button_save.setEnabled(False)
         vbox3.addWidget(self.button_save)
@@ -5075,11 +5070,11 @@ class PageSpectral(QtWidgets.QWidget):
         vbox42.addWidget(self.rb_raw)
         vbox42.addWidget(self.rb_fit)
 
-
-        self.add_scale_cb = QtWidgets.QCheckBox('Scalebar', self)
-        #self.add_scale_cb.toggle()
-        self.add_scale_cb.stateChanged.connect(self.OnShowScale)
-        vbox42.addWidget(self.add_scale_cb)
+        # ToDo: something is wrong here. Scalebar not working. Crucial?
+        #self.add_scale_cb = QtWidgets.QCheckBox('Scalebar', self)
+        ##self.add_scale_cb.toggle()
+        #self.add_scale_cb.stateChanged.connect(self.OnShowScale)
+        #vbox42.addWidget(self.add_scale_cb)
         sb.setLayout(vbox42)
         hbox4b.addWidget(sb)
 
@@ -5140,14 +5135,11 @@ class PageSpectral(QtWidgets.QWidget):
     def OnTSpecFromFile(self, event):
 
 
-        try:
-        #if True:
-            wildcard = "Supported spectrum formats (*.csv *.xas *.txt);;Spectrum files (*.csv);;Spectrum files (*.xas);;Spectrum files (*.txt);;"
+        #try:
+        if True:
+            wildcard = "ASCII files (*.csv *.txt *.xas);;CSV files (*.csv);;TXT files (*.txt);;XAS files (*.xas)"
             directory = self.com.path
-
             filepath, _filter = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', directory, wildcard)
-            #filepath, _filter = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', '', wildcard)
-
 
             filepath = str(filepath)
             if filepath == '':
@@ -5159,7 +5151,6 @@ class PageSpectral(QtWidgets.QWidget):
 
 
             QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
-
             self.anlz.read_target_spectrum(filename=filepath)
             self.com.spec_anl_calculated = 1
 
@@ -5176,9 +5167,9 @@ class PageSpectral(QtWidgets.QWidget):
 
             QtWidgets.QApplication.restoreOverrideCursor()
 
-        except:
-            QtWidgets.QApplication.restoreOverrideCursor()
-            QtWidgets.QMessageBox.warning(self, 'Error', 'Spectrum file not loaded.')
+        #except:
+        #    QtWidgets.QApplication.restoreOverrideCursor()
+        #    QtWidgets.QMessageBox.warning(self, 'Error', 'Spectra not loaded.')
 
 
         self.window().refresh_widgets()

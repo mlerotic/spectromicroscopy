@@ -1046,42 +1046,29 @@ class analyze:
 # target spectra from the components.
     def read_target_spectrum(self, filename = '', flat = False):
         # Load spectrum from a file
-        spectrum_evdata = 0
-        spectrum_data = 0
-        spectrum_common_name = ' '
+        #Todo: preparation completed. combine with load_xraypeakfit_spectra
         if flat == True:
             spectrum_evdata = self.stack.ev
-            spectrum_data = np.ones((1,self.stack.n_ev))
-            spectrum_common_name= ['Flat']
+            spec = np.ones((1,self.stack.n_ev))
+            spectrum_common_names= ['Flat']
+            fitspectra = self.remap_spectrum(spectrum_evdata, spec)
         else:
-            fn =  os.path.basename(str(filename))                                      
-            basename, extension = os.path.splitext(fn)      
-            if extension == '.csv':
-                spectrum_evdata, spectrum_data, spectrum_common_name = self.stack.read_csv(filename)
-            #Todo: enable xas and txt support
-            #elif extension == '.xas':
-            #    spectrum_evdata, spectrum_data, spectrum_common_name = self.stack.read_xas(filename)
-            #elif extension == '.txt':
-            #    spectrum_evdata, spectrum_data, spectrum_common_name = self.stack.read_txt(filename)
-        for i, spec in enumerate(spectrum_data):
-            if not np.any(spec): # exclude spectra with only zeros
-                continue
-            fitspectrum = self.remap_spectrum(spectrum_evdata, spec)
-
-            if self.tspectrum_loaded == 0:
-                self.target_spectra = fitspectrum
+            spectrum_common_names, fitspectra = self.load_filter_remap_spectra(filename)
+        self.n_target_to_add = len(spectrum_common_names)
+        if self.n_target_to_add:
+            self.n_target_spectra += self.n_target_to_add
+            try:
+                self.target_spectra = np.vstack((self.target_spectra,fitspectra))
+            except ValueError:
+                self.target_spectra = fitspectra
                 self.tspectrum_loaded = 1
-                self.n_target_spectra += 1
-            else:
-                self.target_spectra = np.vstack((self.target_spectra,fitspectrum))
-                self.n_target_spectra += 1
-            name = spectrum_common_name[i].strip()
-            if name == ' ':
-                name = 'Cluster %d' % (self.n_target_spectra)
-            if name in self.tspec_names:
-                self.tspec_names.count(name)
-                name = name +'_'+ str(self.tspec_names.count(name))
-            self.tspec_names.append(name)
+            for i, n in enumerate(spectrum_common_names):
+                name = n.strip()
+                if name == ' ':
+                    name = 'Cluster %d' % (i+1)
+                if name in self.tspec_names:
+                    name = name + '_' + str(len(list(filter(lambda x: x.startswith(name), self.tspec_names))))
+                self.tspec_names.append(name)
 
         self.fit_target_spectra()
         self.calc_svd_maps()
@@ -1399,6 +1386,28 @@ class analyze:
         return np.array(maxtab), np.array(mintab)
 
 # ----------------------------------------------------------------------
+    def load_filter_remap_spectra(self, filename):
+        spectrum_common_names = [' ']
+        fitspectra = 0
+        fn = os.path.basename(str(filename))
+        _, extension = os.path.splitext(fn)
+        if extension in ['.csv', '.txt', '.xas']:
+            spectrum_evdata, spectrum_data, spectrum_common_names = self.stack.read_ascii(filename)
+
+        for i, spec in enumerate(spectrum_data):
+            if not np.any(spec):  # exclude spectra with only zeros
+                spectrum_common_names.pop(i)
+                continue
+            fitspectrum = self.remap_spectrum(spectrum_evdata, spec)
+
+            try:
+                fitspectra = np.vstack((fitspectra, fitspectrum))
+            except ValueError:
+                fitspectra = fitspectrum
+
+        return spectrum_common_names, fitspectra
+
+# ----------------------------------------------------------------------
     def remap_spectrum(self, spec_ev, spec):
         if self.stack.n_ev > 0:
             # Map this spectrum onto our energy range - interpolate to ev
@@ -1419,35 +1428,35 @@ class analyze:
         return fit_spectrum
 
 #-----------------------------------------------------------------------   
-    def load_xraypeakfit_spectrum(self, filename):
-
+    def load_xraypeakfit_spectra(self, filename, flat = False):
         # Load spectrum from a file
-        spectrum_evdata = 0
-        spectrum_data = 0
-        spectrum_common_name = ' '
-
-        spectrum_evdata, spectrum_data, spectrum_common_name = self.stack.read_csv(filename)
-        self.xrayfitsp_to_add = len(spectrum_data)
-        for i, spec in enumerate(spectrum_data):
-            fitspectrum = self.remap_spectrum(spectrum_evdata, spec)
-            if self.xrayfitsp_loaded == 0:
-                self.xrayfitspectra = fitspectrum
+        #Todo: preparation completed. combine with read_target_spectrum
+        if flat == True:
+            spectrum_evdata = self.stack.ev
+            spec = np.ones((1,self.stack.n_ev))
+            spectrum_common_names= ['Flat']
+            fitspectra = self.remap_spectrum(spectrum_evdata, spec)
+        else:
+            spectrum_common_names, fitspectra = self.load_filter_remap_spectra(filename)
+        self.xrayfitsp_to_add = len(spectrum_common_names)
+        if self.xrayfitsp_to_add:
+            self.n_xrayfitsp += self.xrayfitsp_to_add
+            try:
+                self.xrayfitspectra = np.vstack((self.xrayfitspectra, fitspectra))
+            except ValueError:
+                self.xrayfitspectra = fitspectra
                 self.xrayfitsp_loaded = 1
-                self.n_xrayfitsp = 1
-            else:
-                self.xrayfitspectra = np.vstack((self.xrayfitspectra,fitspectrum))
-                self.n_xrayfitsp += 1
-            name = spectrum_common_name[i].strip()
-            if name == ' ':
-                name = 'Spectrum %d' % (self.n_xrayfitsp)
-            if name in self.xfspec_names:
-                self.xfspec_names.count(name)
-                name = name +'_'+ str(self.xfspec_names.count(name))
-            self.xfspec_names.append(name)
-            self.xfitpars.append(Cfitparams())
+            for i, n in enumerate(spectrum_common_names):
+                name = n.strip()
+                if name == ' ':
+                    name = 'Spectrum %d' % (i+1)
+                if name in self.xfspec_names:
+                    name = name +'_'+ str(len(list(filter(lambda x: x.startswith(name), self.xfspec_names))))
+                self.xfspec_names.append(name)
 
-            #Find peaks:
-            self.init_fit_params(self.n_xrayfitsp-1)
+                self.xfitpars.append(Cfitparams())
+                #Find peaks:
+                self.init_fit_params(self.n_xrayfitsp-self.xrayfitsp_to_add+i)
 
 #-----------------------------------------------------------------------   
 #Load spectra from cluster analysis
@@ -1477,7 +1486,6 @@ class analyze:
         
         
         pmax,pmin = self.find_peaks(self.xrayfitspectra[index], 0.03, x = self.stack.ev)
-        
         fp = self.xfitpars[index]
 
         peakengs = []
@@ -1502,7 +1510,6 @@ class analyze:
             
             
         fp.base = np.mean(self.xrayfitspectra[index][0:5])
-        
         
         self.set_init_fit_params(index, fp.base, fp.stepfitparams, fp.gauss_fp_a, fp.gauss_fp_m, fp.gauss_fp_s)
         
@@ -1554,7 +1561,7 @@ class analyze:
         
         bounds=[]
         #base can be a negative number
-        bounds.append((fp.base-0.5,fp.base+0.5))
+        bounds.append((fp.base-1.5,fp.base+1.5))
         for i in range(1,len(p)):
             bmin = 0
             bmax = None
