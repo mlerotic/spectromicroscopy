@@ -46,7 +46,11 @@ from __future__ import division
 
 import numpy as np
 import scipy.interpolate
-from xdrlib3 import *
+try:
+    from xdrlib3 import *
+except ImportError:
+    # Fallback to using the xdrlib module that is removed from the standard Python library in version 3.13
+    from xdrlib import *
 import string
 
 #------------------------------------------------------------------------------
