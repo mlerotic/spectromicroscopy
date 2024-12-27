@@ -9,8 +9,6 @@ def resource_path(relative_path):
 def check_for_updates(current_version):
     import urllib.request, re
     from urllib.error import URLError
-    from importlib.metadata import version as version_check
-    from packaging.version import parse as parse_version
     timeout=.06
     message = 'Socket timed out. Check your internet connection.\nVersion checks skipped.'
     attempt = 0
@@ -52,35 +50,53 @@ def check_for_updates(current_version):
                 return
         except:
             pass
-    while attempt < max_attempt:
+    # while attempt < max_attempt:
+    #     try:
+    #         with urllib.request.urlopen(
+    #                 "https://raw.githubusercontent.com/mlerotic/spectromicroscopy/development/mantis_xray/__init__.py", timeout=timeout) as init_file:
+    #             github_init = init_file.read()
+    #         # print(github_init)
+    #         github_latest = re.search(r"(?:__version__*\s=*\s)['|\"]+([\d\.]+)", github_init.decode()).group(1)
+    #         print("Current development code is version {0}".format(github_latest))
+    #         attempt = 0
+    #         break
+    #     except URLError:
+    #         attempt+=1
+    #         print("Connection attempt " + str(attempt)+"/"+str(max_attempt)+" unsuccessful.")
+    #         if attempt == 3:
+    #             print(message)
+    #             return
+    #     except:
+    #         pass
+
+def print_dependency_versions():
+    from importlib.metadata import version as version_check, PackageNotFoundError
+    from packaging.version import parse as parse_version
+    import re
+    print("Dependency versions:")
+    for P in ['PyQt5>=5.15.9','numpy', 'scipy>=1.11.4', 'matplotlib>=3.6.0', 'h5py', 'Pillow', 'lxml', 'pyqtgraph>=0.13.7', "scikit-image>=0.19.1", "xdrlib3"]: #copy list from ../setup.py
+        p = re.split('[><=]',P)
+        # print(p[0], len(p))
         try:
-            with urllib.request.urlopen(
-                    "https://raw.githubusercontent.com/mlerotic/spectromicroscopy/development/mantis_xray/__init__.py", timeout=timeout) as init_file:
-                github_init = init_file.read()
-            # print(github_init)
-            github_latest = re.search(r"(?:__version__*\s=*\s)['|\"]+([\d\.]+)", github_init.decode()).group(1)
-            print("Current development code is version {0}".format(github_latest))
-            attempt = 0
-            break
-        except URLError:
-            attempt+=1
-            print("Connection attempt " + str(attempt)+"/"+str(max_attempt)+" unsuccessful.")
-            if attempt == 3:
-                print(message)
-                return
-        except:
+            v_c = version_check(p[0].lower())
+            print("\t{0} == {1}".format(p[0],v_c),end=' ')
+            if len(p)>1:
+                op_str = P[len(p[0]):-len(p[-1])]
+                if   op_str == '<' :        check = parse_version(v_c) <  parse_version(p[-1])
+                elif op_str == '>' :        check = parse_version(v_c) >  parse_version(p[-1])
+                elif op_str in ['=','=='] : check = parse_version(v_c) == parse_version(p[-1])
+                elif op_str == '!=':        check = parse_version(v_c) != parse_version(p[-1])
+                elif op_str in ['>=','=>']: check = parse_version(v_c) >= parse_version(p[-1])
+                elif op_str in ['<=','=>']: check = parse_version(v_c) <= parse_version(p[-1])
+                else : check = True
+                if not check:
+                    print(" (upgrade to {0} for full functionality)".format(P[len(p[0]):]))
+                else:
+                    print("")
+            else:
+                print('')
+        except PackageNotFoundError:
             pass
-    # PyQt5 & pyqtgraph version check
-    if parse_version(version_check('pyqt5')) >= parse_version('5.15.6'):
-        print("PyQt version in use is {0}".format(version_check("pyqt5")))
-    else:
-        print("PyQt version in use is {0}. Please consider updating to > 5.15.6 for full functionality.".format(version_check("pyqt5")))
-    if parse_version(version_check('pyqtgraph')) >= parse_version('0.12.2'):
-        print("PyQtGraph version in use is {0}".format(version_check("pyqtgraph")))
-    else:
-        print("PyQtGraph version in use is {0}. Please consider updating to > 0.12.2 for full functionality.".format(version_check("pyqtgraph")))
-
-
 
 # PDF Exporter adopted from Orange https://orangedatamining.com/
 # https://github.com/biolab/orange-widget-base/blob/master/orangewidget/utils/PDFExporter.py
