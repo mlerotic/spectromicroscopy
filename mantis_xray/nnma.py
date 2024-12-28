@@ -210,8 +210,8 @@ class nnma():
             costCurrent, deltaErrorCurrent = self.calcCostFn(muCurrent, tCurrent, count)
 
             count = count + 1
-            print('Iteration number {0}/{1}'.format(count,self.maxIters))
-
+            print('Iteration number {0}/{1}'.format(count,self.maxIters), end='\r')
+        print('')
         endTime = time.time()
         self.timeTaken = endTime - startTime
         if count < self.maxIters:
