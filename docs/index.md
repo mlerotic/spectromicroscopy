@@ -9,7 +9,7 @@ The [paper](http://dx.doi.org/10.1016/j.ultramic.2004.01.008)  of Lerotic _et al
 
 MANTiS presents the user with a sequence of panels to guide the analysis workflow.  This sequence is illustrated in the following schematic:
 
-![WorkflowSchematic](images/workflow_schematic.png)
+![WorkflowSchematic](images/workflow_schematic.svg)
 
 **Figure 0** Workflow Schematic
 
