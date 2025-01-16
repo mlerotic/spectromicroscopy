@@ -11,7 +11,7 @@ MANTiS presents the user with a sequence of panels to guide the analysis workflo
 
 ![WorkflowSchematic](images/workflow_schematic.svg)
 
-**Figure 0** Workflow Schematic
+**Figure 0** Workflow Schematic image
 
 ----
 
