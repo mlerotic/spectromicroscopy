@@ -8136,7 +8136,7 @@ class PagePCA(QtWidgets.QWidget):
 #         line.setFrameShadow(QtWidgets.QFrame.Sunken)
 #         vbox21.addWidget(line)
 
-
+        #Todo: Repair 4d pca
         self.button_calcpca4D = QtWidgets.QPushButton('Calculate PCA for all angles')
         self.button_calcpca4D.clicked.connect( self.OnCalcPCA4D)
         self.button_calcpca4D.setEnabled(False)
@@ -8883,6 +8883,277 @@ class SaveWinP2(QtWidgets.QDialog):
                                evals_pdf = ev_pdf,
                                evals_svg = ev_svg)
 
+""" ------------------------------------------------------------------------------------------------"""
+class PagePCACluster(QtWidgets.QWidget):
+    def __init__(self, common, data_struct, stack, anlz):
+        super(PagePCACluster, self).__init__()
+        uic.loadUi(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pagepca.ui'), self)
+        self.show()
+        self.cmaps = [('Perceptually Uniform Sequential', [
+            'viridis', 'plasma', 'inferno', 'magma']),
+                      ('Sequential', [
+                          'Greys', 'Purples', 'Blues', 'Greens', 'Oranges', 'Reds',
+                          'YlOrBr', 'YlOrRd', 'OrRd', 'PuRd', 'RdPu', 'BuPu',
+                          'GnBu', 'PuBu', 'YlGnBu', 'PuBuGn', 'BuGn', 'YlGn']),
+                      ('Sequential (2)', [
+                          'binary', 'gist_yarg', 'gist_gray', 'gray', 'bone', 'pink',
+                          'spring', 'summer', 'autumn', 'winter', 'cool', 'Wistia',
+                          'hot', 'afmhot', 'gist_heat', 'copper']),
+                      ('Diverging', [
+                          'PiYG', 'PRGn', 'BrBG', 'PuOr', 'RdGy', 'RdBu',
+                          'RdYlBu', 'RdYlGn', 'Spectral', 'coolwarm', 'bwr', 'seismic']),
+                      ('Qualitative', [
+                          'Pastel1', 'Pastel2', 'Paired', 'Accent',
+                          'Dark2', 'Set1', 'Set2', 'Set3',
+                          'tab10', 'tab20', 'tab20b', 'tab20c']),
+                      ('Miscellaneous', [
+                          'flag', 'prism', 'ocean', 'gist_earth', 'terrain', 'gist_stern',
+                          'gnuplot', 'gnuplot2', 'CMRmap', 'cubehelix', 'brg', 'hsv',
+                          'gist_rainbow', 'rainbow', 'jet', 'nipy_spectral', 'gist_ncar'])]
+
+        self.initUI(common, data_struct, stack, anlz)
+
+#----------------------------------------------------------------------
+    def initUI(self, common, data_struct, stack, anlz):
+
+        self.spectrum_plotwidget.setBackground("w")
+
+        self.data_struct = data_struct
+        self.stk = stack
+        self.com = common
+        self.anlz = anlz
+
+        self.filename = " "
+
+        self.ix = 0
+        self.iy = 0
+        self.iev = 0
+        self.itheta = 0
+        self.showflux = True
+        self.show_colorbar = 0
+
+        self.dispbrightness_min = 0
+        self.dispbrightness_max = 100
+        self.displaygamma = 10.0
+        self.defaultdisplay = 1.0
+
+        self.brightness_min = 0.0
+        self.brightness_max = 1.0
+        self.gamma = 1.0
+
+        self.colortable = "gray"
+
+        self.addroi = 0
+        self.showROImask = 0
+        self.line = None
+        self.ROIpix = None
+
+        self.show_scale_bar = 1
+        self.white_scale_bar = 0
+
+        self.movie_playing = 0
+        self.mean_visible = 0
+
+
+        #Panel Preprocess
+
+        #Align stack...
+        #self.button_align.clicked.connect(self.OnAlignImgsDialog)
+        #self.button_align.setEnabled(False)
+
+        #Crop stack 3D/4D...
+        #self.button_multicrop.clicked.connect( self.OnMultiCrop)
+        #self.button_multicrop.setEnabled(False)
+
+        #Artefacts && Leveling
+        #self.button_artefacts.clicked.connect( self.OnArtefacts)
+        #self.button_artefacts.setEnabled(False)
+
+        #Dark signal subtraction...
+        #self.button_darksig.clicked.connect(self.OnDarkSignal)
+        #self.button_darksig.setEnabled(False)
+
+        #Save processed stack
+        #self.button_savestack.clicked.connect(self.OnSaveStack)
+        #self.button_savestack.setEnabled(False)
+
+        #Panel Normalize
+        #Select I0...
+        #self.button_i0.clicked.connect( self.OnI0histogram)
+        #self.button_i0.setEnabled(False)
+
+        #I0 from file...
+        #self.button_i0ffile.clicked.connect(self.OnI0FFile)
+        #self.button_i0ffile.setEnabled(False)
+
+        #Show I0...
+        #self.button_showi0.clicked.connect( self.OnShowI0)
+        #self.button_showi0.setEnabled(False)
+
+        #Use pre-normalized data
+        #self.button_prenorm.clicked.connect(self.OnPreNormalizedData)
+        #self.button_prenorm.setEnabled(False)
+
+        #Load Reference Images
+        #self.button_refimgs.clicked.connect(self.OnRefImgs)
+        #self.button_refimgs.setEnabled(False)
+
+        #self.button_meanflux.clicked.connect( self.OnShowMean)
+        #self.button_meanflux.setEnabled(False)
+        #self.button_meanflux.setChecked(False)
+        #self.button_slideshow.clicked.connect( self.OnSlideshow)
+        #self.button_slideshow.setEnabled(False)
+
+        #Save images...
+        #self.button_save.clicked.connect( self.OnSave)
+        #self.button_save.setEnabled(False)
+        #vbox22.addWidget(self.button_save)
+
+        #panel 4
+        #vbox4 = QtWidgets.QVBoxLayout()
+        #gridsizer4 = QtWidgets.QGridLayout()
+
+        #self.tc_imageeng = QtWidgets.QLabel(self)
+        #self.tc_imageeng.setText("Image at energy: ")
+        #gridsizer4.addWidget(self.tc_imageeng, 0, 0, QtCore .Qt. AlignLeft)
+
+
+        #frame = QtWidgets.QFrame()
+        #frame.setFrameStyle(QtWidgets.QFrame.StyledPanel|QtWidgets.QFrame.Sunken)
+        #fbox = QtWidgets.QHBoxLayout()
+
+        self.climgfig = ImgFig(self,self.canvas)
+        self.specfig = SpecFig(self, self.spectrum_plotwidget)
+
+        #self.slider_eng = QtWidgets.QScrollBar(QtCore.Qt.Vertical)
+        #self.slider_eng.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.slider_cl.valueChanged[int].connect(self.OnScrollCl)
+        #self.slider_eng.setRange(0, 100)
+        #gridsizer4.addWidget(self.slider_eng, 1, 1, QtCore .Qt. AlignLeft)
+
+        #self.slider_theta = QtWidgets.QScrollBar(QtCore.Qt.Horizontal)
+        #self.slider_theta.setFocusPolicy(QtCore.Qt.StrongFocus)
+        #self.slider_theta.valueChanged[int].connect(self.OnScrollTheta)
+        #self.slider_theta.setRange(0, 100)
+        self.slider_theta.setVisible(False)
+        #self.tc_imagetheta = QtWidgets.QLabel(self)
+        #self.tc_imagetheta.setText("4D Data Angle: ")
+        #self.tc_imagetheta.setVisible(False)
+        #hbox41 = QtWidgets.QHBoxLayout()
+        #hbox41.addWidget(self.tc_imagetheta)
+        #hbox41.addWidget(self.slider_theta)
+        #gridsizer4.addLayout(hbox41, 2, 0)
+
+        self.pb_copy_img.clicked.connect(self.climgfig.OnCopy)
+        self.pb_copy_img.setEnabled(False)
+        self.pb_copy_specimg.clicked.connect(self.specfig.OnCopy)
+        self.pb_copy_specimg.setEnabled(False)
+
+        #self.MetricCheckBox.toggled.connect(lambda: self.absimgfig.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
+        #self.ZeroOriginCheckBox.toggled.connect(lambda: self.absimgfig.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
+        self.SquarePxCheckBox.toggled.connect(lambda: self.climgfig.OnMetricScale(False, True,self.SquarePxCheckBox.isChecked()))
+        self.SquarePxCheckBox.setVisible(True)
+        self.ScalebarCheckBox.toggled.connect(lambda: self.climgfig.OnUpdateScale(self.ScalebarCheckBox.isChecked()))
+
+        self.CMCatBox.addItems([self.cmaps[0][0],self.cmaps[1][0],self.cmaps[2][0],self.cmaps[3][0],self.cmaps[4][0],self.cmaps[5][0]])
+
+        self.CMMapBox.addItems(self.cmaps[3][1])
+        self.CMCatBox.currentIndexChanged.connect(self.climgfig.OnCatChanged)
+        self.CMMapBox.currentIndexChanged.connect(lambda: self.climgfig.OnColormapChange(map=self.CMMapBox.currentText(),num_colors=self.StepSpin.value(),fliplut=self.ColorFlipCheckBox.isChecked()))
+        self.CMCatBox.setCurrentIndex(3)
+        self.CMMapBox.setCurrentIndex(5)
+        self.StepSpin.valueChanged.connect(lambda: self.climgfig.OnColormapChange(map=self.CMMapBox.currentText(),num_colors=self.StepSpin.value(),fliplut=self.ColorFlipCheckBox.isChecked()))
+        self.ColorFlipCheckBox.toggled.connect(lambda: self.climgfig.OnColormapChange(map=self.CMMapBox.currentText(),num_colors=self.StepSpin.value(),fliplut=self.ColorFlipCheckBox.isChecked()))
+        #self.ROIShapeBox.addItems(["Lasso", "Rectangle", "Circle", "Ellipse", "Polygon", "Histogram"])
+        #self.ROIShapeBox.currentTextChanged.connect(self.absimgfig.OnROIShapeChanged)
+
+        self.button_calcpca.clicked.connect( self.OnCalcPCA)
+        #self.button_calcpca.setEnabled(False)
+
+        #self.button_lockspectrum.setEnabled(False)
+        #self.button_clearlastroi.setEnabled(False)
+        #self.button_mergeroi.setEnabled(True)
+        #self.button_subtractroi.setEnabled(True)
+        #self.button_clearspecfig.setEnabled(False)
+        #self.ROIShapeBox.setEnabled(False)
+        #self.ROIvisibleCheckBox.setEnabled(False)
+        #self.ROIvisibleCheckBox.stateChanged.connect(self.absimgfig.OnROIVisibility)
+#----------------------------------------------------------------------
+    def OnCalcPCA(self, event):
+
+        QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
+        self.calcpca = False
+        self.selpca = 1
+        self.numsigpca = 2
+        #self.slidershow.setValue(self.selpca)
+
+        #scrollmax = np.min([self.stk.n_ev, 20])
+        #self.slidershow.setMaximum(scrollmax)
+
+        #try:
+        self.CalcPCA()
+        self.calcpca = True
+        #self.loadPCAImage()
+        #self.loadPCASpectrum()
+        #self.showEvals()
+        self.com.pca_calculated = 1
+        QtWidgets.QApplication.restoreOverrideCursor()
+        self.climgfig.loadPCAImage()
+        self.specfig.ClearandReload(self.climgfig)
+        #except:
+        #    pass
+        #    self.com.pca_calculated = 0
+        #    QtWidgets.QApplication.restoreOverrideCursor()
+         #   QtWidgets.QMessageBox.warning(self, 'Error', 'PCA not calculated.')
+
+        self.window().refresh_widgets()
+
+#----------------------------------------------------------------------
+    def CalcPCA(self):
+
+        self.anlz.calculate_pca()
+
+        #Scree plot criterion
+        self.numsigpca = self.anlz.numsigpca
+
+        self.npcaspin.setValue(self.numsigpca)
+
+        # cumulative variance
+        var = self.anlz.variance[:self.numsigpca].sum()
+        self.vartc.setText(str(var.round(decimals=2)*100)+'%')
+
+#----------------------------------------------------------------------
+    def CalcPCA4D(self):
+
+        if self.com.stack_4d == 1:
+            self.anlz.calculate_pca_4D()
+        else:
+            return
+
+        #Scree plot criterion
+        self.numsigpca = self.anlz.numsigpca
+        self.npcaspin.setValue(self.numsigpca)
+
+        # cumulative variance
+        var = self.anlz.variance[:self.numsigpca].sum()
+        self.vartc.setText(str(var.round(decimals=2)*100)+'%')
+
+        if self.com.spec_anl4D_calculated == 1:
+            self.anlz.calculate_targetmaps_4D()
+
+#-----------------------------------------------------------------------
+    def OnScrollCl(self, value):
+        self.selpca = value
+        #self.button_meanflux.setChecked(False)
+        #self.mean_visible = 0
+        if self.anlz.pca_calculated == 1:
+            self.slider_cl.setValue(value)
+            image = self.anlz.pcaimages[:, :, self.selpca]  # .copy()
+            self.climgfig.draw(image,levels=(-self.anlz.pcaimagebounds[self.selpca],self.anlz.pcaimagebounds[self.selpca]))
+            self.specfig.updatePlotDataOnPCA()
+            #self.specfig.setLineIndicator(self.iev)
+            #self.specfig.LineIndicator.setValue(self.stk.ev[self.iev])
+
 
 """ ------------------------------------------------------------------------------------------------"""
 class PageStack(QtWidgets.QWidget):
@@ -9118,16 +9389,16 @@ class PageStack(QtWidgets.QWidget):
 
         #panel 4
         #vbox4 = QtWidgets.QVBoxLayout()
-        gridsizer4 = QtWidgets.QGridLayout()
+        #gridsizer4 = QtWidgets.QGridLayout()
 
-        self.tc_imageeng = QtWidgets.QLabel(self)
-        self.tc_imageeng.setText("Image at energy: ")
-        gridsizer4.addWidget(self.tc_imageeng, 0, 0, QtCore .Qt. AlignLeft)
+        #self.tc_imageeng = QtWidgets.QLabel(self)
+        #self.tc_imageeng.setText("Image at energy: ")
+        #gridsizer4.addWidget(self.tc_imageeng, 0, 0, QtCore .Qt. AlignLeft)
 
 
-        frame = QtWidgets.QFrame()
-        frame.setFrameStyle(QtWidgets.QFrame.StyledPanel|QtWidgets.QFrame.Sunken)
-        fbox = QtWidgets.QHBoxLayout()
+        #frame = QtWidgets.QFrame()
+        #frame.setFrameStyle(QtWidgets.QFrame.StyledPanel|QtWidgets.QFrame.Sunken)
+        #fbox = QtWidgets.QHBoxLayout()
 
         self.absimgfig = ImgFig(self,self.canvas)
         self.specfig = SpecFig(self, self.spectrum_plotwidget)
@@ -9167,9 +9438,9 @@ class PageStack(QtWidgets.QWidget):
         self.CMCatBox.setCurrentIndex(2)
         self.CMMapBox.setCurrentIndex(3)
         self.CMCatBox.currentIndexChanged.connect(self.absimgfig.OnCatChanged)
-        self.CMMapBox.currentIndexChanged.connect(lambda: self.absimgfig.OnColormapChange(map=self.CMMapBox.currentText(),num_colors=self.StepSpin.value()))
-        self.StepSpin.valueChanged.connect(lambda: self.absimgfig.OnColormapChange(map=self.CMMapBox.currentText(),num_colors=self.StepSpin.value()))
-
+        self.CMMapBox.currentIndexChanged.connect(lambda: self.absimgfig.OnColormapChange(map=self.CMMapBox.currentText(),num_colors=self.StepSpin.value(),fliplut=self.ColorFlipCheckBox.isChecked()))
+        self.StepSpin.valueChanged.connect(lambda: self.absimgfig.OnColormapChange(map=self.CMMapBox.currentText(),num_colors=self.StepSpin.value(),fliplut=self.ColorFlipCheckBox.isChecked()))
+        self.ColorFlipCheckBox.toggled.connect(lambda: self.absimgfig.OnColormapChange(map=self.CMMapBox.currentText(),num_colors=self.StepSpin.value(),fliplut=self.ColorFlipCheckBox.isChecked()))
         self.ROIShapeBox.addItems(["Lasso", "Rectangle", "Circle", "Ellipse", "Polygon", "Histogram"])
         self.ROIShapeBox.currentTextChanged.connect(self.absimgfig.OnROIShapeChanged)
         self.button_lockspectrum.setEnabled(False)
@@ -14317,9 +14588,9 @@ class PageLoadData(QtWidgets.QWidget):
         self.CMCatBox.setCurrentIndex(2)
         self.CMMapBox.setCurrentIndex(3)
         self.CMCatBox.currentIndexChanged.connect(self.absimgfig.OnCatChanged)
-        self.CMMapBox.currentIndexChanged.connect(lambda: self.absimgfig.OnColormapChange(map=self.CMMapBox.currentText(),num_colors=self.StepSpin.value()))
-        self.StepSpin.valueChanged.connect(lambda: self.absimgfig.OnColormapChange(map=self.CMMapBox.currentText(),num_colors=self.StepSpin.value()))
-
+        self.CMMapBox.currentIndexChanged.connect(lambda: self.absimgfig.OnColormapChange(map=self.CMMapBox.currentText(),num_colors=self.StepSpin.value(),fliplut=self.ColorFlipCheckBox.isChecked()))
+        self.StepSpin.valueChanged.connect(lambda: self.absimgfig.OnColormapChange(map=self.CMMapBox.currentText(),num_colors=self.StepSpin.value(),fliplut=self.ColorFlipCheckBox.isChecked()))
+        self.ColorFlipCheckBox.toggled.connect(lambda: self.absimgfig.OnColormapChange(map=self.CMMapBox.currentText(),num_colors=self.StepSpin.value(),fliplut=self.ColorFlipCheckBox.isChecked()))
         self.pb_rotate.clicked.connect(self.OnRotate)
         self.pb_mirror.clicked.connect(self.OnMirror)
         self.button_save.clicked.connect( self.OnSave)
@@ -14330,9 +14601,9 @@ class PageLoadData(QtWidgets.QWidget):
         self.tc_path.setText('D:/')
         self.slider_theta.setVisible(False)
 
-    def keyPressEvent(self, e):
-        if e.key() == 67 and (e.modifiers() & QtCore.Qt.ControlModifier):
-            self.OnCopy()
+#    def keyPressEvent(self, e):
+#        if e.key() == 67 and (e.modifiers() & QtCore.Qt.ControlModifier):
+#            self.OnCopy()
 
 # ----------------------------------------------------------------------
     def OnSave(self, event):
@@ -14548,8 +14819,8 @@ class ShowODMap(QtWidgets.QWidget):
         self.CMCatBox.setCurrentIndex(2)
         self.CMMapBox.setCurrentIndex(14)
         self.CMCatBox.currentIndexChanged.connect(self.odimgfig.OnCatChanged)
-        self.CMMapBox.currentIndexChanged.connect(lambda: self.odimgfig.OnColormapChange(map=self.CMMapBox.currentText(),num_colors=self.StepSpin.value()))
-        self.StepSpin.valueChanged.connect(lambda: self.odimgfig.OnColormapChange(map=self.CMMapBox.currentText(),num_colors=self.StepSpin.value()))
+        self.CMMapBox.currentIndexChanged.connect(lambda: self.odimgfig.OnColormapChange(map=self.CMMapBox.currentText(),num_colors=self.StepSpin.value(),fliplut=self.ColorFlipCheckBox.isChecked()))
+        self.StepSpin.valueChanged.connect(lambda: self.odimgfig.OnColormapChange(map=self.CMMapBox.currentText(),num_colors=self.StepSpin.value(),fliplut=self.ColorFlipCheckBox.isChecked()))
 
         self.filterSpinBox.valueChanged.connect(lambda: self.ShowMap(self.prelst, self.postlst))
         self.filterSpinBox.setEnabled(False)
@@ -15586,8 +15857,11 @@ http://www.gnu.org/licenses/.''')
 
         self.setLayout(vbox)
 # ----------------------------------------------------------------------
-class SpecFig():
-    def __init__(self,parent,plotwidget):
+class SpecFig(pg.GraphicsView):
+    #focus_instance = None
+    def __init__(self,parent=None, plotwidget=None):
+        super().__init__(parent)
+        self.setFocusPolicy(Qt.ClickFocus)
         self.parent = parent
         self.plot = plotwidget
         self.plotitem = self.plot.getPlotItem()
@@ -15612,11 +15886,20 @@ class SpecFig():
         self.LineIndicator = pg.InfiniteLine(angle=90, movable=True, markers=None,
                                               pen=pg.mkPen(color=QtGui.QColor(0, 0, 0, 128), width=1.5, style=QtCore.Qt.DashLine))
         self.LineIndicatorLabel = pg.InfLineLabel(self.LineIndicator, " ")
-        self.parent.button_lockspectrum.clicked.connect(self.OnLockSpectrum)
-        self.parent.button_clearspecfig.clicked.connect(self.ClearandReload)
-        self.parent.button_clearlastroi.clicked.connect(self.ClearLast)
-        self.parent.button_mergeroi.clicked.connect(self.mergeROI)
-        self.parent.button_subtractroi.clicked.connect(self.subtractROI)
+        try:
+            self.parent.button_lockspectrum.clicked.connect(self.OnLockSpectrum)
+            self.parent.button_clearspecfig.clicked.connect(self.ClearandReload)
+            self.parent.button_clearlastroi.clicked.connect(self.ClearLast)
+            self.parent.button_mergeroi.clicked.connect(self.mergeROI)
+            self.parent.button_subtractroi.clicked.connect(self.subtractROI)
+        except AttributeError as e:
+            print(f"An error occurred: {e}")
+
+        # canvas.scene().sigMouseClicked.connect(lambda _: self.setFocus())
+        self.plot.scene().sigMouseClicked.connect(lambda event: self.setActive())
+
+    def setActive(self):
+        self.parent.window().active_widget = self  # Returns the active widget for CTRL +C functionality
 
     def ClearLast(self):
         #self.plot.blockSignals(True)
@@ -15632,18 +15915,20 @@ class SpecFig():
             pass
         #self.plot.blockSignals(False)
 
-    def ClearandReload(self):
+    def ClearandReload(self, fig=None):
         self.roicolor = (0, 0, 255, 255)
         self.plot.blockSignals(True)
         self.plotitem.setMouseEnabled(x=True, y=True)
+        if fig is None:
+            fig = self.parent.absimgfig
         iterator = len(self.plotitem.items)-1
         # The expression "for item in self.plotitem.items: " does not work! Instead we count the items and iterate through them
         for i in range(iterator,-1,-1):
                 self.plotitem.removeItem(self.plotitem.items[i])  # remove spectra
                 try:    # remove locked ROIs from imageplot
-                    roiitem = self.parent.absimgfig.imageplot.items[i+1]# +1 because transparent selection "ROImask" exists.
-                    if isinstance(roiitem, pg.ImageItem) and len(self.parent.absimgfig.imageplot.items) > 2:
-                        self.parent.absimgfig.imageplot.removeItem(roiitem)
+                    roiitem = fig.imageplot.items[i+1]# +1 because transparent selection "ROImask" exists.
+                    if isinstance(roiitem, pg.ImageItem) and len(fig.imageplot.items) > 2:
+                        fig.imageplot.removeItem(roiitem)
                 except IndexError:  # if previously removed, ignore
                     pass
         try:
@@ -15658,9 +15943,9 @@ class SpecFig():
         self.loadNewSpectrum()
         vb = self.plotitem.items[1].getViewBox()
         vb.enableAutoRange()
-
-        if self.parent.ROIShapeBox.currentText() != "Lasso":
-            self.parent.absimgfig.OnROIVisibility(self.parent.ROIvisibleCheckBox.checkState())
+        if hasattr(self.parent, "ROIShapeBox"):
+            if self.parent.ROIShapeBox.currentText() != "Lasso":
+                self.parent.absimgfig.OnROIVisibility(self.parent.ROIvisibleCheckBox.checkState())
 
 
     def ClearforHistogram(self):
@@ -15949,13 +16234,15 @@ class SpecFig():
             self.parent.absimgfig.roi.sigRegionChanged.disconnect()
         except:
             pass
-        self.parent.ROIvisibleCheckBox.setEnabled(True)
-        self.parent.absimgfig.OnROIShapeChanged(self.parent.ROIShapeBox.currentText())
-
-        if self.parent.ROIShapeBox.currentText() == "Lasso":
-            self.plotitem.items[1].hide()
-            self.parent.absimgfig.OnROIVisibility(self.parent.ROIvisibleCheckBox.checkState())
-
+        if hasattr(self.parent, "ROIvisibleCheckBox"):
+            self.parent.ROIvisibleCheckBox.setEnabled(True)
+        if hasattr(self.parent, "ROIShapeBox"):
+            self.parent.absimgfig.OnROIShapeChanged(self.parent.ROIShapeBox.currentText())
+            if self.parent.ROIShapeBox.currentText() == "Lasso":
+                self.plotitem.items[1].hide()
+                self.parent.absimgfig.OnROIVisibility(self.parent.ROIvisibleCheckBox.checkState())
+        if hasattr(self.parent, "selpca"):
+            self.updatePlotDataOnPCA()
         self.LineIndicator.addMarker("o")
         self.dot = self.LineIndicator.markers[0][0]
         self.LineIndicator.setZValue(10)
@@ -15976,6 +16263,31 @@ class SpecFig():
         self.plotitem.items[1].setData(x, y)
         self.LineIndicator.setPos(QtCore.QPointF(self.plotitem.items[1].xData[self.parent.iev], self.plotitem.items[1].yData[self.parent.iev]))
         self.plot.blockSignals(False)
+
+    def updatePlotDataOnPCA(self):
+        if hasattr(self, "roicolor"):
+            color = self.roicolor
+            self.plot.blockSignals(True)
+            #self.formatAxesLabels(type=type)
+            try:
+                self.plotitem.removeItem(self.plotitem.items[1])
+            except:
+                pass
+            #self.region.sigRegionChanged.disconnect()
+            self.setPlotItemVisibility(True)
+            #data = self.prefilterData()
+            #mask = self.createROImask()
+            #self.drawROImask(mask, color=color)
+            #x, y = self.getSpecfromROI(data,self.parent.absimgfig.boolmask)
+            #print(self.parent.anlz.eigenvecs[:,0])
+            curve = pg.PlotCurveItem(self.parent.stk.ev , self.parent.anlz.eigenvecs[:,self.parent.selpca], pen=({'color': color, 'width': 2}), skipFiniteCheck=True)
+            self.plotitem.setMouseEnabled(x=True, y=True)
+            self.plotitem.addItem(curve)
+            self.plotitem.items.remove(curve)
+            self.plotitem.items.insert(1, curve)
+            self.plot.blockSignals(False)
+            if hasattr(self, "dot"):
+                self.OnUpdateLineIndicator()
 
     def updatePlotDataOnROIShapeChange(self,type):
         color = self.roicolor
@@ -16067,7 +16379,7 @@ class SpecFig():
         self.parent.slider_eng.blockSignals(False)
 
     def OnUpdateLineIndicator(self):
-        if self.parent.absimgfig.currentroishape == "Histogram":
+        if hasattr(self.parent, "absimgfig") and self.parent.absimgfig.currentroishape == "Histogram":
             return
         self.ypos = self.getIntersectionY()
         self.LineIndicator.markers = [(self.dot, self.ypos, 10)]
@@ -16189,8 +16501,8 @@ class SpecFig():
 
     def OnCopy(self):
         # self.exp = pg.exporters.ImageExporter(self.plotitem) # just plot
-        self.exp = pg.exporters.ImageExporter(self.plot.scene()) # plot and axes, i.e., complete viewbox
-        self.exp.export(copy=True)
+        exp = pg.exporters.ImageExporter(self.plot.scene()) # plot and axes, i.e., complete viewbox
+        exp.export(copy=True)
         return
 
     def SaveFig(self,fileName):
@@ -16241,6 +16553,16 @@ class ImgFig():
         cm = pg.colormap.get(self.map, source="matplotlib")
         self.bar = pg.ColorBarItem(values=(0, 1), colorMap=cm, rounding=0.0001)  # init color bar
         self.mousepressed = False
+        #canvas.scene().sigMouseClicked.connect(lambda _: self.setFocus())
+        canvas.scene().sigMouseClicked.connect(lambda event: self.setActive())
+
+    def setActive(self):
+        self.parent.window().active_widget = self  # Returns the active widget for CTRL +C functionality
+
+    def loadPCAImage(self):
+        self.clear()
+        self.parent.selpca = 0
+        self.loadPCAData()
 
     def loadNewImage(self):
         self.clear()
@@ -16412,6 +16734,31 @@ class ImgFig():
         if self.parent.ROIShapeBox.currentText() == "Lasso": # remove lasso ROI after function call
             self.OnROIShapeChanged("Lasso")
 
+    def loadPCAData(self): # Called when fresh data are loaded.
+        try:
+            self.vb.sigRangeChanged.disconnect()
+        except:
+            pass
+        self.imageplot.addItem(self.imageitem)
+        self.vb = self.imageitem.getViewBox()
+        rightlabel = self.bar.getAxis("right")
+        #if self.parent.com.i0_loaded:
+        #    rightlabel.setLabel(text="OD", units="")
+        #else:
+        #    rightlabel.setLabel(text="counts", units="")
+        #self.parent.slider_eng.blockSignals(True)
+        self.parent.slider_cl.setRange(0, min(20, self.parent.stk.n_ev - 1))
+        self.bar.setImageItem(self.imageitem, insert_in=self.imageplot)
+        self.OnColormapChange(map=self.parent.CMMapBox.currentText(),num_colors=self.parent.StepSpin.value(),fliplut=self.parent.ColorFlipCheckBox.isChecked())
+        self.parent.OnScrollCl(self.parent.selpca) # Plot image & set Scrollbar
+        try:
+            self.OnMetricScale(self.parent.MetricCheckBox.isChecked(), True, False)
+        except AttributeError:
+            self.OnMetricScale(False, True, self.parent.SquarePxCheckBox.isChecked())
+        self.OnShowScale()
+        self.vb.sigRangeChanged.connect(lambda: self.OnUpdateScale(self.parent.ScalebarCheckBox.isChecked()))
+
+
     def loadData(self): # Called when fresh data are loaded.
         try:
             self.vb.sigRangeChanged.disconnect()
@@ -16426,10 +16773,10 @@ class ImgFig():
             rightlabel.setLabel(text="counts", units="")
         #self.parent.slider_eng.blockSignals(True)
         self.parent.slider_eng.setRange(0, self.parent.stk.n_ev - 1)
-        self.OnColormapChange(map=self.parent.CMMapBox.currentText(),num_colors=self.parent.StepSpin.value())
-        self.parent.OnScrollEng(self.parent.iev) # Plot image & set Scrollbar
 
         self.bar.setImageItem(self.imageitem, insert_in=self.imageplot)
+        self.OnColormapChange(map=self.parent.CMMapBox.currentText(),num_colors=self.parent.StepSpin.value(),fliplut=self.parent.ColorFlipCheckBox.isChecked())
+        self.parent.OnScrollEng(self.parent.iev) # Plot image & set Scrollbar
         try:
             self.OnMetricScale(self.parent.MetricCheckBox.isChecked(), True, False)
         except AttributeError:
@@ -16437,9 +16784,9 @@ class ImgFig():
         self.OnShowScale()
         self.vb.sigRangeChanged.connect(lambda: self.OnUpdateScale(self.parent.ScalebarCheckBox.isChecked()))
 
-    def draw(self,image,setlabel=True,setlut=False):
+    def draw(self,image,setlabel=True,setlut=False,levels=False):
         if setlut:
-            self.OnColormapChange(map=self.parent.CMMapBox.currentText(),num_colors=self.parent.StepSpin.value())
+            self.OnColormapChange(map=self.parent.CMMapBox.currentText(),num_colors=self.parent.StepSpin.value(),fliplut=self.parent.ColorFlipCheckBox.isChecked())
         self.imageitem.setImage(image)
         if setlabel:
             if self.parent.com.stack_4d == 1:
@@ -16448,8 +16795,11 @@ class ImgFig():
                                                                                                         self.parent.itheta])))
             else:
                 self.imageplot.setTitle("<center>Image at energy {0:5.2f} eV</center>".format(float(self.parent.stk.ev[self.parent.iev])))
-        min = np.nanmin(image)  # ignoring nans
-        max = np.nanmax(image)
+        if levels:
+            min,max = levels
+        else:
+            min = np.nanmin(image)  # ignoring nans
+            max = np.nanmax(image)
         if not np.isnan(min) and not np.isnan(max):
             self.bar.setLevels(low=min, high=max)
 
@@ -16499,10 +16849,13 @@ class ImgFig():
         self.parent.CMMapBox.blockSignals(False)
         self.parent.CMMapBox.addItems(self.parent.cmaps[self.parent.CMCatBox.currentIndex()][1])
 
-    def OnColormapChange(self, map="gray", num_colors=256):
+    def OnColormapChange(self, map="gray", num_colors=256, fliplut=False):
         self.map = map
+        luttup = (0,1)
+        if fliplut:
+            luttup = (1,0)
         cm = pg.colormap.get(self.map, source="matplotlib")
-        lut = cm.getLookupTable(0, 1, num_colors)
+        lut = cm.getLookupTable(*luttup, num_colors)
         if self.parent.com.stack_loaded == 1:
             try:
                 lut = np.ascontiguousarray(lut)
@@ -16538,8 +16891,8 @@ class ImgFig():
 
     def OnCopy(self):
         # self.exp = pg.exporters.ImageExporter(self.imageitem) # just image
-        self.exp = pg.exporters.ImageExporter(self.imageplot) # image and axes, i.e., complete viewbox
-        self.exp.export(copy=True)
+        exp = pg.exporters.ImageExporter(self.imageplot)  # image and axes, i.e., complete viewbox
+        exp.export(copy=True)
         return
 
     def SaveFig(self,fileName):
@@ -16567,7 +16920,7 @@ class MainFrame(QtWidgets.QMainWindow):
 
     def __init__(self):
         super(MainFrame, self).__init__()
-
+        self.active_widget = None
         self.initUI()
 
 
@@ -16587,6 +16940,8 @@ class MainFrame(QtWidgets.QMainWindow):
 
         self.initToolbar()
 
+        self.controlc = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+C"), self)
+        self.controlc.activated.connect(self.OnCopyWidget)
 
         ico = QtGui.QIcon(resource_path(os.path.join('images','logo-2l-32.ico')))
         self.setWindowIcon(ico)
@@ -16596,6 +16951,7 @@ class MainFrame(QtWidgets.QMainWindow):
         # create the page windows as tabs
         self.page0 = PageLoadData(self.common, self.data_struct, self.stk)
         self.page1 = PageStack(self.common, self.data_struct, self.stk)
+        self.page2_1 = PagePCACluster(self.common, self.data_struct, self.stk, self.anlz)
         self.page2 = PagePCA(self.common, self.data_struct, self.stk, self.anlz)
         self.page3 = PageCluster(self.common, self.data_struct, self.stk, self.anlz)
         self.page4 = PageSpectral(self.common, self.data_struct, self.stk, self.anlz)
@@ -16606,7 +16962,8 @@ class MainFrame(QtWidgets.QMainWindow):
 
         tabs.addTab(self.page0,"Load Data")
         tabs.addTab(self.page1, "Preprocess Data")
-        tabs.addTab(self.page2,"PCA")
+        tabs.addTab(self.page2, "PCA")
+        tabs.addTab(self.page2_1,"PCA_new")
         tabs.addTab(self.page3,"Cluster Analysis")
         tabs.addTab(self.page4,"Spectral Maps")
         tabs.addTab(self.page7, "NNMA Analysis")
@@ -16699,7 +17056,14 @@ class MainFrame(QtWidgets.QMainWindow):
             self.raise_()
 
 
-#----------------------------------------------------------------------
+    #----------------------------------------------------------------------
+
+    def OnCopyWidget(self):
+        if self.active_widget:
+            self.active_widget.OnCopy()
+
+    #----------------------------------------------------------------------
+
     def initToolbar(self):
 
         self.actionOpen = QtWidgets.QAction(self)
@@ -17283,7 +17647,7 @@ class MainFrame(QtWidgets.QMainWindow):
         #fig = self.page1.absimgfig
         #fig.clf()
         #self.page1.AbsImagePanel.draw()
-        self.page1.tc_imageeng.setText("Image at energy: ")
+        #self.page1.tc_imageeng.setText("Image at energy: ")
 
         # self.page1.textctrl.setText(' ')
 
