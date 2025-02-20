@@ -215,7 +215,7 @@ class analyze:
             self.pcaimages = np.reshape(self.pcaimages, (self.stack.n_cols, self.stack.n_rows, self.stack.n_ev), order='F')
 
             #Find bounds for displaying color-tables
-            for i in range(min(20, self.stack.n_ev - 1)):
+            for i in range(min(19, self.stack.n_ev - 1)):
                 min_val = np.amin(self.pcaimages[:,:,i])
                 max_val = np.amax(self.pcaimages[:,:,i])
                 self.pcaimagebounds[i] = np.amax((np.abs(min_val), np.abs(max_val)))

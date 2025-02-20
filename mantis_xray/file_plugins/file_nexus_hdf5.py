@@ -101,12 +101,19 @@ def read(FileName,stack_object,selection=(0,0), json=None, inorm=None, *args, **
         stack_object.absdata = numpy.transpose(numpy.array(F[entry][detector][signal_name]),axes=axes_order)
         if len(axes_order) < 3: # for single images add one more dimension
             stack_object.absdata = numpy.expand_dims(stack_object.absdata, axis=2)
-    if inorm and ('ringcurrent' in list(F[entry])):
-        ringcurrent = numpy.transpose(numpy.array(F[entry]['ringcurrent']['data']),axes=axes_order)
-        if len(axes_order) < 3: # for single images add one more dimension
-            ringcurrent = numpy.expand_dims(ringcurrent, axis=2)
-        ringcurrent_median = numpy.nanmedian(ringcurrent, keepdims=False)
-        stack_object.absdata = stack_object.absdata / (ringcurrent/ringcurrent_median)
+    if inorm:
+        key = 'ringcurrent' if 'ringcurrent' in list(F[entry]) else 'control'
+        if key in list(F[entry]):
+            ringcurrent = numpy.transpose(numpy.array(F[entry][key]['data']),axes=axes_order)
+            if len(axes_order) < 3: # for single images add one more dimension
+                ringcurrent = numpy.expand_dims(ringcurrent, axis=2)
+            ringcurrent_median = numpy.nanmedian(ringcurrent, keepdims=False)
+            stack_object.absdata = stack_object.absdata / (ringcurrent/ringcurrent_median)
+            print("ring current normalization: successful")
+        else:
+            print("ring current normalization: 'control' or 'ringcurrent' entry  not found!")
+    else:
+        print("ring current normalization: skipped")
 
     F.close()
 
