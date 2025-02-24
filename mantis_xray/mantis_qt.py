@@ -1736,13 +1736,6 @@ class File_GUI():
             if plugin.title not in ['SDF']:
                 self.jsoncheck.hide()
 
-            self.ringnormcheck = QtWidgets.QCheckBox("Normalize ringcurrent (for NEXUS .HDF5 only!)")
-            self.ringnormcheck.stateChanged.connect(lambda: self.setChecked("ringnormcheck",self.ringnormcheck.isChecked()))
-            hbox4.addWidget(self.ringnormcheck)
-            self.ringnormcheck.setChecked(File_GUI.option_norm_ringcurrent)
-            if plugin.title not in ['NXstxm']:
-                self.ringnormcheck.hide()
-
             hbox4.addStretch(1)
             self.button_ok = QtWidgets.QPushButton('Accept')
             self.button_ok.clicked.connect(self.OnAccept)
@@ -1770,10 +1763,7 @@ class File_GUI():
                 self.Entry_info.UpdateInfo(self.contents)
 
         def setChecked(self,name,value=True):
-            if name == "ringnormcheck":
-                File_GUI.option_norm_ringcurrent = value
-                #self.ringnormcheck.setChecked(value)
-            elif name == "jsoncheck":
+            if name == "jsoncheck":
                 File_GUI.option_write_json = value
                 #self.jsoncheck.setChecked(value)
         def OnAccept(self):
@@ -1827,6 +1817,24 @@ class File_GUI():
                 self.checkbox.setEnabled(False)
                 self.channel_combobox.setEnabled(False)
 
+            Data_Normalize_Label = QtWidgets.QLabel('Normalize data to: ')
+            self.addWidget(Data_Normalize_Label)
+            self.norm_combobox = QtWidgets.QComboBox()
+            self.norm_combobox.addItem('none')
+            if contents.norm_data is not None:
+                for normkey in contents.norm_data.keys():
+                    self.norm_combobox.addItem(normkey)
+            self.norm_combobox.addItem('ring current (fallback)')
+            preferences = ["control", "ringcurrent","ring current (fallback)"]
+            for pref in preferences:
+                index = self.norm_combobox.findText(pref)
+                if index != -1:
+                    self.norm_combobox.setCurrentIndex(index)
+                    break
+
+            self.addWidget(self.norm_combobox)
+            self.addStretch(1)
+
         def setChecked(self,value=True):
             self.checkbox.setChecked(value)
 
@@ -1845,7 +1853,7 @@ class File_GUI():
                 #return False
 
         def GetStatus(self):
-            return (self.checkbox.isChecked(),self.channel_combobox.currentIndex())
+            return (self.checkbox.isChecked(),self.channel_combobox.currentIndex(),self.norm_combobox.currentIndex())
 
     #---------------------------------------
     class EntryInfoBox(QtWidgets.QGroupBox):
@@ -1883,7 +1891,7 @@ class File_GUI():
             for i in range(self.vbox.count()):
                 status = self.vbox.itemAt(i).GetStatus()
                 if status[0]:
-                    selection.append((i,status[1])) # (region,detector)
+                    selection.append((i,status[1],status[2])) # (region,detector)
             return selection
 
 File_GUI = File_GUI() #Create instance so that object can remember things (e.g. last path)
@@ -16759,12 +16767,10 @@ class MainFrame(QtWidgets.QMainWindow):
                 self.anlz.delete_data()
             try:    #if checkboxes exist, return checked/unchecked
                 JSONconvert = dlg.jsoncheck.isChecked()
-                ringnorm = dlg.ringnormcheck.isChecked()
             except UnboundLocalError: #if checkboxes missing, i.e. for prenormalized data, *.ncb, etc.
                 print("DataChoiceDialog skipped")
                 JSONconvert = None
-                ringnorm = None
-            file_plugins.load(filepath, stack_object=self.stk, plugin=plugin, selection=FileInternalSelection,json=JSONconvert,inorm=ringnorm)
+            file_plugins.load(filepath, stack_object=self.stk, plugin=plugin, selection=FileInternalSelection,json=JSONconvert)
             directory = os.path.dirname(str(filepath))
             self.page1.filename = os.path.basename(str(filepath))
 
