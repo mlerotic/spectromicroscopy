@@ -47,11 +47,16 @@ def identify(filename):
     except:
         return False
 
-def read(FileName,stack_object,selection=(0,0), json=None, inorm=None, *args, **kwargs):
-    #print(inorm)
+def read(FileName,stack_object,selection=(0,0), json=None,  *args, **kwargs):
     D = GetFileStructure(FileName)
     entry = list(D.keys())[selection[0]]
     detector = list(D[entry].keys())[selection[1]] #[counter0, ...]
+    normalize = []
+    if D[entry].norm_data is not None:
+        normalize = list(D[entry].norm_data.keys())
+    normalize.append('fallback')
+    normalize.insert(0, 'none')
+    normalize = normalize[selection[2]]
     F = h5py.File(FileName, 'r')
     if 'energy' in list(F[entry][detector]):
         stack_object.ev = numpy.array(F[entry][detector]['energy'])
@@ -101,12 +106,28 @@ def read(FileName,stack_object,selection=(0,0), json=None, inorm=None, *args, **
         stack_object.absdata = numpy.transpose(numpy.array(F[entry][detector][signal_name]),axes=axes_order)
         if len(axes_order) < 3: # for single images add one more dimension
             stack_object.absdata = numpy.expand_dims(stack_object.absdata, axis=2)
-    if inorm and ('ringcurrent' in list(F[entry])):
-        ringcurrent = numpy.transpose(numpy.array(F[entry]['ringcurrent']['data']),axes=axes_order)
-        if len(axes_order) < 3: # for single images add one more dimension
-            ringcurrent = numpy.expand_dims(ringcurrent, axis=2)
-        ringcurrent_median = numpy.nanmedian(ringcurrent, keepdims=False)
-        stack_object.absdata = stack_object.absdata / (ringcurrent/ringcurrent_median)
+    if normalize == "none":
+        print("ring current normalization: skipped")
+    elif normalize == "fallback":
+        R = numpy.array(F[entry]['instrument']['control']['data'])
+        R = R.reshape(stack_object.n_ev,  stack_object.n_rows, stack_object.n_cols)
+        R = numpy.transpose(R, (2, 1, 0))
+        #R = R[:, :, :] #[::-1, :, :] Do we need to mirror? e.g., left/right?
+        R_median = numpy.nanmedian(R, keepdims=False)
+        stack_object.absdata = stack_object.absdata / (R/R_median)
+        print("ring current normalization: successful with fallback method. no tiling or meandering supported!")
+    elif normalize in D[entry].norm_data.keys():
+        try:
+            R = numpy.transpose(numpy.array(F[entry][normalize]['data']),axes=axes_order)
+            if len(axes_order) < 3:  # for single images add one more dimension
+                R = numpy.expand_dims(R, axis=2)
+            R_median = numpy.nanmedian(R, keepdims=False)
+            stack_object.absdata = stack_object.absdata / (R / R_median)
+            print("ring current normalization: successful")
+        except ValueError:
+            print('ring current normalization: ERROR! Line scans not supported.')
+
+
 
     F.close()
 
