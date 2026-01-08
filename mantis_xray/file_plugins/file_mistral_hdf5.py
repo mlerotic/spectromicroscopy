@@ -80,7 +80,7 @@ def GetFileStructure(filename):
         filename: Path to the HDF5 file
 
     Returns:
-        OrderedDict containing file structure information
+        OrderedDict containing file structure information with attributes
     """
     try:
         f = h5py.File(filename, "r")
@@ -94,31 +94,22 @@ def GetFileStructure(filename):
         D = OrderedDict()
         D["SpecNormalized"] = OrderedDict()
 
-        # Required fields for GUI compatibility
-        D["SpecNormalized"]["definition"] = "MISTRAL-ALBA"
-        D["SpecNormalized"]["scan_type"] = "spectromicroscopy"
-        D["SpecNormalized"]["type"] = "MISTRAL-ALBA STXM Stack"
+        # Set attributes on the OrderedDict (GUI expects these as attributes)
+        D["SpecNormalized"].definition = "MISTRAL-ALBA"
+        D["SpecNormalized"].scan_type = "spectromicroscopy"
+        D["SpecNormalized"].norm_data = None
 
-        # Get data shape and dtype
+        # Get data shape and axes
         if "spectroscopy_normalized_aligned" in grp:
             data = grp["spectroscopy_normalized_aligned"]
-            D["SpecNormalized"]["data_shape"] = data.shape
-            D["SpecNormalized"]["data_dtype"] = str(data.dtype)
-            D["SpecNormalized"]["data_axes"] = ["energy", "y", "x"]
+            D["SpecNormalized"].data_shape = data.shape
+            D["SpecNormalized"].data_axes = ["energy", "y", "x"]
+        else:
+            D["SpecNormalized"].data_shape = None
+            D["SpecNormalized"].data_axes = None
 
-        # Get energy information
-        if "energy" in grp:
-            energy = grp["energy"]
-            D["SpecNormalized"]["n_energies"] = len(energy)
-            D["SpecNormalized"]["energy_range"] = (float(energy[0]), float(energy[-1]))
-
-        # Check for optional datasets
-        D["SpecNormalized"]["has_currents"] = "Currents" in grp
-        D["SpecNormalized"]["has_exptimes"] = "ExpTimes" in grp
-        D["SpecNormalized"]["has_rotation"] = "rotation_angle" in grp
-
-        # Normalization data (for compatibility with GUI)
-        D["SpecNormalized"]["norm_data"] = None
+        # Add a single channel entry (required by GUI)
+        D["SpecNormalized"]["data"] = OrderedDict()
 
         f.close()
         return D
@@ -168,12 +159,8 @@ def read(filename, stack_object, selection=None, *args, **kwargs):
     stack_object.n_rows = stack_object.absdata.shape[1]
 
     # Create spatial coordinate arrays (in micrometers)
-    stack_object.x_dist = numpy.linspace(
-        0, stack_object.n_cols * x_pixel_size, num=stack_object.n_cols
-    )
-    stack_object.y_dist = numpy.linspace(
-        0, stack_object.n_rows * y_pixel_size, num=stack_object.n_rows
-    )
+    stack_object.x_dist = numpy.linspace(0, stack_object.n_cols * x_pixel_size, num=stack_object.n_cols)
+    stack_object.y_dist = numpy.linspace(0, stack_object.n_rows * y_pixel_size, num=stack_object.n_rows)
 
     # Read exposure times (dwell times)
     if "ExpTimes" in grp:
@@ -196,20 +183,9 @@ def read(filename, stack_object, selection=None, *args, **kwargs):
     # Fill the HDF5 structure for MANTiS
     stack_object.fill_h5_struct_from_stk()
 
-    if verbose:
-        print("Successfully loaded MISTRAL data:")
-        print("  Data shape: %s" % (stack_object.absdata.shape,))
-        print(
-            "  Energy range: %.2f - %.2f eV" % (stack_object.ev[0], stack_object.ev[-1])
-        )
-        print(
-            "  Spatial size: %d x %d pixels"
-            % (stack_object.n_cols, stack_object.n_rows)
-        )
-        print("  Pixel size: %.4f x %.4f µm" % (x_pixel_size, y_pixel_size))
-
-    return
-
-
-# Module-level verbose flag (consistent with other plugins)
-verbose = 0
+    # Print success message
+    print("MISTRAL-ALBA HDF5 file loaded successfully")
+    print("  Data shape: %s" % (stack_object.absdata.shape,))
+    print("  Energy range: %.2f - %.2f eV (%d points)" % (stack_object.ev[0], stack_object.ev[-1], stack_object.n_ev))
+    print("  Spatial size: %d x %d pixels" % (stack_object.n_cols, stack_object.n_rows))
+    print("  Pixel size: %.4f x %.4f µm" % (x_pixel_size, y_pixel_size))
