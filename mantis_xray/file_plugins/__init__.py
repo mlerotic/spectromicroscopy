@@ -109,7 +109,7 @@ for data_type in data_types:
     filter_list['read'][data_type].append('All files (*.*)')
 
 
-def load(filename, stack_object=None, plugin=None, selection=None, json=None, inorm=None):
+def load(filename, stack_object=None, plugin=None, selection=None, json=None):
     """
     Pass the load command over to the appropriate plugin so that it can import data from the named file.
     """
@@ -120,11 +120,11 @@ def load(filename, stack_object=None, plugin=None, selection=None, json=None, in
     else:
         print("load", filename, "with the", plugin.title, "plugin.")
         if selection is None:
-            plugin.read(filename, stack_object, selection, json, inorm)
+            plugin.read(filename, stack_object, selection, json)
         elif len(selection) == 1: # one region only
-            plugin.read(filename, stack_object, selection[0], json, inorm)
+            plugin.read(filename, stack_object, selection[0], json)
         else: # multiple regions selected at once. collating absdata
-            plugin.read(filename, stack_object, selection[0], json, inorm)
+            plugin.read(filename, stack_object, selection[0], json)
             temp_stack = data_stack.data(stack_object.data_struct)
             full_stack = stack_object.absdata.copy()
             for s in selection[1:]:
