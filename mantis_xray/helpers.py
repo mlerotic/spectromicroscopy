@@ -9,7 +9,7 @@ def resource_path(relative_path):
 def check_for_updates(current_version):
     import urllib.request, re
     from urllib.error import URLError
-    timeout=.06
+    timeout=5
     message = 'Socket timed out. Check your internet connection.\nVersion checks skipped.'
     attempt = 0
     max_attempt = 3

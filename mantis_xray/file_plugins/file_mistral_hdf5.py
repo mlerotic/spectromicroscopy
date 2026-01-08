@@ -93,6 +93,10 @@ def GetFileStructure(filename):
         grp = f["SpecNormalized"]
         D = OrderedDict()
         D["SpecNormalized"] = OrderedDict()
+
+        # Required fields for GUI compatibility
+        D["SpecNormalized"]["definition"] = "MISTRAL-ALBA"
+        D["SpecNormalized"]["scan_type"] = "spectromicroscopy"
         D["SpecNormalized"]["type"] = "MISTRAL-ALBA STXM Stack"
 
         # Get data shape and dtype
@@ -100,6 +104,7 @@ def GetFileStructure(filename):
             data = grp["spectroscopy_normalized_aligned"]
             D["SpecNormalized"]["data_shape"] = data.shape
             D["SpecNormalized"]["data_dtype"] = str(data.dtype)
+            D["SpecNormalized"]["data_axes"] = ["energy", "y", "x"]
 
         # Get energy information
         if "energy" in grp:
@@ -111,6 +116,9 @@ def GetFileStructure(filename):
         D["SpecNormalized"]["has_currents"] = "Currents" in grp
         D["SpecNormalized"]["has_exptimes"] = "ExpTimes" in grp
         D["SpecNormalized"]["has_rotation"] = "rotation_angle" in grp
+
+        # Normalization data (for compatibility with GUI)
+        D["SpecNormalized"]["norm_data"] = None
 
         f.close()
         return D
