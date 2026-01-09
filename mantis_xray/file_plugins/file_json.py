@@ -45,6 +45,7 @@ def GetFileStructure(FileName):
     D = OrderedDict()
     for i,R in enumerate(['Region_'+str(r) for r in range(JS.num_regions)]):
         D[R] = OrderedDict()
+        D[R].norm_data = None  # Normalization data (for compatibility with GUI)
         D[R].definition = 'JSON'
         D[R].scan_type = JS.js['ScanDefinition']['Type']
         D[R].data_shape = JS.data_size[i]

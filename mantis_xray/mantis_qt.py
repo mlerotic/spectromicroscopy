@@ -1825,7 +1825,7 @@ class File_GUI():
                 for normkey in contents.norm_data.keys():
                     self.norm_combobox.addItem(normkey)
             self.norm_combobox.addItem('ring current (fallback)')
-            preferences = ["control", "ringcurrent","ring current (fallback)"]
+            preferences = ["control", "ringcurrent", "none", "ring current (fallback)"]
             for pref in preferences:
                 index = self.norm_combobox.findText(pref)
                 if index != -1:
@@ -16758,6 +16758,7 @@ class MainFrame(QtWidgets.QMainWindow):
                     plugin = file_plugins.identify(dlg.filepath)
             if plugin is None:
                 QtWidgets.QMessageBox.warning(self, 'Error!', "Unknown file type")
+                return
 
             QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
 
