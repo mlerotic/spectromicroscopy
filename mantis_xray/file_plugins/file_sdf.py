@@ -45,6 +45,7 @@ def GetFileStructure(FileName):
     D = OrderedDict()
     for i,R in enumerate(['Region_'+str(r) for r in range(HDR.num_regions)]):
         D[R] = OrderedDict()
+        D[R].norm_data = None  # Normalization data (for compatibility with GUI)
         D[R].definition = 'SDF'
         D[R].scan_type = HDR.hdr['ScanDefinition']['Type']
         D[R].data_shape = HDR.data_size[i]
@@ -233,7 +234,11 @@ def read(filename, self, selection=None, JSONstatus=None, *args, **kwargs):
     allowed_type =['NEXAFS Image Scan','NEXAFS Line Scan','Image Scan', 'Line Scan']
     flag = HDR.hdr['ScanDefinition']['Flags']
     type = HDR.hdr['ScanDefinition']['Type']
-    region, channel = selection
+    # Handle both old (2-element) and new (3-element) selection format
+    if len(selection) == 2:
+        region, channel = selection
+    else:
+        region, channel = selection[0], selection[1]
     if not (flag in allowed_flag and type in allowed_type):
         print("Unknown Format")
         return

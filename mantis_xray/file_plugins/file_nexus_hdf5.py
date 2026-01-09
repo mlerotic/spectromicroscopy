@@ -109,13 +109,16 @@ def read(FileName,stack_object,selection=(0,0), json=None,  *args, **kwargs):
     if normalize == "none":
         print("ring current normalization: skipped")
     elif normalize == "fallback":
-        R = numpy.array(F[entry]['instrument']['control']['data'])
-        R = R.reshape(stack_object.n_ev,  stack_object.n_rows, stack_object.n_cols)
-        R = numpy.transpose(R, (2, 1, 0))
-        #R = R[:, :, :] #[::-1, :, :] Do we need to mirror? e.g., left/right?
-        R_median = numpy.nanmedian(R, keepdims=False)
-        stack_object.absdata = stack_object.absdata / (R/R_median)
-        print("ring current normalization: successful with fallback method. no tiling or meandering supported!")
+        try:
+            R = numpy.array(F[entry]['instrument']['control']['data'])
+            R = R.reshape(stack_object.n_ev,  stack_object.n_rows, stack_object.n_cols)
+            R = numpy.transpose(R, (2, 1, 0))
+            #R = R[:, :, :] #[::-1, :, :] Do we need to mirror? e.g., left/right?
+            R_median = numpy.nanmedian(R, keepdims=False)
+            stack_object.absdata = stack_object.absdata / (R/R_median)
+            print("ring current normalization: successful with fallback method. no tiling or meandering supported!")
+        except KeyError as e:
+            print(f"ring current normalization: skipped (fallback method failed)")
     elif normalize in D[entry].norm_data.keys():
         try:
             R = numpy.transpose(numpy.array(F[entry][normalize]['data']),axes=axes_order)
