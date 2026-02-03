@@ -39,7 +39,7 @@ from __future__ import print_function
 
 import pkgutil, importlib, os, sys
 import numpy
-from .. import data_stack
+from ..analysis import data_stack
 
 verbose = True
 

@@ -27,7 +27,7 @@ import os
 import numpy as np
 import h5py
 
-from mantis_xray import data_struct
+from mantis_xray.analysis import data_struct
 verbose = 0
 
 title = 'Exchange'
