@@ -10202,11 +10202,18 @@ class ShowArtefacts(QtWidgets.QDialog):
         self.button_cancel.clicked.connect(self.close)
         self.bg_level.toggled.connect(self.ShowImage)
         self.remove_outliers.toggled.connect(self.ShowImage)
+        self.remove_lines.toggled.connect(self.ShowImage)
         self.cb_h.stateChanged.connect(self.ShowImage)
         self.cb_v.stateChanged.connect(self.ShowImage)
+        self.rb_lines_h.toggled.connect(self.ShowImage)
+        self.rb_lines_v.toggled.connect(self.ShowImage)
         # I initially wanted to use Qt.QueuedConnection to create a non-blocking Slider. It is good enough.
         self.weight_slider.valueChanged.connect(self.ShowCalcImage)
         self.weight_slider_2.valueChanged.connect(self.ShowCalcImage)
+        self.spin_repeat.valueChanged.connect(self.ShowCalcImage)
+        self.spin_thickness.valueChanged.connect(self.ShowCalcImage)
+        self.spin_bg_value.valueChanged.connect(self.ShowCalcImage)
+        self.spin_bg_threshold.valueChanged.connect(self.ShowCalcImage)
         self.slider_eng.sliderPressed.connect(self.ShowImage)
         self.slider_eng.sliderReleased.connect(self.ShowImage)
         self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
@@ -10228,12 +10235,15 @@ class ShowArtefacts(QtWidgets.QDialog):
         self.OnScrollEng(0)
 
     def ShowCalcImage(self):
+        """Render the preview image after applying enabled artifact corrections."""
         a = self.stack.absdata[:, :, self.slider_eng.value()].astype('float64')
         if self.bg_level.isChecked():
             if any([self.cb_h.isChecked(),self.cb_v.isChecked()]):
                 a, wf = self.LevelCalc(a)
                 if self.rb_median_i0.isChecked():
                     self.label_3.setText(str('{:d}').format(int(wf))+' %')
+        if self.remove_lines.isChecked():
+            a = self.RemoveLinesCalc(a)
         if self.remove_outliers.isChecked():
             a, wf = self.OutlierCalc(a)
             self.label_7.setText(str('<p>exceeding background level &plusmn; {:d} * &sigma;</p>').format(int(wf)))
@@ -10316,6 +10326,111 @@ class ShowArtefacts(QtWidgets.QDialog):
         else:
             a = self.CorrectOutliers(a, wf, mask)
         return(a,wf)
+
+    def HasSequentialBackgroundValues(self, line, min_repeat, bg_value, bg_threshold):
+        """Return True if a line contains a run near `bg_value` of length >= `min_repeat`."""
+        if line.size < min_repeat:
+            return False
+        mask = np.abs(line - bg_value) <= bg_threshold
+        run_length = 0
+        for value in mask:
+            if value:
+                run_length += 1
+                if run_length >= min_repeat:
+                    return True
+            else:
+                run_length = 0
+        return False
+
+    def DetectLineIndices(self, array, axis, min_repeat, bg_value, bg_threshold):
+        """Find row/column indices that match the background-run criterion."""
+        n_lines = array.shape[axis]
+        flagged = []
+        for idx in range(n_lines):
+            line = array[idx, :] if axis == 0 else array[:, idx]
+            if self.HasSequentialBackgroundValues(line, min_repeat, bg_value, bg_threshold):
+                flagged.append(idx)
+        return np.array(flagged, dtype=int)
+
+    def ExpandLineIndices(self, indices, n_lines, thickness):
+        """Expand flagged indices by `thickness` pixels to cover thicker stripe artifacts."""
+        if indices.size == 0:
+            return indices
+        half = thickness // 2
+        offset_start = -half
+        offset_end = thickness - half
+        expanded = set()
+        for idx in indices:
+            for offset in range(offset_start, offset_end):
+                candidate = idx + offset
+                if 0 <= candidate < n_lines:
+                    expanded.add(candidate)
+        return np.array(sorted(expanded), dtype=int)
+
+    def CorrectLines(self, array, axis, min_repeat, thickness, bg_value, bg_threshold):
+        """Replace flagged lines by neighboring-line averages along the chosen axis."""
+        flagged = self.DetectLineIndices(array, axis, min_repeat, bg_value, bg_threshold)
+        flagged = self.ExpandLineIndices(flagged, array.shape[axis], thickness)
+        if flagged.size == 0:
+            return array
+
+        result = array.copy()
+        line_mask = np.zeros(array.shape[axis], dtype=bool)
+        line_mask[flagged] = True
+        flagged_idx = np.flatnonzero(line_mask)
+
+        starts = [flagged_idx[0]]
+        ends = []
+        for i in range(1, flagged_idx.size):
+            if flagged_idx[i] != flagged_idx[i - 1] + 1:
+                ends.append(flagged_idx[i - 1])
+                starts.append(flagged_idx[i])
+        ends.append(flagged_idx[-1])
+
+        for start, end in zip(starts, ends):
+            prev_idx = start - 1
+            while prev_idx >= 0 and line_mask[prev_idx]:
+                prev_idx -= 1
+
+            next_idx = end + 1
+            while next_idx < line_mask.size and line_mask[next_idx]:
+                next_idx += 1
+
+            if prev_idx >= 0 and next_idx < line_mask.size:
+                if axis == 0:
+                    replacement = 0.5 * (result[prev_idx, :] + result[next_idx, :])
+                    result[start:end + 1, :] = replacement[None, :]
+                else:
+                    replacement = 0.5 * (result[:, prev_idx] + result[:, next_idx])
+                    result[:, start:end + 1] = replacement[:, None]
+            elif prev_idx >= 0:
+                if axis == 0:
+                    result[start:end + 1, :] = result[prev_idx, :][None, :]
+                else:
+                    result[:, start:end + 1] = result[:, prev_idx][:, None]
+            elif next_idx < line_mask.size:
+                if axis == 0:
+                    result[start:end + 1, :] = result[next_idx, :][None, :]
+                else:
+                    result[:, start:end + 1] = result[:, next_idx][:, None]
+        return result
+
+    def RemoveLinesCalc(self, a, final=False):
+        """Apply line-removal correction to preview (2D) or full stack (3D)."""
+        min_repeat = self.spin_repeat.value()
+        thickness = self.spin_thickness.value()
+        bg_value = self.spin_bg_value.value()
+        bg_threshold = self.spin_bg_threshold.value()
+        # The stack uses [x, y], so horizontal lines are y-indexed (axis 1).
+        axis = 1 if self.rb_lines_h.isChecked() else 0
+        if final and a.ndim == 3:
+            for ev in range(a.shape[-1]):
+                a[:, :, ev] = self.CorrectLines(a[:, :, ev], axis, min_repeat, thickness, bg_value, bg_threshold)
+        elif final:
+            a = self.CorrectLines(a, axis, min_repeat, thickness, bg_value, bg_threshold)
+        else:
+            a = self.CorrectLines(a, axis, min_repeat, thickness, bg_value, bg_threshold)
+        return a
 # ----------------------------------------------------------------------
     def OnScrollEng(self, value):
         self.slider_eng.setValue(value)
@@ -10325,7 +10440,7 @@ class ShowArtefacts(QtWidgets.QDialog):
     def ShowImage(self):
         if (self.slider_eng.isSliderDown()):
             self.i_item.setImage(self.stack.absdata[:, :, int(self.iev)])
-        elif any([self.remove_outliers.isChecked(), self.bg_level.isChecked()]):
+        elif any([self.remove_outliers.isChecked(), self.bg_level.isChecked(), self.remove_lines.isChecked()]):
             self.ShowCalcImage()
         else:
             self.i_item.setImage(self.stack.absdata[:, :, int(self.iev)])
@@ -10335,6 +10450,8 @@ class ShowArtefacts(QtWidgets.QDialog):
 #----------------------------------------------------------------------
     def OnAccept(self, evt):
         a, wf = self.LevelCalc(self.stack.absdata.astype('float64'),final=True)
+        if self.remove_lines.isChecked():
+            a = self.RemoveLinesCalc(a, final=True)
         if self.remove_outliers.isChecked():
             a, wf = self.OutlierCalc(a,final=True)
             self.parent.page1.specfig.OnI0Reset()  # Reset I0 on PageStack
