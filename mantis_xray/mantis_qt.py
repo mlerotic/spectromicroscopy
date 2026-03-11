@@ -10203,6 +10203,7 @@ class ShowArtefacts(QtWidgets.QDialog):
         self.bg_level.toggled.connect(self.ShowImage)
         self.remove_outliers.toggled.connect(self.ShowImage)
         self.remove_lines.toggled.connect(self.ShowImage)
+        self.remove_hot_pixels.toggled.connect(self.ShowImage)
         self.cb_h.stateChanged.connect(self.ShowImage)
         self.cb_v.stateChanged.connect(self.ShowImage)
         self.rb_lines_h.toggled.connect(self.ShowImage)
@@ -10214,9 +10215,25 @@ class ShowArtefacts(QtWidgets.QDialog):
         self.spin_thickness.valueChanged.connect(self.ShowCalcImage)
         self.spin_bg_value.valueChanged.connect(self.ShowCalcImage)
         self.spin_bg_threshold.valueChanged.connect(self.ShowCalcImage)
+        self.spin_hot_threshold.valueChanged.connect(self.ShowCalcImage)
+        self.spin_hot_size.valueChanged.connect(self.OnHotPatchSizeChanged)
+        self.button_pick_hot_center.clicked.connect(self.OnUndoHotPatch)
+        self.button_apply_hot_patch.clicked.connect(self.OnApplyHotPatch)
+        self.spin_hot_center_x.valueChanged.connect(self.UpdateHotSelectionLabel)
+        self.spin_hot_center_y.valueChanged.connect(self.UpdateHotSelectionLabel)
         self.slider_eng.sliderPressed.connect(self.ShowImage)
         self.slider_eng.sliderReleased.connect(self.ShowImage)
         self.slider_eng.valueChanged[int].connect(self.OnScrollEng)
+        self.hot_threshold_initialized = False
+        self.absdata_work = self.stack.absdata.copy()
+        self.hot_patch_history = []
+        self.current_display_image = self.absdata_work[:, :, 0].astype('float64')
+        self.spin_hot_center_x.setRange(0, self.absdata_work.shape[0] - 1)
+        self.spin_hot_center_y.setRange(0, self.absdata_work.shape[1] - 1)
+        self.spin_hot_center_x.setValue(self.absdata_work.shape[0] // 2)
+        self.spin_hot_center_y.setValue(self.absdata_work.shape[1] // 2)
+        self.spin_hot_size.setRange(1, max(1, min(self.absdata_work.shape[0], self.absdata_work.shape[1])))
+        self.canvas.scene().sigMouseClicked.connect(self.OnImageClick)
 
         self.setWindowTitle('Artefacts & Leveling')
         self.slider_eng.setRange(0, self.stack.n_ev - 1)
@@ -10236,7 +10253,8 @@ class ShowArtefacts(QtWidgets.QDialog):
 
     def ShowCalcImage(self):
         """Render the preview image after applying enabled artifact corrections."""
-        a = self.stack.absdata[:, :, self.slider_eng.value()].astype('float64')
+        a = self.absdata_work[:, :, self.slider_eng.value()].astype('float64')
+        self.UpdateHotPixelThresholdLabel(a)
         if self.bg_level.isChecked():
             if any([self.cb_h.isChecked(),self.cb_v.isChecked()]):
                 a, wf = self.LevelCalc(a)
@@ -10247,7 +10265,9 @@ class ShowArtefacts(QtWidgets.QDialog):
         if self.remove_outliers.isChecked():
             a, wf = self.OutlierCalc(a)
             self.label_7.setText(str('<p>exceeding background level &plusmn; {:d} * &sigma;</p>').format(int(wf)))
+        self.current_display_image = a
         self.i_item.setImage(a)
+        self.UpdateHotSelectionLabel()
 
     def CorrectionArray(self,array,axis,wf,mask = None,):
         # calculate median along given axis, ignoring nans if present
@@ -10431,6 +10451,164 @@ class ShowArtefacts(QtWidgets.QDialog):
         else:
             a = self.CorrectLines(a, axis, min_repeat, thickness, bg_value, bg_threshold)
         return a
+
+    def InitializeHotPixelThreshold(self, image):
+        """Initialize hot-pixel threshold from image statistics to avoid destructive defaults."""
+        if self.hot_threshold_initialized:
+            return
+        finite_vals = image[np.isfinite(image)]
+        if finite_vals.size == 0:
+            return
+        threshold = float(np.percentile(finite_vals, 99.9))
+        span = float(np.max(finite_vals) - np.min(finite_vals))
+        step = max(span / 1000.0, 1e-6)
+        self.spin_hot_threshold.blockSignals(True)
+        self.spin_hot_threshold.setValue(threshold)
+        self.spin_hot_threshold.setSingleStep(step)
+        self.spin_hot_threshold.blockSignals(False)
+        self.hot_threshold_initialized = True
+
+    def UpdateHotPixelThresholdLabel(self, image):
+        """Show the current image value range near the hot-pixel threshold control."""
+        self.InitializeHotPixelThreshold(image)
+        finite_vals = image[np.isfinite(image)]
+        if finite_vals.size:
+            min_val = np.min(finite_vals)
+            max_val = np.max(finite_vals)
+            hot_fraction = 100.0 * np.mean(image > self.spin_hot_threshold.value())
+            self.label_13.setText(
+                'Threshold (>) | range [{:.4g}, {:.4g}] | hot {:.2f}%'.format(min_val, max_val, hot_fraction)
+            )
+        else:
+            self.label_13.setText('Threshold (>) | range [n/a, n/a] | hot n/a')
+
+    def OnHotPatchSizeChanged(self, value):
+        """Keep patch size odd so the center coordinate is unambiguous."""
+        if value % 2 == 0:
+            self.spin_hot_size.blockSignals(True)
+            self.spin_hot_size.setValue(value + 1)
+            self.spin_hot_size.blockSignals(False)
+
+    def UpdateHotSelectionLabel(self):
+        """Display currently selected pixel coordinates and intensity."""
+        ix = int(np.clip(self.spin_hot_center_x.value(), 0, self.absdata_work.shape[0] - 1))
+        iy = int(np.clip(self.spin_hot_center_y.value(), 0, self.absdata_work.shape[1] - 1))
+        if hasattr(self, 'current_display_image') and self.current_display_image is not None:
+            image = self.current_display_image
+        else:
+            image = self.absdata_work[:, :, int(self.iev)]
+        if ix < image.shape[0] and iy < image.shape[1]:
+            value = image[ix, iy]
+            if np.isfinite(value):
+                value_txt = '{:.6g}'.format(float(value))
+            else:
+                value_txt = 'nan'
+            self.label_hot_pixel.setText('Pixel: x={:d}, y={:d}, I={}'.format(ix, iy, value_txt))
+        else:
+            self.label_hot_pixel.setText('Pixel: x={:d}, y={:d}, I=n/a'.format(ix, iy))
+
+    def OnImageClick(self, event):
+        """Capture center coordinates and intensity from image click."""
+        if hasattr(event, 'button') and event.button() != QtCore.Qt.LeftButton:
+            return
+        pos = self.vb.mapSceneToView(event.scenePos())
+        ix = int(np.rint(pos.x()))
+        iy = int(np.rint(pos.y()))
+        ix = int(np.clip(ix, 0, self.absdata_work.shape[0] - 1))
+        iy = int(np.clip(iy, 0, self.absdata_work.shape[1] - 1))
+        self.spin_hot_center_x.setValue(ix)
+        self.spin_hot_center_y.setValue(iy)
+        self.UpdateHotSelectionLabel()
+        self.label_hot_status.setText('Status: center selected')
+
+    def HotPatchBounds(self, center_x, center_y, patch_size, shape):
+        """Return clamped bounds for a square patch centered at `(center_x, center_y)`."""
+        half = patch_size // 2
+        x0 = max(0, center_x - half)
+        x1 = min(shape[0], center_x + half + 1)
+        y0 = max(0, center_y - half)
+        y1 = min(shape[1], center_y + half + 1)
+        return x0, x1, y0, y1
+
+    def CorrectHotPixels(self, array, threshold):
+        """Replace pixels above `threshold` by the average of neighboring non-hot pixels."""
+        mask_hot = array > threshold
+        if not np.any(mask_hot):
+            return array
+
+        result = array.copy()
+        structure = np.ones((3, 3), dtype=bool)
+        labels, n_regions = ndimage.label(mask_hot, structure=structure)
+        for region_idx in range(1, n_regions + 1):
+            region_mask = labels == region_idx
+            border_mask = ndimage.binary_dilation(region_mask, structure=structure)
+            border_mask = border_mask & (~region_mask) & (~mask_hot)
+            border_vals = array[border_mask]
+            border_vals = border_vals[np.isfinite(border_vals)]
+            if border_vals.size:
+                result[region_mask] = float(np.mean(border_vals))
+        return result
+
+    def RemoveHotPixelsCalc(self, a, final=False):
+        """Apply hot-pixel correction to preview (2D) or full stack (3D)."""
+        threshold = self.spin_hot_threshold.value()
+        if final and a.ndim == 3:
+            for ev in range(a.shape[-1]):
+                a[:, :, ev] = self.CorrectHotPixels(a[:, :, ev], threshold)
+        elif final:
+            a = self.CorrectHotPixels(a, threshold)
+        else:
+            a = self.CorrectHotPixels(a, threshold)
+        return a
+
+    def OnApplyHotPatch(self):
+        """Apply hot-pixel correction to the selected patch in the current image only."""
+        if not self.remove_hot_pixels.isChecked():
+            self.label_hot_status.setText('Status: enable "Remove hot pixels" first')
+            return
+        iev = int(self.iev)
+        threshold = self.spin_hot_threshold.value()
+        center_x = self.spin_hot_center_x.value()
+        center_y = self.spin_hot_center_y.value()
+        patch_size = self.spin_hot_size.value()
+        x0, x1, y0, y1 = self.HotPatchBounds(center_x, center_y, patch_size, self.absdata_work[:, :, iev].shape)
+        patch_before = self.absdata_work[x0:x1, y0:y1, iev].copy()
+        patch_after = self.CorrectHotPixels(patch_before.copy(), threshold)
+        changed = np.count_nonzero(~np.isclose(patch_after, patch_before, equal_nan=True))
+        if changed:
+            self.hot_patch_history.append({
+                'iev': int(iev),
+                'x0': int(x0),
+                'x1': int(x1),
+                'y0': int(y0),
+                'y1': int(y1),
+                'patch_before': patch_before
+            })
+            self.absdata_work[x0:x1, y0:y1, iev] = patch_after
+            self.label_hot_status.setText(
+                'Status: corrected {:d} px at eV index {:d}'.format(int(changed), int(iev))
+            )
+        else:
+            self.label_hot_status.setText(
+                'Status: no pixels above threshold in selected patch'
+            )
+        self.ShowImage()
+
+    def OnUndoHotPatch(self):
+        """Revert the most recently applied hot-pixel patch."""
+        if not self.hot_patch_history:
+            self.label_hot_status.setText('Status: nothing to undo')
+            return
+        entry = self.hot_patch_history.pop()
+        iev = entry['iev']
+        self.absdata_work[entry['x0']:entry['x1'], entry['y0']:entry['y1'], iev] = entry['patch_before']
+        if int(self.iev) != int(iev):
+            self.slider_eng.blockSignals(True)
+            self.slider_eng.setValue(int(iev))
+            self.slider_eng.blockSignals(False)
+            self.iev = int(iev)
+        self.label_hot_status.setText('Status: undo applied')
+        self.ShowImage()
 # ----------------------------------------------------------------------
     def OnScrollEng(self, value):
         self.slider_eng.setValue(value)
@@ -10438,18 +10616,22 @@ class ShowArtefacts(QtWidgets.QDialog):
 
         self.ShowImage()
     def ShowImage(self):
+        self.UpdateHotPixelThresholdLabel(self.absdata_work[:, :, int(self.iev)])
         if (self.slider_eng.isSliderDown()):
-            self.i_item.setImage(self.stack.absdata[:, :, int(self.iev)])
+            self.current_display_image = self.absdata_work[:, :, int(self.iev)].astype('float64')
+            self.i_item.setImage(self.current_display_image)
         elif any([self.remove_outliers.isChecked(), self.bg_level.isChecked(), self.remove_lines.isChecked()]):
             self.ShowCalcImage()
         else:
-            self.i_item.setImage(self.stack.absdata[:, :, int(self.iev)])
+            self.current_display_image = self.absdata_work[:, :, int(self.iev)].astype('float64')
+            self.i_item.setImage(self.current_display_image)
 
             self.label_3.setText(str(''))
+        self.UpdateHotSelectionLabel()
         self.groupBox.setTitle(str('Stack Browser | Image at {0:5.2f} eV').format(float(self.stack.ev[self.iev])))
 #----------------------------------------------------------------------
     def OnAccept(self, evt):
-        a, wf = self.LevelCalc(self.stack.absdata.astype('float64'),final=True)
+        a, wf = self.LevelCalc(self.absdata_work.astype('float64'),final=True)
         if self.remove_lines.isChecked():
             a = self.RemoveLinesCalc(a, final=True)
         if self.remove_outliers.isChecked():
