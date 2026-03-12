@@ -36,19 +36,46 @@ read_types = ['spectrum','image','stack']
 write_types = ['spectrum','image','stack','results']
 
 
-def identify(filename):
+def _safe_close_h5_file(h5_file):
+    """Close an HDF5 file while tolerating known network-filesystem close errors."""
+    if h5_file is None:
+        return
     try:
-        # Open HDF5 file
-         aps_format = False
-         # Open HDF5 file
-         f = h5py.File(filename, 'r')
-         #Check is exchange is in the file
-         if 'exchange' in f:
-             aps_format = True
-         f.close()
-         return aps_format
-    except:
+        h5_file.close()
+    except RuntimeError as exc:
+        msg = str(exc).lower()
+        if ('unable to close file' in msg) or ('bad file descriptor' in msg):
+            if verbose == 1:
+                print("Warning: ignored HDF5 close error:", exc)
+            return
+        raise
+
+
+def _open_h5_readonly(filename):
+    """Open HDF5 file in read mode, disabling file locks when supported."""
+    try:
+        return h5py.File(filename, 'r', locking=False)
+    except TypeError:
+        # Older h5py versions do not support the locking keyword.
+        return h5py.File(filename, 'r')
+
+
+def identify(filename):
+    f = None
+    aps_format = False
+    try:
+        f = _open_h5_readonly(filename)
+        # Check if exchange is in the file
+        if 'exchange' in f:
+            aps_format = True
+    except Exception:
         return False
+    finally:
+        try:
+            _safe_close_h5_file(f)
+        except Exception:
+            pass
+    return aps_format
 
 
 def read_old( filepath, data_stk):
@@ -66,7 +93,7 @@ def read(filename, stack_object, selection=None, *args, **kwargs):
 
     #new_stack = data_stack.data(data_struct)
     # Open HDF5 file
-    f = h5py.File(filename, 'r')
+    f = _open_h5_readonly(filename)
 
 
     # Read basic definitions
@@ -412,24 +439,25 @@ def read(filename, stack_object, selection=None, *args, **kwargs):
 
 
 
+        if 'optical_density' in spectromicroscopyGrp:
+            od = spectromicroscopyGrp['optical_density']
+            data_struct.spectromicroscopy.optical_density = od[...]
+
         if 'normalization' in spectromicroscopyGrp:
             normGrp = spectromicroscopyGrp['normalization']
-            ws = normGrp['white_spectrum']
-            #Check if white_spectrum is an array
-            wspectrum = ws[...]
-            try:
+            if 'white_spectrum' in normGrp:
+                ws = normGrp['white_spectrum']
                 data_struct.spectromicroscopy.normalization.white_spectrum = ws[...]
                 if 'units' in ws.attrs:
                     data_struct.spectromicroscopy.normalization.white_spectrum_units = ws.attrs['units']
+            if 'white_spectrum_energy' in normGrp:
                 wse = normGrp['white_spectrum_energy']
                 data_struct.spectromicroscopy.normalization.white_spectrum_energy = wse[...]
-                if 'units' in ws.attrs:
+                if 'units' in wse.attrs:
                     data_struct.spectromicroscopy.normalization.white_spectrum_energy_units = wse.attrs['units']
-            except:
-                pass
 
     # Close
-    f.close()
+    _safe_close_h5_file(f)
 
     if have4d == 0:
         stack_object.absdata = data_struct.exchange.data

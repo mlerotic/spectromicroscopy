@@ -9163,6 +9163,8 @@ class PageStack(QtWidgets.QWidget):
         self.pb_copy_img.setEnabled(False)
         self.pb_copy_specimg.clicked.connect(self.specfig.OnCopy)
         self.pb_copy_specimg.setEnabled(False)
+        self.pb_copy_stack.clicked.connect(self.OnCopyStack)
+        self.pb_copy_stack.setEnabled(False)
 
         #self.MetricCheckBox.toggled.connect(lambda: self.absimgfig.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
         #self.ZeroOriginCheckBox.toggled.connect(lambda: self.absimgfig.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked()))
@@ -9476,6 +9478,73 @@ class PageStack(QtWidgets.QWidget):
             #                                                                 float(self.stk.theta[self.itheta])))
             self.absimgfig.draw(image)
             self.specfig.ClearandReload()
+
+#-----------------------------------------------------------------------
+    def OnCopyStack(self):
+        if self.com.stack_loaded != 1:
+            return
+        win = self.window()
+        if not hasattr(win, 'add_internal_clipboard_item'):
+            return
+        mode = 'od'
+        assumed_prenorm = False
+        if self.com.i0_loaded == 1:
+            if self.com.stack_4d:
+                stack_data = np.asarray(self.stk.od4d[:, :, :, int(self.itheta)])
+            else:
+                stack_data = np.asarray(self.stk.od3d)
+        else:
+            answer = QtWidgets.QMessageBox.question(
+                self,
+                'Assume Pre-Normalized OD?',
+                'I0 correction is not marked as loaded.\n'
+                'If this stack already contains OD values, click Yes to copy it as pre-normalized OD.',
+                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+                QtWidgets.QMessageBox.No
+            )
+            if answer != QtWidgets.QMessageBox.Yes:
+                return
+            assumed_prenorm = True
+            if self.com.stack_4d:
+                stack_data = np.asarray(self.stk.stack4D[:, :, :, int(self.itheta)])
+            else:
+                stack_data = np.asarray(self.stk.absdata)
+
+        if stack_data.size == 0 or stack_data.ndim != 3:
+            return
+
+        ev = np.asarray(getattr(self.stk, 'ev', np.arange(stack_data.shape[2])), dtype='float64')
+        if ev.size != stack_data.shape[2]:
+            ev = np.arange(stack_data.shape[2], dtype='float64')
+
+        name_prefix = 'OD' if mode == 'od' else 'Flux'
+        stack_name = '{} stack'.format(name_prefix)
+        if hasattr(self, 'filename'):
+            filename = str(self.filename).strip()
+            if filename:
+                stack_name = '{} ({})'.format(stack_name, os.path.basename(filename))
+
+        tags = {
+            'source': 'Preprocess Data',
+            'object': 'stack',
+            'mode': mode
+        }
+        if assumed_prenorm:
+            tags['assumed_prenormalized'] = True
+        if hasattr(self, 'itheta'):
+            tags['itheta'] = int(self.itheta)
+        if hasattr(self, 'filename'):
+            filename = str(self.filename).strip()
+            if filename:
+                tags['stack_file'] = os.path.basename(filename)
+
+        win.add_internal_clipboard_item({
+            'type': 'stack',
+            'name': stack_name,
+            'stack': stack_data.copy(),
+            'ev': ev.copy(),
+            'tags': tags
+        })
 
 #-----------------------------------------------------------------------
     def OnPointSpectrum(self, evt):
@@ -16498,6 +16567,82 @@ class SpecFig():
         # self.exp = pg.exporters.ImageExporter(self.plotitem) # just plot
         self.exp = pg.exporters.ImageExporter(self.plot.scene()) # plot and axes, i.e., complete viewbox
         self.exp.export(copy=True)
+        win = self.parent.window()
+        if not hasattr(win, 'add_internal_clipboard_item'):
+            return
+
+        spectrum_x = None
+        spectrum_y = None
+        curve_name = 'Spectrum'
+
+        if len(self.plotitem.items) > 1:
+            candidate = self.plotitem.items[1]
+            if (hasattr(candidate, 'xData') and hasattr(candidate, 'yData')
+                    and candidate.xData is not None and candidate.yData is not None):
+                spectrum_x = np.asarray(candidate.xData, dtype='float64')
+                spectrum_y = np.asarray(candidate.yData, dtype='float64')
+                if hasattr(candidate, 'opts') and isinstance(candidate.opts, dict):
+                    curve_name = str(candidate.opts.get('name', curve_name))
+
+        if spectrum_x is None or spectrum_y is None or spectrum_x.size == 0 or spectrum_y.size == 0:
+            for item in reversed(self.plotitem.items):
+                if (hasattr(item, 'xData') and hasattr(item, 'yData')
+                        and item.xData is not None and item.yData is not None):
+                    x = np.asarray(item.xData, dtype='float64')
+                    y = np.asarray(item.yData, dtype='float64')
+                    if x.size and y.size and x.size == y.size:
+                        spectrum_x = x
+                        spectrum_y = y
+                        if hasattr(item, 'opts') and isinstance(item.opts, dict):
+                            curve_name = str(item.opts.get('name', curve_name))
+                        break
+
+        if spectrum_x is None or spectrum_y is None or spectrum_x.size == 0 or spectrum_x.size != spectrum_y.size:
+            return
+
+        roi_shape = ''
+        if hasattr(self.parent, 'ROIShapeBox'):
+            roi_shape = str(self.parent.ROIShapeBox.currentText())
+        tags = {
+            'source': 'Preprocess Data',
+            'object': 'spectrum',
+            'roi_shape': roi_shape
+        }
+        if hasattr(self.parent, 'iev'):
+            tags['iev'] = int(self.parent.iev)
+            if hasattr(self.parent, 'stk') and hasattr(self.parent.stk, 'ev'):
+                try:
+                    tags['energy_ev'] = float(self.parent.stk.ev[int(self.parent.iev)])
+                except Exception:
+                    pass
+        if hasattr(self.parent, 'itheta'):
+            tags['itheta'] = int(self.parent.itheta)
+        if hasattr(self.parent, 'ix'):
+            tags['ix'] = int(self.parent.ix)
+        if hasattr(self.parent, 'iy'):
+            tags['iy'] = int(self.parent.iy)
+        if hasattr(self.parent, 'filename'):
+            filename = str(self.parent.filename).strip()
+            if filename:
+                tags['stack_file'] = os.path.basename(filename)
+
+        title = str(curve_name).strip()
+        if not title or title.lower() == 'none':
+            roi_label = roi_shape if roi_shape else 'ROI'
+            ev_val = tags.get('energy_ev', None)
+            if ev_val is not None:
+                title = '{} spectrum @ {:.3f} eV'.format(roi_label, float(ev_val))
+            else:
+                title = '{} spectrum'.format(roi_label)
+            if 'ix' in tags and 'iy' in tags:
+                title = '{} (x={}, y={})'.format(title, tags['ix'], tags['iy'])
+        win.add_internal_clipboard_item({
+            'type': 'spectrum',
+            'name': title,
+            'x': spectrum_x.copy(),
+            'y': spectrum_y.copy(),
+            'tags': tags
+        })
         return
 
     def SaveFig(self,fileName):
@@ -16847,6 +16992,45 @@ class ImgFig():
         # self.exp = pg.exporters.ImageExporter(self.imageitem) # just image
         self.exp = pg.exporters.ImageExporter(self.imageplot) # image and axes, i.e., complete viewbox
         self.exp.export(copy=True)
+        win = self.parent.window()
+        if not hasattr(win, 'add_internal_clipboard_item'):
+            return
+        if not hasattr(self.imageitem, 'image') or self.imageitem.image is None:
+            return
+        image = np.asarray(self.imageitem.image)
+        if image.size == 0:
+            return
+
+        source_label = 'Preprocess Data'
+        if not hasattr(self.parent, 'button_artefacts'):
+            source_label = type(self.parent).__name__
+        tags = {
+            'source': source_label,
+            'object': 'image',
+            'colormap': str(getattr(self, 'map', 'gray'))
+        }
+        ev_idx = getattr(self.parent, 'iev', None)
+        if ev_idx is not None:
+            tags['iev'] = int(ev_idx)
+        theta_idx = getattr(self.parent, 'itheta', None)
+        if theta_idx is not None:
+            tags['itheta'] = int(theta_idx)
+
+        image_name = 'Image'
+        if ev_idx is not None and hasattr(self.parent, 'stk') and hasattr(self.parent.stk, 'ev'):
+            try:
+                ev_val = float(self.parent.stk.ev[int(ev_idx)])
+                tags['energy_ev'] = ev_val
+                image_name = 'Image @ {:.3f} eV'.format(ev_val)
+            except Exception:
+                pass
+
+        win.add_internal_clipboard_item({
+            'type': 'image',
+            'name': image_name,
+            'image': image.copy(),
+            'tags': tags
+        })
         return
 
     def SaveFig(self,fileName):
@@ -16869,6 +17053,1358 @@ class ImgFig():
         if ext in ['tif','png','jpg','svg','pdf']:
             exp.export(fileName)
 
+# ----------------------------------------------------------------------
+class PageXMCD(QtWidgets.QWidget):
+    def __init__(self, common, data_struct, stack, anlz):
+        super(PageXMCD, self).__init__()
+        self.initUI(common, data_struct, stack, anlz)
+
+    def initUI(self, common, data_struct, stack, anlz):
+        self.data_struct = data_struct
+        self.stack = stack
+        self.com = common
+        self.anlz = anlz
+        self.clipboard_spectra = []
+        self.spec_a = None
+        self.spec_b = None
+        self.spec_diff = None
+
+        layout = QtWidgets.QVBoxLayout()
+        controls = QtWidgets.QGroupBox('XMCD Spectra')
+        controls_layout = QtWidgets.QVBoxLayout()
+
+        row1 = QtWidgets.QHBoxLayout()
+        row1.addWidget(QtWidgets.QLabel('Internal clipboard spectrum:'))
+        self.combo_clipboard = QtWidgets.QComboBox()
+        row1.addWidget(self.combo_clipboard, 1)
+        self.button_refresh = QtWidgets.QPushButton('Refresh')
+        row1.addWidget(self.button_refresh)
+        self.button_clear_buffer = QtWidgets.QPushButton('Clear Buffer')
+        row1.addWidget(self.button_clear_buffer)
+        controls_layout.addLayout(row1)
+
+        row2 = QtWidgets.QHBoxLayout()
+        self.button_paste_a = QtWidgets.QPushButton('Paste A')
+        self.button_paste_b = QtWidgets.QPushButton('Paste B')
+        self.button_swap = QtWidgets.QPushButton('Swap')
+        self.button_clear = QtWidgets.QPushButton('Clear')
+        row2.addWidget(self.button_paste_a)
+        row2.addWidget(self.button_paste_b)
+        row2.addWidget(self.button_swap)
+        row2.addWidget(self.button_clear)
+        controls_layout.addLayout(row2)
+
+        row3 = QtWidgets.QHBoxLayout()
+        self.button_subtract = QtWidgets.QPushButton('A - B')
+        self.button_store_diff = QtWidgets.QPushButton('Store Diff')
+        row3.addWidget(self.button_subtract)
+        row3.addWidget(self.button_store_diff)
+        controls_layout.addLayout(row3)
+
+        row4 = QtWidgets.QHBoxLayout()
+        row4.addWidget(QtWidgets.QLabel('BG mode:'))
+        self.combo_bg = QtWidgets.QComboBox()
+        self.combo_bg.addItems(['None', 'Constant', 'Linear'])
+        row4.addWidget(self.combo_bg)
+        row4.addWidget(QtWidgets.QLabel('Fit E min:'))
+        self.spin_bg_min = QtWidgets.QDoubleSpinBox()
+        self.spin_bg_min.setDecimals(4)
+        self.spin_bg_min.setRange(-1.0e9, 1.0e9)
+        self.spin_bg_min.setSingleStep(0.1)
+        self.spin_bg_min.setKeyboardTracking(False)
+        row4.addWidget(self.spin_bg_min)
+        row4.addWidget(QtWidgets.QLabel('Fit E max:'))
+        self.spin_bg_max = QtWidgets.QDoubleSpinBox()
+        self.spin_bg_max.setDecimals(4)
+        self.spin_bg_max.setRange(-1.0e9, 1.0e9)
+        self.spin_bg_max.setSingleStep(0.1)
+        self.spin_bg_max.setKeyboardTracking(False)
+        row4.addWidget(self.spin_bg_max)
+        self.button_bg_overlap = QtWidgets.QPushButton('Use overlap')
+        row4.addWidget(self.button_bg_overlap)
+        controls_layout.addLayout(row4)
+
+        self.label_status = QtWidgets.QLabel('Status: select spectra from internal clipboard')
+        controls_layout.addWidget(self.label_status)
+        controls.setLayout(controls_layout)
+        layout.addWidget(controls)
+
+        self.plot = pg.PlotWidget()
+        self.plot.setBackground('w')
+        self.plot.showGrid(y=True)
+        self.plot.showAxis('top', show=True)
+        self.plot.showAxis('right', show=True)
+        by = self.plot.getAxis('right')
+        bx = self.plot.getAxis('top')
+        by.setStyle(showValues=False, tickLength=0)
+        bx.setStyle(showValues=False, tickLength=0)
+        self.plot.getAxis('left').setLabel(text='Signal')
+        self.plot.getAxis('bottom').setLabel(text='Photon energy [eV]')
+        self.plot.setTitle('XMCD: A, B, and A - B')
+        self.plot.addLegend()
+        layout.addWidget(self.plot, 1)
+
+        self.button_refresh.clicked.connect(self.refreshClipboard)
+        self.button_paste_a.clicked.connect(self.onPasteA)
+        self.button_paste_b.clicked.connect(self.onPasteB)
+        self.button_swap.clicked.connect(self.onSwap)
+        self.button_clear.clicked.connect(self.onClear)
+        self.button_clear_buffer.clicked.connect(self.onClearBuffer)
+        self.button_subtract.clicked.connect(self.onSubtract)
+        self.button_store_diff.clicked.connect(self.onStoreDiff)
+        self.button_bg_overlap.clicked.connect(self.setBackgroundRangeFromOverlap)
+        self.combo_bg.currentIndexChanged.connect(self.onBackgroundControlsChanged)
+        self.spin_bg_min.valueChanged.connect(self.onBackgroundControlsChanged)
+        self.spin_bg_max.valueChanged.connect(self.onBackgroundControlsChanged)
+
+        self.setLayout(layout)
+        self.refreshClipboard()
+        self.setBackgroundRangeFromOverlap()
+        self.redrawPlot()
+
+    def setStatus(self, text):
+        self.label_status.setText('Status: ' + text)
+
+    def backgroundMode(self):
+        return str(self.combo_bg.currentText()).strip().lower()
+
+    def buildSpectrumLabel(self, item):
+        tags = item.get('tags', {})
+        if not isinstance(tags, dict):
+            tags = {}
+        name = str(item.get('name', '')).strip()
+        if not name or name.lower() == 'none':
+            item_id = item.get('id', None)
+            if item_id is None:
+                name = 'Spectrum'
+            else:
+                name = 'Spectrum {}'.format(item_id)
+        extras = []
+        if 'energy_ev' in tags:
+            try:
+                extras.append('{:.3f} eV'.format(float(tags['energy_ev'])))
+            except Exception:
+                pass
+        if 'ix' in tags and 'iy' in tags:
+            extras.append('x={}, y={}'.format(tags['ix'], tags['iy']))
+        source = str(tags.get('source', 'internal')).strip() or 'internal'
+        if extras:
+            return '{} ({}) [{}]'.format(name, ', '.join(extras), source)
+        return '{} [{}]'.format(name, source)
+
+    def getEnergySpan(self):
+        spectra = []
+        for spec in (self.spec_a, self.spec_b):
+            if spec is None:
+                continue
+            x = np.asarray(spec.get('x', []), dtype='float64')
+            if x.size:
+                spectra.append(x)
+        if not spectra:
+            for item in self.clipboard_spectra:
+                x = np.asarray(item.get('x', []), dtype='float64')
+                if x.size:
+                    spectra.append(x)
+        if not spectra:
+            return None
+        xmin = min(float(np.min(x)) for x in spectra)
+        xmax = max(float(np.max(x)) for x in spectra)
+        if not np.isfinite(xmin) or not np.isfinite(xmax):
+            return None
+        if xmax <= xmin:
+            return None
+        return xmin, xmax
+
+    def updateBackgroundRangeLimits(self):
+        span = self.getEnergySpan()
+        if span is None:
+            return
+        xmin, xmax = span
+        self.spin_bg_min.blockSignals(True)
+        self.spin_bg_max.blockSignals(True)
+        self.spin_bg_min.setRange(xmin, xmax)
+        self.spin_bg_max.setRange(xmin, xmax)
+        if self.spin_bg_min.value() < xmin or self.spin_bg_min.value() > xmax:
+            self.spin_bg_min.setValue(xmin)
+        if self.spin_bg_max.value() < xmin or self.spin_bg_max.value() > xmax:
+            self.spin_bg_max.setValue(xmax)
+        self.spin_bg_min.blockSignals(False)
+        self.spin_bg_max.blockSignals(False)
+
+    def setBackgroundRangeFromOverlap(self):
+        xmin = None
+        xmax = None
+        if self.spec_a is not None and self.spec_b is not None:
+            xa = np.asarray(self.spec_a.get('x', []), dtype='float64')
+            xb = np.asarray(self.spec_b.get('x', []), dtype='float64')
+            if xa.size and xb.size:
+                xmin = max(float(np.min(xa)), float(np.min(xb)))
+                xmax = min(float(np.max(xa)), float(np.max(xb)))
+        if xmin is None or xmax is None or xmax <= xmin:
+            span = self.getEnergySpan()
+            if span is None:
+                return
+            xmin, xmax = span
+        self.spin_bg_min.blockSignals(True)
+        self.spin_bg_max.blockSignals(True)
+        self.spin_bg_min.setRange(xmin, xmax)
+        self.spin_bg_max.setRange(xmin, xmax)
+        self.spin_bg_min.setValue(xmin)
+        self.spin_bg_max.setValue(xmax)
+        self.spin_bg_min.blockSignals(False)
+        self.spin_bg_max.blockSignals(False)
+
+    def onBackgroundControlsChanged(self):
+        if self.spec_diff is None:
+            return
+        self.spec_diff = None
+        self.redrawPlot()
+        self.setStatus('background settings changed; press A - B to recompute')
+
+    def refreshClipboard(self):
+        selected_id = None
+        old_idx = self.combo_clipboard.currentIndex()
+        if old_idx >= 0 and old_idx < len(self.clipboard_spectra):
+            selected_id = self.clipboard_spectra[old_idx].get('id')
+        self.combo_clipboard.blockSignals(True)
+        self.combo_clipboard.clear()
+        self.clipboard_spectra = []
+        win = self.window()
+        if hasattr(win, 'get_internal_clipboard_items'):
+            items = win.get_internal_clipboard_items('spectrum')
+        else:
+            items = []
+        for item in items:
+            x = item.get('x')
+            y = item.get('y')
+            if x is None or y is None:
+                continue
+            label = self.buildSpectrumLabel(item)
+            self.clipboard_spectra.append(item)
+            self.combo_clipboard.addItem(label)
+        if self.clipboard_spectra:
+            new_idx = 0
+            if selected_id is not None:
+                for idx, item in enumerate(self.clipboard_spectra):
+                    if item.get('id') == selected_id:
+                        new_idx = idx
+                        break
+            self.combo_clipboard.setCurrentIndex(new_idx)
+        self.combo_clipboard.blockSignals(False)
+        if not self.clipboard_spectra:
+            self.setStatus('no spectrum objects in internal clipboard')
+        else:
+            self.setStatus('clipboard spectra available: {:d}'.format(len(self.clipboard_spectra)))
+        self.updateBackgroundRangeLimits()
+
+    def selectedClipboardSpectrum(self):
+        idx = self.combo_clipboard.currentIndex()
+        if idx < 0 or idx >= len(self.clipboard_spectra):
+            return None
+        item = self.clipboard_spectra[idx]
+        x = np.asarray(item.get('x', []), dtype='float64')
+        y = np.asarray(item.get('y', []), dtype='float64')
+        if x.size == 0 or y.size == 0 or x.size != y.size:
+            return None
+        return {
+            'name': item.get('name', 'Spectrum'),
+            'x': x.copy(),
+            'y': y.copy(),
+            'tags': copy.deepcopy(item.get('tags', {}))
+        }
+
+    def onPasteA(self):
+        spec = self.selectedClipboardSpectrum()
+        if spec is None:
+            self.setStatus('cannot paste A: invalid spectrum in clipboard selection')
+            return
+        self.spec_a = spec
+        self.spec_diff = None
+        self.setBackgroundRangeFromOverlap()
+        self.setStatus('pasted A: {}'.format(self.spec_a['name']))
+        self.redrawPlot()
+
+    def onPasteB(self):
+        spec = self.selectedClipboardSpectrum()
+        if spec is None:
+            self.setStatus('cannot paste B: invalid spectrum in clipboard selection')
+            return
+        self.spec_b = spec
+        self.spec_diff = None
+        self.setBackgroundRangeFromOverlap()
+        self.setStatus('pasted B: {}'.format(self.spec_b['name']))
+        self.redrawPlot()
+
+    def onSwap(self):
+        self.spec_a, self.spec_b = self.spec_b, self.spec_a
+        self.spec_diff = None
+        self.setBackgroundRangeFromOverlap()
+        self.setStatus('swapped A and B')
+        self.redrawPlot()
+
+    def onClear(self):
+        self.spec_a = None
+        self.spec_b = None
+        self.spec_diff = None
+        self.updateBackgroundRangeLimits()
+        self.setStatus('cleared A, B, and XMCD result')
+        self.redrawPlot()
+
+    def onClearBuffer(self):
+        win = self.window()
+        if not hasattr(win, 'clear_internal_clipboard'):
+            self.setStatus('internal clipboard not available')
+            return
+        removed = int(win.clear_internal_clipboard())
+        self.spec_a = None
+        self.spec_b = None
+        self.spec_diff = None
+        self.refreshClipboard()
+        self.redrawPlot()
+        self.setStatus('cleared internal clipboard items: {:d}'.format(removed))
+
+    def applyBackgroundCorrection(self, x, y):
+        mode = self.backgroundMode()
+        if mode == 'none':
+            return y.copy(), {'mode': 'none'}, None
+
+        fit_min = float(self.spin_bg_min.value())
+        fit_max = float(self.spin_bg_max.value())
+        if fit_max <= fit_min:
+            return None, None, 'invalid fit range'
+        fit_mask = (x >= fit_min) & (x <= fit_max)
+        fit_count = int(np.count_nonzero(fit_mask))
+        if fit_count == 0:
+            return None, None, 'no points inside fit range'
+
+        x_fit = x[fit_mask]
+        y_fit = y[fit_mask]
+        meta = {
+            'mode': mode,
+            'fit_min_ev': fit_min,
+            'fit_max_ev': fit_max,
+            'fit_points': fit_count
+        }
+
+        if mode == 'constant':
+            offset = float(np.mean(y_fit))
+            meta['offset'] = offset
+            return y - offset, meta, None
+
+        if fit_count < 2 or np.unique(x_fit).size < 2:
+            return None, None, 'linear fit needs at least two distinct energy points'
+        try:
+            slope, offset = np.polyfit(x_fit, y_fit, 1)
+            slope = float(slope)
+            offset = float(offset)
+        except Exception:
+            return None, None, 'linear fit failed'
+        meta['slope'] = slope
+        meta['offset'] = offset
+        return y - (slope * x + offset), meta, None
+
+    def onSubtract(self):
+        if self.spec_a is None or self.spec_b is None:
+            self.setStatus('paste both A and B first')
+            return
+        xa = self.spec_a['x']
+        ya = self.spec_a['y']
+        xb = self.spec_b['x']
+        yb = self.spec_b['y']
+        if xa.size == xb.size and np.allclose(xa, xb, rtol=1e-10, atol=1e-12):
+            x = xa.copy()
+            ya_i = ya.copy()
+            yb_i = yb.copy()
+        else:
+            xmin = max(float(np.min(xa)), float(np.min(xb)))
+            xmax = min(float(np.max(xa)), float(np.max(xb)))
+            if xmax <= xmin:
+                self.setStatus('A and B energy ranges do not overlap')
+                return
+            npts = max(300, min(4000, max(xa.size, xb.size)))
+            x = np.linspace(xmin, xmax, npts)
+            ya_i = np.interp(x, xa, ya)
+            yb_i = np.interp(x, xb, yb)
+        ya_corr, bg_a, err_a = self.applyBackgroundCorrection(x, ya_i)
+        if err_a is not None:
+            self.setStatus('A background correction failed: {}'.format(err_a))
+            return
+        yb_corr, bg_b, err_b = self.applyBackgroundCorrection(x, yb_i)
+        if err_b is not None:
+            self.setStatus('B background correction failed: {}'.format(err_b))
+            return
+        bg_mode = str(bg_a.get('mode', 'none'))
+        name = '{} - {}'.format(self.spec_a['name'], self.spec_b['name'])
+        if bg_mode != 'none':
+            name = '{} [bg:{}]'.format(name, bg_mode)
+        self.spec_diff = {
+            'name': name,
+            'x': x,
+            'y': ya_corr - yb_corr,
+            'tags': {
+                'source': 'XMCD',
+                'operation': 'A-B',
+                'a_name': self.spec_a['name'],
+                'b_name': self.spec_b['name'],
+                'background_mode': bg_mode,
+                'background_a': bg_a,
+                'background_b': bg_b
+            }
+        }
+        if bg_mode == 'none':
+            self.setStatus('computed XMCD difference (A - B)')
+        else:
+            self.setStatus('computed XMCD difference (A - B) with {} background correction'.format(bg_mode))
+        self.redrawPlot()
+
+    def onStoreDiff(self):
+        if self.spec_diff is None:
+            self.setStatus('no XMCD result to store')
+            return
+        win = self.window()
+        if not hasattr(win, 'add_internal_clipboard_item'):
+            self.setStatus('internal clipboard not available')
+            return
+        payload = {
+            'type': 'spectrum',
+            'name': self.spec_diff['name'],
+            'x': self.spec_diff['x'].copy(),
+            'y': self.spec_diff['y'].copy(),
+            'tags': copy.deepcopy(self.spec_diff.get('tags', {}))
+        }
+        win.add_internal_clipboard_item(payload)
+        self.setStatus('stored XMCD difference in internal clipboard')
+
+    def redrawPlot(self):
+        self.plot.clear()
+        if self.plot.plotItem.legend is None:
+            self.plot.addLegend()
+        self.plot.showGrid(y=True)
+        self.plot.getAxis('left').setLabel(text='Signal')
+        self.plot.getAxis('bottom').setLabel(text='Photon energy [eV]')
+        if self.spec_a is not None:
+            self.plot.plot(self.spec_a['x'], self.spec_a['y'], pen=pg.mkPen(color='#1f77b4', width=2), name='A')
+        if self.spec_b is not None:
+            self.plot.plot(self.spec_b['x'], self.spec_b['y'], pen=pg.mkPen(color='#ff7f0e', width=2), name='B')
+        if self.spec_diff is not None:
+            self.plot.plot(self.spec_diff['x'], self.spec_diff['y'], pen=pg.mkPen(color='#2ca02c', width=2), name='A-B')
+
+#-----------------------------------------------------------------------
+class PageXMCDStacks(QtWidgets.QWidget):
+    def __init__(self, common, data_struct, stack, anlz):
+        super(PageXMCDStacks, self).__init__()
+        self.initUI(common, data_struct, stack, anlz)
+
+    def initUI(self, common, data_struct, stack, anlz):
+        self.data_struct = data_struct
+        self.stack = stack
+        self.com = common
+        self.anlz = anlz
+
+        self.clipboard_stacks = []
+        self.stack_plus = None
+        self.stack_minus_raw = None
+        self.stack_minus = None
+        self.roi = None
+        self.roi_mirror = None
+        self.last_specs = None
+        self.crop_history = []
+        self.link_views = False
+        self._view_sync_in_progress = False
+
+        main_layout = QtWidgets.QVBoxLayout()
+        controls = QtWidgets.QGroupBox('XMCD Stacks')
+        controls_layout = QtWidgets.QVBoxLayout()
+
+        row1 = QtWidgets.QHBoxLayout()
+        row1.addWidget(QtWidgets.QLabel('C+ stack:'))
+        self.combo_plus = QtWidgets.QComboBox()
+        row1.addWidget(self.combo_plus, 1)
+        self.button_paste_plus = QtWidgets.QPushButton('Paste C+')
+        row1.addWidget(self.button_paste_plus)
+        row1.addSpacing(12)
+        row1.addWidget(QtWidgets.QLabel('C- stack:'))
+        self.combo_minus = QtWidgets.QComboBox()
+        row1.addWidget(self.combo_minus, 1)
+        self.button_paste_minus = QtWidgets.QPushButton('Paste C-')
+        row1.addWidget(self.button_paste_minus)
+        self.button_refresh = QtWidgets.QPushButton('Refresh')
+        row1.addWidget(self.button_refresh)
+        controls_layout.addLayout(row1)
+
+        row2 = QtWidgets.QHBoxLayout()
+        row2.addWidget(QtWidgets.QLabel('Energy index:'))
+        self.slider_energy = QtWidgets.QSlider(QtCore.Qt.Horizontal)
+        self.slider_energy.setRange(0, 0)
+        self.slider_energy.setValue(0)
+        row2.addWidget(self.slider_energy, 1)
+        self.label_energy = QtWidgets.QLabel('idx=0')
+        row2.addWidget(self.label_energy)
+        row2.addSpacing(12)
+        self.button_auto_align = QtWidgets.QPushButton('Auto Align')
+        row2.addWidget(self.button_auto_align)
+        row2.addWidget(QtWidgets.QLabel('Method:'))
+        self.combo_align_method = QtWidgets.QComboBox()
+        self.combo_align_method.addItem('Auto best')
+        self.combo_align_method.addItem('Preprocess FFT')
+        self.combo_align_method.addItem('Phase corr')
+        row2.addWidget(self.combo_align_method)
+        row2.addWidget(QtWidgets.QLabel('Features:'))
+        self.combo_align_features = QtWidgets.QComboBox()
+        self.combo_align_features.addItem('None')
+        self.combo_align_features.addItem('Prewitt')
+        self.combo_align_features.addItem('Sobel')
+        self.combo_align_features.setCurrentIndex(1)
+        row2.addWidget(self.combo_align_features)
+        row2.addWidget(QtWidgets.QLabel('Max shift:'))
+        self.spin_align_maxshift = QtWidgets.QDoubleSpinBox()
+        self.spin_align_maxshift.setDecimals(1)
+        self.spin_align_maxshift.setRange(0.0, 5000.0)
+        self.spin_align_maxshift.setSingleStep(0.5)
+        self.spin_align_maxshift.setValue(0.0)
+        self.spin_align_maxshift.setSuffix(' px')
+        row2.addWidget(self.spin_align_maxshift)
+        row2.addWidget(QtWidgets.QLabel('Shift X:'))
+        self.spin_shift_x = QtWidgets.QDoubleSpinBox()
+        self.spin_shift_x.setDecimals(3)
+        self.spin_shift_x.setRange(-5000.0, 5000.0)
+        self.spin_shift_x.setSingleStep(0.1)
+        row2.addWidget(self.spin_shift_x)
+        row2.addWidget(QtWidgets.QLabel('Shift Y:'))
+        self.spin_shift_y = QtWidgets.QDoubleSpinBox()
+        self.spin_shift_y.setDecimals(3)
+        self.spin_shift_y.setRange(-5000.0, 5000.0)
+        self.spin_shift_y.setSingleStep(0.1)
+        row2.addWidget(self.spin_shift_y)
+        self.button_apply_shift = QtWidgets.QPushButton('Apply Shift')
+        row2.addWidget(self.button_apply_shift)
+        self.button_reset_shift = QtWidgets.QPushButton('Reset')
+        row2.addWidget(self.button_reset_shift)
+        controls_layout.addLayout(row2)
+
+        row3 = QtWidgets.QHBoxLayout()
+        self.label_roi = QtWidgets.QLabel('ROI: center=(-,-), size=(-,-)')
+        row3.addWidget(self.label_roi, 1)
+        self.cb_link_views = QtWidgets.QCheckBox('Link views')
+        self.cb_link_views.setChecked(False)
+        row3.addWidget(self.cb_link_views)
+        self.button_crop_roi = QtWidgets.QPushButton('Crop to ROI')
+        row3.addWidget(self.button_crop_roi)
+        self.button_undo_crop = QtWidgets.QPushButton('Undo Crop')
+        row3.addWidget(self.button_undo_crop)
+        self.button_copy_specs = QtWidgets.QPushButton('Copy Spectra')
+        row3.addWidget(self.button_copy_specs)
+        controls_layout.addLayout(row3)
+
+        self.label_status = QtWidgets.QLabel('Status: paste C+ and C- stacks from internal clipboard')
+        controls_layout.addWidget(self.label_status)
+        controls.setLayout(controls_layout)
+        main_layout.addWidget(controls)
+
+        content_layout = QtWidgets.QHBoxLayout()
+
+        left_layout = QtWidgets.QVBoxLayout()
+        self.plot_plus = pg.PlotWidget()
+        self.plot_minus = pg.PlotWidget()
+        self.plot_plus.setMinimumSize(360, 260)
+        self.plot_minus.setMinimumSize(360, 260)
+        self.setupImagePlot(self.plot_plus, 'C+')
+        self.setupImagePlot(self.plot_minus, 'C-')
+        self.image_plus = pg.ImageItem()
+        self.image_minus = pg.ImageItem()
+        self.plot_plus.getPlotItem().addItem(self.image_plus)
+        self.plot_minus.getPlotItem().addItem(self.image_minus)
+        left_layout.addWidget(self.plot_plus, 1)
+        left_layout.addWidget(self.plot_minus, 1)
+        content_layout.addLayout(left_layout, 1)
+
+        self.plot_spec = pg.PlotWidget()
+        self.plot_spec.setBackground('w')
+        self.plot_spec.showGrid(y=True)
+        self.plot_spec.showAxis('top', show=True)
+        self.plot_spec.showAxis('right', show=True)
+        self.plot_spec.getAxis('left').setLabel(text='Signal')
+        self.plot_spec.getAxis('bottom').setLabel(text='Photon energy [eV]')
+        self.plot_spec.setTitle('ROI spectra: C+, C-, and C+ - C-')
+        self.plot_spec.addLegend()
+        by = self.plot_spec.getAxis('right')
+        bx = self.plot_spec.getAxis('top')
+        by.setStyle(showValues=False, tickLength=0)
+        bx.setStyle(showValues=False, tickLength=0)
+        content_layout.addWidget(self.plot_spec, 1)
+        content_layout.setStretch(0, 3)
+        content_layout.setStretch(1, 2)
+
+        main_layout.addLayout(content_layout, 1)
+        self.setLayout(main_layout)
+
+        self.button_refresh.clicked.connect(self.refreshClipboard)
+        self.button_paste_plus.clicked.connect(self.onPastePlus)
+        self.button_paste_minus.clicked.connect(self.onPasteMinus)
+        self.slider_energy.valueChanged.connect(self.onEnergyChanged)
+        self.button_auto_align.clicked.connect(self.onAutoAlign)
+        self.button_apply_shift.clicked.connect(self.onApplyShift)
+        self.button_reset_shift.clicked.connect(self.onResetShift)
+        self.button_crop_roi.clicked.connect(self.onCropToROI)
+        self.button_undo_crop.clicked.connect(self.onUndoCrop)
+        self.button_copy_specs.clicked.connect(self.onCopySpectra)
+        self.cb_link_views.stateChanged.connect(self.onToggleLinkViews)
+        self.plot_plus.getViewBox().sigRangeChanged.connect(self.onPlusRangeChanged)
+        self.plot_minus.getViewBox().sigRangeChanged.connect(self.onMinusRangeChanged)
+
+        self.refreshClipboard()
+        self.redrawViews()
+
+    def setupImagePlot(self, plot, title):
+        plot.setBackground('w')
+        plot.showAxis('top', show=True)
+        plot.showAxis('right', show=True)
+        plot.getAxis('left').setLabel(text='y', units='px')
+        plot.getAxis('bottom').setLabel(text='x', units='px')
+        by = plot.getAxis('right')
+        bx = plot.getAxis('top')
+        by.setStyle(showValues=False, tickLength=0)
+        bx.setStyle(showValues=False, tickLength=0)
+        plot.setTitle(title)
+        plot.setAspectLocked(lock=True, ratio=1)
+
+    def imageLevels(self, image):
+        arr = np.asarray(image, dtype='float64')
+        finite = arr[np.isfinite(arr)]
+        if finite.size == 0:
+            return 0.0, 1.0
+        if finite.size >= 32:
+            lo = float(np.percentile(finite, 1.0))
+            hi = float(np.percentile(finite, 99.0))
+        else:
+            lo = float(np.min(finite))
+            hi = float(np.max(finite))
+        if (not np.isfinite(lo)) or (not np.isfinite(hi)) or hi <= lo:
+            lo = float(np.min(finite))
+            hi = float(np.max(finite))
+        if (not np.isfinite(lo)) or (not np.isfinite(hi)) or hi <= lo:
+            lo, hi = 0.0, 1.0
+        return lo, hi
+
+    def setStatus(self, text):
+        self.label_status.setText('Status: ' + text)
+
+    def buildStackLabel(self, item):
+        tags = item.get('tags', {})
+        if not isinstance(tags, dict):
+            tags = {}
+        name = str(item.get('name', '')).strip()
+        if not name or name.lower() == 'none':
+            item_id = item.get('id', None)
+            if item_id is None:
+                name = 'Stack'
+            else:
+                name = 'Stack {}'.format(item_id)
+        mode = str(tags.get('mode', '')).strip()
+        source = str(tags.get('source', 'internal')).strip() or 'internal'
+        extras = []
+        if mode:
+            extras.append(mode.upper())
+        if 'itheta' in tags:
+            extras.append('theta={}'.format(tags['itheta']))
+        if extras:
+            return '{} ({}) [{}]'.format(name, ', '.join(extras), source)
+        return '{} [{}]'.format(name, source)
+
+    def refreshClipboard(self):
+        self.combo_plus.blockSignals(True)
+        self.combo_minus.blockSignals(True)
+        self.combo_plus.clear()
+        self.combo_minus.clear()
+        self.clipboard_stacks = []
+        win = self.window()
+        if hasattr(win, 'get_internal_clipboard_items'):
+            items = win.get_internal_clipboard_items('stack')
+        else:
+            items = []
+        for item in items:
+            stack = np.asarray(item.get('stack', []))
+            ev = np.asarray(item.get('ev', []), dtype='float64')
+            if stack.ndim != 3 or stack.size == 0:
+                continue
+            if ev.size != stack.shape[2]:
+                ev = np.arange(stack.shape[2], dtype='float64')
+                item['ev'] = ev
+            label = self.buildStackLabel(item)
+            self.clipboard_stacks.append(item)
+            self.combo_plus.addItem(label)
+            self.combo_minus.addItem(label)
+        self.combo_plus.blockSignals(False)
+        self.combo_minus.blockSignals(False)
+        if self.clipboard_stacks:
+            self.setStatus('clipboard stacks available: {:d}'.format(len(self.clipboard_stacks)))
+        else:
+            self.setStatus('no stack objects in internal clipboard')
+
+    def selectedClipboardStack(self, combo):
+        idx = combo.currentIndex()
+        if idx < 0 or idx >= len(self.clipboard_stacks):
+            return None
+        item = self.clipboard_stacks[idx]
+        stack = np.asarray(item.get('stack', []))
+        ev = np.asarray(item.get('ev', []), dtype='float64')
+        if stack.ndim != 3 or stack.size == 0:
+            return None
+        if ev.size != stack.shape[2]:
+            ev = np.arange(stack.shape[2], dtype='float64')
+        return {
+            'name': str(item.get('name', 'Stack')),
+            'stack': stack.copy(),
+            'ev': ev.copy(),
+            'tags': copy.deepcopy(item.get('tags', {}))
+        }
+
+    def onPastePlus(self):
+        spec = self.selectedClipboardStack(self.combo_plus)
+        if spec is None:
+            self.setStatus('cannot paste C+: invalid stack in clipboard selection')
+            return
+        self.stack_plus = spec
+        self.updateEnergySliderRange()
+        self.ensureROI()
+        self.redrawViews()
+        self.updateSpectra()
+        self.setStatus('pasted C+ stack: {}'.format(self.stack_plus['name']))
+
+    def onPasteMinus(self):
+        spec = self.selectedClipboardStack(self.combo_minus)
+        if spec is None:
+            self.setStatus('cannot paste C-: invalid stack in clipboard selection')
+            return
+        self.stack_minus_raw = spec
+        self.spin_shift_x.blockSignals(True)
+        self.spin_shift_y.blockSignals(True)
+        self.spin_shift_x.setValue(0.0)
+        self.spin_shift_y.setValue(0.0)
+        self.spin_shift_x.blockSignals(False)
+        self.spin_shift_y.blockSignals(False)
+        self.applyAlignmentShift(0.0, 0.0)
+        self.updateEnergySliderRange()
+        self.ensureROI()
+        self.redrawViews()
+        self.updateSpectra()
+        self.setStatus('pasted C- stack: {}'.format(self.stack_minus_raw['name']))
+
+    def updateEnergySliderRange(self):
+        nvals = []
+        if self.stack_plus is not None:
+            nvals.append(int(self.stack_plus['stack'].shape[2]))
+        if self.stack_minus is not None:
+            nvals.append(int(self.stack_minus['stack'].shape[2]))
+        if not nvals:
+            self.slider_energy.setRange(0, 0)
+            self.slider_energy.setValue(0)
+            self.label_energy.setText('idx=0')
+            return
+        n = max(1, min(nvals))
+        old = int(self.slider_energy.value())
+        self.slider_energy.blockSignals(True)
+        self.slider_energy.setRange(0, n - 1)
+        self.slider_energy.setValue(min(old, n - 1))
+        self.slider_energy.blockSignals(False)
+        self.onEnergyChanged(int(self.slider_energy.value()))
+
+    def currentBounds(self):
+        if self.roi is None or self.stack_plus is None:
+            return None
+        nx, ny, _ = self.stack_plus['stack'].shape
+        if self.stack_minus is not None:
+            nx = min(nx, int(self.stack_minus['stack'].shape[0]))
+            ny = min(ny, int(self.stack_minus['stack'].shape[1]))
+        pos = self.roi.pos()
+        size = self.roi.size()
+        x0 = int(np.floor(float(pos.x())))
+        y0 = int(np.floor(float(pos.y())))
+        x1 = int(np.ceil(float(pos.x() + size.x())))
+        y1 = int(np.ceil(float(pos.y() + size.y())))
+        x0 = max(0, min(nx - 1, x0))
+        y0 = max(0, min(ny - 1, y0))
+        x1 = max(x0 + 1, min(nx, x1))
+        y1 = max(y0 + 1, min(ny, y1))
+        return x0, x1, y0, y1
+
+    def ensureROI(self):
+        if self.stack_plus is None:
+            return
+        nx, ny, _ = self.stack_plus['stack'].shape
+        if self.stack_minus is not None:
+            nx = min(nx, int(self.stack_minus['stack'].shape[0]))
+            ny = min(ny, int(self.stack_minus['stack'].shape[1]))
+        w = max(2, min(nx, int(round(nx * 0.2))))
+        h = max(2, min(ny, int(round(ny * 0.2))))
+        x0 = int(round((nx - w) / 2.0))
+        y0 = int(round((ny - h) / 2.0))
+        if self.roi is None:
+            self.roi = pg.RectROI([x0, y0], [w, h], pen=pg.mkPen(color='#00aa00', width=2))
+            self.roi.addScaleHandle([1, 1], [0, 0])
+            self.roi.addScaleHandle([0, 0], [1, 1])
+            self.plot_plus.getPlotItem().addItem(self.roi)
+            self.roi.sigRegionChanged.connect(self.onROIChanged)
+        if self.roi_mirror is None:
+            self.roi_mirror = pg.RectROI([x0, y0], [w, h], movable=False, rotatable=False, resizable=False,
+                                         pen=pg.mkPen(color='#00aa00', width=2))
+            self.plot_minus.getPlotItem().addItem(self.roi_mirror)
+        self.clampROIToImage()
+        self.syncROIMirror()
+
+    def clampROIToImage(self):
+        if self.roi is None or self.stack_plus is None:
+            return
+        nx, ny, _ = self.stack_plus['stack'].shape
+        if self.stack_minus is not None:
+            nx = min(nx, int(self.stack_minus['stack'].shape[0]))
+            ny = min(ny, int(self.stack_minus['stack'].shape[1]))
+        pos = self.roi.pos()
+        size = self.roi.size()
+        w = max(1.0, min(float(size.x()), float(nx)))
+        h = max(1.0, min(float(size.y()), float(ny)))
+        x0 = float(pos.x())
+        y0 = float(pos.y())
+        x0 = min(max(0.0, x0), float(nx) - w)
+        y0 = min(max(0.0, y0), float(ny) - h)
+        self.roi.blockSignals(True)
+        self.roi.setPos((x0, y0), update=False)
+        self.roi.setSize((w, h), update=False)
+        self.roi.blockSignals(False)
+
+    def syncROIMirror(self):
+        if self.roi is None or self.roi_mirror is None:
+            return
+        pos = self.roi.pos()
+        size = self.roi.size()
+        self.roi_mirror.setPos((float(pos.x()), float(pos.y())), update=False)
+        self.roi_mirror.setSize((float(size.x()), float(size.y())), update=False)
+        bounds = self.currentBounds()
+        if bounds is None:
+            self.label_roi.setText('ROI: center=(-,-), size=(-,-)')
+            return
+        x0, x1, y0, y1 = bounds
+        cx = 0.5 * (x0 + x1 - 1)
+        cy = 0.5 * (y0 + y1 - 1)
+        self.label_roi.setText('ROI: center=({:.2f}, {:.2f}), size=({:d}, {:d}) px'.format(cx, cy, x1 - x0, y1 - y0))
+
+    def onROIChanged(self):
+        self.clampROIToImage()
+        self.syncROIMirror()
+        self.updateSpectra()
+
+    def onToggleLinkViews(self, state):
+        self.link_views = (state == QtCore.Qt.Checked)
+        if self.link_views:
+            self._syncViewRange(self.plot_plus, self.plot_minus)
+
+    def _syncViewRange(self, src_plot, dst_plot):
+        if (not self.link_views) or self._view_sync_in_progress:
+            return
+        src_vb = src_plot.getViewBox()
+        dst_vb = dst_plot.getViewBox()
+        if src_vb is None or dst_vb is None:
+            return
+        try:
+            self._view_sync_in_progress = True
+            xr, yr = src_vb.viewRange()
+            dst_vb.setRange(xRange=tuple(xr), yRange=tuple(yr), padding=0.0)
+        finally:
+            self._view_sync_in_progress = False
+
+    def onPlusRangeChanged(self, _viewbox, _ranges):
+        self._syncViewRange(self.plot_plus, self.plot_minus)
+
+    def onMinusRangeChanged(self, _viewbox, _ranges):
+        self._syncViewRange(self.plot_minus, self.plot_plus)
+
+    def onEnergyChanged(self, value):
+        self.label_energy.setText('idx={:d}'.format(int(value)))
+        self.redrawViews()
+
+    def getImageForIndex(self, stack_spec, idx):
+        if stack_spec is None:
+            return None, None
+        data = stack_spec['stack']
+        ev = stack_spec['ev']
+        if data.ndim != 3 or data.shape[2] == 0:
+            return None, None
+        ii = int(np.clip(idx, 0, data.shape[2] - 1))
+        image = data[:, :, ii]
+        energy = float(ev[ii]) if ev.size > ii else float(ii)
+        return image, energy
+
+    def redrawViews(self):
+        idx = int(self.slider_energy.value())
+        image_p, ev_p = self.getImageForIndex(self.stack_plus, idx)
+        image_m, ev_m = self.getImageForIndex(self.stack_minus, idx)
+        if image_p is not None:
+            lp = self.imageLevels(image_p)
+            self.image_plus.setImage(image_p, autoLevels=False, levels=lp)
+            self.plot_plus.getViewBox().setRange(xRange=(0, image_p.shape[0]), yRange=(0, image_p.shape[1]), padding=0.02)
+            self.plot_plus.setTitle('C+ @ {:.3f} eV'.format(ev_p))
+        else:
+            self.image_plus.setImage(np.zeros((2, 2), dtype='float64'), autoLevels=False, levels=(0.0, 1.0))
+            self.plot_plus.setTitle('C+')
+        if image_m is not None:
+            lm = self.imageLevels(image_m)
+            self.image_minus.setImage(image_m, autoLevels=False, levels=lm)
+            self.plot_minus.getViewBox().setRange(xRange=(0, image_m.shape[0]), yRange=(0, image_m.shape[1]), padding=0.02)
+            self.plot_minus.setTitle('C- @ {:.3f} eV'.format(ev_m))
+        else:
+            self.image_minus.setImage(np.zeros((2, 2), dtype='float64'), autoLevels=False, levels=(0.0, 1.0))
+            self.plot_minus.setTitle('C-')
+        if self.link_views:
+            self._syncViewRange(self.plot_plus, self.plot_minus)
+        self.syncROIMirror()
+
+    def applyAlignmentShift(self, shift_x, shift_y):
+        if self.stack_minus_raw is None:
+            self.stack_minus = None
+            return
+        data = self.stack_minus_raw['stack']
+        if abs(float(shift_x)) < 1.0e-12 and abs(float(shift_y)) < 1.0e-12:
+            shifted = data.copy()
+        else:
+            shifted = np.zeros_like(data, dtype='float64')
+            sx = float(shift_x)
+            sy = float(shift_y)
+            for ii in range(data.shape[2]):
+                shifted[:, :, ii] = self.stack.apply_image_registration(data[:, :, ii], sx, sy)
+        self.stack_minus = {
+            'name': self.stack_minus_raw['name'],
+            'stack': shifted,
+            'ev': self.stack_minus_raw['ev'].copy(),
+            'tags': copy.deepcopy(self.stack_minus_raw.get('tags', {}))
+        }
+        self.stack_minus['tags']['align_shift_x'] = float(shift_x)
+        self.stack_minus['tags']['align_shift_y'] = float(shift_y)
+
+    def onApplyShift(self):
+        if self.stack_minus_raw is None:
+            self.setStatus('paste C- stack first')
+            return
+        sx = float(self.spin_shift_x.value())
+        sy = float(self.spin_shift_y.value())
+        self.applyAlignmentShift(sx, sy)
+        self.redrawViews()
+        self.updateSpectra()
+        self.setStatus('applied manual alignment shift to C-: x={:.3f}, y={:.3f}'.format(sx, sy))
+
+    def onResetShift(self):
+        if self.stack_minus_raw is None:
+            return
+        self.spin_shift_x.blockSignals(True)
+        self.spin_shift_y.blockSignals(True)
+        self.spin_shift_x.setValue(0.0)
+        self.spin_shift_y.setValue(0.0)
+        self.spin_shift_x.blockSignals(False)
+        self.spin_shift_y.blockSignals(False)
+        self.applyAlignmentShift(0.0, 0.0)
+        self.redrawViews()
+        self.updateSpectra()
+        self.setStatus('reset C- alignment shift')
+
+    def _copyStackSpec(self, spec):
+        if spec is None:
+            return None
+        return {
+            'name': str(spec.get('name', 'Stack')),
+            'stack': np.asarray(spec.get('stack', [])).copy(),
+            'ev': np.asarray(spec.get('ev', []), dtype='float64').copy(),
+            'tags': copy.deepcopy(spec.get('tags', {}))
+        }
+
+    def onCropToROI(self):
+        if self.stack_plus is None or self.stack_minus_raw is None:
+            self.setStatus('paste both C+ and C- stacks first')
+            return
+        bounds = self.currentBounds()
+        if bounds is None:
+            self.setStatus('define ROI first')
+            return
+        x0, x1, y0, y1 = bounds
+        if (x1 - x0) < 2 or (y1 - y0) < 2:
+            self.setStatus('ROI too small for cropping')
+            return
+
+        self.crop_history.append({
+            'stack_plus': self._copyStackSpec(self.stack_plus),
+            'stack_minus_raw': self._copyStackSpec(self.stack_minus_raw),
+            'stack_minus': self._copyStackSpec(self.stack_minus),
+            'shift_x': float(self.spin_shift_x.value()),
+            'shift_y': float(self.spin_shift_y.value())
+        })
+        if len(self.crop_history) > 10:
+            self.crop_history = self.crop_history[-10:]
+
+        self.stack_plus['stack'] = self.stack_plus['stack'][x0:x1, y0:y1, :].copy()
+        self.stack_minus_raw['stack'] = self.stack_minus_raw['stack'][x0:x1, y0:y1, :].copy()
+        if self.stack_minus is not None:
+            self.stack_minus['stack'] = self.stack_minus['stack'][x0:x1, y0:y1, :].copy()
+
+        self.ensureROI()
+        if self.roi is not None:
+            nx, ny, _ = self.stack_plus['stack'].shape
+            rw = max(2, min(nx, int(round(nx * 0.5))))
+            rh = max(2, min(ny, int(round(ny * 0.5))))
+            rx = int(round((nx - rw) / 2.0))
+            ry = int(round((ny - rh) / 2.0))
+            self.roi.blockSignals(True)
+            self.roi.setPos((rx, ry), update=False)
+            self.roi.setSize((rw, rh), update=False)
+            self.roi.blockSignals(False)
+
+        self.updateEnergySliderRange()
+        self.redrawViews()
+        self.updateSpectra()
+        self.setStatus('cropped both stacks to ROI: x=[{}:{}], y=[{}:{}]'.format(x0, x1, y0, y1))
+
+    def onUndoCrop(self):
+        if not self.crop_history:
+            self.setStatus('nothing to undo')
+            return
+        state = self.crop_history.pop()
+        self.stack_plus = self._copyStackSpec(state.get('stack_plus'))
+        self.stack_minus_raw = self._copyStackSpec(state.get('stack_minus_raw'))
+        self.stack_minus = self._copyStackSpec(state.get('stack_minus'))
+        self.spin_shift_x.blockSignals(True)
+        self.spin_shift_y.blockSignals(True)
+        self.spin_shift_x.setValue(float(state.get('shift_x', 0.0)))
+        self.spin_shift_y.setValue(float(state.get('shift_y', 0.0)))
+        self.spin_shift_x.blockSignals(False)
+        self.spin_shift_y.blockSignals(False)
+        self.updateEnergySliderRange()
+        self.ensureROI()
+        self.redrawViews()
+        self.updateSpectra()
+        self.setStatus('crop undone')
+
+    def normalizedRMSE(self, ref, mov):
+        a = np.asarray(ref, dtype='float64')
+        b = np.asarray(mov, dtype='float64')
+        if a.shape != b.shape:
+            return np.nan
+        valid = np.isfinite(a) & np.isfinite(b)
+        if not np.any(valid):
+            return np.nan
+        da = a[valid]
+        db = b[valid]
+        rmse = np.sqrt(np.mean((da - db) ** 2))
+        scale = np.std(da)
+        if (not np.isfinite(scale)) or scale <= 1.0e-12:
+            scale = np.max(da) - np.min(da)
+        if (not np.isfinite(scale)) or scale <= 1.0e-12:
+            scale = 1.0
+        return float(rmse / scale)
+
+    def _featureEdgeMode(self):
+        idx = int(self.combo_align_features.currentIndex())
+        if idx == 1:
+            return 2
+        if idx == 2:
+            return 1
+        return 0
+
+    def _clampShift(self, sx, sy):
+        max_shift = float(self.spin_align_maxshift.value())
+        if max_shift <= 0.0:
+            return float(sx), float(sy)
+        csx = float(np.clip(float(sx), -max_shift, max_shift))
+        csy = float(np.clip(float(sy), -max_shift, max_shift))
+        return csx, csy
+
+    def _estimateShiftPreprocessFFT(self, ref_img, mov_img, edge_mode):
+        sx, sy, _ccorr = self.stack.register_images(ref_img, mov_img,
+                                                    have_ref_img_fft=False,
+                                                    edge_enhancement=int(edge_mode))
+        return float(sx), float(sy)
+
+    def _estimateShiftPhaseCorr(self, ref_img, mov_img, upsample):
+        shift, err, phase = phase_cross_correlation(ref_img, mov_img, upsample_factor=int(upsample))
+        return float(shift[0]), float(shift[1]), float(err), float(phase)
+
+    def _shiftImageForMetric(self, img, sx, sy):
+        return self.stack.apply_image_registration(img, float(sx), float(sy))
+
+    def onAutoAlign(self):
+        if self.stack_plus is None or self.stack_minus_raw is None:
+            self.setStatus('paste both C+ and C- stacks first')
+            return
+        idx = int(self.slider_energy.value())
+        img_p, _ev_p = self.getImageForIndex(self.stack_plus, idx)
+        img_m, _ev_m = self.getImageForIndex(self.stack_minus_raw, idx)
+        if img_p is None or img_m is None:
+            self.setStatus('cannot auto-align: missing image at current index')
+            return
+        align_p = img_p
+        align_m = img_m
+        align_note = 'full image'
+        bounds = self.currentBounds()
+        if bounds is not None:
+            x0, x1, y0, y1 = bounds
+            if (x1 - x0) >= 8 and (y1 - y0) >= 8:
+                align_p = img_p[x0:x1, y0:y1]
+                align_m = img_m[x0:x1, y0:y1]
+                align_note = 'ROI {}x{}'.format(x1 - x0, y1 - y0)
+
+        if align_p.shape != align_m.shape:
+            nx = min(int(align_p.shape[0]), int(align_m.shape[0]))
+            ny = min(int(align_p.shape[1]), int(align_m.shape[1]))
+            if nx < 2 or ny < 2:
+                self.setStatus('auto-align failed: no common image size')
+                return
+            px0 = int((align_p.shape[0] - nx) // 2)
+            py0 = int((align_p.shape[1] - ny) // 2)
+            mx0 = int((align_m.shape[0] - nx) // 2)
+            my0 = int((align_m.shape[1] - ny) // 2)
+            align_p = align_p[px0:px0 + nx, py0:py0 + ny]
+            align_m = align_m[mx0:mx0 + nx, my0:my0 + ny]
+            align_note = '{} + center-common {}x{}'.format(align_note, nx, ny)
+        upsample = 10
+        method_idx = int(self.combo_align_method.currentIndex())
+        feature_idx = int(self.combo_align_features.currentIndex())
+        feature_name = ['none', 'prewitt', 'sobel'][feature_idx]
+        method_name = ['auto best', 'preprocess fft', 'phase corr'][method_idx]
+        self.setStatus('auto-align running: method={}, idx={}, region={}'.format(method_name, idx, align_note))
+        QtWidgets.QApplication.processEvents()
+        QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
+        t0 = time.time()
+        try:
+            pre_nrmse = self.normalizedRMSE(align_p, align_m)
+
+            # Include no-shift candidate so auto mode never degrades alignment.
+            candidates = [{
+                'method': 'none',
+                'edge': 'n/a',
+                'sx': 0.0,
+                'sy': 0.0,
+                'err': np.nan,
+                'phase': np.nan
+            }]
+
+            if method_idx == 1:
+                edge_mode = self._featureEdgeMode()
+                sx, sy = self._estimateShiftPreprocessFFT(align_p, align_m, edge_mode)
+                candidates.append({
+                    'method': 'preprocess_fft',
+                    'edge': feature_name,
+                    'sx': sx,
+                    'sy': sy,
+                    'err': np.nan,
+                    'phase': np.nan
+                })
+            elif method_idx == 2:
+                sx, sy, err, phase = self._estimateShiftPhaseCorr(align_p, align_m, upsample)
+                candidates.append({
+                    'method': 'phase_corr',
+                    'edge': 'n/a',
+                    'sx': sx,
+                    'sy': sy,
+                    'err': err,
+                    'phase': phase
+                })
+            else:
+                for edge_mode, edge_label in [(0, 'none'), (2, 'prewitt'), (1, 'sobel')]:
+                    sx, sy = self._estimateShiftPreprocessFFT(align_p, align_m, edge_mode)
+                    candidates.append({
+                        'method': 'preprocess_fft',
+                        'edge': edge_label,
+                        'sx': sx,
+                        'sy': sy,
+                        'err': np.nan,
+                        'phase': np.nan
+                    })
+                sx, sy, err, phase = self._estimateShiftPhaseCorr(align_p, align_m, upsample)
+                candidates.append({
+                    'method': 'phase_corr',
+                    'edge': 'n/a',
+                    'sx': sx,
+                    'sy': sy,
+                    'err': err,
+                    'phase': phase
+                })
+
+            best = None
+            for cand in candidates:
+                csx, csy = self._clampShift(cand['sx'], cand['sy'])
+                aligned_img = self._shiftImageForMetric(align_m, csx, csy)
+                post_nrmse = self.normalizedRMSE(align_p, aligned_img)
+                cand['sx'] = csx
+                cand['sy'] = csy
+                cand['post_nrmse'] = float(post_nrmse)
+                if best is None or (cand['post_nrmse'] < best['post_nrmse']):
+                    best = cand
+
+            sx = float(best['sx'])
+            sy = float(best['sy'])
+            post_nrmse = float(best['post_nrmse'])
+
+            self.spin_shift_x.blockSignals(True)
+            self.spin_shift_y.blockSignals(True)
+            self.spin_shift_x.setValue(sx)
+            self.spin_shift_y.setValue(sy)
+            self.spin_shift_x.blockSignals(False)
+            self.spin_shift_y.blockSignals(False)
+
+            self.setStatus('auto-align found shift; applying to C- stack...')
+            QtWidgets.QApplication.processEvents()
+            self.applyAlignmentShift(sx, sy)
+            self.redrawViews()
+            self.updateSpectra()
+
+            elapsed_ms = (time.time() - t0) * 1000.0
+            chosen_method = best['method']
+            chosen_edge = best['edge']
+            chosen_err = best.get('err', np.nan)
+            chosen_phase = best.get('phase', np.nan)
+            self.setStatus(
+                'auto-align done: method={}, edge={}, idx={}, shift=(x={:.3f}, y={:.3f}), '
+                'error={:.4g}, phase={:.4g}, nRMSE={:.4g}->{:.4g}, region={}, t={:.0f} ms'.format(
+                    chosen_method, chosen_edge, idx, sx, sy, float(chosen_err), float(chosen_phase),
+                    float(pre_nrmse), float(post_nrmse), align_note, elapsed_ms
+                )
+            )
+        except Exception as exc:
+            self.setStatus('auto-align failed: {}'.format(str(exc)))
+        finally:
+            QtWidgets.QApplication.restoreOverrideCursor()
+
+    def extractSpectrum(self, stack_spec, bounds):
+        if stack_spec is None or bounds is None:
+            return None, None
+        x0, x1, y0, y1 = bounds
+        data = stack_spec['stack']
+        ev = stack_spec['ev']
+        if x1 <= x0 or y1 <= y0:
+            return None, None
+        roi_data = data[x0:x1, y0:y1, :]
+        if roi_data.size == 0:
+            return None, None
+        spec = np.mean(roi_data, axis=(0, 1))
+        return ev.copy(), np.asarray(spec, dtype='float64')
+
+    def computeDiff(self, x1, y1, x2, y2):
+        if x1.size == x2.size and np.allclose(x1, x2, rtol=1e-10, atol=1e-12):
+            return x1.copy(), y1 - y2
+        xmin = max(float(np.min(x1)), float(np.min(x2)))
+        xmax = min(float(np.max(x1)), float(np.max(x2)))
+        if xmax <= xmin:
+            return None, None
+        npts = max(300, min(4000, max(x1.size, x2.size)))
+        x = np.linspace(xmin, xmax, npts)
+        y1i = np.interp(x, x1, y1)
+        y2i = np.interp(x, x2, y2)
+        return x, y1i - y2i
+
+    def updateSpectra(self):
+        self.plot_spec.clear()
+        if self.plot_spec.plotItem.legend is None:
+            self.plot_spec.addLegend()
+        self.plot_spec.showGrid(y=True)
+        self.plot_spec.getAxis('left').setLabel(text='Signal')
+        self.plot_spec.getAxis('bottom').setLabel(text='Photon energy [eV]')
+        bounds = self.currentBounds()
+        if bounds is None:
+            self.last_specs = None
+            return
+
+        x_p, y_p = self.extractSpectrum(self.stack_plus, bounds)
+        x_m, y_m = self.extractSpectrum(self.stack_minus, bounds)
+        if x_p is not None and y_p is not None:
+            self.plot_spec.plot(x_p, y_p, pen=pg.mkPen(color='#1f77b4', width=2), name='C+')
+        if x_m is not None and y_m is not None:
+            self.plot_spec.plot(x_m, y_m, pen=pg.mkPen(color='#ff7f0e', width=2), name='C-')
+
+        x_d = None
+        y_d = None
+        if x_p is not None and y_p is not None and x_m is not None and y_m is not None:
+            x_d, y_d = self.computeDiff(x_p, y_p, x_m, y_m)
+            if x_d is not None:
+                self.plot_spec.plot(x_d, y_d, pen=pg.mkPen(color='#2ca02c', width=2), name='C+ - C-')
+
+        self.last_specs = {
+            'bounds': bounds,
+            'plus': (x_p, y_p),
+            'minus': (x_m, y_m),
+            'diff': (x_d, y_d)
+        }
+
+    def onCopySpectra(self):
+        if self.last_specs is None:
+            self.updateSpectra()
+        if self.last_specs is None:
+            self.setStatus('no ROI spectra available to copy')
+            return
+        win = self.window()
+        if not hasattr(win, 'add_internal_clipboard_item'):
+            self.setStatus('internal clipboard not available')
+            return
+        bounds = self.last_specs['bounds']
+        if bounds is None:
+            self.setStatus('no ROI bounds available')
+            return
+        x0, x1, y0, y1 = bounds
+        cx = 0.5 * (x0 + x1 - 1)
+        cy = 0.5 * (y0 + y1 - 1)
+        w = int(x1 - x0)
+        h = int(y1 - y0)
+
+        copied = 0
+        x_p, y_p = self.last_specs['plus']
+        if x_p is not None and y_p is not None:
+            win.add_internal_clipboard_item({
+                'type': 'spectrum',
+                'name': 'C+ ROI spectrum',
+                'x': x_p.copy(),
+                'y': y_p.copy(),
+                'tags': {
+                    'source': 'XMCD Stacks',
+                    'stack_role': 'C+',
+                    'center_x': float(cx),
+                    'center_y': float(cy),
+                    'width_px': w,
+                    'height_px': h
+                }
+            })
+            copied += 1
+        x_m, y_m = self.last_specs['minus']
+        if x_m is not None and y_m is not None:
+            win.add_internal_clipboard_item({
+                'type': 'spectrum',
+                'name': 'C- ROI spectrum',
+                'x': x_m.copy(),
+                'y': y_m.copy(),
+                'tags': {
+                    'source': 'XMCD Stacks',
+                    'stack_role': 'C-',
+                    'center_x': float(cx),
+                    'center_y': float(cy),
+                    'width_px': w,
+                    'height_px': h
+                }
+            })
+            copied += 1
+        x_d, y_d = self.last_specs['diff']
+        if x_d is not None and y_d is not None:
+            win.add_internal_clipboard_item({
+                'type': 'spectrum',
+                'name': 'C+ - C- ROI spectrum',
+                'x': x_d.copy(),
+                'y': y_d.copy(),
+                'tags': {
+                    'source': 'XMCD Stacks',
+                    'stack_role': 'diff',
+                    'operation': 'C+ - C-',
+                    'center_x': float(cx),
+                    'center_y': float(cy),
+                    'width_px': w,
+                    'height_px': h
+                }
+            })
+            copied += 1
+        self.setStatus('copied ROI spectra to internal clipboard: {:d}'.format(copied))
+
 #-----------------------------------------------------------------------
 class MainFrame(QtWidgets.QMainWindow):
 
@@ -16887,6 +18423,9 @@ class MainFrame(QtWidgets.QMainWindow):
         self.anlz = analyze.analyze(self.stk)
         self.nnma = nnma.nnma(self.stk)
         self.common = common()
+        self.internal_clipboard = []
+        self.internal_clipboard_counter = 0
+        self.internal_clipboard_limit = 32
 
 
         self.resize(Winsizex, Winsizey)
@@ -16906,6 +18445,8 @@ class MainFrame(QtWidgets.QMainWindow):
         self.page2 = PagePCA(self.common, self.data_struct, self.stk, self.anlz)
         self.page3 = PageCluster(self.common, self.data_struct, self.stk, self.anlz)
         self.page4 = PageSpectral(self.common, self.data_struct, self.stk, self.anlz)
+        self.page11 = PageXMCDStacks(self.common, self.data_struct, self.stk, self.anlz)
+        self.page10 = PageXMCD(self.common, self.data_struct, self.stk, self.anlz)
         self.page5 = PagePeakID(self.common, self.data_struct, self.stk, self.anlz)
         self.page6 = PageXrayPeakFitting(self.common, self.data_struct, self.stk, self.anlz)
         self.page7 = PageNNMA(self.common, self.data_struct, self.stk, self.anlz, self.nnma)
@@ -16916,6 +18457,8 @@ class MainFrame(QtWidgets.QMainWindow):
         tabs.addTab(self.page2,"PCA")
         tabs.addTab(self.page3,"Cluster Analysis")
         tabs.addTab(self.page4,"Spectral Maps")
+        tabs.addTab(self.page11, "XMCD Stacks")
+        tabs.addTab(self.page10, "XMCD Spectra")
         tabs.addTab(self.page7, "NNMA Analysis")
         tabs.addTab(self.page5,"Peak ID")
         tabs.addTab(self.page6, "XrayPeakFitting")
@@ -16943,22 +18486,26 @@ class MainFrame(QtWidgets.QMainWindow):
             tabs.tabBar().setTabTextColor(2, QtGui.QColor('tomato'))
             tabs.tabBar().setTabTextColor(3, QtGui.QColor('tomato'))
             tabs.tabBar().setTabTextColor(4, QtGui.QColor('tomato'))
-            tabs.tabBar().setTabTextColor(5, QtGui.QColor('tomato'))
-            tabs.tabBar().setTabTextColor(6, QtGui.QColor('orchid'))
+            tabs.tabBar().setTabTextColor(5, QtGui.QColor('deepskyblue'))
+            tabs.tabBar().setTabTextColor(6, QtGui.QColor('lightskyblue'))
             tabs.tabBar().setTabTextColor(7, QtGui.QColor('orchid'))
+            tabs.tabBar().setTabTextColor(8, QtGui.QColor('orchid'))
+            tabs.tabBar().setTabTextColor(9, QtGui.QColor('orchid'))
             if showtomotab:
-                tabs.tabBar().setTabTextColor(8, QtGui.QColor('dodgerblue'))
+                tabs.tabBar().setTabTextColor(10, QtGui.QColor('dodgerblue'))
         else:
             tabs.tabBar().setTabTextColor(0, QtGui.QColor('green'))
             tabs.tabBar().setTabTextColor(1, QtGui.QColor('green'))
             tabs.tabBar().setTabTextColor(2, QtGui.QColor('darkRed'))
             tabs.tabBar().setTabTextColor(3, QtGui.QColor('darkRed'))
             tabs.tabBar().setTabTextColor(4, QtGui.QColor('darkRed'))
-            tabs.tabBar().setTabTextColor(5, QtGui.QColor('darkRed'))
-            tabs.tabBar().setTabTextColor(6, QtGui.QColor('purple'))
+            tabs.tabBar().setTabTextColor(5, QtGui.QColor('teal'))
+            tabs.tabBar().setTabTextColor(6, QtGui.QColor('darkCyan'))
             tabs.tabBar().setTabTextColor(7, QtGui.QColor('purple'))
+            tabs.tabBar().setTabTextColor(8, QtGui.QColor('purple'))
+            tabs.tabBar().setTabTextColor(9, QtGui.QColor('purple'))
             if showtomotab:
-                tabs.tabBar().setTabTextColor(8, QtGui.QColor('darkblue'))
+                tabs.tabBar().setTabTextColor(10, QtGui.QColor('darkblue'))
         #if showmaptab:
         #    tabs.tabBar().setTabTextColor(9, QtGui.QColor('darkblue'))
 
@@ -17004,6 +18551,114 @@ class MainFrame(QtWidgets.QMainWindow):
         self.show()
         if sys.platform == "darwin":
             self.raise_()
+
+
+#----------------------------------------------------------------------
+    def add_internal_clipboard_item(self, item):
+        if not isinstance(item, dict):
+            return None
+
+        entry = copy.deepcopy(item)
+        entry_type = str(entry.get('type', '')).strip().lower()
+        if entry_type not in ('spectrum', 'image', 'stack'):
+            return None
+        entry['type'] = entry_type
+
+        entry_name = entry.get('name', None)
+        if entry_name is None:
+            entry_name = ''
+        else:
+            entry_name = str(entry_name).strip()
+        if not entry_name or entry_name.lower() == 'none':
+            entry_name = '{} {}'.format(entry_type.title(), self.internal_clipboard_counter + 1)
+        entry['name'] = entry_name
+
+        tags = entry.get('tags', {})
+        if not isinstance(tags, dict):
+            tags = {}
+        entry['tags'] = copy.deepcopy(tags)
+        entry['tags'].setdefault('source', 'internal')
+        entry['tags'].setdefault('copied_at', time.strftime('%Y-%m-%d %H:%M:%S'))
+
+        if entry_type == 'spectrum':
+            x = np.asarray(entry.get('x', []), dtype='float64')
+            y = np.asarray(entry.get('y', []), dtype='float64')
+            if x.size == 0 or y.size == 0 or x.size != y.size:
+                return None
+            entry['x'] = x.copy()
+            entry['y'] = y.copy()
+            entry.pop('image', None)
+            entry.pop('stack', None)
+            entry.pop('ev', None)
+        elif entry_type == 'image':
+            image = np.asarray(entry.get('image', []))
+            if image.size == 0:
+                return None
+            entry['image'] = image.copy()
+            entry.pop('x', None)
+            entry.pop('y', None)
+            entry.pop('stack', None)
+            entry.pop('ev', None)
+        else:
+            stack = np.asarray(entry.get('stack', []))
+            if stack.size == 0 or stack.ndim != 3:
+                return None
+            ev = np.asarray(entry.get('ev', np.arange(stack.shape[2])), dtype='float64')
+            if ev.size != stack.shape[2]:
+                ev = np.arange(stack.shape[2], dtype='float64')
+            entry['stack'] = stack.copy()
+            entry['ev'] = ev.copy()
+            entry.pop('x', None)
+            entry.pop('y', None)
+            entry.pop('image', None)
+
+        self.internal_clipboard_counter += 1
+        entry['id'] = self.internal_clipboard_counter
+        self.internal_clipboard.insert(0, entry)
+        if len(self.internal_clipboard) > self.internal_clipboard_limit:
+            self.internal_clipboard = self.internal_clipboard[:self.internal_clipboard_limit]
+
+        if hasattr(self, 'page10'):
+            try:
+                self.page10.refreshClipboard()
+            except Exception:
+                pass
+        if hasattr(self, 'page11'):
+            try:
+                self.page11.refreshClipboard()
+            except Exception:
+                pass
+        return entry['id']
+
+#----------------------------------------------------------------------
+    def get_internal_clipboard_items(self, item_type=None):
+        if item_type is None:
+            return copy.deepcopy(self.internal_clipboard)
+        request_type = str(item_type).strip().lower()
+        return copy.deepcopy([item for item in self.internal_clipboard if item.get('type') == request_type])
+
+
+#----------------------------------------------------------------------
+    def clear_internal_clipboard(self, item_type=None):
+        if item_type is None:
+            removed = len(self.internal_clipboard)
+            self.internal_clipboard = []
+        else:
+            request_type = str(item_type).strip().lower()
+            before = len(self.internal_clipboard)
+            self.internal_clipboard = [item for item in self.internal_clipboard if item.get('type') != request_type]
+            removed = before - len(self.internal_clipboard)
+        if hasattr(self, 'page10'):
+            try:
+                self.page10.refreshClipboard()
+            except Exception:
+                pass
+        if hasattr(self, 'page11'):
+            try:
+                self.page11.refreshClipboard()
+            except Exception:
+                pass
+        return removed
 
 
 #----------------------------------------------------------------------
@@ -17302,6 +18957,18 @@ class MainFrame(QtWidgets.QMainWindow):
         """
         filepath, plugin = File_GUI.SelectFile('write','stack')
         if filepath is not None and plugin is not None:
+            if self.common.i0_loaded == 1 and plugin.title != 'Exchange':
+                answer = QtWidgets.QMessageBox.question(
+                    self,
+                    'OD Metadata Warning',
+                    'You are saving an OD-normalized stack in "{}" format.\n'
+                    'Only Exchange HDF5 preserves OD normalization metadata reliably.\n'
+                    'Use this format anyway?'.format(plugin.title),
+                    QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+                    QtWidgets.QMessageBox.No
+                )
+                if answer != QtWidgets.QMessageBox.Yes:
+                    return
             QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
             try:
                 file_plugins.save(filepath, self.stk, 'stack', plugin=plugin)
@@ -17398,6 +19065,7 @@ class MainFrame(QtWidgets.QMainWindow):
             self.page1.button_clearspecfig.setEnabled(False)
             self.page1.ROIShapeBox.setEnabled(False)
             self.page1.ROIvisibleCheckBox.setEnabled(False)
+            self.page1.pb_copy_stack.setEnabled(False)
             #self.page1.button_resetdisplay.setEnabled(False)
             #self.page1.button_despike.setEnabled(False)
             #self.page1.button_displaycolor.setEnabled(False)
@@ -17423,6 +19091,7 @@ class MainFrame(QtWidgets.QMainWindow):
             self.page0.pb_copy_img.setEnabled(True)
             self.page1.pb_copy_img.setEnabled(True)
             self.page1.pb_copy_specimg.setEnabled(True)
+            self.page1.pb_copy_stack.setEnabled(True)
             self.page1.button_savestack.setEnabled(True)
             self.page1.button_align.setEnabled(True)
             self.page1.button_meanflux.setEnabled(True)
