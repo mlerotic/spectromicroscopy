@@ -24,7 +24,7 @@ from collections import OrderedDict
 title = 'NXstxm'
 extension = ['*.hdf','*.hdf5','*.nxs']
 read_types = ['spectrum','image','stack','sample line spectrum']
-write_types = []#'spectrum','image','stack']
+write_types = ['stack']
 
 def perhaps_decode(value):
 	try:
@@ -137,6 +137,60 @@ def read(FileName,stack_object,selection=(0,0), json=None,  *args, **kwargs):
     stack_object.fill_h5_struct_from_stk()
 
 
+def write(filename, data_object, data_type):
+    if data_type not in ['stack']:
+        raise ValueError('NXstxm plugin only supports writing stack data.')
+    write_nxstxm(filename, data_object)
+
+
+def _as_1d_dist(values, n):
+    arr = numpy.asarray(values, dtype='float64')
+    if arr.ndim == 1 and arr.size == int(n):
+        return arr
+    return numpy.arange(int(n), dtype='float64')
+
+
+def write_nxstxm(filename, stack_object):
+    data = numpy.asarray(stack_object.absdata, dtype='float64')
+    if data.ndim != 3:
+        raise ValueError('NXstxm export requires 3D stack data (x, y, energy).')
+
+    n_cols, n_rows, n_ev = data.shape
+    ev = numpy.asarray(stack_object.ev, dtype='float64')
+    if ev.ndim != 1 or ev.size != int(n_ev):
+        ev = numpy.arange(int(n_ev), dtype='float64')
+
+    x_dist = _as_1d_dist(getattr(stack_object, 'x_dist', None), n_cols)
+    y_dist = _as_1d_dist(getattr(stack_object, 'y_dist', None), n_rows)
+
+    dwell = numpy.asarray(getattr(stack_object, 'data_dwell', numpy.ones((n_ev))), dtype='float64')
+    if dwell.ndim == 0:
+        dwell = numpy.full((n_ev,), float(dwell), dtype='float64')
+    elif dwell.ndim > 1:
+        dwell = dwell.reshape(-1)
+    if dwell.size != int(n_ev):
+        dwell = numpy.ones((n_ev,), dtype='float64')
+
+    with h5py.File(filename, 'w') as f:
+        entry = f.create_group('entry1')
+        entry.attrs['NX_class'] = numpy.bytes_('NXentry')
+        entry.create_dataset('definition', data=numpy.array([numpy.bytes_('NXstxm')]))
+
+        det = entry.create_group('counter0')
+        det.attrs['NX_class'] = numpy.bytes_('NXdata')
+        det.attrs['signal'] = numpy.bytes_('data')
+        det.attrs['axes'] = numpy.array([numpy.bytes_('sample_x'),
+                                         numpy.bytes_('sample_y'),
+                                         numpy.bytes_('energy')])
+
+        det.create_dataset('data', data=data)
+        det.create_dataset('sample_x', data=x_dist)
+        det.create_dataset('sample_y', data=y_dist)
+        det.create_dataset('energy', data=ev)
+        det.create_dataset('count_time', data=dwell)
+        det.create_dataset('stxm_scan_type', data=numpy.array([numpy.bytes_('sample image stack')]))
+
+
 def GetFileStructure(FileName):
     """ToDo: Currently, the file will be opened two times. Maybe a solution like in the sdf-plugin would be better."""
     F = h5py.File(FileName, 'r')
@@ -175,4 +229,3 @@ def GetFileStructure(FileName):
         return None
     else:
         return D
-
