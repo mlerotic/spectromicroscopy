@@ -1664,7 +1664,7 @@ class File_GUI():
         self.option_norm_ringcurrent = True
         #print(self.filter_list)
 
-    def SelectFile(self,action,data_type):
+    def SelectFile(self,action,data_type,default_filepath=None):
         #print(action,data_type)
         dlg=QtWidgets.QFileDialog(None)
         dlg.setWindowTitle('Choose File')
@@ -1672,7 +1672,16 @@ class File_GUI():
         #dlg.setOption(QtWidgets.QFileDialog.DontUseNativeDialog)
         if action == "write":
             dlg.setAcceptMode(QtWidgets.QFileDialog.AcceptSave)
-        dlg.setDirectory(self.last_path[action][data_type])
+        if default_filepath is not None and str(default_filepath).strip() != '':
+            default_filepath = str(default_filepath)
+            default_directory = os.path.dirname(default_filepath)
+            if default_directory != '':
+                dlg.setDirectory(default_directory)
+            else:
+                dlg.setDirectory(self.last_path[action][data_type])
+            dlg.selectFile(default_filepath)
+        else:
+            dlg.setDirectory(self.last_path[action][data_type])
         dlg.setNameFilters(self.filter_list[action][data_type])
         dlg.selectNameFilter(self.filter_list[action][data_type][self.last_filter[action][data_type]])
         if dlg.exec_(): #if not cancelled
@@ -14656,6 +14665,7 @@ class PageLoadData(QtWidgets.QWidget):
         self.data_struct = data_struct
         self.stk = stack
         self.com = common
+        self.stitch_stack_entries = []
 
         self.filename = " "
         self.showflux = True
@@ -14678,6 +14688,7 @@ class PageLoadData(QtWidgets.QWidget):
 
         self.button_sm.setToolTip('Supported Formats .sm, .tif, .xrm')
         self.button_sm.clicked.connect( self.OnBuildStack)
+        self.setupStitchWidgets()
 
         self.pb_copy_img.clicked.connect(self.absimgfig.OnCopy)
         self.pb_copy_img.setEnabled(False)
@@ -14705,6 +14716,105 @@ class PageLoadData(QtWidgets.QWidget):
 
         self.tc_path.setText('D:/')
         self.slider_theta.setVisible(False)
+
+    def setupStitchWidgets(self):
+        group = QtWidgets.QGroupBox('Stitch measured stacks')
+        group.setMinimumSize(QtCore.QSize(250, 0))
+        group.setMaximumSize(QtCore.QSize(250, 16777215))
+        layout = QtWidgets.QVBoxLayout()
+
+        self.button_stitch_load_folder_add = QtWidgets.QPushButton('Load folder + Queue')
+        self.button_stitch_load_folder_add.clicked.connect(self.OnLoadFolderAndQueueStitchStack)
+        layout.addWidget(self.button_stitch_load_folder_add)
+
+        self.button_stitch_load_add = QtWidgets.QPushButton('Load file + Queue')
+        self.button_stitch_load_add.clicked.connect(self.OnLoadAndQueueStitchStack)
+        layout.addWidget(self.button_stitch_load_add)
+
+        self.button_stitch_add_current = QtWidgets.QPushButton('Queue current stack')
+        self.button_stitch_add_current.clicked.connect(self.OnQueueCurrentStitchStack)
+        self.button_stitch_add_current.setEnabled(False)
+        layout.addWidget(self.button_stitch_add_current)
+
+        self.stitch_list = QtWidgets.QListWidget()
+        self.stitch_list.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+        self.stitch_list.setMinimumHeight(110)
+        self.stitch_list.setMaximumHeight(125)
+        self.stitch_list.currentRowChanged.connect(self.OnStitchQueueSelectionChanged)
+        layout.addWidget(self.stitch_list)
+
+        range_group = QtWidgets.QGroupBox('Energy window')
+        range_group.setMinimumHeight(105)
+        range_layout = QtWidgets.QVBoxLayout()
+        self.label_stitch_entry_range = QtWidgets.QLabel('Select a queued stack to set its energy window.')
+        self.label_stitch_entry_range.setWordWrap(True)
+        self.label_stitch_entry_range.setMinimumHeight(
+            self.label_stitch_entry_range.fontMetrics().lineSpacing() * 2 + 6
+        )
+        range_layout.addWidget(self.label_stitch_entry_range)
+
+        range_row = QtWidgets.QHBoxLayout()
+        range_row.addWidget(QtWidgets.QLabel('min [eV]'))
+        self.spin_stitch_entry_min = QtWidgets.QDoubleSpinBox()
+        self.spin_stitch_entry_min.setDecimals(4)
+        self.spin_stitch_entry_min.setRange(-1.0e9, 1.0e9)
+        self.spin_stitch_entry_min.setSingleStep(0.001)
+        self.spin_stitch_entry_min.valueChanged.connect(self.OnStitchEntryRangeChanged)
+        range_row.addWidget(self.spin_stitch_entry_min)
+        range_row.addWidget(QtWidgets.QLabel('max [eV]'))
+        self.spin_stitch_entry_max = QtWidgets.QDoubleSpinBox()
+        self.spin_stitch_entry_max.setDecimals(4)
+        self.spin_stitch_entry_max.setRange(-1.0e9, 1.0e9)
+        self.spin_stitch_entry_max.setSingleStep(0.001)
+        self.spin_stitch_entry_max.valueChanged.connect(self.OnStitchEntryRangeChanged)
+        range_row.addWidget(self.spin_stitch_entry_max)
+        range_layout.addLayout(range_row)
+
+        self.button_stitch_entry_full = QtWidgets.QPushButton('Full range')
+        self.button_stitch_entry_full.clicked.connect(self.OnResetStitchEntryRange)
+        range_layout.addWidget(self.button_stitch_entry_full)
+        range_group.setLayout(range_layout)
+        layout.addWidget(range_group)
+        self._updating_stitch_range_controls = False
+
+        button_row = QtWidgets.QHBoxLayout()
+        self.button_stitch_remove = QtWidgets.QPushButton('Remove')
+        self.button_stitch_remove.clicked.connect(self.OnRemoveQueuedStitchStack)
+        button_row.addWidget(self.button_stitch_remove)
+        self.button_stitch_clear = QtWidgets.QPushButton('Clear')
+        self.button_stitch_clear.clicked.connect(self.OnClearQueuedStitchStacks)
+        button_row.addWidget(self.button_stitch_clear)
+        layout.addLayout(button_row)
+
+        options_row = QtWidgets.QHBoxLayout()
+        self.cb_stitch_drop_overlap = QtWidgets.QCheckBox('Drop overlap')
+        self.cb_stitch_drop_overlap.setChecked(True)
+        options_row.addWidget(self.cb_stitch_drop_overlap)
+        options_row.addWidget(QtWidgets.QLabel('tol [eV]'))
+        self.spin_stitch_tol = QtWidgets.QDoubleSpinBox()
+        self.spin_stitch_tol.setDecimals(4)
+        self.spin_stitch_tol.setRange(0.0, 10.0)
+        self.spin_stitch_tol.setSingleStep(0.001)
+        self.spin_stitch_tol.setValue(0.001)
+        options_row.addWidget(self.spin_stitch_tol)
+        layout.addLayout(options_row)
+
+        self.button_stitch_apply = QtWidgets.QPushButton('Stitch checked')
+        self.button_stitch_apply.clicked.connect(self.OnStitchQueuedStacks)
+        layout.addWidget(self.button_stitch_apply)
+
+        self.label_stitch_status = QtWidgets.QLabel('Queue stacks here, then stitch the checked ones.')
+        self.label_stitch_status.setWordWrap(True)
+        layout.addWidget(self.label_stitch_status)
+
+        group.setLayout(layout)
+        try:
+            insert_index = max(0, self.verticalLayout_2.count() - 1)
+            self.verticalLayout_2.insertWidget(insert_index, group)
+        except Exception:
+            self.verticalLayout_2.addWidget(group)
+        self.group_stitch = group
+        self.refreshStitchQueueList()
 
     def keyPressEvent(self, e):
         if e.key() == 67 and (e.modifiers() & QtCore.Qt.ControlModifier):
@@ -14801,6 +14911,559 @@ class PageLoadData(QtWidgets.QWidget):
     def OnBuildStack(self, event):
 
         self.window().BuildStack()
+
+    def setStitchStatus(self, text):
+        self.label_stitch_status.setText(str(text))
+
+    def getEntryEnergyBounds(self, entry):
+        ev = np.asarray(entry.get('ev', []), dtype='float64')
+        if ev.size == 0:
+            return (None, None)
+        return (float(np.min(ev)), float(np.max(ev)))
+
+    def getEntrySelectedEnergyBounds(self, entry):
+        ev_min, ev_max = self.getEntryEnergyBounds(entry)
+        if ev_min is None or ev_max is None:
+            return (None, None)
+        selected_min = float(entry.get('selected_ev_min', ev_min))
+        selected_max = float(entry.get('selected_ev_max', ev_max))
+        selected_min = min(max(selected_min, ev_min), ev_max)
+        selected_max = min(max(selected_max, ev_min), ev_max)
+        if selected_min > selected_max:
+            selected_min = ev_min
+            selected_max = ev_max
+        return (selected_min, selected_max)
+
+    def buildStitchEntryLabel(self, entry):
+        ev = np.asarray(entry.get('ev', []), dtype='float64')
+        ev_min, ev_max = self.getEntryEnergyBounds(entry)
+        selected_min, selected_max = self.getEntrySelectedEnergyBounds(entry)
+        if ev.size > 0 and ev_min is not None:
+            if np.isclose(ev_min, selected_min, rtol=1e-8, atol=1e-6) and np.isclose(ev_max, selected_max, rtol=1e-8, atol=1e-6):
+                erange = '{:.3f}..{:.3f} eV'.format(ev_min, ev_max)
+            else:
+                erange = '{:.3f}..{:.3f} eV | use {:.3f}..{:.3f} eV'.format(ev_min, ev_max, selected_min, selected_max)
+        else:
+            erange = 'no energy axis'
+        shape = entry.get('shape', (0, 0, 0))
+        dims = '{}x{}x{}'.format(int(shape[0]), int(shape[1]), int(shape[2]))
+        return '{} | {} | {}'.format(entry.get('name', 'Stack'), erange, dims)
+
+    def refreshStitchQueueList(self, selected_row=None):
+        current_row = self.stitch_list.currentRow()
+        if selected_row is None:
+            selected_row = current_row
+        self.stitch_list.clear()
+        for idx, entry in enumerate(self.stitch_stack_entries):
+            item = QtWidgets.QListWidgetItem(self.buildStitchEntryLabel(entry))
+            item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)
+            item.setCheckState(QtCore.Qt.Checked if entry.get('checked', True) else QtCore.Qt.Unchecked)
+            item.setData(QtCore.Qt.UserRole, idx)
+            self.stitch_list.addItem(item)
+        enabled = len(self.stitch_stack_entries) > 0
+        self.button_stitch_remove.setEnabled(enabled)
+        self.button_stitch_clear.setEnabled(enabled)
+        self.button_stitch_apply.setEnabled(len(self.stitch_stack_entries) >= 2)
+        if len(self.stitch_stack_entries) == 0:
+            selected_row = -1
+        elif selected_row is None or selected_row < 0:
+            selected_row = 0
+        else:
+            selected_row = min(int(selected_row), len(self.stitch_stack_entries) - 1)
+        if selected_row >= 0:
+            self.stitch_list.setCurrentRow(selected_row)
+        else:
+            self.updateStitchEntryRangeControls()
+
+    def currentStackDisplayName(self):
+        filename = str(self.tc_file.text()).strip()
+        if filename in ('', 'File name'):
+            filename = 'Stack {}'.format(len(self.stitch_stack_entries) + 1)
+        return filename
+
+    def currentStackPath(self):
+        filename = str(self.tc_file.text()).strip()
+        directory = str(self.tc_path.text()).strip()
+        if filename and filename != 'File name' and directory and directory != 'D:/':
+            return os.path.join(directory, filename)
+        return filename
+
+    def makeCurrentStackSnapshot(self):
+        if self.com.stack_loaded != 1:
+            raise ValueError('No active stack to queue.')
+        if self.com.stack_4d == 1:
+            raise ValueError('4D stacks are not supported in measured-stack stitching.')
+        data = np.asarray(self.stk.absdata, dtype='float64')
+        ev = np.asarray(self.stk.ev, dtype='float64')
+        if data.ndim != 3 or ev.ndim != 1 or data.shape[2] != ev.size:
+            raise ValueError('Current stack does not have a valid 3D energy axis.')
+        x_dist = np.asarray(self.stk.x_dist, dtype='float64')
+        y_dist = np.asarray(self.stk.y_dist, dtype='float64')
+        data_dwell = np.asarray(self.stk.data_dwell, dtype='float64') if self.stk.data_dwell is not None else np.ones((ev.size,), dtype='float64')
+        if data_dwell.ndim == 0:
+            data_dwell = np.full((ev.size,), float(data_dwell), dtype='float64')
+        elif data_dwell.size != ev.size:
+            data_dwell = np.ones((ev.size,), dtype='float64')
+
+        i0data = None
+        evi0 = None
+        has_matching_i0 = False
+        if self.com.i0_loaded == 1:
+            try:
+                i0data = np.asarray(self.stk.i0data, dtype='float64')
+                evi0 = np.asarray(self.stk.evi0, dtype='float64')
+                if i0data.ndim == 1 and evi0.ndim == 1 and i0data.size == ev.size and evi0.size == ev.size:
+                    if np.allclose(evi0, ev, rtol=1e-8, atol=1e-6):
+                        has_matching_i0 = True
+                    else:
+                        i0data = None
+                        evi0 = None
+                else:
+                    i0data = None
+                    evi0 = None
+            except Exception:
+                i0data = None
+                evi0 = None
+
+        return {
+            'name': self.currentStackDisplayName(),
+            'filepath': self.currentStackPath(),
+            'directory': str(self.tc_path.text()).strip(),
+            'data': data.copy(),
+            'ev': ev.copy(),
+            'x_dist': x_dist.copy(),
+            'y_dist': y_dist.copy(),
+            'data_dwell': data_dwell.copy(),
+            'i0data': None if i0data is None else i0data.copy(),
+            'evi0': None if evi0 is None else evi0.copy(),
+            'has_matching_i0': bool(has_matching_i0),
+            'selected_ev_min': float(np.min(ev)),
+            'selected_ev_max': float(np.max(ev)),
+            'shape': tuple(data.shape),
+            'checked': True
+        }
+
+    def OnQueueCurrentStitchStack(self):
+        try:
+            entry = self.makeCurrentStackSnapshot()
+        except Exception as exc:
+            self.setStitchStatus('Queue failed: {}'.format(str(exc)))
+            return
+        self.stitch_stack_entries.append(entry)
+        self.refreshStitchQueueList(selected_row=len(self.stitch_stack_entries) - 1)
+        self.setStitchStatus('Queued stack: {}'.format(self.buildStitchEntryLabel(entry)))
+
+    def resolveStitchHdrFromDirectory(self, directory):
+        directory = os.path.abspath(str(directory))
+        if not os.path.isdir(directory):
+            raise ValueError('Selected path is not a directory.')
+
+        hdr_paths = []
+        for name in sorted(os.listdir(directory)):
+            filepath = os.path.join(directory, name)
+            if os.path.isfile(filepath) and name.lower().endswith('.hdr'):
+                hdr_paths.append(filepath)
+
+        if not hdr_paths:
+            raise ValueError('No .hdr file found in {}'.format(directory))
+        if len(hdr_paths) == 1:
+            return hdr_paths[0]
+
+        folder_name = os.path.basename(os.path.normpath(directory)).lower()
+        scored = []
+        for filepath in hdr_paths:
+            stem = os.path.splitext(os.path.basename(filepath))[0].lower()
+            score = 0
+            if 'master' in stem:
+                score += 100
+            if stem == folder_name:
+                score += 80
+            elif stem.startswith(folder_name) or folder_name.startswith(stem):
+                score += 50
+            elif folder_name and folder_name in stem:
+                score += 20
+            scored.append((score, filepath))
+
+        scored.sort(key=lambda item: (-item[0], item[1]))
+        if len(scored) > 1 and scored[0][0] > scored[1][0] and scored[0][0] > 0:
+            return scored[0][1]
+
+        filepath, _filter = QtWidgets.QFileDialog.getOpenFileName(
+            self,
+            'Choose HDR master file',
+            directory,
+            'HDR files (*.hdr)'
+        )
+        if filepath == '':
+            raise ValueError('No HDR file selected.')
+        return str(filepath)
+
+    def OnLoadFolderAndQueueStitchStack(self):
+        start_dir = self.com.path if self.com.path else os.getcwd()
+        directory = QtWidgets.QFileDialog.getExistingDirectory(
+            self,
+            'Choose measured-stack folder',
+            start_dir,
+            QtWidgets.QFileDialog.ShowDirsOnly | QtWidgets.QFileDialog.ReadOnly
+        )
+        if directory == '':
+            self.setStitchStatus('Folder load canceled.')
+            return
+        try:
+            filepath = self.resolveStitchHdrFromDirectory(directory)
+        except Exception as exc:
+            self.setStitchStatus('Folder load failed: {}'.format(str(exc)))
+            return
+        loaded = self.window().LoadStackFromPath(filepath)
+        if not loaded:
+            self.setStitchStatus('Folder load canceled.')
+            return
+        self.OnQueueCurrentStitchStack()
+
+    def OnLoadAndQueueStitchStack(self):
+        loaded = self.window().LoadStack()
+        if not loaded:
+            self.setStitchStatus('Load canceled.')
+            return
+        self.OnQueueCurrentStitchStack()
+
+    def OnRemoveQueuedStitchStack(self):
+        row = self.stitch_list.currentRow()
+        if row < 0 or row >= len(self.stitch_stack_entries):
+            self.setStitchStatus('Select a queued stack to remove.')
+            return
+        removed = self.stitch_stack_entries.pop(row)
+        self.refreshStitchQueueList(selected_row=row)
+        self.setStitchStatus('Removed queued stack: {}'.format(removed.get('name', 'Stack')))
+
+    def OnClearQueuedStitchStacks(self):
+        count = len(self.stitch_stack_entries)
+        self.stitch_stack_entries = []
+        self.refreshStitchQueueList()
+        self.setStitchStatus('Cleared queued stack list ({:d} removed).'.format(count))
+
+    def getCurrentStitchEntry(self):
+        row = self.stitch_list.currentRow()
+        if row < 0 or row >= len(self.stitch_stack_entries):
+            return None
+        return self.stitch_stack_entries[row]
+
+    def updateStitchEntryRangeControls(self):
+        entry = self.getCurrentStitchEntry()
+        has_entry = entry is not None
+        self.spin_stitch_entry_min.setEnabled(has_entry)
+        self.spin_stitch_entry_max.setEnabled(has_entry)
+        self.button_stitch_entry_full.setEnabled(has_entry)
+        if not has_entry:
+            self._updating_stitch_range_controls = True
+            self.spin_stitch_entry_min.blockSignals(True)
+            self.spin_stitch_entry_max.blockSignals(True)
+            self.spin_stitch_entry_min.setValue(0.0)
+            self.spin_stitch_entry_max.setValue(0.0)
+            self.spin_stitch_entry_min.blockSignals(False)
+            self.spin_stitch_entry_max.blockSignals(False)
+            self._updating_stitch_range_controls = False
+            self.label_stitch_entry_range.setText('Select a queued stack to set its energy window.')
+            return
+
+        ev = np.asarray(entry.get('ev', []), dtype='float64')
+        ev_min, ev_max = self.getEntryEnergyBounds(entry)
+        selected_min, selected_max = self.getEntrySelectedEnergyBounds(entry)
+        if ev_min is None or ev_max is None:
+            self.label_stitch_entry_range.setText('This stack has no valid energy axis.')
+            return
+
+        step = 0.001
+        if ev.size > 1:
+            diffs = np.diff(np.unique(np.sort(ev)))
+            diffs = diffs[diffs > 0]
+            if diffs.size > 0:
+                step = max(float(np.min(diffs)), 0.0001)
+
+        self._updating_stitch_range_controls = True
+        self.spin_stitch_entry_min.blockSignals(True)
+        self.spin_stitch_entry_max.blockSignals(True)
+        self.spin_stitch_entry_min.setRange(ev_min, ev_max)
+        self.spin_stitch_entry_max.setRange(ev_min, ev_max)
+        self.spin_stitch_entry_min.setSingleStep(step)
+        self.spin_stitch_entry_max.setSingleStep(step)
+        self.spin_stitch_entry_min.setValue(selected_min)
+        self.spin_stitch_entry_max.setValue(selected_max)
+        self.spin_stitch_entry_min.blockSignals(False)
+        self.spin_stitch_entry_max.blockSignals(False)
+        self._updating_stitch_range_controls = False
+        self.label_stitch_entry_range.setText(
+            'Available: {:.3f}..{:.3f} eV, {:d} imgs.'.format(ev_min, ev_max, int(ev.size))
+        )
+
+    def OnStitchQueueSelectionChanged(self, row):
+        self.updateStitchEntryRangeControls()
+
+    def updateCurrentStitchEntryLabel(self):
+        row = self.stitch_list.currentRow()
+        item = self.stitch_list.currentItem()
+        if item is None or row < 0 or row >= len(self.stitch_stack_entries):
+            return
+        item.setText(self.buildStitchEntryLabel(self.stitch_stack_entries[row]))
+
+    def OnStitchEntryRangeChanged(self, _value=None):
+        if self._updating_stitch_range_controls:
+            return
+        entry = self.getCurrentStitchEntry()
+        if entry is None:
+            return
+        ev_min, ev_max = self.getEntryEnergyBounds(entry)
+        if ev_min is None or ev_max is None:
+            return
+
+        selected_min = float(self.spin_stitch_entry_min.value())
+        selected_max = float(self.spin_stitch_entry_max.value())
+        sender = self.sender()
+        if selected_min > selected_max:
+            self._updating_stitch_range_controls = True
+            if sender == self.spin_stitch_entry_min:
+                self.spin_stitch_entry_max.blockSignals(True)
+                self.spin_stitch_entry_max.setValue(selected_min)
+                self.spin_stitch_entry_max.blockSignals(False)
+                selected_max = selected_min
+            else:
+                self.spin_stitch_entry_min.blockSignals(True)
+                self.spin_stitch_entry_min.setValue(selected_max)
+                self.spin_stitch_entry_min.blockSignals(False)
+                selected_min = selected_max
+            self._updating_stitch_range_controls = False
+
+        entry['selected_ev_min'] = min(max(selected_min, ev_min), ev_max)
+        entry['selected_ev_max'] = min(max(selected_max, ev_min), ev_max)
+        self.updateCurrentStitchEntryLabel()
+        self.setStitchStatus(
+            'Using {:.3f}..{:.3f} eV from {}.'.format(
+                float(entry['selected_ev_min']),
+                float(entry['selected_ev_max']),
+                entry.get('name', 'selected stack')
+            )
+        )
+
+    def OnResetStitchEntryRange(self):
+        entry = self.getCurrentStitchEntry()
+        if entry is None:
+            return
+        ev_min, ev_max = self.getEntryEnergyBounds(entry)
+        if ev_min is None or ev_max is None:
+            return
+        entry['selected_ev_min'] = ev_min
+        entry['selected_ev_max'] = ev_max
+        self.updateStitchEntryRangeControls()
+        self.updateCurrentStitchEntryLabel()
+        self.setStitchStatus('Reset energy range for {} to full range.'.format(entry.get('name', 'selected stack')))
+
+    def getCheckedStitchEntries(self):
+        entries = []
+        for row in range(self.stitch_list.count()):
+            item = self.stitch_list.item(row)
+            idx = item.data(QtCore.Qt.UserRole)
+            checked = item.checkState() == QtCore.Qt.Checked
+            if idx is None or idx >= len(self.stitch_stack_entries):
+                continue
+            self.stitch_stack_entries[idx]['checked'] = checked
+            if checked:
+                entries.append(self.stitch_stack_entries[idx])
+        return entries
+
+    def sortSnapshotByEnergy(self, entry):
+        ev = np.asarray(entry['ev'], dtype='float64')
+        order = np.argsort(ev, kind='mergesort')
+        sorted_entry = dict(entry)
+        sorted_entry['ev'] = ev[order].copy()
+        sorted_entry['data'] = np.asarray(entry['data'], dtype='float64')[:, :, order].copy()
+        dwell = np.asarray(entry.get('data_dwell', np.ones((ev.size,), dtype='float64')), dtype='float64')
+        if dwell.ndim == 1 and dwell.size == ev.size:
+            sorted_entry['data_dwell'] = dwell[order].copy()
+        else:
+            sorted_entry['data_dwell'] = np.ones((ev.size,), dtype='float64')
+        if entry.get('has_matching_i0', False):
+            sorted_entry['i0data'] = np.asarray(entry['i0data'], dtype='float64')[order].copy()
+            sorted_entry['evi0'] = np.asarray(entry['evi0'], dtype='float64')[order].copy()
+        return sorted_entry
+
+    def stitchCheckedSnapshots(self, entries):
+        if len(entries) < 2:
+            raise ValueError('Check at least two queued stacks to stitch.')
+
+        prepared = [self.sortSnapshotByEnergy(entry) for entry in entries]
+        prepared.sort(key=lambda item: float(item['ev'][0]) if item['ev'].size > 0 else np.inf)
+
+        ref_shape = prepared[0]['data'].shape[:2]
+        ref_x = np.asarray(prepared[0]['x_dist'], dtype='float64')
+        ref_y = np.asarray(prepared[0]['y_dist'], dtype='float64')
+        tol = float(self.spin_stitch_tol.value())
+        drop_overlap = self.cb_stitch_drop_overlap.isChecked()
+
+        all_have_i0 = all(entry.get('has_matching_i0', False) for entry in prepared)
+        data_chunks = []
+        ev_chunks = []
+        dwell_chunks = []
+        i0_chunks = []
+        i0_ev_chunks = []
+        dropped = 0
+        last_kept_energy = None
+
+        for entry in prepared:
+            data = np.asarray(entry['data'], dtype='float64')
+            ev = np.asarray(entry['ev'], dtype='float64')
+            x_dist = np.asarray(entry['x_dist'], dtype='float64')
+            y_dist = np.asarray(entry['y_dist'], dtype='float64')
+            if data.shape[:2] != ref_shape:
+                raise ValueError('Spatial shape mismatch: {} vs {}.'.format(data.shape[:2], ref_shape))
+            if x_dist.shape != ref_x.shape or y_dist.shape != ref_y.shape:
+                raise ValueError('Spatial axis length mismatch between queued stacks.')
+            if not np.allclose(x_dist, ref_x, rtol=1e-6, atol=1e-6):
+                raise ValueError('sample_x axis mismatch between queued stacks.')
+            if not np.allclose(y_dist, ref_y, rtol=1e-6, atol=1e-6):
+                raise ValueError('sample_y axis mismatch between queued stacks.')
+            selected_min, selected_max = self.getEntrySelectedEnergyBounds(entry)
+            if selected_min is None or selected_max is None:
+                raise ValueError('Queued stack {} has no valid energy axis.'.format(entry.get('name', 'Stack')))
+            selected_keep = (ev >= (selected_min - 1e-9)) & (ev <= (selected_max + 1e-9))
+            if not np.any(selected_keep):
+                raise ValueError(
+                    'Selected energy range {:.3f}..{:.3f} eV leaves no images in {}.'.format(
+                        selected_min, selected_max, entry.get('name', 'Stack')
+                    )
+                )
+            if drop_overlap and last_kept_energy is not None:
+                keep = selected_keep & (ev > (last_kept_energy + tol))
+            else:
+                keep = selected_keep
+            if not np.any(keep):
+                dropped += int(np.count_nonzero(~selected_keep) + np.count_nonzero(selected_keep))
+                continue
+            data_chunks.append(data[:, :, keep].copy())
+            ev_kept = ev[keep].copy()
+            ev_chunks.append(ev_kept)
+            dwell = np.asarray(entry.get('data_dwell', np.ones((ev.size,), dtype='float64')), dtype='float64')
+            if dwell.ndim == 1 and dwell.size == ev.size:
+                dwell_chunks.append(dwell[keep].copy())
+            else:
+                dwell_chunks.append(np.ones((ev_kept.size,), dtype='float64'))
+            if all_have_i0:
+                i0_chunks.append(np.asarray(entry['i0data'], dtype='float64')[keep].copy())
+                i0_ev_chunks.append(np.asarray(entry['evi0'], dtype='float64')[keep].copy())
+            dropped += int(ev.size - ev_kept.size)
+            last_kept_energy = float(ev_kept[-1])
+
+        if not data_chunks:
+            raise ValueError('No images left after overlap removal.')
+
+        stitched_data = np.concatenate(data_chunks, axis=2)
+        stitched_ev = np.concatenate(ev_chunks)
+        stitched_dwell = np.concatenate(dwell_chunks)
+        order = np.argsort(stitched_ev, kind='mergesort')
+        stitched_data = stitched_data[:, :, order]
+        stitched_ev = stitched_ev[order]
+        stitched_dwell = stitched_dwell[order]
+
+        stitched = {
+            'name': 'stitched_{:d}_stacks'.format(len(entries)),
+            'directory': prepared[0].get('directory', ''),
+            'data': stitched_data,
+            'ev': stitched_ev,
+            'x_dist': ref_x.copy(),
+            'y_dist': ref_y.copy(),
+            'data_dwell': stitched_dwell,
+            'dropped': dropped,
+            'n_sources': len(entries)
+        }
+
+        if all_have_i0 and i0_chunks:
+            stitched_i0 = np.concatenate(i0_chunks)
+            stitched_i0_ev = np.concatenate(i0_ev_chunks)
+            i0_order = np.argsort(stitched_i0_ev, kind='mergesort')
+            stitched['i0data'] = stitched_i0[i0_order].copy()
+            stitched['evi0'] = stitched_i0_ev[i0_order].copy()
+            stitched['has_matching_i0'] = True
+        else:
+            stitched['i0data'] = None
+            stitched['evi0'] = None
+            stitched['has_matching_i0'] = False
+        return stitched
+
+    def applyStitchedSnapshot(self, snapshot):
+        win = self.window()
+        if self.com.stack_loaded == 1:
+            win.new_stack_refresh()
+        self.stk.new_data()
+        win.anlz.delete_data()
+
+        self.stk.absdata = np.asarray(snapshot['data'], dtype='float64').copy()
+        self.stk.n_cols = int(self.stk.absdata.shape[0])
+        self.stk.n_rows = int(self.stk.absdata.shape[1])
+        self.stk.ev = np.asarray(snapshot['ev'], dtype='float64').copy()
+        self.stk.n_ev = int(self.stk.ev.size)
+        self.stk.x_dist = np.asarray(snapshot['x_dist'], dtype='float64').copy()
+        self.stk.y_dist = np.asarray(snapshot['y_dist'], dtype='float64').copy()
+        self.stk.data_dwell = np.asarray(snapshot.get('data_dwell', np.ones((self.stk.n_ev,), dtype='float64')), dtype='float64').copy()
+        self.stk.i0_dwell = np.ones((self.stk.n_ev), dtype='float64')
+        self.stk.data_struct.spectromicroscopy.data_dwell = self.stk.data_dwell.copy()
+        self.stk.data_struct.spectromicroscopy.i0_dwell = self.stk.i0_dwell.copy()
+        self.stk.stack4D = None
+        self.stk.theta = 0
+        self.stk.n_theta = 0
+        self.stk.fill_h5_struct_from_stk()
+        self.stk.setScale()
+
+        self.com.stack_4d = 0
+        self.com.stack_loaded = 1
+        self.com.path = snapshot.get('directory', '')
+        self.com.filename = snapshot.get('name', 'stitched_stack')
+        win.page1.filename = self.com.filename
+
+        if snapshot.get('has_matching_i0', False):
+            self.stk.i0data = np.asarray(snapshot['i0data'], dtype='float64').copy()
+            self.stk.evi0 = np.asarray(snapshot['evi0'], dtype='float64').copy()
+            self.com.i0_loaded = 1
+            self.stk.calculate_optical_density()
+            self.stk.fill_h5_struct_normalization()
+        else:
+            self.com.i0_loaded = 0
+            self.stk.i0data = np.zeros(1)
+            self.stk.evi0 = 0
+
+        x = self.stk.n_cols
+        y = self.stk.n_rows
+        win.page1.imgrgb = np.zeros(x * y * 3, dtype="uint8")
+        win.page1.maxval = np.amax(self.stk.absdata)
+        win.ix = int(x / 2)
+        win.iy = int(y / 2)
+        win.page1.ix = win.ix
+        win.page1.iy = win.iy
+        win.page0.absimgfig.loadNewImage()
+        win.page0.ShowInfo(self.com.filename, self.com.path)
+        win.page1.absimgfig.loadNewImageWithROI()
+        win.page1.button_multicrop.setText('Crop stack 3D...')
+        win.page1.specfig.ClearandReload()
+        win.page5.updatewidgets()
+        win.refresh_widgets()
+
+    def OnStitchQueuedStacks(self):
+        entries = self.getCheckedStitchEntries()
+        try:
+            stitched = self.stitchCheckedSnapshots(entries)
+        except Exception as exc:
+            self.setStitchStatus('Stitch failed: {}'.format(str(exc)))
+            return
+        self.applyStitchedSnapshot(stitched)
+        self.setStitchStatus(
+            'Stitched {:d} stacks into {:d} energy images ({:d} excluded by ranges/overlap).'.format(
+                int(stitched.get('n_sources', len(entries))), int(stitched['ev'].size), int(stitched.get('dropped', 0))
+            )
+        )
+        default_save_path = ''
+        if self.com.path:
+            default_save_path = os.path.join(self.com.path, self.com.filename)
+        elif self.com.filename:
+            default_save_path = self.com.filename
+        self.window().SaveProcessedStack(default_filepath=default_save_path)
 
 #----------------------------------------------------------------------
     def OnScrollEng(self, value):
@@ -18691,96 +19354,104 @@ class MainFrame(QtWidgets.QMainWindow):
         self.actionInfo.triggered.connect(self.onAbout)
 
 #----------------------------------------------------------------------
+    def LoadStackFromPath(self, filepath, plugin=None):
+        if filepath is None:
+            return False
+        filepath = str(filepath)
+        if plugin is None: # auto-assign appropriate plugin
+            plugin = file_plugins.identify(filepath)
+        FileStruct = file_plugins.GetFileStructure(filepath, plugin=plugin)
+        FileInternalSelection = [(0,0)]
+        if FileStruct is not None:
+            dlg = File_GUI.DataChoiceDialog(filepath=filepath, filestruct=FileStruct, plugin=plugin)
+            if not dlg.exec_():
+                return False # do nothing if GUI is cancelled
+            FileInternalSelection = dlg.selection
+            if dlg.filepath != filepath:
+                filepath = dlg.filepath
+                plugin = file_plugins.identify(dlg.filepath)
+        if plugin is None:
+            QtWidgets.QMessageBox.warning(self, 'Error!', "Unknown file type")
+            return False
+
+        QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
+
+        if self.common.stack_loaded == 1:
+            self.new_stack_refresh()
+            self.stk.new_data()
+            self.anlz.delete_data()
+        try:    #if checkboxes exist, return checked/unchecked
+            JSONconvert = dlg.jsoncheck.isChecked()
+        except UnboundLocalError: #if checkboxes missing, i.e. for prenormalized data, *.ncb, etc.
+            print("DataChoiceDialog skipped")
+            JSONconvert = None
+        file_plugins.load(filepath, stack_object=self.stk, plugin=plugin, selection=FileInternalSelection,json=JSONconvert)
+        directory = os.path.dirname(str(filepath))
+        self.page1.filename = os.path.basename(str(filepath))
+
+
+        #Update widgets
+        x=self.stk.n_cols
+        y=self.stk.n_rows
+        self.page1.imgrgb = np.zeros(x*y*3,dtype = "uint8")
+        self.page1.maxval = np.amax(self.stk.absdata)
+
+
+        self.ix = int(x/2)
+        self.iy = int(y/2)
+
+        self.page1.ix = self.ix
+        self.page1.iy = self.iy
+
+        #self.iev = 0
+        #self.page0.slider_eng.setRange(0,self.stk.n_ev-1)
+        #self.page0.iev = self.iev
+        #self.page0.slider_eng.setValue(self.iev)
+
+        #self.page1.slider_eng.setRange(0,self.stk.n_ev-1)
+        #self.page1.iev = self.iev
+        #self.page1.slider_eng.setValue(self.iev)
+        #if showmaptab:
+        #    self.page9.Clear()
+        #    self.page9.slider_eng.setRange(0,self.stk.n_ev-1)
+        self.stk.setScale()
+        self.common.stack_loaded = 1
+        self.common.path = directory
+
+        if self.stk.data_struct.spectromicroscopy.normalization.white_spectrum is not None:
+            self.common.i0_loaded = 1
+            self.stk.calculate_optical_density()
+            self.stk.fill_h5_struct_normalization()
+
+        #self.page0.Clear()
+        self.page0.absimgfig.loadNewImage()
+        self.page0.ShowInfo(self.page1.filename, directory)
+        #self.page1.ResetDisplaySettings()
+        self.page1.absimgfig.loadNewImageWithROI()
+        self.page1.button_multicrop.setText('Crop stack 3D...')
+        #print(x,y), (self.ix,self.iy), self.stk.absdata.shape
+        self.page1.specfig.ClearandReload()
+        #self.page1.textctrl.setText(self.page1.filename)
+
+        self.page5.updatewidgets()
+
+        QtWidgets.QApplication.restoreOverrideCursor()
+
+        #if showmaptab:
+        #    self.page9.Clear()
+        #    self.page9.loadData()
+        self.refresh_widgets()
+        return True
+
     def LoadStack(self):
         """
         Browse for a stack file:
         """
 
         filepath, plugin = File_GUI.SelectFile('read','stack')
-        if filepath is not None:
-            if plugin is None: # auto-assign appropriate plugin
-                plugin = file_plugins.identify(filepath)
-            FileStruct = file_plugins.GetFileStructure(filepath, plugin=plugin)
-            FileInternalSelection = [(0,0)]
-            if FileStruct is not None:
-                dlg = File_GUI.DataChoiceDialog(filepath=filepath, filestruct=FileStruct, plugin=plugin)
-                if not dlg.exec_():
-                    return # do nothing if GUI is cancelled
-                FileInternalSelection = dlg.selection
-                if dlg.filepath != filepath:
-                    filepath = dlg.filepath
-                    plugin = file_plugins.identify(dlg.filepath)
-            if plugin is None:
-                QtWidgets.QMessageBox.warning(self, 'Error!', "Unknown file type")
-                return
-
-            QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
-
-            if self.common.stack_loaded == 1:
-                self.new_stack_refresh()
-                self.stk.new_data()
-                self.anlz.delete_data()
-            try:    #if checkboxes exist, return checked/unchecked
-                JSONconvert = dlg.jsoncheck.isChecked()
-            except UnboundLocalError: #if checkboxes missing, i.e. for prenormalized data, *.ncb, etc.
-                print("DataChoiceDialog skipped")
-                JSONconvert = None
-            file_plugins.load(filepath, stack_object=self.stk, plugin=plugin, selection=FileInternalSelection,json=JSONconvert)
-            directory = os.path.dirname(str(filepath))
-            self.page1.filename = os.path.basename(str(filepath))
-
-
-            #Update widgets
-            x=self.stk.n_cols
-            y=self.stk.n_rows
-            self.page1.imgrgb = np.zeros(x*y*3,dtype = "uint8")
-            self.page1.maxval = np.amax(self.stk.absdata)
-
-
-            self.ix = int(x/2)
-            self.iy = int(y/2)
-
-            self.page1.ix = self.ix
-            self.page1.iy = self.iy
-
-            #self.iev = 0
-            #self.page0.slider_eng.setRange(0,self.stk.n_ev-1)
-            #self.page0.iev = self.iev
-            #self.page0.slider_eng.setValue(self.iev)
-
-            #self.page1.slider_eng.setRange(0,self.stk.n_ev-1)
-            #self.page1.iev = self.iev
-            #self.page1.slider_eng.setValue(self.iev)
-            #if showmaptab:
-            #    self.page9.Clear()
-            #    self.page9.slider_eng.setRange(0,self.stk.n_ev-1)
-            self.stk.setScale()
-            self.common.stack_loaded = 1
-            self.common.path = directory
-
-            if self.stk.data_struct.spectromicroscopy.normalization.white_spectrum is not None:
-                self.common.i0_loaded = 1
-                self.stk.calculate_optical_density()
-                self.stk.fill_h5_struct_normalization()
-
-            #self.page0.Clear()
-            self.page0.absimgfig.loadNewImage()
-            self.page0.ShowInfo(self.page1.filename, directory)
-            #self.page1.ResetDisplaySettings()
-            self.page1.absimgfig.loadNewImageWithROI()
-            self.page1.button_multicrop.setText('Crop stack 3D...')
-            #print(x,y), (self.ix,self.iy), self.stk.absdata.shape
-            self.page1.specfig.ClearandReload()
-            #self.page1.textctrl.setText(self.page1.filename)
-
-            self.page5.updatewidgets()
-
-            QtWidgets.QApplication.restoreOverrideCursor()
-
-            #if showmaptab:
-            #    self.page9.Clear()
-            #    self.page9.loadData()
-        self.refresh_widgets()
+        if filepath is None:
+            return False
+        return self.LoadStackFromPath(filepath, plugin=plugin)
 
 #-----------------------------------------------------------------------
     def BuildStack(self):
@@ -18950,12 +19621,17 @@ class MainFrame(QtWidgets.QMainWindow):
 
 
 #----------------------------------------------------------------------
-    def SaveProcessedStack(self):
+    def SaveProcessedStack(self, default_filepath=None):
 
         """
         Export processed stack to file
         """
-        filepath, plugin = File_GUI.SelectFile('write','stack')
+        if default_filepath is None and self.common.filename:
+            if self.common.path:
+                default_filepath = os.path.join(self.common.path, self.common.filename)
+            else:
+                default_filepath = self.common.filename
+        filepath, plugin = File_GUI.SelectFile('write','stack', default_filepath=default_filepath)
         if filepath is not None and plugin is not None:
             if self.common.i0_loaded == 1 and plugin.title != 'Exchange':
                 answer = QtWidgets.QMessageBox.question(
@@ -18968,19 +19644,21 @@ class MainFrame(QtWidgets.QMainWindow):
                     QtWidgets.QMessageBox.No
                 )
                 if answer != QtWidgets.QMessageBox.Yes:
-                    return
+                    return False
             QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
             try:
                 file_plugins.save(filepath, self.stk, 'stack', plugin=plugin)
                 QtWidgets.QApplication.restoreOverrideCursor()
+                return True
             except:
                 QtWidgets.QApplication.restoreOverrideCursor()
                 QtWidgets.QMessageBox.warning(self, 'Error', 'Could not save processed stack file.')
+                return False
 
 
 
 
-        return
+        return False
 
 
 #----------------------------------------------------------------------
@@ -19108,6 +19786,9 @@ class MainFrame(QtWidgets.QMainWindow):
             #self.page1.button_despike.setEnabled(True)
             #self.page1.button_displaycolor.setEnabled(True)
             self.actionSave.setEnabled(True)
+
+        if hasattr(self.page0, 'button_stitch_add_current'):
+            self.page0.button_stitch_add_current.setEnabled(self.common.stack_loaded == 1 and self.common.stack_4d == 0)
 
 
         if self.common.i0_loaded == 0:
