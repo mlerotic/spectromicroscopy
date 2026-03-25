@@ -87,7 +87,8 @@ print("="*len(welcome_string))
 print(welcome_string)
 print("="*len(welcome_string))
 from .helpers import check_for_updates, print_dependency_versions
-check_for_updates(version)
+if os.environ.get('MANTIS_DISABLE_UPDATE_CHECK', '').strip().lower() not in ('1', 'true', 'yes', 'on'):
+    check_for_updates(version)
 print_dependency_versions()
 print("\nPlease report issues to https://github.com/mlerotic/spectromicroscopy/issues \n")
 
