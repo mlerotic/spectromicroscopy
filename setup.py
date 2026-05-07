@@ -5,10 +5,7 @@ import platform
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
-deps_list = ['PyQt5>=5.15.9','numpy', 'scipy>=1.11.4', 'matplotlib>=3.6.0', 'h5py', 'Pillow', 'lxml', 'pyqtgraph>=0.13.7', "scikit-image>=0.19.1"]
-python_version = platform.python_version_tuple()
-if int(python_version[0]) >= 3 and int(python_version[1]) >= 13:
-    deps_list = deps_list + ["xdrlib3"]
+deps_list = ['PyQt5>=5.15.9','numpy', 'scipy>=1.11.4', 'matplotlib>=3.6.0', 'h5py', 'Pillow', 'lxml', 'pyqtgraph>=0.13.7', "scikit-image>=0.19.1", "xdrlib3"]
 
 setuptools.setup(
     name="mantis-xray", 
