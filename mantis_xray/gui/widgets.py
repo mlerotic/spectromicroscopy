@@ -8,6 +8,18 @@ from scipy.interpolate import interp1d
 from scipy import ndimage
 from ..helpers import PDFExporter
 
+MANTIS_HEX = [
+    '#6699DD', '#EE7733', '#ABCC44', '#99DDFF', '#FFAABB',
+    '#BAAA00', '#AB2622', '#44BB99', '#AA4499', '#EEDD89'
+]
+
+
+def build_mantis_lut(num_colors):
+    n = max(int(num_colors), 1)
+    base = np.array([QtGui.QColor(c).getRgb()[:3] for c in MANTIS_HEX], dtype=np.uint8)
+    idx = np.arange(n) % len(base)
+    return base[idx]
+
 # Note: These classes heavily depend on 'parent' which seems to be a page or something with specific attributes.
 # In a proper refactor, we should define interfaces or pass specific data/signals instead of 'parent'.
 # For now, we move them as-is to separate file, but they still are tightly coupled.
@@ -1107,11 +1119,16 @@ class ImgFig():
 
     def OnColormapChange(self, map="gray", num_colors=256, fliplut=False):
         self.map = map
-        luttup = (0,1)
-        if fliplut:
-            luttup = (1,0)
-        cm = pg.colormap.get(self.map, source="matplotlib")
-        lut = cm.getLookupTable(*luttup, num_colors)
+        if self.map == "Mantis":
+            lut = build_mantis_lut(num_colors)
+            if fliplut:
+                lut = np.ascontiguousarray(lut[::-1])
+        else:
+            luttup = (0,1)
+            if fliplut:
+                luttup = (1,0)
+            cm = pg.colormap.get(self.map, source="matplotlib")
+            lut = cm.getLookupTable(*luttup, num_colors)
         if self.parent.com.stack_loaded == 1:
             try:
                 lut = np.ascontiguousarray(lut)

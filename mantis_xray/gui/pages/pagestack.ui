@@ -311,7 +311,7 @@
             </font>
            </property>
            <property name="title">
-            <string>Region of Interest</string>
+            <string>Regions of Interest</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_10">
             <property name="spacing">
@@ -371,9 +371,9 @@
          </font>
         </property>
         <property name="title">
-         <string></string>
-        </property>
-        <layout class="QHBoxLayout" name="horizontalLayout_3">
+          <string></string>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_3">
          <property name="spacing">
           <number>0</number>
          </property>
@@ -492,10 +492,10 @@
           <pointsize>8</pointsize>
          </font>
         </property>
-        <property name="title">
-         <string></string>
-        </property>
-        <layout class="QHBoxLayout" name="horizontalLayout_5">
+         <property name="title">
+          <string></string>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_5">
          <property name="spacing">
           <number>0</number>
          </property>
@@ -757,13 +757,13 @@
           <pointsize>8</pointsize>
          </font>
         </property>
-        <property name="title">
-         <string></string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
-        </property>
-        <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <property name="title">
+          <string>Stack</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_2">
          <property name="spacing">
           <number>6</number>
          </property>
@@ -875,13 +875,13 @@
           <pointsize>8</pointsize>
          </font>
         </property>
-        <property name="title">
-         <string></string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
-        </property>
-        <layout class="QHBoxLayout" name="horizontalLayout_10">
+         <property name="title">
+          <string>Regions of Interest</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_10">
          <property name="spacing">
           <number>6</number>
          </property>

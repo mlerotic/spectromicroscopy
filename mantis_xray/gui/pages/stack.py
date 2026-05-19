@@ -44,7 +44,7 @@ class PageStack(QtWidgets.QWidget):
                       ('Miscellaneous', [
                           'flag', 'prism', 'ocean', 'gist_earth', 'terrain', 'gist_stern',
                           'gnuplot', 'gnuplot2', 'CMRmap', 'cubehelix', 'brg', 'hsv',
-                          'gist_rainbow', 'rainbow', 'jet', 'nipy_spectral', 'gist_ncar'])]
+                          'gist_rainbow', 'rainbow', 'jet', 'nipy_spectral', 'gist_ncar', 'Mantis'])]
 
         self.initUI(common, data_struct, stack)
 

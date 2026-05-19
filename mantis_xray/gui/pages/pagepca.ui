@@ -334,6 +334,19 @@
               </property>
              </widget>
             </item>
+            <item>
+             <widget class="QPushButton" name="button_send_clusters_to_prep">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Use clusters as ROIs</string>
+              </property>
+             </widget>
+            </item>
            </layout>
           </widget>
          </item>

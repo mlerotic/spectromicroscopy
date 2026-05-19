@@ -4,7 +4,7 @@ import numpy as np
 import pyqtgraph as pg
 from PIL import Image
 from PyQt5 import QtWidgets, uic, QtCore, QtGui
-from ..widgets import SpecFig, ImgFig
+from ..widgets import SpecFig, ImgFig, build_mantis_lut
 from ..dialogs.save import SaveWinP2, SaveWinP3
 from ..dialogs.scatter import Scatterplots
 from ...helpers import PDFExporter
@@ -34,7 +34,7 @@ class PagePCACluster(QtWidgets.QWidget):
                     ('Miscellaneous', [
                         'flag', 'prism', 'ocean', 'gist_earth', 'terrain', 'gist_stern',
                         'gnuplot', 'gnuplot2', 'CMRmap', 'cubehelix', 'brg', 'hsv',
-                        'gist_rainbow', 'rainbow', 'jet', 'nipy_spectral', 'gist_ncar'])]
+                        'gist_rainbow', 'rainbow', 'jet', 'nipy_spectral', 'gist_ncar', 'Mantis'])]
 
         self.initUI(common, data_struct, stack, anlz)
 
@@ -193,6 +193,8 @@ class PagePCACluster(QtWidgets.QWidget):
         self.button_errormap.toggled.connect(self.OnShowErrorMap)
         self.button_errormap.setEnabled(False)
         self._setErrorMapButtonText(False)
+        self.button_send_clusters_to_prep.setEnabled(False)
+        self.button_send_clusters_to_prep.clicked.connect(self.OnSendClustersToPrep)
         self.canvas.scene().sigMouseClicked.connect(self.OnPointClusterImage)
 
         self.UpdatePCAPlotView()
@@ -391,6 +393,7 @@ class PagePCACluster(QtWidgets.QWidget):
         self.com.cluster_calculated = 0
         self.button_scatterplots.setEnabled(False)
         self.button_savecluster.setEnabled(False)
+        self.button_send_clusters_to_prep.setEnabled(False)
         self.button_errormap.setEnabled(False)
         self.showallspectracb.setEnabled(False)
         self.calcpca = False
@@ -573,22 +576,24 @@ class PagePCACluster(QtWidgets.QWidget):
             self.showallspectra = 1
             self.slider_cl.setEnabled(False)
 
-            # Switch colormap to Qualitative/Set1 with one step per cluster so
+            # Switch colormap to Miscellaneous/Mantis with one step per cluster so
             # the image, colorbar and spectra all share the same palette.
-            self.CMCatBox.setCurrentIndex(4)           # Qualitative
+            self.CMCatBox.setCurrentIndex(5)           # Miscellaneous (contains 'Mantis')
             self.StepSpin.setValue(self.numclusters)   # one discrete colour per cluster
-            self.CMMapBox.setCurrentIndex(5)           # Set1
-            self.ColorFlipCheckBox.setChecked(True)    # legacy CA style: flipped colours enabled
+            self.CMMapBox.setCurrentText('Mantis')
+            self.ColorFlipCheckBox.setChecked(False)
             self.StepSpin.setEnabled(False)            # locked to numclusters
 
             self.showClusterImage()
             self.showClusterSpectrum()
             self.UpdatePCAPlotView()
             self._setClusterColorbarHandlesEnabled(False)
+            self.button_send_clusters_to_prep.setEnabled(True)
 
             QtWidgets.QApplication.restoreOverrideCursor()
         except Exception as e:
             self.com.cluster_calculated = 0
+            self.button_send_clusters_to_prep.setEnabled(False)
             QtWidgets.QApplication.restoreOverrideCursor()
             print(e)
             QtWidgets.QMessageBox.warning(self, 'Error', 'Cluster analysis failed: {}'.format(e))
@@ -608,7 +613,7 @@ class PagePCACluster(QtWidgets.QWidget):
 
 #----------------------------------------------------------------------
     def showClusterImage(self):
-        """Display the cluster-index image (always composite) using the current Set1 colormap.
+        """Display the cluster-index image (always composite) using the active cluster colormap.
         cluster_indices values (0..numclusters-1) map directly to LUT entries.
         """
         if self.numclusters <= 0:
@@ -620,8 +625,7 @@ class PagePCACluster(QtWidgets.QWidget):
             setlabel=False,
             # Integer cluster ids (0..N-1) become centered bins in the colorbar.
             levels=(-0.5, self.numclusters - 0.5),
-            # Always rebuild the cluster colormap LUT so that any temporary
-            # per-cluster binary LUT set during Save_CA() export is correctly reset.
+            # Always rebuild the cluster colormap LUT so temporary export LUTs are reset.
             setlut=True,
         )
         self._setColorbarAxisLabel("Cluster", "")
@@ -749,6 +753,7 @@ class PagePCACluster(QtWidgets.QWidget):
         self.selcluster = 0
         self.showallspectra = 0
         self.showerrormap = 0
+        self.button_send_clusters_to_prep.setEnabled(False)
 
         self.button_errormap.blockSignals(True)
         self.button_errormap.setChecked(False)
@@ -823,13 +828,19 @@ class PagePCACluster(QtWidgets.QWidget):
         try:
             map_name = self.CMMapBox.currentText()
             num_lut = max(2, int(self.StepSpin.value()))
-            lut_range = (1.0, 0.0) if self.ColorFlipCheckBox.isChecked() else (0.0, 1.0)
-            cm = pg.colormap.get(map_name, source='matplotlib')
-            lut = cm.getLookupTable(*lut_range, num_lut)
+            if map_name == 'Mantis':
+                lut = build_mantis_lut(num_lut)
+                if self.ColorFlipCheckBox.isChecked():
+                    lut = np.ascontiguousarray(lut[::-1])
+            else:
+                lut_range = (1.0, 0.0) if self.ColorFlipCheckBox.isChecked() else (0.0, 1.0)
+                cm = pg.colormap.get(map_name, source='matplotlib')
+                lut = cm.getLookupTable(*lut_range, num_lut)
             lut_index = int(np.clip(np.floor(((cluster_index + 0.5) / max(self.numclusters, 1)) * num_lut), 0, num_lut - 1))
             return QtGui.QColor(int(lut[lut_index, 0]), int(lut[lut_index, 1]), int(lut[lut_index, 2]))
         except Exception:
             return QtGui.QColor('blue')
+
 
 #----------------------------------------------------------------------
     def showClusterSpectrum(self):
@@ -931,6 +942,58 @@ class PagePCACluster(QtWidgets.QWidget):
     def OnSaveCluster(self, event=None):
         savewin = SaveWinP3(self.window(), page=self)
         savewin.show()
+
+#----------------------------------------------------------------------
+    def OnSendClustersToPrep(self, event=None):
+        if self.com.cluster_calculated != 1 or self.numclusters <= 0:
+            QtWidgets.QMessageBox.warning(self, 'Error', 'No clusters available. Please calculate clusters first.')
+            return
+
+        prep = getattr(self.window(), 'tab_prep', None)
+        if prep is None or not hasattr(prep, 'absimgfig') or not hasattr(prep, 'specfig'):
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Preparation page is not available.')
+            return
+
+        if prep.stk.n_cols != self.stk.n_cols or prep.stk.n_rows != self.stk.n_rows or prep.stk.n_ev != self.stk.n_ev:
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Prep and cluster data dimensions do not match.')
+            return
+
+        prep.specfig.ClearandReload()
+
+        cluster_indices = np.asarray(self.anlz.cluster_indices)
+        if cluster_indices.shape != (prep.stk.n_cols, prep.stk.n_rows):
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Cluster index shape does not match image dimensions.')
+            return
+
+        for i in range(self.numclusters):
+            boolmask = np.full((prep.stk.n_cols, prep.stk.n_rows), True)
+            boolmask[cluster_indices == i] = False
+            if not np.any(~boolmask):
+                continue
+
+            name, color = prep.specfig.GetNextROINumberandColor()
+            color.setAlpha(200)
+
+            roi = np.zeros([*prep.absimgfig.imageitem.image.shape, 4], dtype=np.uint8)
+            roi[np.where(~boolmask)] = color.getRgb()
+            lockedroi = pg.ImageItem(image=roi, border="k", opacity=0.5)
+            prep.absimgfig.imageplot.addItem(lockedroi, ignoreBounds=True)
+            lockedroi.setZValue(11)
+
+            curve = pg.PlotCurveItem(
+                prep.stk.ev,
+                np.asarray(self.anlz.clusterspectra[i], dtype=float),
+                pen=({'color': color, 'width': 2}),
+                skipFiniteCheck=True,
+                name=name,
+            )
+            prep.specfig.pi.addItem(curve)
+
+        if self.numclusters > 0:
+            prep.specfig.last_locked_roi_spectrum = (
+                np.asarray(prep.stk.ev).copy(),
+                np.asarray(self.anlz.clusterspectra[self.numclusters - 1], dtype=float).copy(),
+            )
 
 #----------------------------------------------------------------------
     def OnSave(self, event):
@@ -1304,6 +1367,7 @@ class PagePCACluster(QtWidgets.QWidget):
         self.button_calcca.setEnabled(False)
         self.button_scatterplots.setEnabled(False)
         self.button_savecluster.setEnabled(False)
+        self.button_send_clusters_to_prep.setEnabled(False)
         self.showallspectracb.blockSignals(True)
         self.showallspectracb.setChecked(False)
         self.showallspectracb.blockSignals(False)
