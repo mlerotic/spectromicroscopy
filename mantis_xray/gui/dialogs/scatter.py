@@ -105,6 +105,9 @@ class Scatterplots(QtWidgets.QDialog):
         main.addLayout(center, stretch=1)
         main.addLayout(bottom)
 
+        esc_shortcut = QtWidgets.QShortcut(QtGui.QKeySequence("Esc"), self)
+        esc_shortcut.activated.connect(self.reject)
+
     # ------------------------------------------------------------------
     def _on_slider_x(self, value):
         self.pca_x = value - 1

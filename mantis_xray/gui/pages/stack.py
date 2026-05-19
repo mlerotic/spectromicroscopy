@@ -14,7 +14,7 @@ from ..dialogs.crop import MultiCrop
 from ..dialogs.alignment import ImageRegistrationDialog, ImageRegistrationManual, ImageRegistrationFFT
 from ..dialogs.dark_signal import DarkSignal
 from ..dialogs.artefacts import ShowArtefacts
-# from ..dialogs.dose import DoseCalculation
+from ..dialogs import DoseCalculation
 from ..dialogs.odmap import ShowODMap
 # from ..dialogs.colortable import ColorTableFrame
 
@@ -353,14 +353,6 @@ class PageStack(QtWidgets.QWidget):
             savewin.setWindowTitle('Save I0...')
         savewin.show()
 
-#----------------------------------------------------------------------
-    def OnROI_DoseCalc(self, event):
-        # Disabled for now - needs further work on ROI integration
-        pass
-        # self.CalcROISpectrum()
-        # dosewin = DoseCalculation(self, self.stk, self.ROIspectrum)
-        # dosewin.show()
-
 # ----------------------------------------------------------------------
     def OnMultiCrop(self, evt):
         multicropwin = MultiCrop(self.window(), self.com, self.stk)
@@ -680,17 +672,30 @@ class PageStack(QtWidgets.QWidget):
 #----------------------------------------------------------------------
     def CalcROISpectrum(self):
 
+        locked_spectrum = getattr(self.specfig, "last_locked_roi_spectrum", None)
+        if locked_spectrum is not None:
+            locked_y = np.asarray(locked_spectrum[1])
+        else:
+            locked_y = None
+
         self.ROIspectrum = np.zeros((self.stk.n_ev))
 
-        # Get ROI indices from pyqtgraph ImgFig (ROIrgba is RGBA array)
-        # ROI pixels have non-zero alpha channel
+        # Get ROI indices from the live ROI if available; otherwise reuse the locked spectrum directly.
         roi_mask = np.sum(self.absimgfig.ROIrgba, axis=2) > 0
+        if not np.any(roi_mask):
+            if locked_y is not None and locked_y.size == self.stk.n_ev:
+                self.ROIspectrum = locked_y.copy()
+                return True
+            return False
         indices = np.where(roi_mask)
         numroipix = len(indices[0])
         
         if numroipix == 0:
+            if locked_y is not None and locked_y.size == self.stk.n_ev:
+                self.ROIspectrum = locked_y.copy()
+                return True
             # No ROI defined
-            return
+            return False
 
         if self.com.i0_loaded == 1:
             for ie in range(self.stk.n_ev):
@@ -701,6 +706,8 @@ class PageStack(QtWidgets.QWidget):
                 thiseng = self.stk.absdata[:, :, ie]
                 self.ROIspectrum[ie] = np.sum(thiseng[indices])/numroipix
 
+        return True
+
 #-----------------------------------------------------------------------
     def ShowROISpectrum(self):
 
@@ -708,16 +715,6 @@ class PageStack(QtWidgets.QWidget):
         # This calls self.specfig.clf() etc in original code.
         # I need to adapt to SpecFig widget or copy logic.
         pass
-
-#-----------------------------------------------------------------------
-    def OnAcceptROI(self, evt):
-        # Original implementation is complex - delegates to absimgfig for now
-        # But we need to enable the ROI buttons after acceptance
-        self.button_saveROIspectr.setEnabled(True)
-        self.button_setROII0.setEnabled(True)
-        self.button_ROIdosecalc.setEnabled(True)
-        self.window().refresh_widgets()
-
 
 #-----------------------------------------------------------------------
     def OnSelectLasso(self,verts):
@@ -729,12 +726,15 @@ class PageStack(QtWidgets.QWidget):
 
 #----------------------------------------------------------------------
     def OnROI_DoseCalc(self, event):
+        roi_spectra = self.specfig.get_roi_spectra_for_dose()
+        if not roi_spectra:
+            self.CalcROISpectrum()
 
-        self.CalcROISpectrum()
+        if roi_spectra:
+            self.ROIspectrum = np.asarray(roi_spectra[0][1]).copy()
 
-        # dosewin = DoseCalculation(self, self.stk, self.ROIspectrum)
-        # dosewin.show()
-        pass
+        dosewin = DoseCalculation(self, self.stk, self.ROIspectrum, roi_spectra=roi_spectra)
+        dosewin.exec_()
 
 #----------------------------------------------------------------------
     def OnSpectralROI(self, evt):

@@ -3,6 +3,7 @@ import pyqtgraph as pg
 from PyQt5 import QtCore, QtGui, QtWidgets
 import numpy as np
 import os
+import re
 from scipy.interpolate import interp1d
 from scipy import ndimage
 from ..helpers import PDFExporter
@@ -69,7 +70,8 @@ class SpecFig():
         self.roicolor = (0, 0, 255, 255)
         self.plot.blockSignals(True)
         self.pi.setMouseEnabled(x=True, y=True)
-        if fig is None:
+        # Qt clicked(bool) may pass a bool positional arg; ignore it here.
+        if fig is None or isinstance(fig, bool) or not hasattr(fig, "imageplot"):
             fig = self.parent.absimgfig
         iterator = len(self.pi.items)-1
         # The expression "for item in self.pi.items: " does not work! Instead we count the items and iterate through them
@@ -97,6 +99,8 @@ class SpecFig():
         if hasattr(self.parent, "ROIShapeBox"):
             if self.parent.ROIShapeBox.currentText() != "Lasso":
                 self.parent.absimgfig.OnROIVisibility(self.parent.ROIvisibleCheckBox.checkState())
+        # Clear stale lock fallback data after explicit clear-all.
+        self.last_locked_roi_spectrum = None
 
 
     def ClearforHistogram(self):
@@ -285,6 +289,55 @@ class SpecFig():
             curve.show()
         self.parent.absimgfig.addLockedROI(color)
         curve.setData(x,y)
+        self.last_locked_roi_spectrum = (np.asarray(x).copy(), np.asarray(y).copy())
+
+    def get_roi_spectra_for_dose(self):
+        spectra = []
+
+        def add_if_valid(label, y_data):
+            if y_data is None:
+                return
+            arr = np.asarray(y_data, dtype=float)
+            if arr.ndim == 1 and arr.size == self.parent.stk.n_ev:
+                spectra.append((label, arr.copy()))
+
+        # Current interactive ROI spectrum (main curve).
+        current_y = None
+        if len(self.pi.items) > 1 and isinstance(self.pi.items[1], pg.PlotCurveItem):
+            current_y = getattr(self.pi.items[1], "yData", None)
+        if current_y is None:
+            # Recompute from the active ROI if plot curve data are temporarily unavailable.
+            data = self.prefilterData()
+            mask = self.createROImask()
+            _x, current_y = self.getSpecfromROI(data, mask)
+        add_if_valid("Current ROI", current_y)
+
+        # Locked ROI spectra
+        for item in self.pi.items:
+            if not isinstance(item, pg.PlotCurveItem):
+                continue
+            name = None
+            if hasattr(item, "opts") and isinstance(item.opts, dict):
+                name = item.opts.get("name")
+            if isinstance(name, str) and name.startswith("ROI "):
+                add_if_valid(name, getattr(item, "yData", None))
+
+        unique = {}
+        for label, spectrum in spectra:
+            unique[label] = spectrum
+
+        ordered = []
+        if "Current ROI" in unique:
+            ordered.append(("Current ROI", unique.pop("Current ROI")))
+
+        def roi_sort_key(label):
+            match = re.match(r"ROI\s+(\d+)", label)
+            return int(match.group(1)) if match else 10**9
+
+        for label in sorted(unique.keys(), key=roi_sort_key):
+            ordered.append((label, unique[label]))
+
+        return ordered
 
     def removeLast2ROI(self,i,roiitems):
         self.pi.removeItem(self.pi.items[-1 - i])
@@ -414,9 +467,12 @@ class SpecFig():
         mask = self.createROImask()
         self.drawROImask(mask, color = self.roicolor)
         x, y = self.getSpecfromROI(data,self.parent.absimgfig.boolmask)
+        if len(self.pi.items) < 2 or not isinstance(self.pi.items[1], pg.PlotCurveItem):
+            return
         self.plot.blockSignals(True)
         self.pi.items[1].setData(x, y)
-        self.LineIndicator.setPos(QtCore.QPointF(self.pi.items[1].xData[self.parent.iev], self.pi.items[1].yData[self.parent.iev]))
+        if self.pi.items[1].xData is not None and self.pi.items[1].yData is not None and len(self.pi.items[1].xData) > self.parent.iev:
+            self.LineIndicator.setPos(QtCore.QPointF(self.pi.items[1].xData[self.parent.iev], self.pi.items[1].yData[self.parent.iev]))
         self.plot.blockSignals(False)
 
     def updatePlotDataOnPCA(self):
@@ -893,6 +949,11 @@ class ImgFig():
 
         self.imageplot.addItem(lockedroi, ignoreBounds=True)
         lockedroi.setZValue(11)  # make sure ROI is drawn above image
+        # Locked ROIs are already valid selection state; enable ROI actions now.
+        for button_name in ("button_saveROIspectr", "button_setROII0", "button_ROIdosecalc"):
+            button = getattr(self.parent, button_name, None)
+            if button is not None:
+                button.setEnabled(True)
         if self.parent.ROIShapeBox.currentText() == "Lasso": # remove lasso ROI after function call
             self.OnROIShapeChanged("Lasso")
 

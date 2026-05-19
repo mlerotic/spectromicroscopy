@@ -62,12 +62,14 @@ class henke:
                                'quartz', 'aluminum', 'gold', 'ice', 'carbon', 'polystyrene', 
                                'silicon', 'germanium']
         
-        self.compound_forumula = ['H2O', 'H48.6C32.9N8.9O8.9S0.6', 'H62.5C31.5O6.3', 
+        self.compound_formula = ['H2O', 'H48.6C32.9N8.9O8.9S0.6', 'H62.5C31.5O6.3',
                                    'H42.1C31.9N10.3O13.9P1.6S0.3', 'H35.5C30.8N11.7O18.9P3.1',
                                    'He' , 'H49.95C24.64N8.66O15.57P1.07S0.03', 
                                    'N78.08O20.95Ar0.93', 'C5H8O2', 'Si3N4', 'C', 'Ni', 'Be', 
                                    'Cu', 'SiO2', 'Al', 'Au', 'H2O', 'C', 'C8H8',
                                    'Si', 'Ge']
+        # Backward-compatible alias for legacy code paths.
+        self.compound_forumula = self.compound_formula
         self.compound_density = [ 1.0, 1.35, 1.0, 1.5, 1.7, 1.66E-04, 1.527, 1.20E-03, 1.18,
                                  3.44, 2.26, 8.876, 1.845, 8.96, 2.2, 2.7, 19.3, 0.92, 1, 1.06,
                                  2.33, 5.323 ]
@@ -85,11 +87,12 @@ class henke:
         
         
         if compound_string in self.compound_name:
-            compound_string = self.compound_forumula[self.compound_name.index(compound_string)] 
+            compound_string = self.compound_formula[self.compound_name.index(compound_string)]
 
-        if compound_string in self.compound_forumula: 
-            z_array = self.zcompound(compound_string, z_array)
-            atwt =  self.zatwt(z_array)
+        z_array = self.zcompound(compound_string, z_array)
+        if not isinstance(z_array, np.ndarray):
+            raise ValueError('Invalid compound formula: {}'.format(compound_string))
+        atwt =  self.zatwt(z_array)
 
         return z_array, atwt
             
@@ -227,17 +230,14 @@ class henke:
         
             
         if (this_z == 0) :
-            print('zcompound is confused: ',compound_string)
-            compound_string=''
-            z_array = 0
-            return
-        
+            raise ValueError('zcompound is confused: {}'.format(compound_string))
+
         
         
         # Find the next element or parenthesis, as
         # anything before it must be a number.
         postnum_index = num_start_index
-        if len(compound_string) > num_start_index+1 :
+        if len(compound_string) > num_start_index :
             test_char = compound_string[postnum_index]
         else :
             test_char = ''
@@ -480,7 +480,7 @@ class henke:
                 print('Actual, expected file position before reading extras: ',u.get_position(), expected_pos)
             
             
-            n_extra = np.zeros((n_elements), dtype = np.int)
+            n_extra = np.zeros((n_elements), dtype=int)
             extra_energies = np.zeros((n_elements, n_extra_energies))
             extra_f1 = np.zeros((n_elements, n_extra_energies))
             extra_f2 = np.zeros((n_elements, n_extra_energies))
@@ -511,8 +511,8 @@ class henke:
             byte_offset = 4+4+4*n_energies + 8*ielement*n_energies
             u.set_position(byte_offset)
             
-            f1 = u.unpack_farray(n_energies, u.unpack_float)
-            f2 = u.unpack_farray(n_energies, u.unpack_float)
+            f1 = np.array(u.unpack_farray(n_energies, u.unpack_float))
+            f2 = np.array(u.unpack_farray(n_energies, u.unpack_float))
             
             byte_offset = 4+4+4*n_energies + 8*n_elements*n_energies
             u.set_position(byte_offset)
@@ -523,7 +523,7 @@ class henke:
             
             # Now we have the above plus i_element times the quantity:
             #   (2 for n_extra, and n_extra_energies each of three floats)
-            byte_offset = long(4)+long(4)+long(4)*n_energies + long(8)*n_elements*n_energies + long(4) + ielement*(4+12*n_extra_energies)
+            byte_offset = 4 + 4 + 4 * n_energies + 8 * n_elements * n_energies + 4 + ielement * (4 + 12 * n_extra_energies)
             u.set_position(byte_offset)
             
             n_extra = u.unpack_int()
@@ -551,14 +551,14 @@ class henke:
         first_time = 1
         for i in range(maxz):
             if (z_array[i] != 0.):
-                energies, this_f1, this_f2, n_extra, extra_energies, extra_f1, extra_f2 = self.read(ielement=i)
-            if (first_time == 1) :
-                f1 = z_array[i]*this_f1
-                f2 = z_array[i]*this_f2
-                first_time = 0
-            else:
-                f1 = f1+z_array[i]*this_f1
-                f2 = f2+z_array[i]*this_f2
+                energies, this_f1, this_f2, n_extra, extra_energies, extra_f1, extra_f2 = self.read(ielement=i, all=False)
+                if (first_time == 1) :
+                    f1 = z_array[i]*this_f1
+                    f2 = z_array[i]*this_f2
+                    first_time = 0
+                else:
+                    f1 = f1+z_array[i]*this_f1
+                    f2 = f2+z_array[i]*this_f2
 
   
         num_energies = len(energies)
@@ -625,8 +625,20 @@ class henke:
 
 #------------------------------------------------------------------------------    
     def dose_calc(self, stack, i_composition, od_spectrum, i0_signal, dosecalc_detector_eff):    
-    
-        pix_nm_squared = 1.e6*(stack.x_dist[1]-stack.x_dist[0])*(stack.y_dist[1]-stack.y_dist[0])
+        x_dist = np.asarray(getattr(stack, 'x_dist', []), dtype=float)
+        y_dist = np.asarray(getattr(stack, 'y_dist', []), dtype=float)
+        if x_dist.ndim == 1 and x_dist.size > 1:
+            dx = float(np.abs(x_dist[1] - x_dist[0]))
+        else:
+            dx = float(getattr(stack, 'x_pxsize', 0.0) or 0.0)
+        if y_dist.ndim == 1 and y_dist.size > 1:
+            dy = float(np.abs(y_dist[1] - y_dist[0]))
+        else:
+            dy = float(getattr(stack, 'y_pxsize', 0.0) or 0.0)
+        if dx <= 0.0 or dy <= 0.0:
+            raise ValueError('Missing valid pixel size for dose calculation (x/y spacing).')
+
+        pix_nm_squared = 1.e6 * dx * dy
 
         dose = 0.
              
@@ -635,19 +647,38 @@ class henke:
         rho = 1.
         henke_energies, f1, f2, delta, beta, graze_mrad, reflect, inverse_mu, atwt, alpha = self.array(i_composition,rho) 
 
+        ev = np.asarray(stack.ev, dtype=float)
+        od_spectrum = np.asarray(od_spectrum, dtype=float)
+        i0_signal = np.asarray(i0_signal, dtype=float)
+        if od_spectrum.size != ev.size:
+            raise ValueError('ROI spectrum length does not match energy axis.')
+        if i0_signal.size == 1:
+            i0_signal = np.full(ev.shape, float(i0_signal[0]), dtype=float)
+        elif i0_signal.size != ev.size:
+            raise ValueError('I0 signal length does not match energy axis.')
+
         func_f2_array = scipy.interpolate.interp1d(henke_energies, f2,  bounds_error=False, fill_value=0.0) 
-        f2_array = func_f2_array(stack.ev)
-        
+        f2_array = func_f2_array(ev)
+
         # This is the scaling of f2_array as described in pca_gui_man.tex
-        i_max_ev = np.argmax(stack.ev)
-        if stack.data_dwell == None: 
-            stack.data_dwell = 1.
+        i_max_ev = np.argmax(ev)
+        dwell = getattr(stack, 'data_dwell', None)
+        if dwell is None:
+            dwell = 1.0
+        else:
+            dwell = np.asarray(dwell, dtype=float)
+            if dwell.size == 0:
+                dwell = 1.0
+            elif dwell.size == 1:
+                dwell = float(dwell.reshape(-1)[0])
+            elif dwell.size != ev.size:
+                raise ValueError('data_dwell length does not match energy axis.')
         if (od_spectrum[i_max_ev] != 0.) :
-            f2_array = f2_array[0,i_max_ev]*(stack.ev/stack.ev[i_max_ev])*(od_spectrum/od_spectrum[i_max_ev])
+            f2_array = f2_array[i_max_ev]*(ev/ev[i_max_ev])*(od_spectrum/od_spectrum[i_max_ev])
             # See the documentation file pca_gui_man.tex. Is i0_signal
             # normalized to 1 sec? Does not seem to be the case! Might
             # have to change it at some point.
-            dose  = 6.74e5*(1./(dosecalc_detector_eff* pix_nm_squared*atwt))*np.sum(i0_signal*1e-3*stack.data_dwell *f2_array)
+            dose  = 6.74e5*(1./(dosecalc_detector_eff* pix_nm_squared*atwt))*np.sum(i0_signal*1e-3*dwell *f2_array)
 
 
         return dose

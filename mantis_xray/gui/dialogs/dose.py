@@ -5,7 +5,7 @@ from ...analysis import henke
 
 class DoseCalculation(QtWidgets.QDialog):
 
-    def __init__(self, parent,  stack, ROIspectrum):
+    def __init__(self, parent,  stack, ROIspectrum, roi_spectra=None):
         QtWidgets.QWidget.__init__(self, parent)
 
         self.parent = parent
@@ -20,6 +20,7 @@ class DoseCalculation(QtWidgets.QDialog):
 
         self.stack = stack
         self.ROIspectrum = ROIspectrum
+        self.roi_spectra = roi_spectra or []
 
 
 
@@ -39,6 +40,8 @@ class DoseCalculation(QtWidgets.QDialog):
         st2 = QtWidgets.QLabel(self)
         st2.setText('I region composition:')
         #st2.SetFont(fontb)
+        st_roi = QtWidgets.QLabel(self)
+        st_roi.setText('ROI selection:')
 #        st3 = QtWidgets.QLabel(self,'Xray absorption length:')
 #        st3.SetFont(fontb)
         st4 = QtWidgets.QLabel(self)
@@ -51,6 +54,12 @@ class DoseCalculation(QtWidgets.QDialog):
 
         self.tc_2 = QtWidgets.QLineEdit(self)
 
+        self.cb_roi = QtWidgets.QComboBox(self)
+        if self.roi_spectra:
+            self.cb_roi.addItems([label for label, _ in self.roi_spectra])
+        else:
+            self.cb_roi.addItem('Current ROI')
+
 #        self.tc_3 = wx.TextCtrl(panel1, -1, size=((200,-1)), style=wx.TE_RICH|wx.VSCROLL|wx.TE_READONLY,
 #                                         value=' ')
 
@@ -61,10 +70,12 @@ class DoseCalculation(QtWidgets.QDialog):
         gridtop.addWidget( self.tc_1, 0,1)
         gridtop.addWidget(st2, 1,0)
         gridtop.addWidget( self.tc_2, 1,1)
+        gridtop.addWidget(st_roi, 2,0)
+        gridtop.addWidget(self.cb_roi, 2,1)
 #        gridtop.addWidget(st3, 0)
 #        gridtop.addWidget( self.tc_3, 0)
-        gridtop.addWidget(st4, 2,0)
-        gridtop.addWidget( self.tc_4, 2,1)
+        gridtop.addWidget(st4, 3,0)
+        gridtop.addWidget( self.tc_4, 3,1)
 
 
 
@@ -96,6 +107,14 @@ class DoseCalculation(QtWidgets.QDialog):
 
         i_composition = str(self.tc_2.text())
 
+        selected_spectrum = np.asarray(self.ROIspectrum, dtype=float)
+        if self.roi_spectra:
+            idx = self.cb_roi.currentIndex()
+            if idx < 0 or idx >= len(self.roi_spectra):
+                QtWidgets.QMessageBox.warning(self, 'Error', 'Please select a valid ROI.')
+                return
+            selected_spectrum = np.asarray(self.roi_spectra[idx][1], dtype=float)
+
         dose = 0.
 
         Chenke = henke.henke()
@@ -108,9 +127,9 @@ class DoseCalculation(QtWidgets.QDialog):
             return
 
         try:
-            dose = Chenke.dose_calc(self.stack, i_composition, self.ROIspectrum, self.stack.i0data, detector_eff)
-        except:
-            QtWidgets.QMessageBox.warning(self, 'Error', "Could not calculate dose. Please enter new compound.")
+            dose = Chenke.dose_calc(self.stack, i_composition, selected_spectrum, self.stack.i0data, detector_eff)
+        except Exception as e:
+            QtWidgets.QMessageBox.warning(self, 'Error', "Could not calculate dose: {}".format(e))
             return
 
         self.tc_4.setText(str(dose))

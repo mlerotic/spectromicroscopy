@@ -20,7 +20,7 @@ from .pages import (
     PageNNMA, PageTomo
 )
 from .utils.file_gui import File_GUI
-from .dialogs import StackListFrame
+from .dialogs import StackListFrame, AboutFrame
 
 class MainFrame(QtWidgets.QMainWindow):
 
@@ -544,10 +544,8 @@ class MainFrame(QtWidgets.QMainWindow):
 
 #----------------------------------------------------------------------
     def onAbout(self):
-
-        #self.popup = AboutFrame(self)
-        #self.popup.show()
-        pass
+        dlg = AboutFrame(self)
+        dlg.exec_()
 
 # ----------------------------------------------------------------------
     def ShowInfo(self, filename, filepath):
@@ -602,6 +600,7 @@ class MainFrame(QtWidgets.QMainWindow):
             self.tab_prep.button_meanflux.setEnabled(False)
             self.tab_prep.button_slideshow.setEnabled(False)
             self.tab_prep.button_spectralROI.setEnabled(False)
+            self.tab_prep.button_ROIdosecalc.setEnabled(False)
             self.tab_prep.button_lockspectrum.setEnabled(False)
             self.tab_prep.button_clearlastroi.setEnabled(False)
             self.tab_prep.button_mergeroi.setEnabled(False)
@@ -642,6 +641,7 @@ class MainFrame(QtWidgets.QMainWindow):
             self.tab_prep.button_meanflux.setEnabled(True)
             self.tab_prep.button_slideshow.setEnabled(True)
             self.tab_prep.button_spectralROI.setEnabled(True)
+            self.tab_prep.button_ROIdosecalc.setEnabled(True)
             self.tab_prep.button_lockspectrum.setEnabled(True)
             self.tab_prep.button_clearlastroi.setEnabled(True)
             self.tab_prep.button_mergeroi.setEnabled(True)

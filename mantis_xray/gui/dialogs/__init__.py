@@ -13,4 +13,4 @@ from .fit_params import FitParams
 from .about import AboutFrame
 from .stack_list import StackListFrame
 from .plot_frame import PlotFrame
-# from .dose import DoseCalculation # Currently deactivated
+from .dose import DoseCalculation

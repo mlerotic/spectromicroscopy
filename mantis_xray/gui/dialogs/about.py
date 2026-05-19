@@ -9,7 +9,8 @@ class AboutFrame(QtWidgets.QDialog):
     def __init__(self, parent = None, title='About'):
         QtWidgets.QWidget.__init__(self, parent)
 
-        self.resize(360, 660)
+        self.resize(360, 620)
+        self.setFixedSize(360, 620)
         self.setWindowTitle('About Mantis')
 
         pal = QtGui.QPalette()
@@ -80,10 +81,10 @@ http://www.gnu.org/licenses/.''')
         vbox.addLayout(hbox)
         vbox.addStretch(1)
 
-        button_close = QtWidgets.QPushButton('Close')
-        button_close.clicked.connect( self.close)
-        vbox.addWidget(button_close)
         vbox.addStretch(1)
+
+        esc_shortcut = QtWidgets.QShortcut(QtGui.QKeySequence("Esc"), self)
+        esc_shortcut.activated.connect(self.reject)
 
 
 
