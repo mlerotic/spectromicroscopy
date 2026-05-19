@@ -386,6 +386,6 @@ class FitParams(QtWidgets.QDialog):
                 self.gauss_fp_s[i] = float(self.le_sigma[i].text())
 
 
-            self.parent.page6.SetInitFitParams(self.base, self.stepfitparams, self.gauss_fp_a, self.gauss_fp_m, self.gauss_fp_s)
+            self.parent.tab_pfit.SetInitFitParams(self.base, self.stepfitparams, self.gauss_fp_a, self.gauss_fp_m, self.gauss_fp_s)
 
         self.close()

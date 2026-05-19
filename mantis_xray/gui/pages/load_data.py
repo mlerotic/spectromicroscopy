@@ -5,7 +5,7 @@ from PyQt5 import QtWidgets, uic, QtCore, QtGui
 # import pyqtgraph as pg # Assuming ImgFig uses it internally, but maybe needed for layouts if used directly?
 from ..widgets import ImgFig
 
-# from ..dialogs.save import SaveWin
+from ..dialogs.save import SaveWin
 
 class PageLoadData(QtWidgets.QWidget):
     def __init__(self, common, data_struct, stack):
@@ -94,10 +94,8 @@ class PageLoadData(QtWidgets.QWidget):
 
 # ----------------------------------------------------------------------
     def OnSave(self, event):
-
-        # savewin = SaveWin(self, self.com, self.stk)
-        # savewin.show()
-        pass
+        savewin = SaveWin(self, self.com, self.stk)
+        savewin.show()
 
 # ----------------------------------------------------------------------
     def OnMirror(self):
@@ -124,10 +122,10 @@ class PageLoadData(QtWidgets.QWidget):
             self.OnScrollEng(self.iev)
             # Update/Refresh widgets:
             #if showmaptab:
-            #    self.window().page9.Clear()
-            #    self.window().page9.loadData()
-            self.window().page1.absimgfig.loadNewImageWithROI()
-            self.window().page1.specfig.ClearandReload()
+            #    self.window().tab_map.Clear()
+            #    self.window().tab_map.loadData()
+            self.window().tab_prep.absimgfig.loadNewImageWithROI()
+            self.window().tab_prep.specfig.ClearandReload()
         return
 
     def OnRotate(self):
@@ -161,13 +159,13 @@ class PageLoadData(QtWidgets.QWidget):
             self.OnScrollEng(self.iev)
             self.absimgfig.OnMetricScale(self.MetricCheckBox.isChecked(), self.ZeroOriginCheckBox.isChecked(),self.SquarePxCheckBox.isChecked())
             #if showmaptab:
-            #    self.window().page9.Clear()
-            #    self.window().page9.loadData()
-            self.window().page1.ix = int(self.stk.n_cols / 2)
-            self.window().page1.iy = int(self.stk.n_rows / 2)
-            #self.window().page1.loadSpectrum(self.window().page1.ix, self.window().page1.iy)
-            self.window().page1.absimgfig.loadNewImageWithROI()
-            self.window().page1.specfig.ClearandReload()
+            #    self.window().tab_map.Clear()
+            #    self.window().tab_map.loadData()
+            self.window().tab_prep.ix = int(self.stk.n_cols / 2)
+            self.window().tab_prep.iy = int(self.stk.n_rows / 2)
+            #self.window().tab_prep.loadSpectrum(self.window().tab_prep.ix, self.window().tab_prep.iy)
+            self.window().tab_prep.absimgfig.loadNewImageWithROI()
+            self.window().tab_prep.specfig.ClearandReload()
         return
 
 #-----------------------------------------------------------------------
@@ -203,8 +201,8 @@ class PageLoadData(QtWidgets.QWidget):
         image = self.stk.absdata[:, :, int(self.slider_eng.value())].copy()
 
         self.absimgfig.draw(image)
-        #self.window().page1.itheta = self.itheta
-        #self.window().page1.slider_theta.setValue(self.itheta)
+        #self.window().tab_prep.itheta = self.itheta
+        #self.window().tab_prep.slider_theta.setValue(self.itheta)
 
-        #self.window().page2.itheta = self.itheta
-        #self.window().page2.slider_theta.setValue(self.itheta)
+        #self.window().tab_clus.itheta = self.itheta
+        #self.window().tab_clus.slider_theta.setValue(self.itheta)

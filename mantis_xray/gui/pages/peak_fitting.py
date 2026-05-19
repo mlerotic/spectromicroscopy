@@ -934,7 +934,7 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
 
 
         if self.showevlines:
-            peak_engs = self.window().page5.peak_engs
+            peak_engs = self.window().tab_peak.peak_engs
             for i in range(len(peak_engs)):
                 if (peak_engs[i]>self.stk.ev[0]) and (peak_engs[i]<self.stk.ev[-1]):
                     axes.axvline(x=peak_engs[i], color = 'g', alpha=0.5)

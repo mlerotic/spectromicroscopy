@@ -108,7 +108,7 @@ class ShowMapHistogram(QtWidgets.QDialog):
         self.axes = fig.gca()
 
         #target_svd_maps;target_pcafit_maps
-        if self.parent.page4.showraw == True:
+        if self.parent.tab_spec.showraw == True:
             self.histogram = self.anlz.original_svd_maps
         else:
             self.histogram = self.anlz.original_fit_maps
@@ -134,7 +134,7 @@ class ShowMapHistogram(QtWidgets.QDialog):
         self.axes = fig.gca()
 
         #target_svd_maps;target_pcafit_maps
-        if self.parent.page4.showraw == True:
+        if self.parent.tab_spec.showraw == True:
             self.histogram = self.anlz.original_svd_maps4D
         else:
             self.histogram = self.anlz.original_fit_maps4D
@@ -184,9 +184,9 @@ class ShowMapHistogram(QtWidgets.QDialog):
 #----------------------------------------------------------------------
     def OnAccept(self, evt):
 
-        if self.parent.page4.showraw == True:
+        if self.parent.tab_spec.showraw == True:
             self.anlz.svd_map_threshold(self.histmin, self.histmax, svd=True)
         else:
             self.anlz.svd_map_threshold(self.histmin, self.histmax, pca=True)
-        self.parent.page4.loadTargetMap()
+        self.parent.tab_spec.loadTargetMap()
         self.close()

@@ -273,7 +273,7 @@ class analyze:
         
         for jth in range(self.stack.n_theta):
             
-            od3d = self.stack.od4D[:,:,:,jth]
+            od3d = self.stack.od4d[:,:,:,jth]
             od = od3d.copy()
             
             od = np.reshape(od, (n_pix, self.stack.n_ev), order='F')               
@@ -1239,7 +1239,7 @@ class analyze:
         for jth in range(self.stack.n_theta):
             
             
-            od3d = self.stack.od4D[:,:,:,jth]
+            od3d = self.stack.od4d[:,:,:,jth]
             od = od3d.copy()
             
             self.stack.od = np.reshape(od, (n_pix, self.stack.n_ev), order='F')   

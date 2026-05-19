@@ -323,41 +323,41 @@ class StackListFrame(QtWidgets.QDialog):
         self.stk.setScale()
 
 
-        #self.parent.page1.iev = int(self.stk.n_ev/3) #Is this correct?
+        #self.parent.tab_prep.iev = int(self.stk.n_ev/3) #Is this correct?
 
         self.parent.ix = int(self.stk.n_cols/2)
         self.parent.iy = int(self.stk.n_rows/2)
 
         self.common.stack_loaded = 1
 
-        self.parent.page0.absimgfig.loadNewImage()
+        self.parent.tab_load.absimgfig.loadNewImage()
         directory = os.path.dirname(str(self.filepath))
         self.parent.ShowInfo(os.path.basename(str(self.filepath)), directory)
-        # self.page1.ResetDisplaySettings()
-        self.parent.page1.absimgfig.loadNewImageWithROI()
-        self.parent.page1.button_multicrop.setText('Crop stack 3D...')
+        # self.tab_prep.ResetDisplaySettings()
+        self.parent.tab_prep.absimgfig.loadNewImageWithROI()
+        self.parent.tab_prep.button_multicrop.setText('Crop stack 3D...')
         # print(x,y), (self.ix,self.iy), self.stk.absdata.shape
-        self.parent.page1.specfig.ClearandReload()
+        self.parent.tab_prep.specfig.ClearandReload()
 
         # self.parent.refresh_widgets()
-        # self.parent.page1.ResetDisplaySettings()
-        # self.parent.page1.filename = filelist[0]
-        # # self.parent.page1.textctrl.setText(filelist[0])
+        # self.parent.tab_prep.ResetDisplaySettings()
+        # self.parent.tab_prep.filename = filelist[0]
+        # # self.parent.tab_prep.textctrl.setText(filelist[0])
         #
-        # self.parent.page0.slider_eng.setRange(0,self.stk.n_ev-1)
-        # #self.parent.page0.iev = int(self.stk.n_ev/2)
-        # self.parent.page0.slider_eng.setValue(self.parent.page1.iev)
+        # self.parent.tab_load.slider_eng.setRange(0,self.stk.n_ev-1)
+        # #self.parent.tab_load.iev = int(self.stk.n_ev/2)
+        # self.parent.tab_load.slider_eng.setValue(self.parent.tab_prep.iev)
         #
-        # self.parent.page1.slider_eng.setRange(0,self.stk.n_ev-1)
-        # #self.parent.page1.iev = self.stk.n_ev/2
-        # self.parent.page1.slider_eng.setValue(self.parent.page1.iev)
+        # self.parent.tab_prep.slider_eng.setRange(0,self.stk.n_ev-1)
+        # #self.parent.tab_prep.iev = self.stk.n_ev/2
+        # self.parent.tab_prep.slider_eng.setValue(self.parent.tab_prep.iev)
         #
-        # self.parent.page1.specfig.loadNewSpectrum()
-        # self.parent.page1.absimgfig.loadNewImageWithROI()
+        # self.parent.tab_prep.specfig.loadNewSpectrum()
+        # self.parent.tab_prep.absimgfig.loadNewImageWithROI()
         #
         #
         # self.parent.ShowInfo(filelist[0], self.filepath)
-        self.parent.page5.updatewidgets()
+        self.parent.tab_peak.updatewidgets()
         self.parent.refresh_widgets()
         QtWidgets.QApplication.restoreOverrideCursor()
         self.close()

@@ -33,8 +33,8 @@ class ImageRegistrationDialog(QtWidgets.QDialog):
         #     self.bt_align2.setEnabled(True)
         # else:
         #     self.bt_align2.setEnabled(True)
-        self.bt_align.clicked.connect(self.parent.page1.OnAlignImgs)
-        self.bt_align2.clicked.connect(self.parent.page1.OnAlignImgs2)
+        self.bt_align.clicked.connect(self.parent.tab_prep.OnAlignImgs)
+        self.bt_align2.clicked.connect(self.parent.tab_prep.OnAlignImgs2)
         self.bt_align.clicked.connect(self.done)
         self.bt_align2.clicked.connect(self.done)
 
@@ -789,15 +789,15 @@ class ImageRegistrationManual(QtWidgets.QDialog):
 
         #self.slider_eng.setRange(0, self.stack.n_ev-1)
 
-        #self.parent.page1.slider_eng.setRange(0, self.stack.n_ev-1)
-        #self.parent.page1.iev = self.stack.n_ev/2
-        #self.parent.page1.slider_eng.setValue(self.parent.page1.iev)
+        #self.parent.tab_prep.slider_eng.setRange(0, self.stack.n_ev-1)
+        #self.parent.tab_prep.iev = self.stack.n_ev/2
+        #self.parent.tab_prep.slider_eng.setValue(self.parent.tab_prep.iev)
 
-        #self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
-        #self.parent.page1.loadImage()
-        self.parent.page1.absimgfig.loadNewImageWithROI()
-        self.parent.page0.absimgfig.loadNewImage()
-        self.parent.page1.specfig.ClearandReload()
+        #self.parent.tab_prep.loadSpectrum(self.parent.tab_prep.ix, self.parent.tab_prep.iy)
+        #self.parent.tab_prep.loadImage()
+        self.parent.tab_prep.absimgfig.loadNewImageWithROI()
+        self.parent.tab_load.absimgfig.loadNewImage()
+        self.parent.tab_prep.specfig.ClearandReload()
 
         self.ShowImage()
 
@@ -1240,19 +1240,19 @@ class ImageRegistrationManual(QtWidgets.QDialog):
         self.stack.data_struct.spectromicroscopy.yshifts = self.yshifts
 
 
-        #self.parent.page1.slider_eng.setRange(0,self.stack.n_ev-1)
-        #self.parent.page1.iev = int(self.stack.n_ev/2)
-        #self.parent.page1.slider_eng.setValue(self.parent.page1.iev)
+        #self.parent.tab_prep.slider_eng.setRange(0,self.stack.n_ev-1)
+        #self.parent.tab_prep.iev = int(self.stack.n_ev/2)
+        #self.parent.tab_prep.slider_eng.setValue(self.parent.tab_prep.iev)
 
-        #self.parent.page1.ix = int(self.stack.n_cols/2)
-        #self.parent.page1.iy = int(self.stack.n_rows/2)
+        #self.parent.tab_prep.ix = int(self.stack.n_cols/2)
+        #self.parent.tab_prep.iy = int(self.stack.n_rows/2)
 
-        #self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
-        #self.parent.page1.loadImage()
-        #self.parent.page9.loadImage()
-        self.parent.page1.absimgfig.loadNewImageWithROI()
-        self.parent.page0.absimgfig.loadNewImage()
-        self.parent.page1.specfig.ClearandReload()
+        #self.parent.tab_prep.loadSpectrum(self.parent.tab_prep.ix, self.parent.tab_prep.iy)
+        #self.parent.tab_prep.loadImage()
+        #self.parent.tab_map.loadImage()
+        self.parent.tab_prep.absimgfig.loadNewImageWithROI()
+        self.parent.tab_load.absimgfig.loadNewImage()
+        self.parent.tab_prep.specfig.ClearandReload()
 
         self.close()
 
@@ -2441,12 +2441,12 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
 # ----------------------------------------------------------------------
     def OnCancel(self, evt):
         self.stack.absdata_shifted_cropped = self.stack.absdata
-        self.parent.page1.absimgfig.loadNewImageWithROI()
-        self.parent.page0.absimgfig.loadNewImage()
+        self.parent.tab_prep.absimgfig.loadNewImageWithROI()
+        self.parent.tab_load.absimgfig.loadNewImage()
 
         #if showmaptab:
-        #    self.parent.page9.Clear()
-        #    self.parent.page9.loadData()
+        #    self.parent.tab_map.Clear()
+        #    self.parent.tab_map.loadData()
 
         self.close()
     # ----------------------------------------------------------------------
@@ -2466,7 +2466,7 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
         self.stack.n_rows =  datadim[1].copy()
 
         if self.com.i0_loaded == 1:
-            self.parent.page1.specfig.I0Update()
+            self.parent.tab_prep.specfig.I0Update()
 
         self.stack.data_struct.exchange.energy = self.stack.ev
 
@@ -2474,22 +2474,22 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
         #self.stack.data_struct.spectromicroscopy.xshifts = self.x_shiftstemp
         #self.stack.data_struct.spectromicroscopy.yshifts = self.y_shiftstemp
 
-        #self.parent.page1.slider_eng.setRange(0,self.stack.n_ev-1)
-        #self.parent.page1.iev = int(self.stack.n_ev/2)
-        #self.parent.page1.slider_eng.setValue(self.parent.page1.iev)
-        self.parent.page0.absimgfig.loadNewImage()
-        self.parent.page1.absimgfig.loadNewImageWithROI()
-        self.parent.page1.specfig.ClearandReload()
+        #self.parent.tab_prep.slider_eng.setRange(0,self.stack.n_ev-1)
+        #self.parent.tab_prep.iev = int(self.stack.n_ev/2)
+        #self.parent.tab_prep.slider_eng.setValue(self.parent.tab_prep.iev)
+        self.parent.tab_load.absimgfig.loadNewImage()
+        self.parent.tab_prep.absimgfig.loadNewImageWithROI()
+        self.parent.tab_prep.specfig.ClearandReload()
         self.parent.window().refresh_widgets()
-        #self.parent.page1.ix = int(self.stack.n_cols/2)
-        #self.parent.page1.iy = int(self.stack.n_rows/2)
+        #self.parent.tab_prep.ix = int(self.stack.n_cols/2)
+        #self.parent.tab_prep.iy = int(self.stack.n_rows/2)
 
-        #self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
-        #self.parent.page1.loadImage()
+        #self.parent.tab_prep.loadSpectrum(self.parent.tab_prep.ix, self.parent.tab_prep.iy)
+        #self.parent.tab_prep.loadImage()
 
         #if showmaptab:
-        #    self.parent.page9.Clear()
-        #    self.parent.page9.loadData()
+        #    self.parent.tab_map.Clear()
+        #    self.parent.tab_map.loadData()
 
         self.close()
 

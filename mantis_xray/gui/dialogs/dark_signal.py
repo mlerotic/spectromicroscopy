@@ -87,9 +87,9 @@ class DarkSignal(QtWidgets.QDialog):
 
 
 
-        self.parent.page1.absimgfig.loadNewImageWithROI()
-        self.parent.page0.absimgfig.loadNewImage()
-        self.parent.page1.specfig.ClearandReload()
+        self.parent.tab_prep.absimgfig.loadNewImageWithROI()
+        self.parent.tab_load.absimgfig.loadNewImage()
+        self.parent.tab_prep.specfig.ClearandReload()
         self.parent.window().refresh_widgets()
 
 

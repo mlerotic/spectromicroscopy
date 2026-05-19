@@ -194,24 +194,24 @@ class PagePeakID(QtWidgets.QWidget):
             self.anlz.load_xraypeakfit_spectra(filename=filepath)
             if not self.anlz.xrayfitsp_to_add:
                 raise IndexError
-            if self.window().page6 != None:
+            if self.window().tab_pfit != None:
                 self.com.xpf_loaded = 1
                 for i in range(self.anlz.xrayfitsp_to_add):
-                    self.window().page6.spectrumfitted.append(0)
-                    self.window().page6.firstinit.append(1)
-                    self.window().page6.initdone.append(0)
-                    self.window().page6.nsteps.append(1)
-                    self.window().page6.npeaks.append(4)
-                    self.window().page6.fits.append(0)
-                    self.window().page6.fits_sep.append(0)
+                    self.window().tab_pfit.spectrumfitted.append(0)
+                    self.window().tab_pfit.firstinit.append(1)
+                    self.window().tab_pfit.initdone.append(0)
+                    self.window().tab_pfit.nsteps.append(1)
+                    self.window().tab_pfit.npeaks.append(4)
+                    self.window().tab_pfit.fits.append(0)
+                    self.window().tab_pfit.fits_sep.append(0)
 
-                self.window().page6.i_spec = self.anlz.n_xrayfitsp
-                self.window().page6.slider_spec.setMaximum(self.anlz.n_xrayfitsp)
-                self.window().page6.slider_spec.setValue(self.window().page6.i_spec)
-                self.window().page6.nstepsspin.setValue(self.window().page6.nsteps[self.window().page6.i_spec-1])
-                self.window().page6.ngaussspin.setValue(self.window().page6.npeaks[self.window().page6.i_spec-1])
-                self.window().page6.loadSpectrum()
-                self.window().page6.updatewidgets()
+                self.window().tab_pfit.i_spec = self.anlz.n_xrayfitsp
+                self.window().tab_pfit.slider_spec.setMaximum(self.anlz.n_xrayfitsp)
+                self.window().tab_pfit.slider_spec.setValue(self.window().tab_pfit.i_spec)
+                self.window().tab_pfit.nstepsspin.setValue(self.window().tab_pfit.nsteps[self.window().tab_pfit.i_spec-1])
+                self.window().tab_pfit.ngaussspin.setValue(self.window().tab_pfit.npeaks[self.window().tab_pfit.i_spec-1])
+                self.window().tab_pfit.loadSpectrum()
+                self.window().tab_pfit.updatewidgets()
 
             self.spectrum_loaded = 1
             self.updatewidgets()
@@ -249,28 +249,28 @@ class PagePeakID(QtWidgets.QWidget):
             for i in range(self.anlz.nclusters):
                 self.anlz.load_xraypeakfit_clusterspectrum(i)
 
-                if self.window().page6 != None:
-                    self.window().page6.spectrumfitted.append(0)
-                    self.window().page6.firstinit.append(1)
-                    self.window().page6.initdone.append(0)
-                    self.window().page6.nsteps.append(1)
-                    self.window().page6.npeaks.append(4)
-                    self.window().page6.fits.append(0)
-                    self.window().page6.fits_sep.append(0)
+                if self.window().tab_pfit != None:
+                    self.window().tab_pfit.spectrumfitted.append(0)
+                    self.window().tab_pfit.firstinit.append(1)
+                    self.window().tab_pfit.initdone.append(0)
+                    self.window().tab_pfit.nsteps.append(1)
+                    self.window().tab_pfit.npeaks.append(4)
+                    self.window().tab_pfit.fits.append(0)
+                    self.window().tab_pfit.fits_sep.append(0)
 
 
             self.spectrum_loaded = 1
 
 
             self.com.xpf_loaded = 1
-            if self.window().page6 != None:
-                self.window().page6.i_spec = self.anlz.n_xrayfitsp
-                self.window().page6.slider_spec.setMaximum(self.anlz.n_xrayfitsp)
-                self.window().page6.slider_spec.setValue(self.window().page6.i_spec)
-                self.window().page6.nstepsspin.setValue(self.window().page6.nsteps[self.window().page6.i_spec-1])
-                self.window().page6.ngaussspin.setValue(self.window().page6.npeaks[self.window().page6.i_spec-1])
-                self.window().page6.loadSpectrum()
-                self.window().page6.updatewidgets()
+            if self.window().tab_pfit != None:
+                self.window().tab_pfit.i_spec = self.anlz.n_xrayfitsp
+                self.window().tab_pfit.slider_spec.setMaximum(self.anlz.n_xrayfitsp)
+                self.window().tab_pfit.slider_spec.setValue(self.window().tab_pfit.i_spec)
+                self.window().tab_pfit.nstepsspin.setValue(self.window().tab_pfit.nsteps[self.window().tab_pfit.i_spec-1])
+                self.window().tab_pfit.ngaussspin.setValue(self.window().tab_pfit.npeaks[self.window().tab_pfit.i_spec-1])
+                self.window().tab_pfit.loadSpectrum()
+                self.window().tab_pfit.updatewidgets()
 
 
             QtWidgets.QApplication.restoreOverrideCursor()

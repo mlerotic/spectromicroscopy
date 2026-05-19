@@ -274,7 +274,7 @@ class ShowCompositeRBGmap(QtWidgets.QDialog):
 #----------------------------------------------------------------------
     def CalcR(self):
 
-        if self.parent.page4.showraw == True:
+        if self.parent.tab_spec.showraw == True:
             tsmap = self.anlz.target_svd_maps[:,:,self.r_spec].copy()
         else:
             tsmap = self.anlz.target_pcafit_maps[:,:,self.r_spec].copy()
@@ -336,7 +336,7 @@ class ShowCompositeRBGmap(QtWidgets.QDialog):
 #----------------------------------------------------------------------
     def CalcG(self):
 
-        if self.parent.page4.showraw == True:
+        if self.parent.tab_spec.showraw == True:
             tsmap = self.anlz.target_svd_maps[:,:,self.g_spec].copy()
         else:
             tsmap = self.anlz.target_pcafit_maps[:,:,self.g_spec].copy()
@@ -397,7 +397,7 @@ class ShowCompositeRBGmap(QtWidgets.QDialog):
 #----------------------------------------------------------------------
     def CalcB(self):
 
-        if self.parent.page4.showraw == True:
+        if self.parent.tab_spec.showraw == True:
             tsmap = self.anlz.target_svd_maps[:,:,self.b_spec].copy()
         else:
             tsmap = self.anlz.target_pcafit_maps[:,:,self.b_spec].copy()

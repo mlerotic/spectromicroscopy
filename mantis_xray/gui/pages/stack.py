@@ -9,7 +9,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 # from mpl_toolkits.axes_grid1 import make_axes_locatable # Used in commented out code?
 
 from ..widgets import SpecFig, ImgFig
-# from ..dialogs.save import SaveWin
+from ..dialogs.save import SaveWin
 from ..dialogs.crop import MultiCrop
 from ..dialogs.alignment import ImageRegistrationDialog, ImageRegistrationManual, ImageRegistrationFFT
 from ..dialogs.dark_signal import DarkSignal
@@ -262,8 +262,11 @@ class PageStack(QtWidgets.QWidget):
 
 #----------------------------------------------------------------------
     def OnShowI0(self, event):
-
         self.specfig.toggleI0Spectrum()
+        if self.button_showi0.isChecked():
+            self.button_save.setText('Save I0...')
+        else:
+            self.button_save.setText('Save...')
         #plot = PlotFrame(self, self.stk.evi0,self.stk.i0data)
         #plot.show()
 
@@ -344,7 +347,11 @@ class PageStack(QtWidgets.QWidget):
 
 #----------------------------------------------------------------------
     def OnSave(self, event):
-        self.window().SaveStack()
+        i0_mode = self.button_showi0.isChecked()
+        savewin = SaveWin(self, self.com, self.stk, i0_mode=i0_mode)
+        if i0_mode:
+            savewin.setWindowTitle('Save I0...')
+        savewin.show()
 
 #----------------------------------------------------------------------
     def OnROI_DoseCalc(self, event):
@@ -455,12 +462,13 @@ class PageStack(QtWidgets.QWidget):
         self.mean_visible = 0
         if self.com.stack_loaded == 1:
             self.slider_theta.setValue(value)
+            self.stk.absdata = self.stk.stack4D[:, :, :, self.itheta].copy()
             if self.com.i0_loaded == 0:
-                self.stk.absdata = self.stk.stack4D[:, :, :, self.itheta].copy()
                 image = self.stk.absdata[:, :, int(self.slider_eng.value())].copy()
             else:
                 self.stk.od3d = self.stk.od4d[:, :, :, self.itheta].copy()
                 image = self.stk.od3d[:, :, int(self.slider_eng.value())].copy()
+            self.stk.calc_histogram()
             #self.tc_imagetheta.setText("4D Data Angle: "+str(self.stk.theta[self.itheta]))
             #self.p1.setTitle("<center>Image at {0:5.2f} eV and {1:5.1f}°</center>".format(float(self.stk.ev[self.iev]),
             #                                                                 float(self.stk.theta[self.itheta])))
@@ -527,7 +535,7 @@ class PageStack(QtWidgets.QWidget):
 
         if self.com.stack_loaded == 1:
             self.loadImage()
-            #self.window().page0.ShowImage()
+            #self.window().tab_load.ShowImage()
 
 #----------------------------------------------------------------------
     def OnShowColBar(self, state):

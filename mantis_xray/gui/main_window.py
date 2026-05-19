@@ -1,4 +1,3 @@
-
 import os
 import numpy as np
 import sys
@@ -9,19 +8,19 @@ from ..analysis import data_struct
 from ..analysis import data_stack
 from ..analysis import analyze
 from ..analysis import nnma
-from ..core.constants import Winsizex, Winsizey, showtomotab
+from ..core.constants import Winsizex, Winsizey
 from .. import __version__ as version
 from ..core.state import common
 from ..helpers import resource_path
 from ..file_plugins import file_dataexch_hdf5
 from .. import file_plugins
 from .pages import (
-    PageLoadData, PageStack, PagePCA, PagePCACluster,
-    PageCluster, PageSpectral, PagePeakID, PageXrayPeakFitting,
+    PageLoadData, PageStack, PagePCACluster,
+    PageSpectral, PagePeakID, PageXrayPeakFitting,
     PageNNMA, PageTomo
 )
 from .utils.file_gui import File_GUI
-from .dialogs import AboutFrame, StackListFrame
+from .dialogs import StackListFrame
 
 class MainFrame(QtWidgets.QMainWindow):
 
@@ -55,36 +54,32 @@ class MainFrame(QtWidgets.QMainWindow):
         self.setWindowIcon(ico)
 
         self.tabs = QtWidgets.QTabWidget()
+        self.tab_tomo = PageTomo(self.common, self.data_struct, self.stk, self.anlz)
 
-        # create the page windows as tabs
-        self.page0 = PageLoadData(self.common, self.data_struct, self.stk)
-        self.page1 = PageStack(self.common, self.data_struct, self.stk)
-        self.page2_1 = PagePCACluster(self.common, self.data_struct, self.stk, self.anlz)
-        self.page2 = PagePCA(self.common, self.data_struct, self.stk, self.anlz)
-        self.page3 = PageCluster(self.common, self.data_struct, self.stk, self.anlz)
-        self.page4 = PageSpectral(self.common, self.data_struct, self.stk, self.anlz)
-        self.page5 = PagePeakID(self.common, self.data_struct, self.stk, self.anlz)
-        self.page6 = PageXrayPeakFitting(self.common, self.data_struct, self.stk, self.anlz)
-        self.page7 = PageNNMA(self.common, self.data_struct, self.stk, self.anlz, self.nnma)
+        # create the tab windows with descriptive attribute names
+        self.tab_load = PageLoadData(self.common, self.data_struct, self.stk)
+        self.tab_prep = PageStack(self.common, self.data_struct, self.stk)
+        self.tab_clus = PagePCACluster(self.common, self.data_struct, self.stk, self.anlz)
+        self.tab_spec = PageSpectral(self.common, self.data_struct, self.stk, self.anlz)
+        self.tab_peak = PagePeakID(self.common, self.data_struct, self.stk, self.anlz)
+        self.tab_pfit = PageXrayPeakFitting(self.common, self.data_struct, self.stk, self.anlz)
+        self.tab_nnma = PageNNMA(self.common, self.data_struct, self.stk, self.anlz, self.nnma)
 
+        self.tabs.addTab(self.tab_load, "Load Data")
+        self.tabs.addTab(self.tab_prep, "Preprocess Data")
+        self.tabs.addTab(self.tab_clus, "PCA && Cluster Analysis")
+        self.tabs.addTab(self.tab_spec, "Spectral Maps")
+        self.tabs.addTab(self.tab_nnma, "NNMA Analysis")
+        self.tabs.addTab(self.tab_peak, "Peak ID")
+        self.tabs.addTab(self.tab_pfit, "XrayPeakFitting")
 
-        self.tabs.addTab(self.page0,"Load Data")
-        self.tabs.addTab(self.page1, "Preprocess Data")
-        self.tabs.addTab(self.page2, "PCA")
-        self.tabs.addTab(self.page2_1,"PCA_new")
-        self.tabs.addTab(self.page3,"Cluster Analysis")
-        self.tabs.addTab(self.page4,"Spectral Maps")
-        self.tabs.addTab(self.page7, "NNMA Analysis")
-        self.tabs.addTab(self.page5,"Peak ID")
-        self.tabs.addTab(self.page6, "XrayPeakFitting")
-
-        if showtomotab:
-            self.page8 = PageTomo(self.common, self.data_struct, self.stk, self.anlz)
-            self.tabs.addTab(self.page8, "Tomography")
+        self.tabs.addTab(self.tab_tomo, "Tomography")
+        self.tabs.setTabEnabled(self.tabs.indexOf(self.tab_tomo), False)
+        self._set_tomo_tab_style(False)
 
 #        if showmaptab:
-#            self.page9 = PageMap(self.common, self.data_struct, self.stk)
-#            self.tabs.addTab(self.page9, "Image Maps")
+#            self.tab_map = PageMap(self.common, self.data_struct, self.stk)
+#            self.tabs.addTab(self.tab_map, "Image Maps")
 
         if sys.platform == 'win32':
             self.tabs.setMinimumHeight(750)
@@ -100,23 +95,17 @@ class MainFrame(QtWidgets.QMainWindow):
             self.tabs.tabBar().setTabTextColor(1, QtGui.QColor('lightgreen'))
             self.tabs.tabBar().setTabTextColor(2, QtGui.QColor('tomato'))
             self.tabs.tabBar().setTabTextColor(3, QtGui.QColor('tomato'))
-            self.tabs.tabBar().setTabTextColor(4, QtGui.QColor('tomato'))
-            self.tabs.tabBar().setTabTextColor(5, QtGui.QColor('tomato'))
-            self.tabs.tabBar().setTabTextColor(6, QtGui.QColor('orchid'))
-            self.tabs.tabBar().setTabTextColor(7, QtGui.QColor('orchid'))
-            if showtomotab:
-                self.tabs.tabBar().setTabTextColor(8, QtGui.QColor('dodgerblue'))
+            self.tabs.tabBar().setTabTextColor(4, QtGui.QColor('orchid'))
+            self.tabs.tabBar().setTabTextColor(5, QtGui.QColor('orchid'))
         else:
             self.tabs.tabBar().setTabTextColor(0, QtGui.QColor('green'))
             self.tabs.tabBar().setTabTextColor(1, QtGui.QColor('green'))
             self.tabs.tabBar().setTabTextColor(2, QtGui.QColor('darkRed'))
             self.tabs.tabBar().setTabTextColor(3, QtGui.QColor('darkRed'))
-            self.tabs.tabBar().setTabTextColor(4, QtGui.QColor('darkRed'))
-            self.tabs.tabBar().setTabTextColor(5, QtGui.QColor('darkRed'))
-            self.tabs.tabBar().setTabTextColor(6, QtGui.QColor('purple'))
-            self.tabs.tabBar().setTabTextColor(7, QtGui.QColor('purple'))
-            if showtomotab:
-                self.tabs.tabBar().setTabTextColor(8, QtGui.QColor('darkblue'))
+            self.tabs.tabBar().setTabTextColor(4, QtGui.QColor('purple'))
+            self.tabs.tabBar().setTabTextColor(5, QtGui.QColor('purple'))
+        tomo_index = self.tabs.indexOf(self.tab_tomo)
+        self._set_tomo_tab_style(tomo_index != -1 and self.tabs.isTabEnabled(tomo_index))
         #if showmaptab:
         #    self.tabs.tabBar().setTabTextColor(9, QtGui.QColor('darkblue'))
 
@@ -132,17 +121,17 @@ class MainFrame(QtWidgets.QMainWindow):
 #         for opt, arg in options:
 #             if opt in '--nnma':
 #                 if verbose: print "Running with NNMA."
-#                 self.page7 = PageNNMA(self.common, self.data_struct, self.stk, self.anlz, self.nnma)
-#                 self.tabs.addTab(self.page7, "NNMA Analysis")
+#                 self.tab_nnma = PageNNMA(self.common, self.data_struct, self.stk, self.anlz, self.nnma)
+#                 self.tabs.addTab(self.tab_nnma, "NNMA Analysis")
 
         layout = QtWidgets.QVBoxLayout()
 
         layout.addWidget(self.tabs)
         #self.setCentralWidget(self.tabs)
         self.ShowInfo('File name', os.getcwd())
-        self.page0.FnOverlayCheckBox.stateChanged.connect(self.syncFnOverlayCheckBox)
-        self.page1.FnOverlayCheckBox.stateChanged.connect(self.syncFnOverlayCheckBox)
-        self.page2_1.FnOverlayCheckBox.stateChanged.connect(self.syncFnOverlayCheckBox)
+        self.tab_load.FnOverlayCheckBox.stateChanged.connect(self.syncFnOverlayCheckBox)
+        self.tab_prep.FnOverlayCheckBox.stateChanged.connect(self.syncFnOverlayCheckBox)
+        self.tab_clus.FnOverlayCheckBox.stateChanged.connect(self.syncFnOverlayCheckBox)
 
         self.scrollArea = QtWidgets.QScrollArea()
         #self.scrollArea.setBackgroundRole(QtGui.QPalette.Dark)
@@ -248,37 +237,37 @@ class MainFrame(QtWidgets.QMainWindow):
             directory = os.path.dirname(str(filepath))
 
 
-            self.page1.filename = os.path.basename(str(filepath))
+            self.tab_prep.filename = os.path.basename(str(filepath))
 
 
             #Update widgets
             x=self.stk.n_cols
             y=self.stk.n_rows
-            self.page1.imgrgb = np.zeros(x*y*3,dtype = "uint8")
-            self.page1.maxval = np.amax(self.stk.absdata)
+            self.tab_prep.imgrgb = np.zeros(x*y*3,dtype = "uint8")
+            self.tab_prep.maxval = np.amax(self.stk.absdata)
 
 
             self.ix = int(x/2)
             self.iy = int(y/2)
 
-            self.page1.ix = self.ix
-            self.page1.iy = self.iy
+            self.tab_prep.ix = self.ix
+            self.tab_prep.iy = self.iy
 
             #self.iev = 0
-            #self.page0.slider_eng.setRange(0,self.stk.n_ev-1)
-            #self.page0.iev = self.iev
-            #self.page0.slider_eng.setValue(self.iev)
+            #self.tab_load.slider_eng.setRange(0,self.stk.n_ev-1)
+            #self.tab_load.iev = self.iev
+            #self.tab_load.slider_eng.setValue(self.iev)
 
-            #self.page1.slider_eng.setRange(0,self.stk.n_ev-1)
-            #self.page1.iev = self.iev
-            #self.page1.slider_eng.setValue(self.iev)
+            #self.tab_prep.slider_eng.setRange(0,self.stk.n_ev-1)
+            #self.tab_prep.iev = self.iev
+            #self.tab_prep.slider_eng.setValue(self.iev)
             #if showmaptab:
-            #    self.page9.Clear()
-            #    self.page9.slider_eng.setRange(0,self.stk.n_ev-1)
+            #    self.tab_map.Clear()
+            #    self.tab_map.slider_eng.setRange(0,self.stk.n_ev-1)
             self.stk.setScale()
             self.common.stack_loaded = 1
             self.common.path = directory
-            self.common.fntocaption = self.page0.FnOverlayCheckBox.isChecked()
+            self.common.fntocaption = self.tab_load.FnOverlayCheckBox.isChecked()
 
             if self.stk.data_struct.spectromicroscopy.normalization.white_spectrum is not None:
                 if self.stk.calculate_optical_density() is False:
@@ -288,23 +277,23 @@ class MainFrame(QtWidgets.QMainWindow):
                     self.stk.fill_h5_struct_normalization()
                     self.common.i0_loaded = 1
 
-            #self.page0.Clear()
-            self.ShowInfo(self.page1.filename, directory)
-            self.page0.absimgfig.loadNewImage()
-            #self.page1.ResetDisplaySettings()
-            self.page1.absimgfig.loadNewImageWithROI()
-            self.page1.button_multicrop.setText('Crop stack 3D...')
+            #self.tab_load.Clear()
+            self.ShowInfo(self.tab_prep.filename, directory)
+            self.tab_load.absimgfig.loadNewImage()
+            #self.tab_prep.ResetDisplaySettings()
+            self.tab_prep.absimgfig.loadNewImageWithROI()
+            self.tab_prep.button_multicrop.setText('Crop stack 3D...')
             #print(x,y), (self.ix,self.iy), self.stk.absdata.shape
-            self.page1.specfig.ClearandReload()
-            #self.page1.textctrl.setText(self.page1.filename)
+            self.tab_prep.specfig.ClearandReload()
+            #self.tab_prep.textctrl.setText(self.tab_prep.filename)
 
-            self.page5.updatewidgets()
+            self.tab_peak.updatewidgets()
 
             QtWidgets.QApplication.restoreOverrideCursor()
 
             #if showmaptab:
-            #    self.page9.Clear()
-            #    self.page9.loadData()
+            #    self.tab_map.Clear()
+            #    self.tab_map.loadData()
         self.refresh_widgets()
 
 #-----------------------------------------------------------------------
@@ -357,14 +346,14 @@ class MainFrame(QtWidgets.QMainWindow):
 
 
             directory =  os.path.dirname(str(filenames[0]))
-            self.page1.filename = os.path.basename(filenames[0])
+            self.tab_prep.filename = os.path.basename(filenames[0])
 
             QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
-            basename, extension = os.path.splitext(self.page1.filename)
+            basename, extension = os.path.splitext(self.tab_prep.filename)
             extension = extension.strip()
 
             self.common.path = directory
-            self.common.filename = self.page1.filename
+            self.common.filename = self.tab_prep.filename
 
             if extension == '.hdf5':
                 if self.common.stack_loaded == 1:
@@ -394,46 +383,53 @@ class MainFrame(QtWidgets.QMainWindow):
             if not hasattr(self.stk, 'theta') or type(self.stk.theta) == int:
                 raise TypeError("Not a 4D stack")
             self.common.stack_4d = 1
+            self._set_tomo_tab_enabled(True)
 
             x=self.stk.n_cols
             y=self.stk.n_rows
-            self.page1.imgrgb = np.zeros(x*y*3,dtype = "uint8")
-            self.page1.maxval = np.amax(self.stk.absdata)
+            self.tab_prep.imgrgb = np.zeros(x*y*3,dtype = "uint8")
+            self.tab_prep.maxval = np.amax(self.stk.absdata)
 
 
             self.ix = int(x/2)
             self.iy = int(y/2)
 
-            self.page1.ix = self.ix
-            self.page1.iy = self.iy
+            self.tab_prep.ix = self.ix
+            self.tab_prep.iy = self.iy
 
             self.iev = int(self.stk.n_ev/2)
-            #self.page0.slider_eng.setRange(0,self.stk.n_ev-1)
-            self.page0.iev = self.iev
-            #self.page0.slider_eng.setValue(self.iev)
+            #self.tab_load.slider_eng.setRange(0,self.stk.n_ev-1)
+            self.tab_load.iev = self.iev
+            #self.tab_load.slider_eng.setValue(self.iev)
 
-            #self.page1.slider_eng.setRange(0,self.stk.n_ev-1)
-            self.page1.iev = self.iev
-            #self.page1.slider_eng.setValue(self.iev)
+            #self.tab_prep.slider_eng.setRange(0,self.stk.n_ev-1)
+            self.tab_prep.iev = self.iev
+            #self.tab_prep.slider_eng.setValue(self.iev)
 
-            self.page0.slider_theta.setVisible(True)
-            #self.page0.tc_imagetheta.setVisible(True)
+            self.tab_load.slider_theta.setVisible(True)
+            #self.tab_load.tc_imagetheta.setVisible(True)
             self.itheta = 0
-            self.page0.slider_theta.setRange(0,self.stk.n_theta-1)
-            self.page0.itheta = self.itheta
-            self.page0.slider_theta.setValue(self.itheta)
-            #self.page0.tc_imagetheta.setText("4D Data Angle: "+str(self.stk.theta[self.itheta]))
+            self.tab_load.slider_theta.setRange(0,self.stk.n_theta-1)
+            self.tab_load.itheta = self.itheta
+            self.tab_load.slider_theta.setValue(self.itheta)
+            #self.tab_load.tc_imagetheta.setText("4D Data Angle: "+str(self.stk.theta[self.itheta]))
 
 
-            self.page1.slider_theta.setVisible(True)
-            #self.page1.tc_imagetheta.setVisible(True)
-            self.page1.slider_theta.setRange(0,self.stk.n_theta-1)
-            self.page1.itheta = self.itheta
-            self.page1.slider_theta.setValue(self.itheta)
-            #self.page1.tc_imagetheta.setText("4D Data Angle: "+str(self.stk.theta[self.itheta]))
+            self.tab_prep.slider_theta.setVisible(True)
+            #self.tab_prep.tc_imagetheta.setVisible(True)
+            self.tab_prep.slider_theta.setRange(0,self.stk.n_theta-1)
+            self.tab_prep.itheta = self.itheta
+            self.tab_prep.slider_theta.setValue(self.itheta)
+            #self.tab_prep.tc_imagetheta.setText("4D Data Angle: "+str(self.stk.theta[self.itheta]))
 
-            self.page2.button_calcpca4D.setVisible(True)
-            self.page4.button_calc4d.setVisible(True)
+            self.tab_clus.slider_theta.setVisible(True)
+            self.tab_clus.slider_theta.setEnabled(True)
+            self.tab_clus.slider_theta.setRange(0, self.stk.n_theta - 1)
+            self.tab_clus.itheta = self.itheta
+            self.tab_clus.slider_theta.setValue(self.itheta)
+
+            self.tab_clus.button_calcpca4D.setVisible(True) if hasattr(self.tab_clus, 'button_calcpca4D') else None
+            self.tab_spec.button_calc4d.setVisible(True)
 
 
             self.common.stack_loaded = 1
@@ -441,27 +437,27 @@ class MainFrame(QtWidgets.QMainWindow):
             if self.stk.data_struct.spectromicroscopy.normalization.white_spectrum is not None:
                 self.common.i0_loaded = 1
 
-            self.page0.absimgfig.loadNewImage()
-            self.ShowInfo(self.page1.filename, directory)
-            #self.page1.ResetDisplaySettings()
-            self.page1.absimgfig.loadNewImageWithROI()
-            self.page1.button_multicrop.setText('Crop stack 4D...')
-            self.page1.specfig.ClearandReload()
-            # self.page1.textctrl.setText(self.page1.filename)
+            self.tab_load.absimgfig.loadNewImage()
+            self.ShowInfo(self.tab_prep.filename, directory)
+            #self.tab_prep.ResetDisplaySettings()
+            self.tab_prep.absimgfig.loadNewImageWithROI()
+            self.tab_prep.button_multicrop.setText('Crop stack 4D...')
+            self.tab_prep.specfig.ClearandReload()
+            # self.tab_prep.textctrl.setText(self.tab_prep.filename)
 
-            self.page5.updatewidgets()
+            self.tab_peak.updatewidgets()
 
             QtWidgets.QApplication.restoreOverrideCursor()
 
             #if showmaptab:
-            #    self.page9.Clear()
-            #    self.page9.loadData()
+            #    self.tab_map.Clear()
+            #    self.tab_map.loadData()
         except:
 
             self.common.stack_loaded = 0
             self.common.i0_loaded = 0
             self.new_stack_refresh()
-            self.page1.button_multicrop.setText('Crop stack 3D/4D...')
+            self.tab_prep.button_multicrop.setText('Crop stack 3D/4D...')
             QtWidgets.QApplication.restoreOverrideCursor()
             QtWidgets.QMessageBox.warning(self, 'Error', 'Image stack not loaded.')
 
@@ -524,12 +520,12 @@ class MainFrame(QtWidgets.QMainWindow):
 
 
             directory =  os.path.dirname(str(filepath))
-            self.page1.filename =  os.path.basename(str(filepath))
+            self.tab_prep.filename =  os.path.basename(str(filepath))
 
             QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
 
             self.common.path = directory
-            self.common.filename = self.page1.filename
+            self.common.filename = self.tab_prep.filename
 
 
             file_dataexch_hdf5.write_results_h5(filepath, self.data_struct, self.anlz)
@@ -588,191 +584,202 @@ class MainFrame(QtWidgets.QMainWindow):
 
         if self.common.stack_loaded == 0:
 
-            self.page1.FnOverlayCheckBox.setDisabled(True)
-            self.page0.FnOverlayCheckBox.setDisabled(True)
-            self.page2_1.FnOverlayCheckBox.setDisabled(True)
-            self.page1.button_i0ffile.setEnabled(False)
-            self.page1.button_i0.setEnabled(False)
-            self.page1.button_artefacts.setEnabled(False)
-            self.page1.button_prenorm.setEnabled(False)
-            self.page1.button_refimgs.setEnabled(False)
-            self.page1.button_multicrop.setEnabled(False)
-            #self.page1.button_limitev.setEnabled(False)
-            #self.page1.button_subregion.setEnabled(False)
-            self.page1.button_darksig.setEnabled(False)
-            self.page1.button_save.setEnabled(False)
-            self.page1.button_savestack.setEnabled(False)
-            self.page1.button_align.setEnabled(False)
-            self.page1.button_meanflux.setEnabled(False)
-            self.page1.button_slideshow.setEnabled(False)
-            self.page1.button_spectralROI.setEnabled(False)
-            self.page1.button_lockspectrum.setEnabled(False)
-            self.page1.button_clearlastroi.setEnabled(False)
-            self.page1.button_mergeroi.setEnabled(False)
-            self.page1.button_subtractroi.setEnabled(False)
-            self.page1.button_clearspecfig.setEnabled(False)
-            self.page1.ROIShapeBox.setEnabled(False)
-            self.page1.ROIvisibleCheckBox.setEnabled(False)
-            #self.page1.button_resetdisplay.setEnabled(False)
-            #self.page1.button_despike.setEnabled(False)
-            #self.page1.button_displaycolor.setEnabled(False)
+            self.tab_prep.FnOverlayCheckBox.setDisabled(True)
+            self.tab_load.FnOverlayCheckBox.setDisabled(True)
+            self.tab_clus.FnOverlayCheckBox.setDisabled(True)
+            self.tab_prep.button_i0ffile.setEnabled(False)
+            self.tab_prep.button_i0.setEnabled(False)
+            self.tab_prep.button_artefacts.setEnabled(False)
+            self.tab_prep.button_prenorm.setEnabled(False)
+            self.tab_prep.button_refimgs.setEnabled(False)
+            self.tab_prep.button_multicrop.setEnabled(False)
+            #self.tab_prep.button_limitev.setEnabled(False)
+            #self.tab_prep.button_subregion.setEnabled(False)
+            self.tab_prep.button_darksig.setEnabled(False)
+            self.tab_prep.button_save.setEnabled(False)
+            self.tab_prep.button_savestack.setEnabled(False)
+            self.tab_prep.button_align.setEnabled(False)
+            self.tab_prep.button_meanflux.setEnabled(False)
+            self.tab_prep.button_slideshow.setEnabled(False)
+            self.tab_prep.button_spectralROI.setEnabled(False)
+            self.tab_prep.button_lockspectrum.setEnabled(False)
+            self.tab_prep.button_clearlastroi.setEnabled(False)
+            self.tab_prep.button_mergeroi.setEnabled(False)
+            self.tab_prep.button_subtractroi.setEnabled(False)
+            self.tab_prep.button_clearspecfig.setEnabled(False)
+            self.tab_prep.ROIShapeBox.setEnabled(False)
+            self.tab_prep.ROIvisibleCheckBox.setEnabled(False)
+            #self.tab_prep.button_resetdisplay.setEnabled(False)
+            #self.tab_prep.button_despike.setEnabled(False)
+            #self.tab_prep.button_displaycolor.setEnabled(False)
             self.actionSave.setEnabled(False)
 
         else:
-            self.page1.FnOverlayCheckBox.setDisabled(False)
-            self.page0.FnOverlayCheckBox.setDisabled(False)
-            self.page2_1.FnOverlayCheckBox.setDisabled(False)
-            self.page1.button_i0ffile.setEnabled(True)
-            self.page1.button_i0.setEnabled(True)
-            self.page1.button_artefacts.setEnabled(True)
-            self.page1.button_prenorm.setEnabled(True)
-            self.page1.button_multicrop.setEnabled(True)
-            #self.page1.button_limitev.setEnabled(True)
+            self.tab_prep.FnOverlayCheckBox.setDisabled(False)
+            self.tab_load.FnOverlayCheckBox.setDisabled(False)
+            self.tab_clus.FnOverlayCheckBox.setDisabled(False)
+            self.tab_prep.button_i0ffile.setEnabled(True)
+            self.tab_prep.button_i0.setEnabled(True)
+            self.tab_prep.button_artefacts.setEnabled(True)
+            self.tab_prep.button_prenorm.setEnabled(True)
+            self.tab_prep.button_multicrop.setEnabled(True)
+            #self.tab_prep.button_limitev.setEnabled(True)
             if self.common.stack_4d == 0:
-                self.page1.button_refimgs.setEnabled(True)
-                #self.page1.button_subregion.setEnabled(True)
-                self.page1.button_darksig.setEnabled(True)
+                self.tab_prep.button_refimgs.setEnabled(True)
+                #self.tab_prep.button_subregion.setEnabled(True)
+                self.tab_prep.button_darksig.setEnabled(True)
             else:
-                self.page1.button_refimgs.setEnabled(False)
-                #self.page1.button_subregion.setEnabled(False)
-                self.page1.button_darksig.setEnabled(False)
-            self.page0.button_save.setEnabled(True)
-            self.page1.button_save.setEnabled(True)
-            self.page0.pb_copy_img.setEnabled(True)
-            self.page1.pb_copy_img.setEnabled(True)
-            self.page1.pb_copy_specimg.setEnabled(True)
-            self.page1.button_savestack.setEnabled(True)
-            self.page1.button_align.setEnabled(True)
-            self.page1.button_meanflux.setEnabled(True)
-            self.page1.button_slideshow.setEnabled(True)
-            self.page1.button_spectralROI.setEnabled(True)
-            self.page1.button_lockspectrum.setEnabled(True)
-            self.page1.button_clearlastroi.setEnabled(True)
-            self.page1.button_mergeroi.setEnabled(True)
-            self.page1.button_subtractroi.setEnabled(True)
-            self.page1.button_clearspecfig.setEnabled(True)
-            self.page1.ROIShapeBox.setEnabled(True)
-            self.page1.ROIvisibleCheckBox.setEnabled(True)
-            #self.page1.button_resetdisplay.setEnabled(True)
-            #self.page1.button_despike.setEnabled(True)
-            #self.page1.button_displaycolor.setEnabled(True)
+                self.tab_prep.button_refimgs.setEnabled(False)
+                #self.tab_prep.button_subregion.setEnabled(False)
+                self.tab_prep.button_darksig.setEnabled(False)
+            self.tab_load.button_save.setEnabled(True)
+            self.tab_prep.button_save.setEnabled(True)
+            self.tab_load.pb_copy_img.setEnabled(True)
+            self.tab_prep.pb_copy_img.setEnabled(True)
+            self.tab_prep.pb_copy_specimg.setEnabled(True)
+            self.tab_prep.button_savestack.setEnabled(True)
+            self.tab_prep.button_align.setEnabled(True)
+            self.tab_prep.button_meanflux.setEnabled(True)
+            self.tab_prep.button_slideshow.setEnabled(True)
+            self.tab_prep.button_spectralROI.setEnabled(True)
+            self.tab_prep.button_lockspectrum.setEnabled(True)
+            self.tab_prep.button_clearlastroi.setEnabled(True)
+            self.tab_prep.button_mergeroi.setEnabled(True)
+            self.tab_prep.button_subtractroi.setEnabled(True)
+            self.tab_prep.button_clearspecfig.setEnabled(True)
+            self.tab_prep.ROIShapeBox.setEnabled(True)
+            self.tab_prep.ROIvisibleCheckBox.setEnabled(True)
+            #self.tab_prep.button_resetdisplay.setEnabled(True)
+            #self.tab_prep.button_despike.setEnabled(True)
+            #self.tab_prep.button_displaycolor.setEnabled(True)
             self.actionSave.setEnabled(True)
 
 
+        if self.tab_tomo is not None:
+            self._set_tomo_tab_enabled(bool(self.common.stack_loaded and self.common.stack_4d))
+
         if self.common.i0_loaded == 0:
-            self.page1.specfig.I0Cancel()
-            self.page1.button_showi0.setEnabled(False)
-            self.page1.button_showi0.setChecked(False)
-            #self.page1.rb_flux.setEnabled(False)
-            #self.page1.rb_od.setEnabled(False)
-            #self.page1.button_reseti0.setEnabled(False)
-            #self.page1.button_saveod.setEnabled(False)
-            self.page2.button_calcpca.setEnabled(False)
-            self.page2_1.button_calcpca.setEnabled(False)
-            self.page2.button_calcpca4D.setEnabled(False)
-            self.page4.button_loadtspec.setEnabled(False)
-            self.page4.button_addflat.setEnabled(False)
-            self.page5.button_save.setEnabled(False)
-            if self.page7:
-                self.page7.button_calcnnma.setEnabled(False)
-                self.page7.button_muroi.setEnabled(False)
-                self.page7.button_mufile.setEnabled(False)
-                self.page7.button_murand.setEnabled(False)
-            if showtomotab:
-                self.page8.button_engdata.setEnabled(False)
+            self.tab_prep.specfig.I0Cancel()
+            self.tab_prep.button_showi0.setEnabled(False)
+            self.tab_prep.button_showi0.setChecked(False)
+            self.tab_clus.button_calcpca.setEnabled(False)
+            self.tab_spec.button_loadtspec.setEnabled(False)
+            self.tab_spec.button_addflat.setEnabled(False)
+            self.tab_peak.button_save.setEnabled(False)
+            if self.tab_nnma:
+                self.tab_nnma.button_calcnnma.setEnabled(False)
+                self.tab_nnma.button_muroi.setEnabled(False)
+                self.tab_nnma.button_mufile.setEnabled(False)
+                self.tab_nnma.button_murand.setEnabled(False)
+            if self.tab_tomo is not None:
+                self.tab_tomo.button_engdata.setEnabled(False)
         else:
-            self.page1.button_showi0.setEnabled(True)
-            #self.page1.rb_flux.setEnabled(True)
-            #self.page1.rb_od.setEnabled(True)
-            #self.page1.button_reseti0.setEnabled(True)
-            #self.page1.button_saveod.setEnabled(True)
-            self.page2.button_calcpca.setEnabled(True)
-            self.page2_1.button_calcpca.setEnabled(True)
-            self.page2.button_calcpca4D.setEnabled(True)
-            self.page4.button_loadtspec.setEnabled(True)
-            self.page4.button_addflat.setEnabled(True)
-            self.page5.button_save.setEnabled(True)
-            if self.page7:
-                self.page7.button_calcnnma.setEnabled(True)
-                self.page7.button_muroi.setEnabled(True)
-                self.page7.button_mufile.setEnabled(True)
-                self.page7.button_murand.setEnabled(True)
-            if showtomotab:
-                self.page8.button_engdata.setEnabled(True)
+            self.tab_prep.button_showi0.setEnabled(True)
+            self.tab_clus.button_calcpca.setEnabled(True)
+            self.tab_spec.button_loadtspec.setEnabled(True)
+            self.tab_spec.button_addflat.setEnabled(True)
+            self.tab_peak.button_save.setEnabled(True)
+            if self.tab_nnma:
+                self.tab_nnma.button_calcnnma.setEnabled(True)
+                self.tab_nnma.button_muroi.setEnabled(True)
+                self.tab_nnma.button_mufile.setEnabled(True)
+                self.tab_nnma.button_murand.setEnabled(True)
+            if self.tab_tomo is not None:
+                self.tab_tomo.button_engdata.setEnabled(True)
 
         if self.common.pca_calculated == 0:
-            self.page2.button_savepca.setEnabled(False)
-            self.page2_1.button_savepca.setEnabled(False)
-            self.page2.slidershow.setEnabled(False)
-            self.page2.button_movepcup.setEnabled(False)
-            self.page3.button_calcca.setEnabled(False)
-            self.page4.rb_fit.setEnabled(False)
+            self.tab_clus.button_savepca.setEnabled(False)
+            self.tab_clus.button_toggle_pca_plot.setEnabled(False)
+            self.tab_clus.npcaspin.setEnabled(False)
+            self.tab_clus.button_movepcup.setEnabled(False)
+            self.tab_clus.button_calcca.setEnabled(False)
+            self.tab_clus.nclusterspin.setEnabled(False)
+            self.tab_clus.remove1stpcacb.setEnabled(False)
+            self.tab_clus.cb_splitclusters.setEnabled(False)
+            self.tab_clus.ntc_pcscaling_2.setEnabled(False)
+            self.tab_spec.rb_fit.setEnabled(False)
         else:
-            self.page2.button_savepca.setEnabled(True)
-            self.page2_1.button_savepca.setEnabled(True)
-            self.page2.slidershow.setEnabled(True)
-            self.page2.button_movepcup.setEnabled(True)
-            self.page3.button_calcca.setEnabled(True)
-            self.page4.rb_fit.setEnabled(True)
+            self.tab_clus.button_calcca.setEnabled(True)
+            self.tab_clus.nclusterspin.setEnabled(True)
+            self.tab_clus.remove1stpcacb.setEnabled(True)
+            self.tab_clus.cb_splitclusters.setEnabled(True)
+            self.tab_clus.ntc_pcscaling_2.setEnabled(True)
+            self.tab_spec.rb_fit.setEnabled(True)
+
+            # In PCA_new cluster mode, lock the PCA block (except Calculate PCA).
+            if self.tab_clus.cluster_display_mode:
+                self.tab_clus.button_savepca.setEnabled(False)
+                self.tab_clus.button_toggle_pca_plot.setEnabled(False)
+                self.tab_clus.button_movepcup.setEnabled(False)
+                self.tab_clus.npcaspin.setEnabled(False)
+            else:
+                self.tab_clus.button_savepca.setEnabled(True)
+                self.tab_clus.button_toggle_pca_plot.setEnabled(True)
+                self.tab_clus.npcaspin.setEnabled(True)
+                # Keep Move PC Up in sync with current plot view state.
+                self.tab_clus.UpdatePCAPlotView()
+
 
         if self.common.cluster_calculated == 0:
-            self.page3.button_scatterplots.setEnabled(False)
-            self.page3.button_savecluster.setEnabled(False)
-            self.page3.slidershow.setEnabled(False)
-            self.page4.button_addclspec.setEnabled(False)
-            self.page5.button_addclspec.setEnabled(False)
-            if self.page7:
-                self.page7.button_mucluster.setEnabled(False)
+            self.tab_spec.button_addclspec.setEnabled(False)
+            self.tab_peak.button_addclspec.setEnabled(False)
+            self.tab_clus.button_scatterplots.setEnabled(False)
+            self.tab_clus.button_savecluster.setEnabled(False)
+            self.tab_clus.showallspectracb.setEnabled(False)
+            self.tab_clus.button_errormap.setEnabled(False)
+            if self.tab_nnma:
+                self.tab_nnma.button_mucluster.setEnabled(False)
         else:
-            self.page3.button_scatterplots.setEnabled(True)
-            self.page3.button_savecluster.setEnabled(True)
-            self.page3.slidershow.setEnabled(True)
-            self.page4.button_addclspec.setEnabled(True)
-            self.page5.button_addclspec.setEnabled(True)
-            if self.page7:
-                self.page7.button_mucluster.setEnabled(True)
+            self.tab_spec.button_addclspec.setEnabled(True)
+            self.tab_peak.button_addclspec.setEnabled(True)
+            self.tab_clus.button_scatterplots.setEnabled(True)
+            self.tab_clus.button_savecluster.setEnabled(True)
+            self.tab_clus.showallspectracb.setEnabled(True)
+            self.tab_clus.button_errormap.setEnabled(True)
+            if self.tab_nnma:
+                self.tab_nnma.button_mucluster.setEnabled(True)
 
 
         if self.common.spec_anl_calculated == 0:
-            self.page4.button_removespec.setEnabled(False)
-            self.page4.button_movespdown.setEnabled(False)
-            self.page4.button_movespup.setEnabled(False)
-            self.page4.button_save.setEnabled(False)
-            self.page4.button_showrgb.setEnabled(False)
-            #self.page4.button_histogram.setEnabled(False)
-            self.page4.button_calc4d.setEnabled(False)
+            self.tab_spec.button_removespec.setEnabled(False)
+            self.tab_spec.button_movespdown.setEnabled(False)
+            self.tab_spec.button_movespup.setEnabled(False)
+            self.tab_spec.button_save.setEnabled(False)
+            self.tab_spec.button_showrgb.setEnabled(False)
+            #self.tab_spec.button_histogram.setEnabled(False)
+            self.tab_spec.button_calc4d.setEnabled(False)
 
         else:
-            self.page4.button_removespec.setEnabled(True)
-            self.page4.button_movespdown.setEnabled(True)
-            self.page4.button_movespup.setEnabled(True)
-            self.page4.button_save.setEnabled(True)
-            self.page4.button_showrgb.setEnabled(True)
-            #self.page4.button_histogram.setEnabled(True)
-            self.page4.button_calc4d.setEnabled(True)
+            self.tab_spec.button_removespec.setEnabled(True)
+            self.tab_spec.button_movespdown.setEnabled(True)
+            self.tab_spec.button_movespup.setEnabled(True)
+            self.tab_spec.button_save.setEnabled(True)
+            self.tab_spec.button_showrgb.setEnabled(True)
+            #self.tab_spec.button_histogram.setEnabled(True)
+            self.tab_spec.button_calc4d.setEnabled(True)
 
 
-        if showtomotab:
+        if self.tab_tomo is not None:
             if self.common.spec_anl4D_calculated == 0:
-                self.page8.button_spcomp.setEnabled(False)
+                self.tab_tomo.button_spcomp.setEnabled(False)
             else:
-                self.page8.button_spcomp.setEnabled(True)
+                self.tab_tomo.button_spcomp.setEnabled(True)
 
 
-        if self.page6 != None:
+        if self.tab_pfit != None:
             if self.common.cluster_calculated == 0:
-                self.page6.button_addclspec.setEnabled(False)
+                self.tab_pfit.button_addclspec.setEnabled(False)
             else:
-                self.page6.button_addclspec.setEnabled(True)
+                self.tab_pfit.button_addclspec.setEnabled(True)
 
             if self.common.xpf_loaded == 1:
-                self.page6.slider_spec.setEnabled(True)
+                self.tab_pfit.slider_spec.setEnabled(True)
             else:
-                self.page6.slider_spec.setEnabled(False)
+                self.tab_pfit.slider_spec.setEnabled(False)
 
 
         # ToDo: RestoreResetDisplaysetting functionality # Really needed?
-        #self.page1.ResetDisplaySettings()
+        #self.tab_prep.ResetDisplaySettings()
 
 
 
@@ -792,70 +799,87 @@ class MainFrame(QtWidgets.QMainWindow):
         self.refresh_widgets()
 
         #page 0
-        self.page0.slider_theta.setVisible(False)
-        #self.page0.tc_imagetheta.setVisible(False)
+        self.tab_load.slider_theta.setVisible(False)
+        #self.tab_load.tc_imagetheta.setVisible(False)
 
         #page 1
-        self.page1.button_i0.disconnect()
-        self.page1.button_i0.setText("Select I0")
-        self.page1.button_i0.clicked.connect(self.page1.specfig.OnI0Histogram)
-        #self.page1.rb_flux.setChecked(True)
-        #self.page1.rb_od.setChecked(False)
-        #self.page1.showflux = True
+        self.tab_prep.button_i0.disconnect()
+        self.tab_prep.button_i0.setText("Select I0")
+        self.tab_prep.button_i0.clicked.connect(self.tab_prep.specfig.OnI0Histogram)
+        #self.tab_prep.rb_flux.setChecked(True)
+        #self.tab_prep.rb_od.setChecked(False)
+        #self.tab_prep.showflux = True
 
-        #fig = self.page1.specfig
+        #fig = self.tab_prep.specfig
         #fig.clf()
-        #self.page1.SpectrumPanel.draw()
-        #self.page1.tc_spec.setText("Spectrum at point: ")
+        #self.tab_prep.SpectrumPanel.draw()
+        #self.tab_prep.tc_spec.setText("Spectrum at point: ")
 
-        #fig = self.page1.absimgfig
+        #fig = self.tab_prep.absimgfig
         #fig.clf()
-        #self.page1.AbsImagePanel.draw()
-        #self.page1.tc_imageeng.setText("Image at energy: ")
+        #self.tab_prep.AbsImagePanel.draw()
+        #self.tab_prep.tc_imageeng.setText("Image at energy: ")
 
-        # self.page1.textctrl.setText(' ')
+        # self.tab_prep.textctrl.setText(' ')
 
-        self.page1.ResetDisplaySettings()
-        #page 0
-        self.page1.slider_theta.setVisible(False)
-        #self.page1.tc_imagetheta.setVisible(False)
+        self.tab_prep.ResetDisplaySettings()
+        #page 1
+        self.tab_prep.slider_theta.setVisible(False)
 
-        #page 2
-        fig = self.page2.pcaevalsfig
+        # page 2_1 (PCA & Cluster Analysis)
+        self.tab_clus.reset_after_new_stack()
+        self.tab_clus.slider_theta.setVisible(False)
+        self.tab_clus.slider_theta.setEnabled(False)
+
+        #page 4
+        self.tab_spec.ClearWidgets()
+
+        #page 5
+        fig = self.tab_peak.kespecfig
         fig.clf()
-        self.page2.PCAEvalsPan.draw()
-
-        fig = self.page2.pcaimgfig
+        self.tab_peak.KESpecPan.draw()
+        fig = self.tab_peak.absimgfig
         fig.clf()
-        self.page2.PCAImagePan.draw()
+        self.tab_peak.AbsImagePanel.draw()
 
-        fig = self.page2.pcaspecfig
-        fig.clf()
-        self.page2.PCASpecPan.draw()
+        #page 6
+        if self.tab_pfit != None:
+            fig = self.tab_pfit.Specfig
+            fig.clf()
+            self.tab_pfit.SpectrumPanel.draw()
+            self.tab_pfit.slider_spec.setEnabled(False)
 
-        self.page2.vartc.setText('0%')
-        self.page2.npcaspin.setValue(1)
-        self.page2.tc_PCAcomp.setText("PCA component ")
-        self.page2.text_pcaspec.setText("PCA spectrum ")
+        # tab_tomo
+        if self.tab_tomo is not None:
+            self._set_tomo_tab_enabled(False)
 
-        self.page2.selpca = 1
-        self.page2.numsigpca = 2
-        self.page2.slidershow.setValue(self.page2.selpca)
+    def _set_tomo_tab_enabled(self, enabled):
+        if self.tab_tomo is None:
+            return
+        tomo_index = self.tabs.indexOf(self.tab_tomo)
+        if tomo_index == -1:
+            return
+        self.tabs.setTabEnabled(tomo_index, enabled)
+        self._set_tomo_tab_style(enabled)
+        if not enabled:
+            if self.tabs.currentWidget() == self.tab_tomo:
+                self.tabs.setCurrentWidget(self.tab_prep)
+            self.tab_tomo.NewStackClear()
 
-        self.page2.slider_theta.setVisible(False)
-        self.page2.tc_imagetheta.setVisible(False)
-        self.page2.button_calcpca4D.setVisible(False)
-
-        #page 3
-        fig = self.page3.clusterimgfig
-        fig.clf()
-        self.page3.ClusterImagePan.draw()
-
-        fig = self.page3.clusterindvimgfig
-        fig.clf()
-        self.page3.ClusterIndvImagePan.draw()
-
-        fig = self.page3.clusterspecfig
+    def _set_tomo_tab_style(self, enabled):
+        if self.tab_tomo is None:
+            return
+        tomo_index = self.tabs.indexOf(self.tab_tomo)
+        if tomo_index == -1:
+            return
+        if enabled:
+            if self.palette().color(self.palette().Background).red() + self.palette().color(self.palette().Background).green() + self.palette().color(self.palette().Background).blue() < 375:
+                color = QtGui.QColor('dodgerblue')
+            else:
+                color = QtGui.QColor('darkblue')
+        else:
+            color = QtGui.QColor('gray')
+        self.tabs.tabBar().setTabTextColor(tomo_index, color)
 
     def check_energy_duplicates(self):
         if hasattr(self.stk, 'ev'):
@@ -935,42 +959,3 @@ class MainFrame(QtWidgets.QMainWindow):
              QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
              
         return result
-        fig.clf()
-        self.page3.ClusterSpecPan.draw()
-
-        fig = self.page3.clusterdistmapfig
-        fig.clf()
-        self.page3.ClusterDistMapPan.draw()
-
-        self.page3.selcluster = 1
-        self.page3.slidershow.setValue(self.page3.selcluster)
-        self.page3.numclusters = 5
-        self.page3.nclusterspin.setValue(self.page3.numclusters)
-        self.page3.tc_cluster.setText("Cluster ")
-        self.page3.tc_clustersp.setText("Cluster spectrum")
-        self.page3.wo_1st_pca = 0
-        self.page3.remove1stpcacb.setChecked(False)
-
-
-        #page 4
-        self.page4.ClearWidgets()
-
-        #page 5
-        fig = self.page5.kespecfig
-        fig.clf()
-        self.page5.KESpecPan.draw()
-        fig = self.page5.absimgfig
-        fig.clf()
-        self.page5.AbsImagePanel.draw()
-
-
-        #page 6
-        if self.page6 != None:
-            fig = self.page6.Specfig
-            fig.clf()
-            self.page6.SpectrumPanel.draw()
-            self.page6.slider_spec.setEnabled(False)
-
-        #page8
-        if showtomotab:
-            self.page8.NewStackClear()

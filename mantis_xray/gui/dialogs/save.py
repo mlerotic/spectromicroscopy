@@ -1,4 +1,3 @@
-
 import os
 import numpy as np
 from PyQt5 import QtWidgets, QtGui, QtCore
@@ -12,7 +11,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 class SaveWin(QtWidgets.QDialog):
 
-    def __init__(self, parent, com, stk):
+    def __init__(self, parent, com, stk, i0_mode=False):
         QtWidgets.QWidget.__init__(self, parent)
         uic.loadUi(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dialogsave.ui'), self)
         self.parent = parent
@@ -22,6 +21,14 @@ class SaveWin(QtWidgets.QDialog):
 
         self.cb11.setChecked(True)
         self.cb21.setChecked(True)
+
+        if i0_mode:
+            # Batch export not applicable when saving I0 spectrum
+            self.label_6.setVisible(False)
+            self.cb32.setVisible(False)
+            self.cb32.setChecked(False)
+            self.cb35.setVisible(False)
+            self.cb35.setChecked(False)
 
         if not hasattr(parent, 'specfig'):
             self.label_spectrum.setVisible(False)
@@ -172,10 +179,10 @@ class SaveWin(QtWidgets.QDialog):
                     data = (self.parent.specfig.pi.items[-1].yData.tolist())
                 else:
                     name = "ROI spectrum"
-                    plot_num = len(self.parent.specfig.items)
+                    plot_num = len(self.parent.specfig.pi.items)
                     data = []
-                    # Assuming items logic needs adjustment based on pyqtgraph
-                    pass 
+                    for i in range(plot_num - 1):
+                        data.append(self.parent.specfig.pi.items[i + 1].yData.tolist())
                 self.stk.write_csv(fileName_spec, evdata, data, cname=name)
 
             ext = 'svg'
@@ -256,7 +263,7 @@ class SaveWinP2(QtWidgets.QDialog):
 
 
 #----------------------------------------------------------------------
-    def OnSave(self, evt):
+    def OnSave(self, evt=None):
 
         self.filename = str(self.tc_savefn.text())
 
@@ -287,13 +294,13 @@ class SaveWinP2(QtWidgets.QDialog):
                                evals_svg = ev_svg)
 
 
-
 class SaveWinP3(QtWidgets.QDialog):
 
-    def __init__(self, parent):
+    def __init__(self, parent, page=None):
         QtWidgets.QWidget.__init__(self, parent)
 
         self.parent = parent
+        self._ca_page = page  # optional explicit page; if None, uses self.parent.tab_clus
 
 
         self.resize(400, 300)
@@ -341,16 +348,16 @@ class SaveWinP3(QtWidgets.QDialog):
         st5 = QtWidgets.QLabel(self)
         st5.setText('.csv')
         st5.setFont(fontb)
-        st10 = QtWidgets.QLabel(self)
-        st10.setText('.tif (data)')
-        st10.setFont(fontb)
+        st_tif = QtWidgets.QLabel(self)
+        st_tif.setText('.tif (data)')
+        st_tif.setFont(fontb)
 
         st6 = QtWidgets.QLabel(self)
         st6.setText('_spectrum')
 
         self.cb11 = QtWidgets.QCheckBox('', self)
-        self.cb11.setChecked(True)
         self.cb12 = QtWidgets.QCheckBox('', self)
+        self.cb12.setChecked(True)
         self.cb13 = QtWidgets.QCheckBox('', self)
         self.cb14 = QtWidgets.QCheckBox('', self)
 
@@ -358,8 +365,8 @@ class SaveWinP3(QtWidgets.QDialog):
         st7.setText('_composite_images')
 
         self.cb21 = QtWidgets.QCheckBox('', self)
-        self.cb21.setChecked(True)
         self.cb22 = QtWidgets.QCheckBox('', self)
+        self.cb22.setChecked(True)
         self.cb23 = QtWidgets.QCheckBox('', self)
         self.cb24 = QtWidgets.QCheckBox('', self)
 
@@ -367,8 +374,8 @@ class SaveWinP3(QtWidgets.QDialog):
         st8.setText('_individual_images')
 
         self.cb31 = QtWidgets.QCheckBox('', self)
-        self.cb31.setChecked(True)
         self.cb32 = QtWidgets.QCheckBox('', self)
+        self.cb32.setChecked(True)
         self.cb33 = QtWidgets.QCheckBox('', self)
         self.cb34 = QtWidgets.QCheckBox('', self)
 
@@ -376,8 +383,8 @@ class SaveWinP3(QtWidgets.QDialog):
         st9.setText('_scatter_plots')
 
         self.cb41 = QtWidgets.QCheckBox('', self)
-        self.cb41.setChecked(True)
         self.cb42 = QtWidgets.QCheckBox('', self)
+        self.cb42.setChecked(True)
         self.cb43 = QtWidgets.QCheckBox('', self)
 
 
@@ -386,7 +393,7 @@ class SaveWinP3(QtWidgets.QDialog):
         gridtop.addWidget(st3, 0, 2)
         gridtop.addWidget(st4, 0, 3)
         gridtop.addWidget(st5, 0, 4)
-        gridtop.addWidget(st10, 0, 5)
+        gridtop.addWidget(st_tif, 0, 5)
 
         gridtop.addWidget(st6, 1, 0)
         gridtop.addWidget(self.cb11, 1, 1)
@@ -502,22 +509,40 @@ class SaveWinP3(QtWidgets.QDialog):
         scatt_svg = self.cb43.isChecked()
 
         self.close()
-        self.parent.page3.Save(self.filename, self.path,
-                                         spec_png = sp_png,
-                                         spec_pdf = sp_pdf,
-                                         spec_svg = sp_svg,
-                                         spec_csv = sp_csv,
-                                         img_png = im_png,
-                                         img_pdf = im_pdf,
-                                         img_svg = im_svg,
-                                         img_tif = im_tif,
-                                         indimgs_png = indim_png,
-                                         indimgs_pdf = indim_pdf,
-                                         indimgs_svg = indim_svg,
-                                         indimgs_tif = indim_tif,
-                                         scatt_png = scatt_png,
-                                         scatt_pdf = scatt_pdf,
-                                         scatt_svg = scatt_svg)
+        if self._ca_page is not None:
+            self._ca_page.Save_CA(self.filename, self.path,
+                                             spec_png = sp_png,
+                                             spec_pdf = sp_pdf,
+                                             spec_svg = sp_svg,
+                                             spec_csv = sp_csv,
+                                             img_png = im_png,
+                                             img_pdf = im_pdf,
+                                             img_svg = im_svg,
+                                             img_tif = im_tif,
+                                             indimgs_png = indim_png,
+                                             indimgs_pdf = indim_pdf,
+                                             indimgs_svg = indim_svg,
+                                             indimgs_tif = indim_tif,
+                                             scatt_png = scatt_png,
+                                             scatt_pdf = scatt_pdf,
+                                             scatt_svg = scatt_svg)
+        else:
+            self.parent.tab_clus.Save_CA(self.filename, self.path,
+                                             spec_png = sp_png,
+                                             spec_pdf = sp_pdf,
+                                             spec_svg = sp_svg,
+                                             spec_csv = sp_csv,
+                                             img_png = im_png,
+                                             img_pdf = im_pdf,
+                                             img_svg = im_svg,
+                                             img_tif = im_tif,
+                                             indimgs_png = indim_png,
+                                             indimgs_pdf = indim_pdf,
+                                             indimgs_svg = indim_svg,
+                                             indimgs_tif = indim_tif,
+                                             scatt_png = scatt_png,
+                                             scatt_pdf = scatt_pdf,
+                                             scatt_svg = scatt_svg)
 
 
 class SaveWinP4(QtWidgets.QDialog):
@@ -702,7 +727,7 @@ class SaveWinP4(QtWidgets.QDialog):
 
 
         self.close()
-        self.parent.page4.Save(self.filename, self.path,
+        self.parent.tab_spec.Save(self.filename, self.path,
                                          spec_png = sp_png,
                                          spec_pdf = sp_pdf,
                                          spec_svg = sp_svg,
@@ -905,7 +930,7 @@ class SaveWinP5(QtWidgets.QDialog):
         cf_svg = self.cb33.isChecked()
 
         self.close()
-        self.parent.page7.Save(self.filename, self.path,
+        self.parent.tab_nnma.Save(self.filename, self.path,
                                spec_png = sp_png,
                                spec_pdf = sp_pdf,
                                spec_svg = sp_svg,

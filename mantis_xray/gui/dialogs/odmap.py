@@ -93,7 +93,7 @@ class ShowODMap(QtWidgets.QWidget):
         self.MapSelectWidget1.mousePressEvent = self.mouseEventOnQList
         self.MapSelectWidget1.mouseMoveEvent = self.mouseEventOnQList
 
-        self.parent.page1.button_spectralROI.setEnabled(False)
+        self.parent.tab_prep.button_spectralROI.setEnabled(False)
 
     def OnScrollEng(self, value):
         self.iev = value
@@ -628,5 +628,5 @@ class ShowODMap(QtWidgets.QWidget):
     def closeEvent(self, event):
         #self.Clear()
         self.close()
-        self.parent.page1.button_spectralROI.setEnabled(True)
+        self.parent.tab_prep.button_spectralROI.setEnabled(True)
 #-----------------------------------------------------------------------

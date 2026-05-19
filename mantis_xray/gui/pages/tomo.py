@@ -473,7 +473,7 @@ class PageTomo(QtWidgets.QWidget):
 
 
         for i in range (self.stack.n_theta):
-            if self.window().page4.showraw == True:
+            if self.window().tab_spec.showraw == True:
                 self.tomodata[:,:,:,i] = self.anlz.target_svd_maps4D[i]
             else:
                 self.tomodata[:,:,:,i] = self.anlz.target_pcafit_maps[i]
@@ -1180,7 +1180,7 @@ class PageTomo(QtWidgets.QWidget):
             if len(self.ROIvol[self.islice]) > 0:
                 im_red = axes.imshow(np.rot90(self.ROIvol[self.islice]), cmap=matplotlib.colormaps["autumn"])
 
-#         if self.window().page1.show_scale_bar == 1:
+#         if self.window().tab_prep.show_scale_bar == 1:
 #             #Show Scale Bar
 #             if self.com.white_scale_bar == 1:
 #                 sbcolor = 'white'

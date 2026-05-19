@@ -130,13 +130,6 @@
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="button_savepca">
-              <property name="text">
-               <string>Save PCA results...</string>
-              </property>
-             </widget>
-            </item>
-            <item>
              <layout class="QGridLayout" name="gridLayout_4">
               <property name="leftMargin">
                <number>4</number>
@@ -177,6 +170,16 @@
              </layout>
             </item>
             <item>
+              <widget class="QPushButton" name="button_toggle_pca_plot">
+               <property name="text">
+                <string>Show eigenvalues</string>
+               </property>
+               <property name="checkable">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
              <widget class="QPushButton" name="button_movepcup">
               <property name="text">
                <string>Move PC up</string>
@@ -331,13 +334,6 @@
               </property>
              </widget>
             </item>
-            <item>
-             <widget class="QPushButton" name="button_savecluster">
-              <property name="text">
-               <string>Save CA results...</string>
-              </property>
-             </widget>
-            </item>
            </layout>
           </widget>
          </item>
@@ -375,7 +371,7 @@
          </font>
         </property>
         <property name="title">
-         <string>Component/Cluster</string>
+         <string></string>
         </property>
         <layout class="QHBoxLayout" name="horizontalLayout_3">
          <property name="spacing">
@@ -500,7 +496,7 @@
          </font>
         </property>
         <property name="title">
-         <string>Spectrum</string>
+         <string></string>
         </property>
         <layout class="QHBoxLayout" name="horizontalLayout_5">
          <property name="spacing">
@@ -519,13 +515,68 @@
           <number>0</number>
          </property>
          <item>
-          <widget class="PlotWidget" name="spectrum_plotwidget">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
+          <widget class="QStackedWidget" name="pca_plot_stack">
+           <property name="currentIndex">
+            <number>0</number>
            </property>
+           <widget class="QWidget" name="pca_spectrum_page">
+            <layout class="QHBoxLayout" name="horizontalLayout_10">
+             <property name="spacing">
+              <number>0</number>
+             </property>
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
+             <item>
+              <widget class="PlotWidget" name="spectrum_plotwidget">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="pca_eigenvalues_page">
+            <layout class="QHBoxLayout" name="horizontalLayout_11">
+             <property name="spacing">
+              <number>0</number>
+             </property>
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
+             <item>
+              <widget class="PlotWidget" name="pca_eigenvals_plotwidget">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
           </widget>
          </item>
         </layout>
@@ -1006,18 +1057,18 @@
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
-        <property name="minimumSize">
-         <size>
-          <width>220</width>
-          <height>116</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>220</width>
-          <height>116</height>
-         </size>
-        </property>
+          <property name="minimumSize">
+           <size>
+            <width>220</width>
+            <height>116</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>220</width>
+            <height>116</height>
+           </size>
+          </property>
         <property name="font">
          <font>
           <family>Ubuntu</family>
@@ -1060,19 +1111,19 @@
            <property name="verticalSpacing">
             <number>5</number>
            </property>
-           <item row="1" column="1">
-            <widget class="QPushButton" name="button_save">
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>24</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>Save...</string>
-             </property>
-            </widget>
-           </item>
+            <item row="1" column="1">
+             <widget class="QPushButton" name="button_savepca">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Save PCA results...</string>
+              </property>
+             </widget>
+            </item>
            <item row="1" column="0">
             <widget class="QPushButton" name="pb_copy_img">
              <property name="enabled">
@@ -1120,35 +1171,48 @@
              </property>
             </widget>
            </item>
-           <item row="0" column="1">
-            <widget class="QLabel" name="label_3">
-             <property name="text">
-              <string>Export dialog</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="0">
-            <widget class="QPushButton" name="pb_copy_specimg">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>24</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>Spectrum</string>
-             </property>
-            </widget>
-           </item>
+            <item row="0" column="1">
+             <widget class="QLabel" name="label_3">
+              <property name="text">
+               <string>Export dialog</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="0">
+             <widget class="QPushButton" name="pb_copy_specimg">
+              <property name="enabled">
+               <bool>true</bool>
+              </property>
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Spectrum</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="1">
+             <widget class="QPushButton" name="button_savecluster">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Save CA results...</string>
+              </property>
+             </widget>
+            </item>
           </layout>
          </item>
          <item>

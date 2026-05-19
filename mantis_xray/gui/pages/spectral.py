@@ -705,11 +705,11 @@ class PageSpectral(QtWidgets.QWidget):
         self.loadTargetMap()
 
 
-        self.window().page0.itheta = self.itheta
-        self.window().page0.slider_theta.setValue(self.itheta)
+        self.window().tab_load.itheta = self.itheta
+        self.window().tab_load.slider_theta.setValue(self.itheta)
 
-        self.window().page1.itheta = self.itheta
-        self.window().page1.slider_theta.setValue(self.itheta)
+        self.window().tab_prep.itheta = self.itheta
+        self.window().tab_prep.slider_theta.setValue(self.itheta)
 
 
 

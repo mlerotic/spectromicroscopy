@@ -351,10 +351,10 @@ class PageNNMA(QtWidgets.QWidget):
     def OnLoadROISpectra(self, event):
         #self.ncompspin.setValue(xxxx n rois)
         self.ncompspin.setEnabled(False)
-        plot_num = len(self.window().page1.specfig.pi.items)
+        plot_num = len(self.window().tab_prep.specfig.pi.items)
         kNNMA = 0
         for i in range(plot_num - 1):
-            spec = self.window().page1.specfig.pi.items[i + 1].yData
+            spec = self.window().tab_prep.specfig.pi.items[i + 1].yData
             if not np.any(spec):  # exclude spectra with only zeros
                 continue
             kNNMA += 1
@@ -377,7 +377,7 @@ class PageNNMA(QtWidgets.QWidget):
 
     #----------------------------------------------------------------------
     def OnLoadClusterSpectra(self, event):
-        self.ncompspin.setValue(self.window().page3.numclusters)
+        self.ncompspin.setValue(self.window().tab_clus.numclusters)
         self.ncompspin.setEnabled(False)
         self.nnma.setClusterSpectra(self.anlz.clusterspectra)
 

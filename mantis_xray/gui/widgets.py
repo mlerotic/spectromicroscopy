@@ -435,7 +435,7 @@ class SpecFig():
             #self.drawROImask(mask, color=color)
             #x, y = self.getSpecfromROI(data,self.parent.absimgfig.boolmask)
             #print(self.parent.anlz.eigenvecs[:,0])
-            curve = pg.PlotCurveItem(self.parent.stk.ev , self.parent.anlz.eigenvecs[:,self.parent.selpca], pen=({'color': color, 'width': 2}), skipFiniteCheck=True)
+            curve = pg.PlotCurveItem(self.parent.stk.ev , self.parent.anlz.eigenvecs[:,self.parent.selpca], pen=({'color': color, 'width': 2}), skipFiniteCheck=True, name='Component {}'.format(self.parent.selpca + 1))
             self.pi.setMouseEnabled(x=True, y=True)
             self.pi.addItem(curve)
             self.pi.items.remove(curve)
@@ -981,9 +981,19 @@ class ImgFig():
                 self.imageplot.setTitle("<center>{0}Image at {1:5.2f} eV</center>".format(fn,float(self.parent.stk.ev[self.parent.iev])))
 
         elif setpcalabel is True:
-            #            if self.parent.com.stack_4d == 1:
-            # if:
-            self.imageplot.setTitle("<center>{}Component {:02d}</center>".format(fn,int(self.parent.selpca)+1))
+            # In cluster display mode the left panel always shows the cluster
+            # composite (or error map), not a PCA component – use the correct title.
+            if getattr(self.parent, 'cluster_display_mode', False):
+                if getattr(self.parent, 'showerrormap', 0):
+                    self.imageplot.setTitle("<center>{}Cluster Error Map</center>".format(fn))
+                else:
+                    if self.parent.com.stack_4d == 1 and hasattr(self.parent.stk, 'theta') and len(self.parent.stk.theta) > self.parent.itheta:
+                        self.imageplot.setTitle("<center>{}Cluster composite at {:5.1f}\u00b0</center>".format(
+                            fn, float(self.parent.stk.theta[self.parent.itheta])))
+                    else:
+                        self.imageplot.setTitle("<center>{}Cluster composite</center>".format(fn))
+            else:
+                self.imageplot.setTitle("<center>{}Component {:02d}</center>".format(fn, int(self.parent.selpca) + 1))
         #if custom_title:
         #    self.imageplot.setTitle("<center>{}{}</center>".format(fn, custom_title))
 

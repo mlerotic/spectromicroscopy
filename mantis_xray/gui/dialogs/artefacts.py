@@ -162,11 +162,11 @@ class ShowArtefacts(QtWidgets.QDialog):
         a, wf = self.LevelCalc(self.stack.absdata.astype('float64'),final=True)
         if self.remove_outliers.isChecked():
             a, wf = self.OutlierCalc(a,final=True)
-            self.parent.page1.specfig.OnI0Reset()  # Reset I0 on PageStack
+            self.parent.tab_prep.specfig.OnI0Reset()  # Reset I0 on PageStack
             self.parent.window().refresh_widgets()
         if not np.array_equal(self.stack.absdata, a, equal_nan=False):
             self.stack.absdata = a
-            self.parent.page0.absimgfig.loadNewImage() # Load new image on PageLoadData
-            self.parent.page1.specfig.OnI0Reset() # Reset I0 on PageStack
+            self.parent.tab_load.absimgfig.loadNewImage() # Load new image on PageLoadData
+            self.parent.tab_prep.specfig.OnI0Reset() # Reset I0 on PageStack
             self.parent.window().refresh_widgets()
         self.close()

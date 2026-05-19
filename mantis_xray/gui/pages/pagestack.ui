@@ -153,13 +153,6 @@
               </property>
              </widget>
             </item>
-            <item>
-             <widget class="QPushButton" name="button_savestack">
-              <property name="text">
-               <string>Save processed stack</string>
-              </property>
-             </widget>
-            </item>
            </layout>
           </widget>
          </item>
@@ -378,7 +371,7 @@
          </font>
         </property>
         <property name="title">
-         <string>Image Stack</string>
+         <string></string>
         </property>
         <layout class="QHBoxLayout" name="horizontalLayout_3">
          <property name="spacing">
@@ -500,7 +493,7 @@
          </font>
         </property>
         <property name="title">
-         <string>Spectrum</string>
+         <string></string>
         </property>
         <layout class="QHBoxLayout" name="horizontalLayout_5">
          <property name="spacing">
@@ -765,7 +758,7 @@
          </font>
         </property>
         <property name="title">
-         <string>Image Stack</string>
+         <string></string>
         </property>
         <property name="alignment">
          <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
@@ -883,7 +876,7 @@
          </font>
         </property>
         <property name="title">
-         <string>Spectrum</string>
+         <string></string>
         </property>
         <property name="alignment">
          <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
@@ -1427,28 +1420,41 @@
              </property>
             </widget>
            </item>
-           <item row="2" column="0">
-            <widget class="QPushButton" name="pb_copy_specimg">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>24</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>Spectrum</string>
-             </property>
-            </widget>
-           </item>
+            <item row="2" column="0">
+             <widget class="QPushButton" name="pb_copy_specimg">
+              <property name="enabled">
+               <bool>true</bool>
+              </property>
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Spectrum</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="1">
+             <widget class="QPushButton" name="button_savestack">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Save stack...</string>
+              </property>
+             </widget>
+            </item>
           </layout>
          </item>
          <item>

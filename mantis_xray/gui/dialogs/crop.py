@@ -490,8 +490,8 @@ class MultiCrop(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
         self.stack.absdata = self.stack.absdata[left:right,bottom:top,selection]
         self.stack.n_cols = self.stack.absdata.shape[0]
         self.stack.n_rows = self.stack.absdata.shape[1]
-        self.parent.page1.ix = int(self.stack.n_cols/2)
-        self.parent.page1.iy = int(self.stack.n_rows/2)
+        self.parent.tab_prep.ix = int(self.stack.n_cols/2)
+        self.parent.tab_prep.iy = int(self.stack.n_rows/2)
         self.stack.scale_bar()
 
         if self.com.stack_4d:
@@ -521,7 +521,7 @@ class MultiCrop(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
                 self.stack.od = self.stack.od3d.copy()
                 self.stack.od = np.reshape(self.stack.od, (self.stack.n_rows * self.stack.n_cols, self.stack.n_ev),
                                        order='F')
-            self.parent.page1.specfig.I0Update()
+            self.parent.tab_prep.specfig.I0Update()
 
         self.stack.fill_h5_struct_from_stk()
         if self.com.i0_loaded == 1:
@@ -529,34 +529,34 @@ class MultiCrop(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
 
         # Fix the slider on Page 1!
         if self.com.stack_4d:
-            self.parent.page1.slider_theta.setRange(0, self.stack.n_theta - 1)
-            self.parent.page1.itheta = 0
-            self.parent.page1.slider_theta.blockSignals(True)
-            self.parent.page1.slider_theta.setValue(int(self.parent.page1.itheta))
-            self.parent.page1.slider_theta.blockSignals(False)
+            self.parent.tab_prep.slider_theta.setRange(0, self.stack.n_theta - 1)
+            self.parent.tab_prep.itheta = 0
+            self.parent.tab_prep.slider_theta.blockSignals(True)
+            self.parent.tab_prep.slider_theta.setValue(int(self.parent.tab_prep.itheta))
+            self.parent.tab_prep.slider_theta.blockSignals(False)
 
-            self.parent.page0.slider_theta.setRange(0, self.stack.n_theta - 1)
-            self.parent.page0.itheta = 0
-            self.parent.page0.slider_theta.blockSignals(True)
-            self.parent.page0.slider_theta.setValue(int(self.parent.page1.itheta))
-            self.parent.page0.slider_theta.blockSignals(False)
+            self.parent.tab_load.slider_theta.setRange(0, self.stack.n_theta - 1)
+            self.parent.tab_load.itheta = 0
+            self.parent.tab_load.slider_theta.blockSignals(True)
+            self.parent.tab_load.slider_theta.setValue(int(self.parent.tab_prep.itheta))
+            self.parent.tab_load.slider_theta.blockSignals(False)
 
-        #self.parent.page1.slider_eng.setRange(0, self.stack.n_ev - 1)
-        #self.parent.page1.iev = 0
-        #self.parent.page1.slider_eng.setValue(int(self.parent.page1.iev))
+        #self.parent.tab_prep.slider_eng.setRange(0, self.stack.n_ev - 1)
+        #self.parent.tab_prep.iev = 0
+        #self.parent.tab_prep.slider_eng.setValue(int(self.parent.tab_prep.iev))
 
-        #self.parent.page0.slider_eng.setRange(0, self.stack.n_ev - 1)
-        #self.parent.page0.iev = 0
-        #self.parent.page0.slider_eng.setValue(int(self.parent.page1.iev))
+        #self.parent.tab_load.slider_eng.setRange(0, self.stack.n_ev - 1)
+        #self.parent.tab_load.iev = 0
+        #self.parent.tab_load.slider_eng.setValue(int(self.parent.tab_prep.iev))
 
-#        self.parent.page1.loadSpectrum(self.parent.page1.ix, self.parent.page1.iy)
-        #self.parent.page1.Clear()
-        self.parent.page1.absimgfig.loadNewImageWithROI()
-        self.parent.page0.absimgfig.loadNewImage()
-        self.parent.page1.specfig.ClearandReload()
+#        self.parent.tab_prep.loadSpectrum(self.parent.tab_prep.ix, self.parent.tab_prep.iy)
+        #self.parent.tab_prep.Clear()
+        self.parent.tab_prep.absimgfig.loadNewImageWithROI()
+        self.parent.tab_load.absimgfig.loadNewImage()
+        self.parent.tab_prep.specfig.ClearandReload()
         self.parent.window().refresh_widgets()
         #if showmaptab:
-        #    self.parent.page9.Clear()
-        #    self.parent.page9.loadData()
+        #    self.parent.tab_map.Clear()
+        #    self.parent.tab_map.loadData()
 
         self.close()
