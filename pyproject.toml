@@ -11,7 +11,7 @@ description = "MANTiS is a Multivariate ANalysis Tool for x-ray Spectromicroscop
 readme = "README.md"
 requires-python = ">=3"
 keywords = ["spectromicroscopy", "microspectroscopy", "stxm", "hyperspectral", "imaging", "image"]
-license = "GPL-3.0-or-later"
+license = {text = "GPL-3.0-or-later"}
 classifiers = [
 	"Development Status :: 5 - Production/Stable",
 	"Programming Language :: Python",
@@ -43,13 +43,22 @@ source = "https://github.com/mlerotic/spectromicroscopy"
 issues = "https://github.com/mlerotic/spectromicroscopy/issues"
 
 [project.optional-dependencies]
-netCDF = ["netcdf4-python"]
+netCDF = ["netCDF4"]
 
 [project.gui-scripts]
 mantis-xray = "mantis_xray.mantis_qt:main"
 
 [tool.setuptools]
-packages = ["mantis_xray", "mantis_xray.file_plugins", "mantis_xray.images", "mantis_xray.TomoCS"]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["mantis_xray*"]
+
+[tool.setuptools.package-data]
+"mantis_xray" = ["*.qss", "Mantis_batch_settings.txt", "images/*"]
+"mantis_xray.analysis" = ["*.xdr"]
+"mantis_xray.gui.dialogs" = ["*.ui"]
+"mantis_xray.gui.pages" = ["*.ui"]
 
 [tool.setuptools.dynamic]
 version = {attr = "mantis_xray.__version__"}
