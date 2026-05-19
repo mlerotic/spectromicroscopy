@@ -22,7 +22,7 @@ from collections import OrderedDict
 #from PyQt5 import QtGui
 
 title = 'NXstxm'
-extension = ['*.hdf','*.hdf5','*.nxs']
+extension = ['*.hdf','*.hdf5','*.nxs','*.stxm']
 read_types = ['spectrum','image','stack','sample line spectrum']
 write_types = []#'spectrum','image','stack']
 
