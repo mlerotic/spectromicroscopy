@@ -24,9 +24,12 @@ import os
 from PyQt5 import QtWidgets
 
 from .gui import MainFrame
-from .helpers import resource_path
+from .helpers import resource_path, print_welcome_banner, check_for_updates, print_dependency_versions
 
 def main():
+    print_welcome_banner()
+    check_for_updates()
+    print_dependency_versions()
     app = QtWidgets.QApplication(sys.argv)
     
     # Load stylesheet if available
