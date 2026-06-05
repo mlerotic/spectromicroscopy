@@ -1,6 +1,6 @@
 
 from PyQt5 import QtWidgets, QtGui
-import os
+import os, webbrowser
 from ...helpers import resource_path
 from ... import __version__ as version
 
@@ -31,9 +31,10 @@ class AboutFrame(QtWidgets.QDialog):
 
 
         text1 = QtWidgets.QLabel(self)
-        text1.setText("www.2ndlookconsulting.com")
+        text1.linkActivated.connect(self.openUrl)
+        text1.setText("<A href='https://www.2ndlookconsulting.com'>www.2ndlookconsulting.com</A>")
         text1.setStyleSheet('color: rgb(53,159,217);font-size: 14pt; font-family: SansSerif;')
-        #text1.setFont(QtGui.QFont('SansSerif', 14))
+        text1.setTextFormat(1)
 
         #font2 = wx.Font(12, wx.SWISS, wx.NORMAL, wx.NORMAL)
         text2 = QtWidgets.QLabel(self)
@@ -43,29 +44,32 @@ class AboutFrame(QtWidgets.QDialog):
 
         #font3 = wx.Font(8, wx.SWISS, wx.NORMAL, wx.NORMAL)
         text3 = QtWidgets.QLabel(self)
+        text3.linkActivated.connect(self.openUrl)
         text3.setText( '''
-Developed by Mirna Lerotic, based on earlier programs by Mirna
-Lerotic and Chris Jacobsen. Initial development supported by
+Current development and maintenance by Benjamin Watts and <BR>
+Jan-David Förster, with contributions from <A href='https://github.com/mlerotic/spectromicroscopy/graphs/contributors?all=1'>others</A>.<BR>
+Originally developed by Mirna Lerotic, based on earlier programs by<BR>
+Mirna Lerotic and Chris Jacobsen. Initial development supported by<BR>
 Argonne National Laboratory LDRD 2010-193-R1 9113. ''')
         text3.setStyleSheet('color: rgb(0,0,0)')
-        #text3.SetFont(font3)
+        text3.setTextFormat(1)
 
 
         #font4 = wx.Font(8, wx.SWISS, wx.NORMAL, wx.NORMAL)
         text4 = QtWidgets.QLabel(self)
+        text4.linkActivated.connect(self.openUrl)
         text4.setText( '''
-Mantis is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published
-by the Free Software Foundation, either version 3 of the License,
-or any later version.
-
-Mantis is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty
-of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-See the GNU General Public License for more details
-http://www.gnu.org/licenses/.''')
+Mantis is free software: you can redistribute it and/or modify<BR>
+it under the terms of the GNU General Public License as published<BR>
+by the Free Software Foundation, either version 3 of the License,<BR>
+or any later version.<BR>
+<BR>
+Mantis is distributed in the hope that it will be useful,<BR>
+but WITHOUT ANY WARRANTY; without even the implied warranty<BR>
+of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.<BR>
+See the <A href='https://www.gnu.org/licenses/'>GNU General Public License</A> for more details.<BR>''')
         text4.setStyleSheet('color: rgb(0,0,0)')
-        #text4.SetFont(font4)
+        text4.setTextFormat(1)
 
         vbox.addStretch(1)
         hbox = QtWidgets.QHBoxLayout()
@@ -89,3 +93,7 @@ http://www.gnu.org/licenses/.''')
 
 
         self.setLayout(vbox)
+
+    def openUrl(self,url):
+        print(url)
+        webbrowser.open(url, new=1, autoraise=True)
