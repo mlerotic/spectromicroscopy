@@ -23,17 +23,15 @@ import sys
 import os
 from PyQt5 import QtWidgets
 
-from .gui import MainFrame
-from .helpers import resource_path, print_welcome_banner, check_for_updates, print_dependency_versions
+from .helpers import print_startup_info
 
 def main():
-    print_welcome_banner()
-    check_for_updates()
-    print_dependency_versions()
+    print_startup_info()
+    from .gui import MainFrame
     app = QtWidgets.QApplication(sys.argv)
     
     # Load stylesheet if available
-    qsspath = os.path.join(os.path.dirname(__file__), 'stylesheet_global.qss')
+    qsspath = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'stylesheet_global.qss')
     if os.path.exists(qsspath):
         with open(qsspath, "r") as stylesheet:
             app.setStyleSheet(stylesheet.read())

@@ -43,6 +43,7 @@ from .file_plugins import file_json
 from .file_plugins import file_tif
 from .file_plugins import file_stk
 from .file_plugins import file_csv
+from .helpers import print_startup_info
 
 
 PlotH = 4.0
@@ -772,6 +773,7 @@ def main():
 
     verbose = True
 
+    print_startup_info()
     print('Running Mantis in batch mode.')
     batch_mode()
 

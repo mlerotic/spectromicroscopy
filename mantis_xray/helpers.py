@@ -104,6 +104,13 @@ def print_dependency_versions():
         except PackageNotFoundError:
             pass
 
+
+def print_startup_info():
+    print_welcome_banner()
+    check_for_updates()
+    print_dependency_versions()
+    print("\nPlease report issues to https://github.com/mlerotic/spectromicroscopy/issues \n")
+
 # PDF Exporter adopted from Orange https://orangedatamining.com/
 # https://github.com/biolab/orange-widget-base/blob/master/orangewidget/utils/PDFExporter.py
 # Potential integration into pyqtgraph in the future is under discussion: https://github.com/pyqtgraph/pyqtgraph/issues/1455#issuecomment-734299674
