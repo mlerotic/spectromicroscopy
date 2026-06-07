@@ -338,6 +338,25 @@ The recommended steps to run NNMA are
 
 **Figure 16** NNMA Analysis tab
 
+
+## Tomography Tab
+
+X-ray Computed Tomography (XCT) is a technique for producing 3D images from a set of 2D projections measured at a set of orientations, tpically by rotating a sample about an axis perpendicular to the axis of the X-ray beam. The Tomography tab in MANTiS can reconstruct a tomography dataset at a single X-ray energy, and multi-energy tomographic datasets.
+
+Note that the tomography reconstruction code is quite outdated and far better reconstructions can be achieved with other code, e.g. the [ASTRA toolbox](https://astra-toolbox.com/)
+
+The recommended steps to reconstruct a tomography dataset are
+
+ * Load the data using the "Load 4D Stack TOMO-XANES" button on the "Load Data" tab.
+ * In the "Preprocess Data" tab, either select an I0, or click the "Use pre-normalised data" button.
+ * In the "Tomography" tab, click the "Load Tomo Data for each Energy" button.
+ * Select an energy in the "Choose Tomo Dataset" dropdown box.
+ * Click the "Calculate One Dataset" button.
+
+![](images/Tomography_tab.png)
+
+**Figure 17** Tomography tab
+
 ----
 
 ## References
