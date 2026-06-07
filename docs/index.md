@@ -315,9 +315,9 @@ To counter the unphysical negative weightings produced in cluster analysis, non-
 Because optical density OD is used for the calculation it is necessary to define a normalization spectrum I0. If the data was normalized beforehand and a normalization spectrum is not required, a .xas file with flux values of -1.0 can be loaded.
 
 If the image stack and I0 spectrum are both loaded, the **Calculate NNMA** button of Fig. 16 becomes sensitive. The button launches the calculation of NNMA. Before running the calculation you should load a set of initial spectra from one of the three options:
- # **Load initial cluster spectra** will load a set of spectra that were calculated using Cluster analysis. This button will become sensitive after cluster spectra have been calculated using **Cluster Analysis** tab. We have found that using cluster spectra ass initial guess for NNMA produces the best results. 
- # **Load initial standard spectra** a set of initial spectra can be loaded from files in either 'csv' or 'xas' format. Multiple spectra can be loaded from the file dialog.
- # **Load initial random spectra** will define a set of random spectra that will be use a starting spectra for NNMA.
+ * **Load initial cluster spectra** will load a set of spectra that were calculated using Cluster analysis. This button will become sensitive after cluster spectra have been calculated using **Cluster Analysis** tab. We have found that using cluster spectra ass initial guess for NNMA produces the best results. 
+ * **Load initial standard spectra** a set of initial spectra can be loaded from files in either 'csv' or 'xas' format. Multiple spectra can be loaded from the file dialog.
+ * **Load initial random spectra** will define a set of random spectra that will be use a starting spectra for NNMA.
 
 Before running NNMA analysis it is required to choose the "Number of components k"  to be sought with the slide-bar in the "NNMA settings" section. If using cluster or standard spectra make sure that the number of components k is equal to the number of initial spectra that where loaded. 
 
@@ -341,7 +341,7 @@ The recommended steps to run NNMA are
 
 ## Tomography Tab
 
-X-ray Computed Tomography (XCT) is a technique for producing 3D images from a set of 2D projections measured at a set of orientations, tpically by rotating a sample about an axis perpendicular to the axis of the X-ray beam. The Tomography tab in MANTiS can reconstruct a tomography dataset at a single X-ray energy, and multi-energy tomographic datasets.
+X-ray Computed Tomography (XCT) is a technique for producing 3D images from a set of 2D projections measured at a set of orientations, tpically by rotating a sample about an axis perpendicular to the axis of the X-ray beam. The Tomography tab in MANTiS can reconstruct a tomography dataset at a single X-ray energy, and multi-energy tomographic datasets. Details can be found in [Wu et al.](http://dx.doi.org/10.1017/S1431927617012466).
 
 Note that the tomography reconstruction code is quite outdated and far better reconstructions can be achieved with other code, e.g. the [ASTRA toolbox](https://astra-toolbox.com/)
 
@@ -360,13 +360,15 @@ The recommended steps to reconstruct a tomography dataset are
 ----
 
 ## References
-  * Lerotic M, Mak R, Wirick S, Meirer F, Jacobsen C. MANTiS: a program for the analysis of X-ray spectromicroscopy data.  J. Synchrotron Rad. 2014 Sep; 21(5); 1206–1212  - [http://dx.doi.org/10.1107/S1600577514013964](http://dx.doi.org/10.1107/S1600577514013964)
+  * Lerotic M, Mak R, Wirick S, Meirer F, Jacobsen C. MANTiS: a program for the analysis of X-ray spectromicroscopy data.  J. Synchrotron Rad. 2014 Sep; 21(5); 1206–1212  - [doi:10.1107/S1600577514013964](http://dx.doi.org/10.1107/S1600577514013964)
 
-  * Mak R, Lerotic M, Fleckenstein H, Vogt S, Wild SM, Leyffer S, Sheynkin Y, Jacobsen C. Non-Negative Matrix Analysis for Effective Feature Extraction in X-Ray Spectromicroscopy. Faraday Discussions. 2014 Apr; 171- [http://doi.org/10.1039/C4FD00023D](http://doi.org/10.1039/C4FD00023D)
+  * Mak R, Lerotic M, Fleckenstein H, Vogt S, Wild SM, Leyffer S, Sheynkin Y, Jacobsen C. Non-Negative Matrix Analysis for Effective Feature Extraction in X-Ray Spectromicroscopy. Faraday Discussions. 2014 Apr; 171- [doi:10.1039/C4FD00023D](http://dx.doi.org/10.1039/C4FD00023D)
   
-  * Lerotic M, Jacobsen C, Gillow JB, Francis AJ, Wirick S, Vogt S, Maser J. Cluster analysis in soft X-ray spectromicroscopy: Finding the patterns in complex specimens. Journal of Electron Spectroscopy and Related Phenomena. 2005 Jun; 144–147, p:1137-1143 - [http://dx.doi.org/10.1016/j.elspec.2005.01.158](http://dx.doi.org/10.1016/j.elspec.2005.01.158 )
+  * Lerotic M, Jacobsen C, Gillow JB, Francis AJ, Wirick S, Vogt S, Maser J. Cluster analysis in soft X-ray spectromicroscopy: Finding the patterns in complex specimens. Journal of Electron Spectroscopy and Related Phenomena. 2005 Jun; 144–147, p:1137-1143 - [doi:10.1016/j.elspec.2005.01.158](http://dx.doi.org/10.1016/j.elspec.2005.01.158 )
   
-  * Lerotic M, Jacobsen C, Schäfer T, Vogt S. Cluster analysis of soft X-ray spectromicroscopy data. Ultramicroscopy. 2004 Jul; 100(1–2), p:35-57 - [http://doi.org/10.1016/j.ultramic.2004.01.008](http://doi.org/10.1016/j.ultramic.2004.01.008)
+  * Lerotic M, Jacobsen C, Schäfer T, Vogt S. Cluster analysis of soft X-ray spectromicroscopy data. Ultramicroscopy. 2004 Jul; 100(1–2), p:35-57 - [doi:10.1016/j.ultramic.2004.01.008](http://dx.doi.org/10.1016/j.ultramic.2004.01.008)
+
+  * Wu J, Lerotic M, Collins S, Leary R, Saghi Z, Midgley P, Berejnov S, Susac D, Stumper J, Singh G, Hitchcock AP. Optimization of Three-Dimensional (3D) Chemical Imaging by Soft X-Ray Spectro-Tomography Using a Compressed Sensing Algorithm. Microscopy and Microanalysis. 2017; 23, p:951-966 - [doi:10.1017/S1431927617012466](http://dx.doi.org/10.1017/S1431927617012466)
 
 Please use the following reference when quoting Mantis
 
