@@ -32,6 +32,7 @@ The program requires Python 3 and following dependencies:
  - [lxml](https://lxml.de/)
  - [PyQtGraph](https://www.pyqtgraph.org/)
  - [scikit-image](https://scikit-image.org/)
+ - [xdrlib3](https://github.com/overcat/xdrlib3)
  - (Optional) [netcdf4-python](http://code.google.com/p/netcdf4-python/)
 
 Python 2.7 with PyQt4 version of Mantis is still available on Github as a separate branch and [binaries](https://github.com/mlerotic/spectromicroscopy/releases/tag/2.3.02) but it will not be updated with new features. The user guide for 2.3. Mantis version can be dowloaded [here](https://github.com/mlerotic/spectromicroscopy/files/5944025/UserGuide_2.3.02.pdf).
