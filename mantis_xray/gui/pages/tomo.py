@@ -35,6 +35,7 @@ class PageTomo(QtWidgets.QWidget):
 
         self.tr = tomo_reconstruction.Ctomo(self.stack)
         self.theta = []
+        self.tomodata = None
 
         self.algonames = ['Compressed Sensing', 'SIRT']
         self.algo = 0
@@ -516,7 +517,7 @@ class PageTomo(QtWidgets.QWidget):
 
         basename, extension = os.path.splitext(OpenFileName)
 
-        if extension == '.mrc':
+        if extension in ('.mrc', '.ali'):
 
             data = tomo_reconstruction.load_mrc(OpenFileName)
             dims = data.shape
@@ -578,6 +579,14 @@ class PageTomo(QtWidgets.QWidget):
             self.n_rows = dims[1]
             self.tomodata = np.zeros((dims[0], dims[1], 1, dims[2]))
             self.tomodata[:,:,0,:] = data
+
+        else:
+            QtWidgets.QMessageBox.warning(
+                self,
+                'Unsupported format',
+                'Please choose a .mrc, .ali, or .ncb tomography dataset.'
+            )
+            return
 
 
         self.fulltomorecdata = []
@@ -760,70 +769,91 @@ class PageTomo(QtWidgets.QWidget):
 
 #----------------------------------------------------------------------
     def OnCalcTomo1(self, event):
+        if self.tomodata is None:
+            QtWidgets.QMessageBox.warning(self, 'No tomo data loaded',
+                                          'Load a tomography dataset before calculating.')
+            return
+
+        if self.tomodata.ndim != 4 or self.tomodata.shape[2] <= 0:
+            QtWidgets.QMessageBox.warning(self, 'Invalid tomo data',
+                                          'Loaded tomography data has an unexpected shape.')
+            return
+
+        if len(self.theta) != self.tomodata.shape[3]:
+            QtWidgets.QMessageBox.warning(self, 'Angle mismatch',
+                                          'Number of projection angles does not match dataset.')
+            return
+
+        if self.select1 < 0 or self.select1 >= self.tomodata.shape[2]:
+            self.select1 = 0
 
         QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
+        try:
+            value = self.ntc_niterations.text()
+            self.maxIters = int(value)
+            value = self.ntc_beta.text()
+            self.beta = float(value)
+            value = self.ntc_samplethick.text()
+            self.samplethick = int(value)
+            self.nprocessors = int(self.ntc_processors.text())
 
+            dims = self.tomodata[:,:,self.select1,:].shape
+            print('Data dims = ', dims)
 
-        value = self.ntc_niterations.text()
-        self.maxIters = int(value)
-        value = self.ntc_beta.text()
-        self.beta = float(value)
-        value = self.ntc_samplethick.text()
-        self.samplethick = int(value)
-        self.nprocessors = int(self.ntc_processors.text())
+            projdata = self.tomodata[:,:,self.select1,:]
 
-        dims = self.tomodata[:,:,self.select1,:].shape
-        print('Data dims = ', dims)
+            binningfactor = int(self.combobin.currentText())
 
-        projdata = self.tomodata[:,:,self.select1,:]
+            if binningfactor > 1:
+                shape = (int(dims[0]/binningfactor), int(dims[1]/binningfactor))
+                projdata = np.zeros((shape[0], shape[1], dims[2]))
+                print('Binning factor:', binningfactor)
+                print('Binned data dims', shape)
+                for i in range(dims[2]):
+                    projdata[:,:,i] = rebin(
+                        self.tomodata[0:shape[0]*binningfactor, 0:shape[1]*binningfactor, self.select1, i],
+                        shape
+                    )
 
-        binningfactor = int (self.combobin.currentText())
+            self.tr.calc_tomo(projdata,
+                               self.theta,
+                               self.maxIters,
+                               self.beta,
+                               self.samplethick,
+                               algorithm = self.algo,
+                               nonnegconst=self.nonnegconst,
+                               nprocessors = self.nprocessors)
 
-        if binningfactor > 1:
-            binneddata = []
-            shape = (int(dims[0]/binningfactor), int(dims[1]/binningfactor))
-            projdata = np.zeros((shape[0], shape[1], dims[2]))
-            print('Binning factor:', binningfactor)
-            print('Binned data dims', shape)
-            for i in range(dims[2]):
-                projdata[:,:,i] = rebin(self.tomodata[0:shape[0]*binningfactor,0:shape[1]*binningfactor,self.select1,i], shape)
+            self.tomo_calculated = 1
+            self.full_tomo_calculated = 0
 
-        self.tr.calc_tomo(projdata,
-                           self.theta,
-                           self.maxIters,
-                           self.beta,
-                           self.samplethick,
-                           algorithm = self.algo,
-                           nonnegconst=self.nonnegconst,
-                           nprocessors = self.nprocessors)
+            dims = self.tr.tomorec.shape
+            self.nslices = dims[2]
 
-        self.tomo_calculated = 1
-        self.full_tomo_calculated = 0
+            self.ROIvol = [[]]* dims[2]
+            self.ROIarray = np.zeros((dims[0], dims[1], dims[2]))
+            self.button_roispec.setEnabled(False)
 
-        dims = self.tr.tomorec.shape
-        self.nslices = dims[2]
+            self.islice = int(dims[2]/2)
+            self.slider_slice.setValue(self.islice)
+            self.slider_slice.setRange(0, dims[2]-1)
 
-        self.ROIvol = [[]]* dims[2]
-        self.ROIarray = np.zeros((dims[0], dims[1], dims[2]))
-        self.button_roispec.setEnabled(False)
+            self.tc_comp.setText('Component: '+self.datanames[self.select1])
+            self.slider_comp.setRange(0, 0)
+            self.button_roi.setEnabled(True)
+            self.button_save.setEnabled(True)
+            self.button_roispec.setEnabled(False)
+            self.button_roi.setEnabled(True)
+            self.button_loadroi.setEnabled(True)
+            self.button_roihist.setEnabled(True)
 
-        self.islice = int(dims[2]/2)
-        self.slider_slice.setValue(self.islice)
-        self.slider_slice.setRange(0, dims[2]-1)
+            self.ShowImage()
 
-        self.tc_comp.setText('Component: '+self.datanames[self.select1])
-        self.slider_comp.setRange(0, 0)
-        self.button_roi.setEnabled(True)
-        self.button_save.setEnabled(True)
-        self.button_roispec.setEnabled(False)
-        self.button_roi.setEnabled(True)
-        self.button_loadroi.setEnabled(True)
-        self.button_roihist.setEnabled(True)
-
-
-        self.ShowImage()
-
-        QtWidgets.QApplication.restoreOverrideCursor()
+        except ValueError:
+            QtWidgets.QMessageBox.warning(self, 'Invalid reconstruction parameters',
+                                          'Iterations, beta, thickness, and processors must be valid numbers.')
+        finally:
+            QtWidgets.QApplication.restoreOverrideCursor()
 
 
 #----------------------------------------------------------------------

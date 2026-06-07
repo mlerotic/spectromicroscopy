@@ -106,7 +106,8 @@ class ROIHistogram(QtWidgets.QDialog):
 
         histogram = self.image.flatten()
 
-        self.n, self.bins, patches = self.axes.hist(histogram, 200, normed=1, facecolor='green', alpha=0.75)
+        # Matplotlib removed the legacy `normed` parameter; use `density` instead.
+        self.n, self.bins, patches = self.axes.hist(histogram, 200, density=True, facecolor='green', alpha=0.75)
 
         self.axes.set_xlabel('Optical Density')
         self.axes.set_ylabel('Percentage of Pixels')
