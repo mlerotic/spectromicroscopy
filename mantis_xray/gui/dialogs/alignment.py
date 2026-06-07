@@ -2095,7 +2095,7 @@ class ImageRegistrationFFT(QtWidgets.QDialog, QtWidgets.QGraphicsScene):
             approximated= ndimage.filters.uniform_filter1d(ydata,self.spinBoxFiltersize.value(),mode = "nearest")
         elif self.comboBox_approx.currentIndex() == 1: # linear regression
             self.spinBoxFiltersize.setEnabled(False)
-            reg = linregress([xdata,ydata])
+            reg = linregress(xdata,ydata)
             approximated = [reg.slope * i + reg.intercept for i in xdata]
 
         if self.cb_extrapolate.isChecked():
