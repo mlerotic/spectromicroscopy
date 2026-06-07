@@ -74,8 +74,8 @@ class MainFrame(QtWidgets.QMainWindow):
         self.tabs.addTab(self.tab_pfit, "XrayPeakFitting")
 
         self.tabs.addTab(self.tab_tomo, "Tomography")
-        self.tabs.setTabEnabled(self.tabs.indexOf(self.tab_tomo), False)
-        self._set_tomo_tab_style(False)
+        self.tabs.setTabEnabled(self.tabs.indexOf(self.tab_tomo), True)
+        self._set_tomo_tab_style(True)
 
 #        if showmaptab:
 #            self.tab_map = PageMap(self.common, self.data_struct, self.stk)

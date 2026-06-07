@@ -46,6 +46,9 @@ class PageTomo(QtWidgets.QWidget):
         self.tomo_calculated = 0
         self.full_tomo_calculated = 0
         self.energiesloaded = 0
+        self.preview_loaded = False
+        self.single_data_is_volume = False
+        self.single_volume_data = None
 
         self.datanames = []
 
@@ -415,12 +418,13 @@ class PageTomo(QtWidgets.QWidget):
 
 
 
-#----------------------------------------------------------------------
     def OnLoadTomoEng(self, event):
 
         self.fulltomorecdata = []
         self.tomo_calculated = 0
         self.full_tomo_calculated = 0
+        self.single_data_is_volume = False
+        self.single_volume_data = None
 
         self.NewStackClear()
 
@@ -453,6 +457,13 @@ class PageTomo(QtWidgets.QWidget):
 
         self.button_expdata.setEnabled(True)
 
+        self.preview_loaded = True
+
+        self.islice = 0
+        self.slider_slice.setRange(0, self.tomodata.shape[3] - 1)
+        self.slider_slice.setValue(self.islice)
+        self.ShowImage()
+
 
 #----------------------------------------------------------------------
     def OnLoadTomoComponents(self, event):
@@ -460,6 +471,8 @@ class PageTomo(QtWidgets.QWidget):
         self.fulltomorecdata = []
         self.tomo_calculated = 0
         self.full_tomo_calculated = 0
+        self.single_data_is_volume = False
+        self.single_volume_data = None
 
         self.NewStackClear()
 
@@ -500,6 +513,13 @@ class PageTomo(QtWidgets.QWidget):
 
         self.button_expdata.setEnabled(True)
 
+        self.preview_loaded = True
+
+        self.islice = 0
+        self.slider_slice.setRange(0, self.tomodata.shape[3] - 1)
+        self.slider_slice.setValue(self.islice)
+        self.ShowImage()
+
 #----------------------------------------------------------------------
     def OnLoadSingleMrc(self, event):
 
@@ -516,38 +536,65 @@ class PageTomo(QtWidgets.QWidget):
             return
 
         basename, extension = os.path.splitext(OpenFileName)
+        extension = extension.lower()
 
         if extension in ('.mrc', '.ali'):
 
             data = tomo_reconstruction.load_mrc(OpenFileName)
             dims = data.shape
+            self.single_volume_data = None
 
-            #Read energies from file
-            wildcard = "Angle files (*.*);;"
+            # Read projection angles from an optional text file.
+            wildcard = "Angle files (*.txt *.csv *.ang *.dat *.*);;"
             OpenFileName2, _filter = QtWidgets.QFileDialog.getOpenFileName(self, 'Load Angle data', '', wildcard,
                                                              None, QtWidgets.QFileDialog.DontUseNativeDialog)
 
             OpenFileName2 = str(OpenFileName2)
-            if OpenFileName2 == '':
-                return
-
-            f = open(str(OpenFileName2),'r')
-
             tlist = []
-
-            for line in f:
-                if line.startswith("*"):
-                    pass
+            angle_error = None
+            if OpenFileName2 != '':
+                _ang_ext = os.path.splitext(OpenFileName2)[1].lower()
+                if _ang_ext in ('.mrc', '.ali', '.ncb'):
+                    angle_error = 'Selected angle file looks like tomography data, not text angles.'
                 else:
-                    t = line
-                    if t.strip() == '':
-                        continue
-                    tlist.append(float(t))
+                    try:
+                        with open(OpenFileName2, 'r', encoding='utf-8') as f:
+                            for line in f:
+                                line = line.strip()
+                                if line == '' or line.startswith('*') or line.startswith('#'):
+                                    continue
+                                # Support one value per line or comma-separated files.
+                                tokens = line.replace(',', ' ').split()
+                                for token in tokens:
+                                    tlist.append(float(token))
+                    except (UnicodeDecodeError, ValueError, OSError) as exc:
+                        angle_error = str(exc)
 
+            if len(tlist) == 0:
+                # No angle file selected (or invalid/empty): assume this is a slice volume.
+                self.single_data_is_volume = True
+                # Saved MANTiS recon volumes are written as data.T, so restore canonical
+                # display/reconstruction orientation (x, y, z) when no angles are provided.
+                canonical_volume = np.asarray(data, dtype=np.float32).T.copy()
+                self.single_volume_data = canonical_volume
+                self.theta = np.arange(canonical_volume.shape[2], dtype=float)
+                data = canonical_volume
+                QtWidgets.QMessageBox.information(
+                    self,
+                    'Assuming slice volume',
+                    'No valid angle file selected. Loading as slice volume.'
+                )
+                if angle_error is not None:
+                    QtWidgets.QMessageBox.warning(
+                        self,
+                        'Invalid angle file',
+                        f'Could not read angle file as text values:\n{angle_error}'
+                    )
+            else:
+                self.theta = np.array(tlist)
+                self.single_data_is_volume = False
+                self.single_volume_data = None
 
-            self.theta = np.array(tlist)
-
-            f.close()
 
             ntheta = len(self.theta)
             if ntheta != dims[2]:
@@ -579,6 +626,8 @@ class PageTomo(QtWidgets.QWidget):
             self.n_rows = dims[1]
             self.tomodata = np.zeros((dims[0], dims[1], 1, dims[2]))
             self.tomodata[:,:,0,:] = data
+            self.single_data_is_volume = False
+            self.single_volume_data = None
 
         else:
             QtWidgets.QMessageBox.warning(
@@ -593,8 +642,15 @@ class PageTomo(QtWidgets.QWidget):
         self.tomo_calculated = 0
         self.full_tomo_calculated = 0
 
+        # NewStackClear resets mode flags; preserve the single-load interpretation.
+        _single_data_is_volume = self.single_data_is_volume
+        _single_volume_data = self.single_volume_data
+
 
         self.NewStackClear()
+
+        self.single_data_is_volume = _single_data_is_volume
+        self.single_volume_data = _single_volume_data
 
         self.button_save.setEnabled(False)
         self.tc_comp.setText('Component: ')
@@ -615,11 +671,26 @@ class PageTomo(QtWidgets.QWidget):
         self.tc_imagecomp.setText("Dataset:" + OpenFileName)
 
         self.button_calcall.setEnabled(False)
-        self.button_calc1.setEnabled(True)
+        self.button_calc1.setEnabled(not self.single_data_is_volume)
         self.button_roi.setEnabled(False)
         self.energiesloaded = 0
 
         self.button_expdata.setEnabled(True)
+
+        self.preview_loaded = True
+
+        if self.single_data_is_volume and self.single_volume_data is not None:
+            # Match normal lower-panel behavior by using the loaded volume as display tomorec.
+            self.tr.tomorec = np.asarray(self.single_volume_data, dtype=np.float32).copy()
+            self.tomo_calculated = 1
+            self.full_tomo_calculated = 0
+            self.nslices = self.tr.tomorec.shape[2]
+
+        # Preview the loaded projections immediately; reconstruction can come later.
+        self.islice = 0
+        self.slider_slice.setRange(0, dims[2] - 1)
+        self.slider_slice.setValue(self.islice)
+        self.ShowImage()
 
 
 #----------------------------------------------------------------------
@@ -740,6 +811,8 @@ class PageTomo(QtWidgets.QWidget):
         self.tomo_calculated = 1
 
         dims = self.tr.tomorec.shape
+        self.n_cols = dims[0]
+        self.n_rows = dims[1]
 
         self.nslices = dims[2]
 
@@ -769,6 +842,14 @@ class PageTomo(QtWidgets.QWidget):
 
 #----------------------------------------------------------------------
     def OnCalcTomo1(self, event):
+        if self.single_data_is_volume:
+            QtWidgets.QMessageBox.information(
+                self,
+                'Slice volume mode',
+                'This dataset was loaded without an angle file. Slices and derived projections are shown automatically; calculation is not required.'
+            )
+            return
+
         if self.tomodata is None:
             QtWidgets.QMessageBox.warning(self, 'No tomo data loaded',
                                           'Load a tomography dataset before calculating.')
@@ -829,6 +910,8 @@ class PageTomo(QtWidgets.QWidget):
 
             dims = self.tr.tomorec.shape
             self.nslices = dims[2]
+            self.n_cols = dims[0]
+            self.n_rows = dims[1]
 
             self.ROIvol = [[]]* dims[2]
             self.ROIarray = np.zeros((dims[0], dims[1], dims[2]))
@@ -969,6 +1052,9 @@ class PageTomo(QtWidgets.QWidget):
         if SaveFileName == '':
             return
 
+        if os.path.splitext(SaveFileName)[1] == '':
+            SaveFileName += '.mrc'
+
 
         basename, extension = os.path.splitext(SaveFileName)
 
@@ -1001,6 +1087,9 @@ class PageTomo(QtWidgets.QWidget):
         if SaveFileName == '':
             return
 
+        if os.path.splitext(SaveFileName)[1] == '':
+            SaveFileName += '.mrc'
+
 
         data = self.tr.tomorec
 
@@ -1020,6 +1109,9 @@ class PageTomo(QtWidgets.QWidget):
             return
 
         basename, extension = os.path.splitext(SaveFileName)
+        if extension == '':
+            extension = '.mrc'
+
 
 
         for i in range(self.ncomponents):
@@ -1041,6 +1133,9 @@ class PageTomo(QtWidgets.QWidget):
         SaveFileName = str(SaveFileName)
         if SaveFileName == '':
             return
+
+        if os.path.splitext(SaveFileName)[1] == '':
+            SaveFileName += '.mrc'
 
 
         data = self.ROIarray
@@ -1145,7 +1240,8 @@ class PageTomo(QtWidgets.QWidget):
     def OnROIHistogram(self, event):
         #self.window().Hide()
         image = self.tr.tomorec[:,:,self.islice].copy()
-        histogram = ROIHistogram(self, image, self.n_cols, self.n_rows)
+        n_cols, n_rows = image.shape
+        histogram = ROIHistogram(self, image, n_cols, n_rows)
         histogram.show()
 
 #----------------------------------------------------------------------
@@ -1194,9 +1290,21 @@ class PageTomo(QtWidgets.QWidget):
     def ShowImage(self):
 
         if self.tomo_calculated == 0:
-            return
-
-        image = self.tr.tomorec[:,:,self.islice].copy()
+            if not self.preview_loaded or self.tomodata is None:
+                return
+            if self.single_data_is_volume and self.single_volume_data is not None:
+                angle = min(max(self.islice, 0), self.single_volume_data.shape[2] - 1)
+                image = self.single_volume_data[:, :, angle].copy()
+            else:
+                comp = min(max(self.select1, 0), self.tomodata.shape[2] - 1)
+                angle = min(max(self.islice, 0), self.tomodata.shape[3] - 1)
+                image = self.tomodata[:,:,comp,angle].copy()
+        else:
+            if self.single_data_is_volume and self.single_volume_data is not None:
+                angle = min(max(self.islice, 0), self.single_volume_data.shape[2] - 1)
+                image = self.single_volume_data[:, :, angle].copy()
+            else:
+                image = self.tr.tomorec[:,:,self.islice].copy()
 
         fig = self.absimgfig
         fig.clf()
@@ -1235,6 +1343,15 @@ class PageTomo(QtWidgets.QWidget):
         self.xys = np.dstack(np.meshgrid(np.arange(self.n_cols), np.arange(self.n_rows))).reshape(-1,2)
 
 
+        if self.tomo_calculated == 0:
+            # No reconstruction yet: keep the secondary panels clear.
+            self.absimgfig2.clf()
+            self.AbsImagePanel2.draw()
+            self.absimgfig3.clf()
+            self.AbsImagePanel3.draw()
+            return
+
+
         #Show orthogonal slices
         dims = self.tr.tomorec.shape
         image2 = self.tr.tomorec[:,int(dims[1]/2),:]
@@ -1268,11 +1385,22 @@ class PageTomo(QtWidgets.QWidget):
 #----------------------------------------------------------------------
     def MakeHistogramROI(self, histmin, histmax):
 
+        # Keep ROI containers aligned with current reconstruction dimensions.
+        rec_dims = self.tr.tomorec.shape
+        if np.shape(self.ROIarray) != rec_dims:
+            self.ROIarray = np.zeros(rec_dims)
+            self.ROIvol = [[]] * rec_dims[2]
+            self.nslices = rec_dims[2]
+
+        self.n_cols = rec_dims[0]
+        self.n_rows = rec_dims[1]
+
         for i in range(self.nslices):
 
-            hist_indices = np.where((histmin<self.tr.tomorec[:,:,i])&(self.tr.tomorec[:,:,i]<histmax))
+            slice_data = self.tr.tomorec[:,:,i]
+            hist_indices = np.where((histmin < slice_data) & (slice_data < histmax))
 
-            ROIpix = np.zeros((self.n_cols,self.n_rows))
+            ROIpix = np.zeros(slice_data.shape)
             ROIpix[hist_indices] = 255
 
             ROIpix = np.ma.array(ROIpix)
@@ -1306,6 +1434,8 @@ class PageTomo(QtWidgets.QWidget):
         self.tomo_calculated = 0
         self.full_tomo_calculated = 0
         self.energiesloaded = 0
+        self.single_data_is_volume = False
+        self.single_volume_data = None
 
         self.datanames = []
 

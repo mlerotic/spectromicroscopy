@@ -980,6 +980,7 @@ class Mrc2:
             self.hdr.mmm1 = (0.0, 0.0, 0.0)
             self.hdr.nspg = 0
             self.hdr.next = 0
+            # Preserve the historical Priism/Sedat 16-bit marker (0xc0a0).
             self.hdr.dvid = 0xc0a0
             self.hdr.nblank = 0
             self.hdr.ntst = 0
@@ -1125,9 +1126,11 @@ class Mrc2:
             self.hdr._array.dtype = self.hdr._array.dtype.newbyteorder()
             self._fileIsByteSwapped = True
 
-        self._extHdrSize = self.hdr.next
-        self._extHdrNumInts = max(0, self.hdr.NumIntegers)
-        self._extHdrNumFloats = max(0, self.hdr.NumFloats)
+        # Header scalar fields may come back as length-1 NumPy arrays.
+        # Normalize to Python ints so size/offset arithmetic stays scalar.
+        self._extHdrSize = int(N.asarray(self.hdr.next).reshape(-1)[0])
+        self._extHdrNumInts = max(0, int(N.asarray(self.hdr.NumIntegers).reshape(-1)[0]))
+        self._extHdrNumFloats = max(0, int(N.asarray(self.hdr.NumFloats).reshape(-1)[0]))
         self._extHdrBytesPerSec = (
             (self._extHdrNumInts + self._extHdrNumFloats) * 4)
         self._dataOffset = self._hdrSize + self._extHdrSize
@@ -1187,7 +1190,7 @@ class Mrc2:
         self._dtype = MrcMode2dtype(self.hdr.PixelType)
         if self._fileIsByteSwapped:
             self._dtype = self._dtype.newbyteorder()
-        self._secByteSize = self._dtype.itemsize * N.prod(self._shape2d)
+        self._secByteSize = int(self._dtype.itemsize * N.prod(self._shape2d))
 
 
     def setHdrForShapeType(self, shape, type):
@@ -1563,7 +1566,8 @@ class Mrc2:
 
         if self._secByteSize == 0:
             raise ValueError('not inited yet - unknown shape, type')
-        self._f.seek(self._dataOffset + i * self._secByteSize)
+        offset = int(self._dataOffset) + int(i) * int(self._secByteSize)
+        self._f.seek(offset)
 
 
     def seekHeader(self):
@@ -2191,7 +2195,10 @@ class HdrPriism(HdrBase):
         """
         return self._array['dvid'][0]
     def _setdvid(self, value):
-        self._array['dvid'][0] = value
+        # Newer NumPy rejects assigning out-of-range Python ints to int16.
+        # Cast through uint16 to keep the intended bit-pattern, then reinterpret.
+        dvid_signed = N.array([int(value) & 0xFFFF], dtype='u2').view('i2')[0]
+        self._array['dvid'][0] = dvid_signed
     dvid = property(_getdvid, _setdvid)
 
 
