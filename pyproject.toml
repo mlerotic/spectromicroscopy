@@ -11,7 +11,7 @@ description = "MANTiS is a Multivariate ANalysis Tool for x-ray Spectromicroscop
 readme = "README.md"
 requires-python = ">=3"
 keywords = ["spectromicroscopy", "microspectroscopy", "stxm", "hyperspectral", "imaging", "image"]
-license = {text = "GPL-3.0-or-later"}
+license = "GPL-3.0-or-later"
 classifiers = [
 	"Development Status :: 5 - Production/Stable",
 	"Programming Language :: Python",

@@ -164,4 +164,3 @@ class PDFExporter(Exporter):
         finally:
             self.setExportMode(False)
         painter.end()
-    
