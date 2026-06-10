@@ -5,14 +5,20 @@ def resource_path(relative_path):
     base_path = getattr(sys, '_MEIPASS', os.path.dirname(__file__))
     return os.path.join(base_path, relative_path)
 
+def print_welcome_banner():
+    from .__init__ import __version__ as version
+    welcome_string = "Welcome to MANTiS {0}".format(version)
+    print("="*len(welcome_string))
+    print(welcome_string)
+    print("="*len(welcome_string))
 
-def check_for_updates(current_version):
+def check_for_updates(retries=3):
     import urllib.request, re
     from urllib.error import URLError
     timeout=5
     message = 'Socket timed out. Check your internet connection.\nVersion checks skipped.'
     attempt = 0
-    max_attempt = 3
+    max_attempt = retries
     while attempt < max_attempt:
         # Scrape the version string from the PyPI:mantis-xray RSS feed
         try:
@@ -74,7 +80,7 @@ def print_dependency_versions():
     from packaging.version import parse as parse_version
     import re
     print("Dependency versions:")
-    for P in ['PyQt5>=5.15.9','numpy', 'scipy>=1.11.4', 'matplotlib>=3.6.0', 'h5py', 'Pillow', 'lxml', 'pyqtgraph>=0.13.7', "scikit-image>=0.19.1", "xdrlib3"]: #copy list from ../setup.py
+    for P in ['PyQt5>=5.15.9','numpy', 'scipy>=1.11.4', 'matplotlib>=3.6.0', 'h5py', 'Pillow', 'lxml', 'pyqtgraph>=0.13.7', "scikit-image>=0.19.1", "xdrlib3"]: #copy list from ../pyproject.toml
         p = re.split('[><=]',P)
         # print(p[0], len(p))
         try:
@@ -97,6 +103,13 @@ def print_dependency_versions():
                 print('')
         except PackageNotFoundError:
             pass
+
+
+def print_startup_info():
+    print_welcome_banner()
+    check_for_updates()
+    print_dependency_versions()
+    print("\nPlease report issues to https://github.com/mlerotic/spectromicroscopy/issues \n")
 
 # PDF Exporter adopted from Orange https://orangedatamining.com/
 # https://github.com/biolab/orange-widget-base/blob/master/orangewidget/utils/PDFExporter.py

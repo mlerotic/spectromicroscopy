@@ -298,7 +298,8 @@ def write(filename, stack, data_type):  # ,norm):
     dat_fn = basename + '.dat'
     filename = basename + '.ncb'
 
-    image_stack = np.transpose(stack.absdata, axes=(1, 0, 2))
+    # Keep native (x, y, energy) order so NCB export/import round-trips correctly.
+    image_stack = stack.absdata
     '''Experimental OD filtering and edge substraction'''
     # if norm:
     #
@@ -363,18 +364,18 @@ def write(filename, stack, data_type):  # ,norm):
 
     f = open(str(dat_fn), 'w')
 
-    print('\t%d\t%d\t%.6f' % (stack.n_rows, stack.n_cols, scale), file=f)
+    print('\t%d\t%d\t%.6f' % (stack.n_cols, stack.n_rows, scale), file=f)
 
-    x_start = stack.y_dist[0]
-    x_stop = stack.y_dist[-1]
+    x_start = stack.x_dist[0]
+    x_stop = stack.x_dist[-1]
     if x_start != 0.:
         x_stop = x_stop - x_start
         x_start = 0.
 
     print('\t%.6f\t%.6f' % (x_start, x_stop), file=f)
 
-    y_start = stack.x_dist[0]
-    y_stop = stack.x_dist[-1]
+    y_start = stack.y_dist[0]
+    y_stop = stack.y_dist[-1]
     if y_start != 0.:
         y_stop = y_stop - y_start
         y_start = 0.
@@ -511,7 +512,8 @@ class Cncb:
         basename, extension = os.path.splitext(filename)
         dat_fn = basename + '.dat'
 
-        image_stack = np.transpose(self.absdata, axes=(1, 0, 2))
+        # Keep native (x, y, energy) order so NCB export/import round-trips correctly.
+        image_stack = self.absdata
 
         # image_stack = self.absdata.copy()
 
@@ -539,19 +541,19 @@ class Cncb:
 
         f = open(str(dat_fn), 'w')
 
-        print('\t%d\t%d\t%.6f' % (self.n_rows, self.n_cols, scale), file=f)
+        print('\t%d\t%d\t%.6f' % (self.n_cols, self.n_rows, scale), file=f)
         # print('\t%d\t%d\t%.6f' %(self.n_cols, self.n_rows, scale)
 
-        x_start = self.y_dist[0]
-        x_stop = self.y_dist[-1]
+        x_start = self.x_dist[0]
+        x_stop = self.x_dist[-1]
         if x_start != 0.:
             x_stop = x_stop - x_start
             x_start = 0.
 
         print('\t%.6f\t%.6f' % (x_start, x_stop), file=f)
 
-        y_start = self.x_dist[0]
-        y_stop = self.x_dist[-1]
+        y_start = self.y_dist[0]
+        y_stop = self.y_dist[-1]
         if y_start != 0.:
             y_stop = y_stop - y_start
             y_start = 0.

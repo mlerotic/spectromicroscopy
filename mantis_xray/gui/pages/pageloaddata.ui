@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="sizePolicy">
-   <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+   <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
@@ -32,16 +32,13 @@
       <property name="spacing">
        <number>12</number>
       </property>
-      <property name="sizeConstraint">
-       <enum>QLayout::SetDefaultConstraint</enum>
-      </property>
       <property name="topMargin">
        <number>6</number>
       </property>
       <item>
        <widget class="QFrame" name="verticalFrame">
         <property name="sizePolicy">
-         <sizepolicy hsizetype="Maximum" vsizetype="MinimumExpanding">
+         <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
@@ -49,7 +46,7 @@
         <property name="minimumSize">
          <size>
           <width>260</width>
-          <height>620</height>
+          <height>0</height>
          </size>
         </property>
         <property name="font">
@@ -65,9 +62,6 @@
          <property name="sizeConstraint">
           <enum>QLayout::SetDefaultConstraint</enum>
          </property>
-         <property name="leftMargin">
-          <number>9</number>
-         </property>
          <property name="topMargin">
           <number>1</number>
          </property>
@@ -79,12 +73,6 @@
          </property>
          <item>
           <widget class="QGroupBox" name="groupBox">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
            <property name="minimumSize">
             <size>
              <width>250</width>
@@ -104,17 +92,14 @@
             </font>
            </property>
            <property name="title">
-            <string>Preprocess</string>
+            <string>Load Data</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_5">
-            <property name="spacing">
-             <number>6</number>
-            </property>
             <property name="sizeConstraint">
              <enum>QLayout::SetMinimumSize</enum>
             </property>
             <item>
-             <widget class="QPushButton" name="button_align">
+             <widget class="QPushButton" name="button_multiload">
               <property name="font">
                <font>
                 <family>Ubuntu</family>
@@ -122,12 +107,12 @@
                </font>
               </property>
               <property name="text">
-               <string>Align stack...</string>
+               <string>Load XANES Stack</string>
               </property>
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="button_multicrop">
+             <widget class="QPushButton" name="button_4d">
               <property name="font">
                <font>
                 <family>Ubuntu</family>
@@ -135,28 +120,7 @@
                </font>
               </property>
               <property name="text">
-               <string>Crop stack 3D/4D...</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="button_artefacts">
-              <property name="text">
-               <string>Artifacts &amp;&amp; Leveling</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="button_darksig">
-              <property name="text">
-               <string>Dark signal subtraction</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="button_savestack">
-              <property name="text">
-               <string>Save processed stack</string>
+               <string>Load 4D Stack TOMO-XANES</string>
               </property>
              </widget>
             </item>
@@ -165,12 +129,6 @@
          </item>
          <item>
           <widget class="QGroupBox" name="groupBox_3">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
            <property name="minimumSize">
             <size>
              <width>250</width>
@@ -190,28 +148,19 @@
             </font>
            </property>
            <property name="title">
-            <string>Normalize</string>
+            <string>Build a stack from a set of files</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_6">
-            <property name="spacing">
-             <number>6</number>
-            </property>
             <property name="sizeConstraint">
              <enum>QLayout::SetMinimumSize</enum>
             </property>
             <item>
-             <widget class="QPushButton" name="button_i0">
+             <widget class="QPushButton" name="button_sm">
               <property name="sizePolicy">
-               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+               <sizepolicy hsizetype="Minimum" vsizetype="Maximum">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>24</height>
-               </size>
               </property>
               <property name="font">
                <font>
@@ -220,124 +169,7 @@
                </font>
               </property>
               <property name="text">
-               <string>Select I0</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="button_showi0">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>24</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>24</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Show I0</string>
-              </property>
-              <property name="checkable">
-               <bool>true</bool>
-              </property>
-              <property name="checked">
-               <bool>false</bool>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="button_i0ffile">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>24</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>I0 from file...</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="button_prenorm">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>24</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Use pre-normalized data</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="button_refimgs">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>24</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Load reference images [.xrm]</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-         </item>
-         <item>
-          <widget class="QGroupBox" name="groupBox_7">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>250</width>
-             <height>0</height>
-            </size>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>250</width>
-             <height>16777215</height>
-            </size>
-           </property>
-           <property name="font">
-            <font>
-             <family>Ubuntu</family>
-             <pointsize>8</pointsize>
-            </font>
-           </property>
-           <property name="title">
-            <string>Region of Interest</string>
-           </property>
-           <layout class="QVBoxLayout" name="verticalLayout_10">
-            <property name="spacing">
-             <number>6</number>
-            </property>
-            <property name="sizeConstraint">
-             <enum>QLayout::SetMinimumSize</enum>
-            </property>
-            <item>
-             <widget class="QPushButton" name="button_ROIdosecalc">
-              <property name="text">
-               <string>ROI dose calculation</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="button_spectralROI">
-              <property name="text">
-               <string>Spectral ROI</string>
+               <string>Select a directory [.sm, .xrm, .tif]</string>
               </property>
              </widget>
             </item>
@@ -346,16 +178,19 @@
          </item>
          <item>
           <spacer name="verticalSpacer">
+           <property name="font">
+            <font>
+             <family>Ubuntu</family>
+             <pointsize>8</pointsize>
+            </font>
+           </property>
            <property name="orientation">
             <enum>Qt::Vertical</enum>
-           </property>
-           <property name="sizeType">
-            <enum>QSizePolicy::MinimumExpanding</enum>
            </property>
            <property name="sizeHint" stdset="0">
             <size>
              <width>20</width>
-             <height>0</height>
+             <height>40</height>
             </size>
            </property>
           </spacer>
@@ -366,7 +201,7 @@
       <item>
        <widget class="QGroupBox" name="tc_imageeng">
         <property name="sizePolicy">
-         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+         <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
@@ -378,14 +213,11 @@
          </font>
         </property>
         <property name="title">
-         <string>Image Stack</string>
+         <string></string>
         </property>
         <layout class="QHBoxLayout" name="horizontalLayout_3">
          <property name="spacing">
           <number>0</number>
-         </property>
-         <property name="sizeConstraint">
-          <enum>QLayout::SetMaximumSize</enum>
          </property>
          <property name="leftMargin">
           <number>0</number>
@@ -400,7 +232,7 @@
           <number>0</number>
          </property>
          <item>
-          <layout class="QGridLayout" name="gridLayout_2" columnstretch="0,0">
+          <layout class="QGridLayout" name="gridLayout_2" columnstretch="0,0" columnminimumwidth="0,0">
            <property name="sizeConstraint">
             <enum>QLayout::SetDefaultConstraint</enum>
            </property>
@@ -413,23 +245,10 @@
            <property name="spacing">
             <number>0</number>
            </property>
-           <item row="1" column="0">
-            <widget class="QScrollBar" name="slider_theta">
-             <property name="font">
-              <font>
-               <family>Ubuntu</family>
-               <pointsize>8</pointsize>
-              </font>
-             </property>
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-            </widget>
-           </item>
            <item row="0" column="0">
             <widget class="GraphicsLayoutWidget" name="canvas">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
@@ -480,53 +299,20 @@
              </property>
             </widget>
            </item>
+           <item row="1" column="0">
+            <widget class="QScrollBar" name="slider_theta">
+             <property name="font">
+              <font>
+               <family>Ubuntu</family>
+               <pointsize>8</pointsize>
+              </font>
+             </property>
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+            </widget>
+           </item>
           </layout>
-         </item>
-        </layout>
-       </widget>
-      </item>
-      <item>
-       <widget class="QGroupBox" name="groupBox_6">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="font">
-         <font>
-          <family>Ubuntu</family>
-          <pointsize>8</pointsize>
-         </font>
-        </property>
-        <property name="title">
-         <string>Spectrum</string>
-        </property>
-        <layout class="QHBoxLayout" name="horizontalLayout_5">
-         <property name="spacing">
-          <number>0</number>
-         </property>
-         <property name="leftMargin">
-          <number>0</number>
-         </property>
-         <property name="topMargin">
-          <number>0</number>
-         </property>
-         <property name="rightMargin">
-          <number>0</number>
-         </property>
-         <property name="bottomMargin">
-          <number>0</number>
-         </property>
-         <item>
-          <widget class="PlotWidget" name="spectrum_plotwidget">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-          </widget>
          </item>
         </layout>
        </widget>
@@ -542,12 +328,9 @@
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <layout class="QHBoxLayout" name="horizontalLayout_9">
+     <layout class="QHBoxLayout" name="horizontalLayout_5">
       <property name="spacing">
        <number>6</number>
-      </property>
-      <property name="sizeConstraint">
-       <enum>QLayout::SetDefaultConstraint</enum>
       </property>
       <property name="leftMargin">
        <number>1</number>
@@ -562,154 +345,197 @@
        <number>1</number>
       </property>
       <item>
-       <spacer name="horizontalSpacer_2">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
+       <layout class="QVBoxLayout" name="verticalLayout_4">
+        <property name="spacing">
+         <number>0</number>
         </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>40</width>
-          <height>20</height>
-         </size>
+        <property name="sizeConstraint">
+         <enum>QLayout::SetDefaultConstraint</enum>
         </property>
-       </spacer>
-      </item>
-      <item>
-       <widget class="QGroupBox" name="groupBox_4">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
+        <property name="topMargin">
+         <number>0</number>
         </property>
-        <property name="minimumSize">
-         <size>
-          <width>120</width>
-          <height>0</height>
-         </size>
+        <property name="rightMargin">
+         <number>0</number>
         </property>
-        <property name="maximumSize">
-         <size>
-          <width>16777215</width>
-          <height>116</height>
-         </size>
-        </property>
-        <property name="font">
-         <font>
-          <family>Ubuntu</family>
-          <pointsize>8</pointsize>
-         </font>
-        </property>
-        <property name="title">
-         <string>Image Stack</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
-        </property>
-        <layout class="QHBoxLayout" name="horizontalLayout_2">
-         <property name="spacing">
-          <number>6</number>
-         </property>
-         <property name="sizeConstraint">
-          <enum>QLayout::SetDefaultConstraint</enum>
-         </property>
-         <property name="leftMargin">
-          <number>8</number>
-         </property>
-         <property name="topMargin">
-          <number>3</number>
-         </property>
-         <property name="rightMargin">
-          <number>6</number>
-         </property>
-         <property name="bottomMargin">
-          <number>0</number>
-         </property>
-         <item>
-          <layout class="QVBoxLayout" name="verticalLayout_3">
+        <item>
+         <widget class="QGroupBox" name="groupBox_5">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="MinimumExpanding" vsizetype="Maximum">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>70</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <family>Ubuntu</family>
+            <pointsize>8</pointsize>
+           </font>
+          </property>
+          <property name="title">
+           <string>File</string>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_8">
            <property name="spacing">
+            <number>0</number>
+           </property>
+           <property name="leftMargin">
+            <number>8</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
             <number>6</number>
            </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
            <item>
-            <widget class="QPushButton" name="button_meanflux">
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>24</height>
-              </size>
+            <layout class="QHBoxLayout" name="horizontalLayout_7">
+             <property name="spacing">
+              <number>0</number>
              </property>
-             <property name="maximumSize">
-              <size>
-               <width>16777215</width>
-               <height>24</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>Show mean</string>
-             </property>
-             <property name="checkable">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="button_slideshow">
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>24</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>16777215</width>
-               <height>24</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>Play stack movie</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <spacer name="verticalSpacer_3">
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
-             </property>
-             <property name="sizeType">
-              <enum>QSizePolicy::Fixed</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>20</width>
-               <height>32</height>
-              </size>
-             </property>
-            </spacer>
+             <item>
+              <widget class="QLabel" name="tc_file">
+               <property name="font">
+                <font>
+                 <family>Ubuntu</family>
+                 <pointsize>8</pointsize>
+                </font>
+               </property>
+               <property name="cursor">
+                <cursorShape>IBeamCursor</cursorShape>
+               </property>
+               <property name="text">
+                <string>TextLabel</string>
+               </property>
+               <property name="textInteractionFlags">
+                <set>Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <spacer name="horizontalSpacer">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="FnOverlayCheckBox">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="text">
+                <string>to caption</string>
+               </property>
+               <property name="checked">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </item>
           </layout>
-         </item>
-        </layout>
-       </widget>
+         </widget>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="groupBox_4">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="MinimumExpanding" vsizetype="Maximum">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>70</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <family>Ubuntu</family>
+            <pointsize>8</pointsize>
+           </font>
+          </property>
+          <property name="title">
+           <string>Path</string>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_9">
+           <property name="spacing">
+            <number>0</number>
+           </property>
+           <property name="leftMargin">
+            <number>8</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>6</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QLabel" name="tc_path">
+             <property name="enabled">
+              <bool>true</bool>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>25</height>
+              </size>
+             </property>
+             <property name="font">
+              <font>
+               <family>Ubuntu</family>
+               <pointsize>8</pointsize>
+              </font>
+             </property>
+             <property name="cursor">
+              <cursorShape>IBeamCursor</cursorShape>
+             </property>
+             <property name="text">
+              <string>TextLabel</string>
+             </property>
+             <property name="textInteractionFlags">
+              <set>Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+       </layout>
       </item>
       <item>
-       <widget class="QGroupBox" name="groupBox_8">
+       <widget class="QGroupBox" name="groupBox_6">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
-        <property name="minimumSize">
-         <size>
-          <width>120</width>
-          <height>0</height>
-         </size>
-        </property>
         <property name="maximumSize">
          <size>
           <width>16777215</width>
-          <height>116</height>
+          <height>150</height>
          </size>
         </property>
         <property name="font">
@@ -719,154 +545,66 @@
          </font>
         </property>
         <property name="title">
-         <string>Spectrum</string>
+         <string>Transform</string>
         </property>
-        <property name="alignment">
-         <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
-        </property>
-        <layout class="QHBoxLayout" name="horizontalLayout_10">
-         <property name="spacing">
-          <number>6</number>
-         </property>
-         <property name="sizeConstraint">
-          <enum>QLayout::SetDefaultConstraint</enum>
-         </property>
-         <property name="leftMargin">
-          <number>9</number>
-         </property>
-         <property name="topMargin">
-          <number>9</number>
-         </property>
-         <property name="rightMargin">
-          <number>9</number>
-         </property>
-         <property name="bottomMargin">
-          <number>9</number>
-         </property>
+        <layout class="QVBoxLayout" name="verticalLayout_7">
          <item>
-          <layout class="QGridLayout" name="gridLayout_3">
-           <item row="0" column="0">
-            <widget class="QCheckBox" name="ROIvisibleCheckBox">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>18</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>16777215</width>
-               <height>10</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>ROI visible</string>
-             </property>
-             <property name="checked">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="QLabel" name="label_roitype">
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>18</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>16777215</width>
-               <height>10</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>ROI type</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <widget class="QComboBox" name="ROIShapeBox"/>
-           </item>
-           <item row="1" column="0">
-            <widget class="QPushButton" name="button_lockspectrum">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>24</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>16777215</width>
-               <height>24</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>Lock to ROI</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="0">
-            <widget class="QPushButton" name="button_mergeroi">
-             <property name="text">
-              <string>Merge ROI</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="2">
-            <widget class="QPushButton" name="button_clearlastroi">
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>24</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>Clear last ROI</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="2">
-            <widget class="QPushButton" name="button_clearspecfig">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>24</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>16777215</width>
-               <height>24</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>Clear all ROI</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="1">
-            <widget class="QPushButton" name="button_subtractroi">
-             <property name="text">
-              <string>Subtract ROI</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
+          <widget class="QPushButton" name="pb_rotate">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>60</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="layoutDirection">
+            <enum>Qt::LeftToRight</enum>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset>
+             <normaloff>../../images/rotate.png</normaloff>../../images/rotate.png</iconset>
+           </property>
+           <property name="iconSize">
+            <size>
+             <width>16</width>
+             <height>16</height>
+            </size>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pb_mirror">
+           <property name="maximumSize">
+            <size>
+             <width>60</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="autoFillBackground">
+            <bool>false</bool>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset>
+             <normaloff>../../images/mirror.png</normaloff>../../images/mirror.png</iconset>
+           </property>
+           <property name="iconSize">
+            <size>
+             <width>16</width>
+             <height>16</height>
+            </size>
+           </property>
+          </widget>
          </item>
         </layout>
        </widget>
@@ -874,20 +612,20 @@
       <item>
        <widget class="QGroupBox" name="DisplayOptions">
         <property name="sizePolicy">
-         <sizepolicy hsizetype="MinimumExpanding" vsizetype="Maximum">
+         <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
         <property name="minimumSize">
          <size>
-          <width>270</width>
-          <height>0</height>
+          <width>320</width>
+          <height>116</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
-          <width>270</width>
+          <width>320</width>
           <height>116</height>
          </size>
         </property>
@@ -900,26 +638,32 @@
         <property name="title">
          <string>Display Options</string>
         </property>
-        <property name="alignment">
-         <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
-        </property>
-        <layout class="QHBoxLayout" name="horizontalLayout_8" stretch="0">
+        <layout class="QHBoxLayout" name="horizontalLayout_2">
          <property name="topMargin">
+          <number>9</number>
+         </property>
+         <property name="rightMargin">
           <number>9</number>
          </property>
          <property name="bottomMargin">
           <number>9</number>
          </property>
          <item>
-          <layout class="QVBoxLayout" name="verticalLayout_9">
+          <layout class="QVBoxLayout" name="verticalLayout_3">
            <property name="spacing">
             <number>0</number>
            </property>
-           <property name="topMargin">
+           <property name="bottomMargin">
             <number>0</number>
            </property>
            <item>
             <widget class="QLabel" name="label">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
              <property name="minimumSize">
               <size>
                <width>0</width>
@@ -939,7 +683,7 @@
               </font>
              </property>
              <property name="text">
-              <string>Colormap Category            Colormap             Steps</string>
+              <string>Colormap Category                        Colormap                     Steps</string>
              </property>
             </widget>
            </item>
@@ -958,13 +702,13 @@
                </property>
                <property name="minimumSize">
                 <size>
-                 <width>100</width>
+                 <width>150</width>
                  <height>0</height>
                 </size>
                </property>
                <property name="maximumSize">
                 <size>
-                 <width>120</width>
+                 <width>150</width>
                  <height>16777215</height>
                 </size>
                </property>
@@ -1017,7 +761,7 @@
             </layout>
            </item>
            <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_6" stretch="1,0,0">
+            <layout class="QHBoxLayout" name="horizontalLayout_6" stretch="0,0,0,0,0,0">
              <property name="spacing">
               <number>6</number>
              </property>
@@ -1025,16 +769,72 @@
               <number>5</number>
              </property>
              <item>
-              <widget class="QCheckBox" name="SquarePxCheckBox">
+              <widget class="QCheckBox" name="MetricCheckBox">
                <property name="minimumSize">
                 <size>
-                 <width>80</width>
+                 <width>60</width>
                  <height>0</height>
                 </size>
                </property>
                <property name="maximumSize">
                 <size>
-                 <width>80</width>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="font">
+                <font>
+                 <family>Ubuntu</family>
+                 <pointsize>8</pointsize>
+                </font>
+               </property>
+               <property name="text">
+                <string>Metric</string>
+               </property>
+               <property name="checked">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="ZeroOriginCheckBox">
+               <property name="minimumSize">
+                <size>
+                 <width>70</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>70</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="font">
+                <font>
+                 <family>Ubuntu</family>
+                 <pointsize>8</pointsize>
+                </font>
+               </property>
+               <property name="text">
+                <string>To origin</string>
+               </property>
+               <property name="checked">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="SquarePxCheckBox">
+               <property name="minimumSize">
+                <size>
+                 <width>70</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>70</width>
                  <height>16777215</height>
                 </size>
                </property>
@@ -1069,29 +869,57 @@
              </item>
              <item>
               <widget class="QCheckBox" name="ScalebarCheckBox">
+               <property name="enabled">
+                <bool>true</bool>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>70</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>70</width>
+                 <height>16777215</height>
+                </size>
+               </property>
                <property name="text">
                 <string>Scalebar</string>
                </property>
               </widget>
              </item>
              <item>
-              <spacer name="horizontalSpacer">
-               <property name="font">
-                <font>
-                 <family>Ubuntu</family>
-                 <pointsize>8</pointsize>
-                </font>
-               </property>
+              <spacer name="horizontalSpacer_2">
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
                </property>
                <property name="sizeHint" stdset="0">
                 <size>
                  <width>40</width>
-                 <height>10</height>
+                 <height>20</height>
                 </size>
                </property>
               </spacer>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="ColorFlipCheckBox">
+               <property name="minimumSize">
+                <size>
+                 <width>70</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>70</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="text">
+                <string>Flip colors</string>
+               </property>
+              </widget>
              </item>
             </layout>
            </item>
@@ -1102,6 +930,9 @@
       </item>
       <item>
        <widget class="QGroupBox" name="groupBox_2">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
         <property name="sizePolicy">
          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
           <horstretch>0</horstretch>
@@ -1129,25 +960,7 @@
         <property name="title">
          <string>Export</string>
         </property>
-        <property name="alignment">
-         <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
-        </property>
-        <layout class="QVBoxLayout" name="verticalLayout_7">
-         <property name="spacing">
-          <number>6</number>
-         </property>
-         <property name="leftMargin">
-          <number>9</number>
-         </property>
-         <property name="topMargin">
-          <number>9</number>
-         </property>
-         <property name="rightMargin">
-          <number>9</number>
-         </property>
-         <property name="bottomMargin">
-          <number>9</number>
-         </property>
+        <layout class="QVBoxLayout" name="verticalLayout_10">
          <item>
           <layout class="QGridLayout" name="gridLayout" rowstretch="0,0,0" columnstretch="0,0">
            <property name="sizeConstraint">
@@ -1277,11 +1090,6 @@
  <customwidgets>
   <customwidget>
    <class>GraphicsLayoutWidget</class>
-   <extends>QGraphicsView</extends>
-   <header location="global">pyqtgraph</header>
-  </customwidget>
-  <customwidget>
-   <class>PlotWidget</class>
    <extends>QGraphicsView</extends>
    <header location="global">pyqtgraph</header>
   </customwidget>
