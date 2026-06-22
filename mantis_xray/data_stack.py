@@ -425,19 +425,52 @@ class data:
         n_pixels = self.n_cols * self.n_rows
         self.od = np.empty((self.n_cols, self.n_rows, self.n_ev))
 
-        # little hack to deal with rounding errors
-        self.evi0[self.evi0.size - 1] += 0.001
-        self.evi0[0] -= 0.001
-        if len(self.evi0) > 3: # >3 is needed to avoid boundary error!
-            fi0int = scipy.interpolate.interp1d(self.evi0.astype(np.double), self.i0data.astype(np.double),
-                                                kind='cubic', bounds_error=False, fill_value=0.0)
-        elif len(self.evi0) > 1: # use linear interpolation when there are fewer points
-            fi0int = scipy.interpolate.interp1d(self.evi0.astype(np.double), self.i0data.astype(np.double),
-                                                bounds_error=False, fill_value=0.0)
-        else: # use constant value when only a single value is available
-            fi0int = lambda x: self.i0data.astype(np.double)
-        
-        i0 = fi0int(self.ev)
+        evi0 = np.asarray(self.evi0, dtype=np.double).ravel()
+        i0data = np.asarray(self.i0data, dtype=np.double).ravel()
+
+        valid = np.isfinite(evi0) & np.isfinite(i0data)
+        evi0 = evi0[valid]
+        i0data = i0data[valid]
+
+        order = np.argsort(evi0, kind='mergesort')
+        evi0 = evi0[order]
+        i0data = i0data[order]
+
+        unique_evi0, inverse = np.unique(evi0, return_inverse=True)
+        if unique_evi0.size != evi0.size:
+            sums = np.bincount(inverse, weights=i0data)
+            counts = np.bincount(inverse)
+            i0data = sums / counts
+            evi0 = unique_evi0
+
+        self.evi0 = evi0
+        self.i0data = i0data
+
+        if evi0.size == 0:
+            raise ValueError('No valid I0 points available for OD calculation')
+        elif evi0.size == 1:
+            i0 = np.full(self.ev.shape, float(i0data[0]), dtype=np.double)
+        else:
+            # little hack to deal with rounding errors at interpolation boundaries
+            evi0 = evi0.copy()
+            evi0[evi0.size - 1] += 0.001
+            evi0[0] -= 0.001
+            if evi0.size > 3:
+                fi0int = scipy.interpolate.interp1d(
+                    evi0,
+                    i0data,
+                    kind='cubic',
+                    bounds_error=False,
+                    fill_value=0.0
+                )
+            else:
+                fi0int = scipy.interpolate.interp1d(
+                    evi0,
+                    i0data,
+                    bounds_error=False,
+                    fill_value=0.0
+                )
+            i0 = fi0int(self.ev.astype(np.double))
 
         if (self.data_dwell is not None) and (self.i0_dwell is not None):
             i0 = i0 * (self.data_dwell / self.i0_dwell)
@@ -481,12 +514,48 @@ class data:
             if len(i0dims) == 2:
                 self.i0data = self.i0datahist[:, ith]
 
-            if len(self.evi0) > 2:
-                fi0int = scipy.interpolate.interp1d(self.evi0, self.i0data, kind='cubic', bounds_error=False,
-                                                    fill_value=0.0)
+            evi0 = np.asarray(self.evi0, dtype=np.double).ravel()
+            i0data = np.asarray(self.i0data, dtype=np.double).ravel()
+
+            valid = np.isfinite(evi0) & np.isfinite(i0data)
+            evi0 = evi0[valid]
+            i0data = i0data[valid]
+
+            order = np.argsort(evi0, kind='mergesort')
+            evi0 = evi0[order]
+            i0data = i0data[order]
+
+            unique_evi0, inverse = np.unique(evi0, return_inverse=True)
+            if unique_evi0.size != evi0.size:
+                sums = np.bincount(inverse, weights=i0data)
+                counts = np.bincount(inverse)
+                i0data = sums / counts
+                evi0 = unique_evi0
+
+            self.evi0 = evi0
+            self.i0data = i0data
+
+            if evi0.size == 0:
+                raise ValueError('No valid I0 points available for OD calculation')
+            elif evi0.size == 1:
+                i0 = np.full(self.ev.shape, float(i0data[0]), dtype=np.double)
             else:
-                fi0int = scipy.interpolate.interp1d(self.evi0, self.i0data, bounds_error=False, fill_value=0.0)
-            i0 = fi0int(self.ev)
+                if evi0.size > 3:
+                    fi0int = scipy.interpolate.interp1d(
+                        evi0,
+                        i0data,
+                        kind='cubic',
+                        bounds_error=False,
+                        fill_value=0.0
+                    )
+                else:
+                    fi0int = scipy.interpolate.interp1d(
+                        evi0,
+                        i0data,
+                        bounds_error=False,
+                        fill_value=0.0
+                    )
+                i0 = fi0int(self.ev.astype(np.double))
 
             if (self.data_dwell is not None) and (self.i0_dwell is not None):
                 i0 = i0 * (self.data_dwell / self.i0_dwell)
