@@ -3023,6 +3023,13 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
         self.i_spec = 1
 
         self.base = 0.0
+        self.base_slope = 0.0
+        self.base_quadratic = 0.0
+        self.selected_peak = -1
+        self.selected_peaks = []
+        self.show_selected_sum = True
+        self.updating_peak_list = False
+        self.fit_stats_text = ''
         self.stepfitparams = np.zeros((6))
         self.gauss_fp_a = np.zeros((12))
         self.gauss_fp_m = np.zeros((12))
@@ -3044,6 +3051,8 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
 
         self.peak_engs = [285.0, 286.5, 288.5, 289.5, 290.5]
         self.peak_names = ['aromatic', 'phenolic', 'carboxyl', 'alkyl', 'carbonyl']
+        self.autofit_emin = 0.0
+        self.autofit_emax = 0.0
 
         vboxL = QtWidgets.QVBoxLayout()
         vboxR = QtWidgets.QVBoxLayout()
@@ -3073,9 +3082,17 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
         textctrl.setFont(font)
         fgs1.addWidget(textctrl, 0, 3)
         textctrl =  QtWidgets.QLabel(self)
-        textctrl.setText('Base')
+        textctrl.setText('Continuum C0')
         textctrl.setFont(font)
         fgs1.addWidget(textctrl, 16, 0)
+        textctrl =  QtWidgets.QLabel(self)
+        textctrl.setText('Continuum C1')
+        textctrl.setFont(font)
+        fgs1.addWidget(textctrl, 17, 0)
+        textctrl =  QtWidgets.QLabel(self)
+        textctrl.setText('Continuum C2')
+        textctrl.setFont(font)
+        fgs1.addWidget(textctrl, 18, 0)
 
 
         textctrl =  QtWidgets.QLabel(self)
@@ -3165,6 +3182,20 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
         self.le_base.setMaximumWidth(65)
         self.le_base.setText(str(self.base))
         fgs1.addWidget(self.le_base, 16, 1)
+
+        self.le_blin = QtWidgets.QLineEdit(self)
+        self.le_blin.setValidator(QtGui.QDoubleValidator(-99999, 99999, 6, self))
+        self.le_blin.setAlignment(QtCore.Qt.AlignRight)
+        self.le_blin.setMaximumWidth(65)
+        self.le_blin.setText(str(self.base_slope))
+        fgs1.addWidget(self.le_blin, 17, 1)
+
+        self.le_bquad = QtWidgets.QLineEdit(self)
+        self.le_bquad.setValidator(QtGui.QDoubleValidator(-99999, 99999, 6, self))
+        self.le_bquad.setAlignment(QtCore.Qt.AlignRight)
+        self.le_bquad.setMaximumWidth(65)
+        self.le_bquad.setText(str(self.base_quadratic))
+        fgs1.addWidget(self.le_bquad, 18, 1)
 
 
         self.le_sa2 = QtWidgets.QLineEdit(self)
@@ -3452,7 +3483,16 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
             self.le_sigma[i].setText(str(self.gauss_fp_s[i]))
 
         vbox.addLayout(fgs1)
-        sizer.setLayout(vbox)
+        params_widget = QtWidgets.QWidget()
+        params_widget.setLayout(vbox)
+        params_scroll = QtWidgets.QScrollArea()
+        params_scroll.setWidgetResizable(True)
+        params_scroll.setWidget(params_widget)
+        params_scroll.setMinimumWidth(310)
+        params_scroll.setMaximumHeight(430)
+        sizerbox = QtWidgets.QVBoxLayout()
+        sizerbox.addWidget(params_scroll)
+        sizer.setLayout(sizerbox)
 
 
 
@@ -3503,6 +3543,16 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
         self.button_save.setEnabled(False)
         vbox3.addWidget(self.button_save)
 
+        self.button_savefitcsv = QtWidgets.QPushButton('Save fit CSV...')
+        self.button_savefitcsv.clicked.connect(self.OnSaveFitCSV)
+        self.button_savefitcsv.setEnabled(False)
+        vbox3.addWidget(self.button_savefitcsv)
+
+        self.button_saveselectedpeak = QtWidgets.QPushButton('Save selected components CSV...')
+        self.button_saveselectedpeak.clicked.connect(self.OnSaveSelectedPeakCSV)
+        self.button_saveselectedpeak.setEnabled(False)
+        vbox3.addWidget(self.button_saveselectedpeak)
+
         sizer3.setLayout(vbox3)
 
 
@@ -3538,6 +3588,88 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
         hbox42.addWidget(self.ngaussspin)
         vbox4.addLayout(hbox42)
 
+        hbox40 = QtWidgets.QHBoxLayout()
+        text0 = QtWidgets.QLabel(self)
+        text0.setText('Continuum')
+        hbox40.addWidget(text0)
+        self.continuum_combo = QtWidgets.QComboBox(self)
+        self.continuum_combo.addItems(['Constant', 'Linear', 'Quadratic'])
+        self.continuum_combo.currentIndexChanged[int].connect(self.OnContinuumModel)
+        hbox40.addWidget(self.continuum_combo)
+        vbox4.addLayout(hbox40)
+
+        sizer_auto = QtWidgets.QGroupBox('NEXAFS Auto Fit')
+        vbox_auto = QtWidgets.QVBoxLayout()
+
+        hbox43 = QtWidgets.QHBoxLayout()
+        text3 = QtWidgets.QLabel(self)
+        text3.setText('Energy range')
+        hbox43.addWidget(text3)
+        self.autofit_emin_spin = QtWidgets.QDoubleSpinBox()
+        self.autofit_emin_spin.setDecimals(2)
+        self.autofit_emin_spin.setRange(-99999, 99999)
+        self.autofit_emin_spin.setSingleStep(0.1)
+        self.autofit_emin_spin.setMinimumWidth(85)
+        hbox43.addWidget(self.autofit_emin_spin)
+        self.autofit_emax_spin = QtWidgets.QDoubleSpinBox()
+        self.autofit_emax_spin.setDecimals(2)
+        self.autofit_emax_spin.setRange(-99999, 99999)
+        self.autofit_emax_spin.setSingleStep(0.1)
+        self.autofit_emax_spin.setMinimumWidth(85)
+        hbox43.addWidget(self.autofit_emax_spin)
+        vbox_auto.addLayout(hbox43)
+
+        hbox44 = QtWidgets.QHBoxLayout()
+        text4 = QtWidgets.QLabel(self)
+        text4.setText('Max steps / peaks')
+        hbox44.addWidget(text4)
+        self.autofit_steps_spin = QtWidgets.QSpinBox()
+        self.autofit_steps_spin.setRange(0, 2)
+        self.autofit_steps_spin.setValue(1)
+        hbox44.addWidget(self.autofit_steps_spin)
+        self.autofit_peaks_spin = QtWidgets.QSpinBox()
+        self.autofit_peaks_spin.setRange(0, 12)
+        self.autofit_peaks_spin.setValue(6)
+        hbox44.addWidget(self.autofit_peaks_spin)
+        vbox_auto.addLayout(hbox44)
+
+        hbox45 = QtWidgets.QHBoxLayout()
+        text5 = QtWidgets.QLabel(self)
+        text5.setText('Prominence')
+        hbox45.addWidget(text5)
+        self.autofit_prom_spin = QtWidgets.QDoubleSpinBox()
+        self.autofit_prom_spin.setDecimals(3)
+        self.autofit_prom_spin.setRange(0.001, 999.0)
+        self.autofit_prom_spin.setSingleStep(0.005)
+        self.autofit_prom_spin.setValue(0.03)
+        hbox45.addWidget(self.autofit_prom_spin)
+        vbox_auto.addLayout(hbox45)
+
+        hbox46 = QtWidgets.QHBoxLayout()
+        text6 = QtWidgets.QLabel(self)
+        text6.setText('Sigma min / max')
+        hbox46.addWidget(text6)
+        self.autofit_minsigma_spin = QtWidgets.QDoubleSpinBox()
+        self.autofit_minsigma_spin.setDecimals(2)
+        self.autofit_minsigma_spin.setRange(0.01, 999.0)
+        self.autofit_minsigma_spin.setSingleStep(0.05)
+        self.autofit_minsigma_spin.setValue(0.15)
+        hbox46.addWidget(self.autofit_minsigma_spin)
+        self.autofit_maxsigma_spin = QtWidgets.QDoubleSpinBox()
+        self.autofit_maxsigma_spin.setDecimals(2)
+        self.autofit_maxsigma_spin.setRange(0.01, 999.0)
+        self.autofit_maxsigma_spin.setSingleStep(0.05)
+        self.autofit_maxsigma_spin.setValue(1.50)
+        hbox46.addWidget(self.autofit_maxsigma_spin)
+        vbox_auto.addLayout(hbox46)
+
+        self.button_autofit = QtWidgets.QPushButton('Auto Fit')
+        self.button_autofit.clicked.connect(self.OnAutoFitSpectrum)
+        self.button_autofit.setEnabled(False)
+        vbox_auto.addWidget(self.button_autofit)
+        sizer_auto.setLayout(vbox_auto)
+        vbox4.addWidget(sizer_auto)
+
 
 #         self.button_initfitparams = QtWidgets.QPushButton('Initialize Fit Parameters')
 #         self.button_initfitparams.clicked.connect( self.OnInitFitParams)
@@ -3557,17 +3689,30 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
         sizer5 = QtWidgets.QGroupBox('Peak Positions [eV]')
         vbox5 = QtWidgets.QVBoxLayout()
 
-        self.tc_peakid = []
-        for i in range(12):
-            tc = QtWidgets.QLabel(self)
-            self.tc_peakid.append(tc)
-            vbox5.addWidget(tc)
+        self.lc_peakid = QtWidgets.QListWidget()
+        self.lc_peakid.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+        self.lc_peakid.itemClicked.connect(self.OnPeakListClick)
+        self.lc_peakid.itemDoubleClicked.connect(self.OnPeakListDoubleClick)
+        self.lc_peakid.itemChanged.connect(self.OnPeakListChanged)
+        self.lc_peakid.itemSelectionChanged.connect(self.OnPeakSelectionChanged)
+        vbox5.addWidget(self.lc_peakid)
 
         vbox5.addStretch(1)
+
+        self.fit_stats = QtWidgets.QTextEdit()
+        self.fit_stats.setReadOnly(True)
+        self.fit_stats.setMinimumWidth(260)
+        self.fit_stats.setMaximumHeight(180)
+        vbox5.addWidget(self.fit_stats)
 
         self.cb_showengs = QtWidgets.QCheckBox('Show eV lines', self)
         self.cb_showengs.stateChanged.connect(self.OnShowEngs)
         vbox5.addWidget(self.cb_showengs)
+
+        self.cb_showselectedsum = QtWidgets.QCheckBox('Show selected sum', self)
+        self.cb_showselectedsum.setChecked(True)
+        self.cb_showselectedsum.stateChanged.connect(self.OnShowSelectedSum)
+        vbox5.addWidget(self.cb_showselectedsum)
 
         sizer5.setLayout(vbox5)
 
@@ -3719,7 +3864,17 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
 
         self.SetFitParams()
 
-        fitted_spectrum, separate_peaks = self.anlz.fit_spectrum(self.i_spec-1, self.nsteps[self.i_spec-1], self.npeaks[self.i_spec-1])
+        fit_range = (self.autofit_emin_spin.value(), self.autofit_emax_spin.value())
+        min_sigma = self.autofit_minsigma_spin.value()
+        max_sigma = self.autofit_maxsigma_spin.value()
+        if min_sigma > max_sigma:
+            min_sigma, max_sigma = max_sigma, min_sigma
+
+        fitted_spectrum, separate_peaks = self.anlz.fit_spectrum(
+            self.i_spec-1, self.nsteps[self.i_spec-1], self.npeaks[self.i_spec-1],
+            fit_range=fit_range, continuum_order=self.continuum_combo.currentIndex(),
+            peak_sigma_bounds=(min_sigma, max_sigma),
+            step_width_bounds=(min_sigma, max_sigma*4.0))
 
         self.fits[self.i_spec-1] = fitted_spectrum
         self.fits_sep[self.i_spec-1] = separate_peaks
@@ -3732,6 +3887,200 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
         self.updatewidgets()
 
 
+#----------------------------------------------------------------------
+    def OnAutoFitSpectrum(self, event):
+
+        QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
+
+        try:
+            min_sigma = self.autofit_minsigma_spin.value()
+            max_sigma = self.autofit_maxsigma_spin.value()
+            if min_sigma > max_sigma:
+                min_sigma, max_sigma = max_sigma, min_sigma
+
+            fitted_spectrum, separate_peaks, nsteps, npeaks = self.anlz.auto_fit_spectrum(
+                self.i_spec-1,
+                emin=self.autofit_emin_spin.value(),
+                emax=self.autofit_emax_spin.value(),
+                max_steps=self.autofit_steps_spin.value(),
+                max_peaks=self.autofit_peaks_spin.value(),
+                min_prominence=self.autofit_prom_spin.value(),
+                min_sigma=min_sigma,
+                max_sigma=max_sigma,
+                continuum_order=self.continuum_combo.currentIndex())
+
+            self.nsteps[self.i_spec-1] = nsteps
+            self.npeaks[self.i_spec-1] = npeaks
+            self.nstepsspin.setValue(nsteps)
+            self.ngaussspin.setValue(npeaks)
+            self.fits[self.i_spec-1] = fitted_spectrum
+            self.fits_sep[self.i_spec-1] = separate_peaks
+            self.spectrumfitted[self.i_spec-1] = 1
+
+            self.loadSpectrum()
+            self.ShowFitParams()
+
+        except Exception as error:
+            QtWidgets.QMessageBox.warning(self, 'Error', "Auto fit failed: "+ str(error))
+
+        QtWidgets.QApplication.restoreOverrideCursor()
+        self.updatewidgets()
+
+
+#----------------------------------------------------------------------
+    def OnSaveFitCSV(self, event):
+
+        if self.spectrumfitted[self.i_spec-1] != 1:
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Fit the spectrum before saving CSV output.')
+            return
+
+        wildcard = "CSV spectrum (*.csv)"
+        default_name = self.anlz.xfspec_names[self.i_spec-1] + '_xraypeakfit.csv'
+        filepath, _filter = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Fitted Spectrum and Components', default_name, wildcard)
+        filepath = str(filepath)
+        if filepath == '':
+            return
+        if not filepath.lower().endswith('.csv'):
+            filepath = filepath + '.csv'
+
+        try:
+            self.SaveFitCSV(filepath)
+        except IOError as e:
+            err = e.strerror if e.strerror else e
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Could not save file: %s' % err)
+        except Exception as error:
+            QtWidgets.QMessageBox.warning(self, 'Error', "Could not save fit CSV: "+ str(error))
+
+
+#----------------------------------------------------------------------
+    def SaveFitCSV(self, filepath):
+
+        ev = self.stk.ev
+        original = self.anlz.xrayfitspectra[self.i_spec-1, :]
+        total = self.fits[self.i_spec-1]
+        components = self.fits_sep[self.i_spec-1]
+        nsteps = self.nsteps[self.i_spec-1]
+        npeaks = self.npeaks[self.i_spec-1]
+
+        component_sum = np.zeros(ev.shape)
+        if len(components) > 0:
+            for component in components:
+                component_sum = component_sum + component
+        header = ['photon energy', 'Total_Fit', 'Component_Sum']
+        data_columns = [ev, total, component_sum]
+
+        if len(components) > 0:
+            header.append('Continuum')
+            data_columns.append(components[0])
+            for i in range(nsteps):
+                header.append('Step_%d' % (i+1))
+                data_columns.append(components[i+1])
+            for i in range(npeaks):
+                header.append(self.GetPeakColumnName(i))
+                data_columns.append(components[nsteps+1+i])
+
+        header.extend(['Original_OD', 'Residual'])
+        data_columns.append(original)
+        data_columns.append(original-total)
+
+        table = np.vstack(data_columns).T
+        with open(filepath, 'w') as f:
+            f.write('* Common name: full fitted spectrum\n')
+            f.write('* Export type: full XrayPeakFitting result\n')
+            f.write('* Note: includes continuum/background, fitted sum, components, original OD, and residual.\n')
+            f.write(','.join(header)+'\n')
+            np.savetxt(f, table, delimiter=',', fmt='%.8g')
+
+
+#----------------------------------------------------------------------
+    def GetPeakColumnName(self, i_peak):
+
+        fp = self.anlz.xfitpars[self.i_spec-1]
+        name = ''
+        if hasattr(fp, 'gauss_names'):
+            name = fp.gauss_names[i_peak].strip()
+        if name == '':
+            return 'Gaussian_%d' % (i_peak+1)
+        return 'Gaussian_%d_%s' % (i_peak+1, self.SafeName(name))
+
+
+#----------------------------------------------------------------------
+    def SafeName(self, name):
+
+        safe = re.sub(r'[^A-Za-z0-9_.-]+', '_', name.strip())
+        safe = safe.strip('_')
+        if safe == '':
+            safe = 'peak'
+        return safe
+
+
+#----------------------------------------------------------------------
+    def OnSaveSelectedPeakCSV(self, event):
+
+        selected = self.GetSelectedPeaks(fallback=False)
+        if len(selected) == 0 and self.lc_peakid.currentItem() is not None:
+            i_peak = self.lc_peakid.currentItem().data(QtCore.Qt.UserRole)
+            if i_peak is not None:
+                selected = [int(i_peak)]
+        if len(selected) == 0:
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Select one or more fitted peaks before saving.')
+            return
+        if self.spectrumfitted[self.i_spec-1] != 1:
+            QtWidgets.QMessageBox.warning(self, 'Error', 'Fit the spectrum before saving components.')
+            return
+
+        wildcard = "CSV spectrum (*.csv)"
+        prefix = self.SafeName(self.GetPeakDisplayName(selected[0]))
+        if len(selected) > 1:
+            prefix = prefix + '_selected_components'
+        default_name = prefix + '_' + self.anlz.xfspec_names[self.i_spec-1] + '.csv'
+        filepath, _filter = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Selected Components', default_name, wildcard)
+        filepath = str(filepath)
+        if filepath == '':
+            return
+        if not filepath.lower().endswith('.csv'):
+            filepath = filepath + '.csv'
+
+        try:
+            self.SaveSelectedPeakCSV(filepath, selected)
+        except Exception as error:
+            QtWidgets.QMessageBox.warning(self, 'Error', "Could not save selected peak CSV: "+ str(error))
+
+
+#----------------------------------------------------------------------
+    def SaveSelectedPeakCSV(self, filepath, selected_peaks=None):
+
+        ev = self.stk.ev
+        components = self.fits_sep[self.i_spec-1]
+        nsteps = self.nsteps[self.i_spec-1]
+        fp = self.anlz.xfitpars[self.i_spec-1]
+        if selected_peaks is None:
+            selected_peaks = self.GetSelectedPeaks()
+        header = ['photon energy']
+        data_columns = [ev]
+        selected_sum = np.zeros(ev.shape)
+        for i_peak in selected_peaks:
+            component_index = nsteps+1+i_peak
+            if component_index >= len(components):
+                raise IndexError('Selected peak %d is not available in the current fit.' % (i_peak+1))
+            peak_component = components[component_index]
+            selected_sum = selected_sum + peak_component
+            header.append(self.GetPeakColumnName(i_peak))
+            data_columns.append(peak_component)
+        if len(selected_peaks) > 1:
+            header.append('Selected_Component_Sum')
+            data_columns.append(selected_sum)
+        table = np.vstack(data_columns).T
+        with open(filepath, 'w') as f:
+            f.write('* Common name: selected fitted components\n')
+            f.write('* Export type: selected Gaussian peak components\n')
+            f.write('* Note: component columns are saved without continuum/background.\n')
+            for i_peak in selected_peaks:
+                f.write('* %s position: %.4f eV\n' % (self.GetPeakDisplayName(i_peak), fp.gauss_fp_m[i_peak]))
+            f.write(','.join(header)+'\n')
+            np.savetxt(f, table, delimiter=',', fmt='%.8g')
+
+
 
 #----------------------------------------------------------------------
     def OnSave(self, event):
@@ -3740,7 +4089,7 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
         #Save images
         wildcard = "Portable Network Graphics (*.png);;Adobe PDF Files (*.pdf);; SVG (*.svg)"
 
-        fileName = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Fit Plot', '', wildcard)
+        fileName, selectedFilter = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Fit Plot', '', wildcard)
 
         fileName = str(fileName)
         if fileName == '':
@@ -3748,6 +4097,15 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
 
         path, ext = os.path.splitext(fileName)
         ext = ext[1:].lower()
+        if ext == '':
+            if 'pdf' in selectedFilter.lower():
+                ext = 'pdf'
+            elif 'svg' in selectedFilter.lower():
+                ext = 'svg'
+            else:
+                ext = 'png'
+            fileName = fileName + '.' + ext
+            path, _ = os.path.splitext(fileName)
 
 
         if ext != 'png' and ext != 'pdf' and ext != 'svg':
@@ -3784,7 +4142,9 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
         print('*********************  Fit Results  ********************', file=f)
 
         print('\n', file=f)
-        print('Base:\t\t'+'{0:04.3f}'.format(self.anlz.xfitpars[self.i_spec-1].base), file=f)
+        print('Continuum C0:\t\t'+'{0:04.3f}'.format(self.anlz.xfitpars[self.i_spec-1].base), file=f)
+        print('Continuum C1:\t\t'+'{0:04.6f}'.format(self.anlz.xfitpars[self.i_spec-1].base_slope), file=f)
+        print('Continuum C2:\t\t'+'{0:04.6f}'.format(self.anlz.xfitpars[self.i_spec-1].base_quadratic), file=f)
 
         print('\n', file=f)
         text = 'Step Inflection Point [eV]:\t'
@@ -3808,6 +4168,17 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
             text = text + '{0:04.3f}'.format(self.anlz.xfitpars[self.i_spec-1].gauss_fp_m[i]) + ',  '
         print(text, file=f)
 
+        text = 'Peak Names:\t'
+        fp = self.anlz.xfitpars[self.i_spec-1]
+        if not hasattr(fp, 'gauss_names'):
+            fp.gauss_names = ['']*12
+        for i in range(self.npeaks[self.i_spec-1]):
+            name = fp.gauss_names[i].strip()
+            if name == '':
+                name = 'Gaussian_%d' % (i+1)
+            text = text + name + ',  '
+        print(text, file=f)
+
         text = 'Peak Sigma:\t'
         for i in range(self.npeaks[self.i_spec-1]):
             text = text + '{0:04.3f}'.format(self.anlz.xfitpars[self.i_spec-1].gauss_fp_s[i]) + ',  '
@@ -3817,6 +4188,10 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
         for i in range(self.npeaks[self.i_spec-1]):
             text = text + '{0:04.3f}'.format(self.anlz.xfitpars[self.i_spec-1].gauss_fp_a[i]) + ',  '
         print(text, file=f)
+
+        print('\n', file=f)
+        print('*********************  Fit Statistics  ********************', file=f)
+        print(self.CalculateFitStats(), file=f)
 
         f.close()
 
@@ -3846,6 +4221,185 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
 
 
 #----------------------------------------------------------------------
+    def OnContinuumModel(self, value):
+        if self.anlz.n_xrayfitsp > 0:
+            self.anlz.xfitpars[self.i_spec-1].continuum_order = value
+
+
+#----------------------------------------------------------------------
+    def OnPeakListClick(self):
+        self.selected_peaks = self.GetSelectedPeaks()
+        self.selected_peak = self.lc_peakid.currentRow()
+        if self.selected_peak not in self.selected_peaks and self.selected_peak >= 0:
+            self.selected_peaks.append(self.selected_peak)
+            self.selected_peaks = sorted(list(set(self.selected_peaks)))
+        self.button_saveselectedpeak.setEnabled(len(self.selected_peaks) > 0 and self.spectrumfitted[self.i_spec-1] == 1)
+        self.loadSpectrum()
+
+
+#----------------------------------------------------------------------
+    def OnPeakListDoubleClick(self, item):
+        i_peak = item.data(QtCore.Qt.UserRole)
+        if i_peak is None:
+            return
+        self.selected_peak = int(i_peak)
+        dlg = PeakFitAssignmentDialog(self, self.selected_peak)
+        if dlg.exec_():
+            fp = self.anlz.xfitpars[self.i_spec-1]
+            if not hasattr(fp, 'gauss_names'):
+                fp.gauss_names = ['']*12
+            fp.gauss_names[self.selected_peak] = dlg.PeakName()
+            self.updatewidgets()
+            self.loadSpectrum()
+
+
+#----------------------------------------------------------------------
+    def OnPeakSelectionChanged(self):
+        if self.updating_peak_list:
+            return
+        selected = self.GetSelectedPeaks()
+        self.selected_peaks = selected
+        self.selected_peak = selected[0] if len(selected) > 0 else -1
+        self.button_saveselectedpeak.setEnabled(len(selected) > 0 and self.spectrumfitted[self.i_spec-1] == 1)
+        self.UpdateFitStats()
+        self.loadSpectrum()
+
+
+#----------------------------------------------------------------------
+    def OnPeakListChanged(self, item):
+        if self.updating_peak_list:
+            return
+        i_peak = item.data(QtCore.Qt.UserRole)
+        if i_peak is None:
+            return
+        fp = self.anlz.xfitpars[self.i_spec-1]
+        if not hasattr(fp, 'gauss_names'):
+            fp.gauss_names = ['']*12
+        text = item.text()
+        if ':' in text:
+            name = text.split(':', 1)[1].strip()
+        else:
+            name = text.strip()
+        fp.gauss_names[int(i_peak)] = name
+        self.updatewidgets()
+
+
+#----------------------------------------------------------------------
+    def GetSelectedPeaks(self, fallback=True):
+
+        selected = []
+        for item in self.lc_peakid.selectedItems():
+            i_peak = item.data(QtCore.Qt.UserRole)
+            if i_peak is not None:
+                selected.append(int(i_peak))
+        selected = sorted(list(set(selected)))
+        if fallback and len(selected) == 0 and hasattr(self, 'selected_peaks'):
+            selected = list(self.selected_peaks)
+        return selected
+
+
+#----------------------------------------------------------------------
+    def CurrentFitMask(self):
+
+        ev = self.stk.ev
+        emin = self.autofit_emin_spin.value()
+        emax = self.autofit_emax_spin.value()
+        if emin > emax:
+            emin, emax = emax, emin
+        mask = (ev >= emin) & (ev <= emax)
+        if np.count_nonzero(mask) < 2:
+            mask = np.ones(ev.shape, dtype=bool)
+        return mask
+
+
+#----------------------------------------------------------------------
+    def CalculateFitStats(self):
+
+        if self.spectrumfitted[self.i_spec-1] != 1:
+            return ''
+
+        mask = self.CurrentFitMask()
+        ev = self.stk.ev
+        original = self.anlz.xrayfitspectra[self.i_spec-1, :]
+        total = self.fits[self.i_spec-1]
+        residual = original-total
+        rmse = np.sqrt(np.mean(residual[mask]**2))
+        mae = np.mean(np.abs(residual[mask]))
+        span = np.amax(original[mask])-np.amin(original[mask])
+        nrmse = rmse/span if span > 0 else 0.0
+        ss_res = np.sum(residual[mask]**2)
+        ss_tot = np.sum((original[mask]-np.mean(original[mask]))**2)
+        r2 = 1.0 - ss_res/ss_tot if ss_tot > 0 else 0.0
+        resid_area = np.trapz(np.abs(residual[mask]), ev[mask])
+
+        lines = []
+        lines.append('Fit error in selected range:')
+        lines.append('RMSE: {0:.5g} OD'.format(rmse))
+        lines.append('NRMSE: {0:.3f}%'.format(100*nrmse))
+        lines.append('MAE: {0:.5g} OD'.format(mae))
+        lines.append('R^2: {0:.5f}'.format(r2))
+        lines.append('|Residual| area: {0:.5g} OD*eV'.format(resid_area))
+
+        selected = self.GetSelectedPeaks()
+        if len(selected) > 0:
+            fp = self.anlz.xfitpars[self.i_spec-1]
+            lines.append('')
+            lines.append('Selected Gaussian components:')
+            selected_area = 0.0
+            peak_stats = []
+            for i_peak in selected:
+                amp = fp.gauss_fp_a[i_peak]
+                sigma = fp.gauss_fp_s[i_peak]
+                area = amp*sigma*np.sqrt(2*np.pi)
+                fwhm = 2.354820045*sigma
+                selected_area += area
+                name = self.GetPeakDisplayName(i_peak)
+                peak_stats.append((i_peak, name, area, amp))
+                lines.append('{0}: area={1:.5g} OD*eV, height={2:.5g}, center={3:.3f} eV, FWHM={4:.3f} eV'.format(
+                    name, area, amp, fp.gauss_fp_m[i_peak], fwhm))
+
+            all_area = 0.0
+            for i in range(self.npeaks[self.i_spec-1]):
+                all_area += fp.gauss_fp_a[i]*fp.gauss_fp_s[i]*np.sqrt(2*np.pi)
+            if selected_area > 0:
+                lines.append('Selected Gaussian area sum: {0:.5g} OD*eV'.format(selected_area))
+                lines.append('Fractions within selected sum:')
+                for item in peak_stats:
+                    lines.append('{0}: {1:.3f}'.format(item[1], item[2]/selected_area))
+            if all_area > 0:
+                lines.append('Selected sum / all fitted Gaussian area: {0:.3f}'.format(selected_area/all_area))
+
+            if len(peak_stats) >= 2:
+                ref = peak_stats[0]
+                lines.append('')
+                lines.append('Ratios to {0}:'.format(ref[1]))
+                for item in peak_stats[1:]:
+                    area_ratio = item[2]/ref[2] if ref[2] != 0 else np.inf
+                    height_ratio = item[3]/ref[3] if ref[3] != 0 else np.inf
+                    lines.append('{0}/{1}: area={2:.5g}, height={3:.5g}'.format(
+                        item[1], ref[1], area_ratio, height_ratio))
+
+        return '\n'.join(lines)
+
+
+#----------------------------------------------------------------------
+    def UpdateFitStats(self):
+        if not hasattr(self, 'fit_stats'):
+            return
+        self.fit_stats_text = self.CalculateFitStats()
+        self.fit_stats.setPlainText(self.fit_stats_text)
+
+
+#----------------------------------------------------------------------
+    def GetPeakDisplayName(self, i_peak):
+
+        fp = self.anlz.xfitpars[self.i_spec-1]
+        if hasattr(fp, 'gauss_names') and fp.gauss_names[i_peak].strip():
+            return fp.gauss_names[i_peak].strip()
+        return 'Gaussian_%d' % (i_peak+1)
+
+
+#----------------------------------------------------------------------
     def OnShowEngs(self, state):
 
         if state == QtCore.Qt.Checked:
@@ -3857,13 +4411,22 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
 
 
 #----------------------------------------------------------------------
+    def OnShowSelectedSum(self, state):
+
+        self.show_selected_sum = state == QtCore.Qt.Checked
+        if self.anlz.n_xrayfitsp > 0:
+            self.loadSpectrum()
+
+
+#----------------------------------------------------------------------
     def updatewidgets(self):
 
 
         self.button_fitspec.setEnabled(True)
+        self.button_autofit.setEnabled(True)
 
-        for i in range(12):
-            self.tc_peakid[i].setText('')
+        self.updating_peak_list = True
+        self.lc_peakid.clear()
 
         peaknames = []
         if len(self.npeaks) > 0:
@@ -3872,32 +4435,67 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
                 diff =   np.abs(self.peak_engs[i_eng]-self.anlz.xfitpars[self.i_spec-1].gauss_fp_m[i])
                 if np.abs(diff) < 0.5:
                     peaknames.append(self.peak_names[i_eng] + '\t({0:01.1f})'.format(diff))
+                elif np.abs(diff) < 1.5:
+                    peaknames.append('nearest: ' + self.peak_names[i_eng] + '\t({0:01.1f})'.format(diff))
                 else:
-                    peaknames.append('unknown')
+                    peaknames.append('Unassigned')
 
 
 
         if self.spectrumfitted[self.i_spec-1] == 1:
             self.button_save.setEnabled(True)
+            self.button_savefitcsv.setEnabled(True)
+            self.button_saveselectedpeak.setEnabled(self.selected_peak >= 0)
 
 
             for i in range(self.npeaks[self.i_spec-1]):
-                text = '\t{0:04.3f}'.format(self.anlz.xfitpars[self.i_spec-1].gauss_fp_m[i])
-                self.tc_peakid[i].setText(text + '\t' + peaknames[i])
-                self.tc_peakid[i].setStyleSheet('color: rgb({0:}, {1}, {2})'.format(int(255*self.plotcolors[i][0]),
-                                                                                 int(255*self.plotcolors[i][1]),
-                                                                                 int(255*self.plotcolors[i][2])))
+                fp = self.anlz.xfitpars[self.i_spec-1]
+                if not hasattr(fp, 'gauss_names'):
+                    fp.gauss_names = ['']*12
+                shown_name = fp.gauss_names[i].strip()
+                if shown_name == '':
+                    shown_name = peaknames[i]
+                text = '{0:04.3f} eV : {1}'.format(fp.gauss_fp_m[i], shown_name)
+                item = QtWidgets.QListWidgetItem(text)
+                item.setFlags(item.flags() | QtCore.Qt.ItemIsEditable)
+                item.setData(QtCore.Qt.UserRole, i)
+                item.setForeground(QtGui.QColor(int(255*self.plotcolors[i][0]),
+                                                int(255*self.plotcolors[i][1]),
+                                                int(255*self.plotcolors[i][2])))
+                self.lc_peakid.addItem(item)
+            if self.selected_peak >= self.npeaks[self.i_spec-1]:
+                self.selected_peak = -1
+            self.selected_peaks = [i for i in self.selected_peaks if i < self.npeaks[self.i_spec-1]]
+            if self.selected_peak >= 0 and self.selected_peak not in self.selected_peaks:
+                self.selected_peaks.append(self.selected_peak)
+                self.selected_peaks = sorted(list(set(self.selected_peaks)))
+            if self.selected_peak >= 0:
+                self.lc_peakid.setCurrentRow(self.selected_peak)
+            for i_peak in self.selected_peaks:
+                item = self.lc_peakid.item(i_peak)
+                if item is not None:
+                    item.setSelected(True)
         else:
             self.button_save.setEnabled(False)
+            self.button_savefitcsv.setEnabled(False)
+            self.button_saveselectedpeak.setEnabled(False)
+        self.updating_peak_list = False
 
 
         self.ShowFitParams()
+        self.UpdateFitStats()
 
 
 #----------------------------------------------------------------------
     def loadSpectrum(self):
 
         spectrum = self.anlz.xrayfitspectra[self.i_spec-1, :]
+
+        if self.autofit_emin == 0.0 and self.autofit_emax == 0.0:
+            self.autofit_emin = float(self.stk.ev[0])
+            self.autofit_emax = float(self.stk.ev[-1])
+            self.autofit_emin_spin.setValue(self.autofit_emin)
+            self.autofit_emax_spin.setValue(self.autofit_emax)
 
 
         fig = self.Specfig
@@ -3912,15 +4510,31 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
         if self.spectrumfitted[self.i_spec-1] == 1:
 
             offset = self.fits_sep[self.i_spec-1][0]
+            selected_peaks = self.GetSelectedPeaks()
             line3 = axes.plot(self.stk.ev, offset, color = 'blue')
             for i in range(1, 1+self.nsteps[self.i_spec-1]):
                 y = self.fits_sep[self.i_spec-1][i]+offset
                 line3 = axes.plot(self.stk.ev, y, color = 'green')
             for i in range(0, self.npeaks[self.i_spec-1]):
                 y = self.fits_sep[self.i_spec-1][i+self.nsteps[self.i_spec-1]+1]+offset
-                line3 = axes.plot(self.stk.ev, y, color = self.plotcolors[i])
+                is_selected = i in selected_peaks or i == self.selected_peak
+                linewidth = 3.0 if is_selected else 1.5
+                alpha = 1.0 if is_selected else 0.8
+                line3 = axes.plot(self.stk.ev, y, color = self.plotcolors[i],
+                                  linewidth=linewidth, alpha=alpha)
+                if is_selected:
+                    axes.axvline(x=self.anlz.xfitpars[self.i_spec-1].gauss_fp_m[i],
+                                 color=self.plotcolors[i], alpha=0.4, linestyle='--')
 
             line2 = axes.plot(self.stk.ev,self.fits[self.i_spec-1], color='red')
+
+            if self.show_selected_sum and len(selected_peaks) >= 2:
+                selected_sum = np.zeros(self.stk.ev.shape)
+                for i_peak in selected_peaks:
+                    selected_sum = selected_sum + self.fits_sep[self.i_spec-1][i_peak+self.nsteps[self.i_spec-1]+1]
+                axes.plot(self.stk.ev, selected_sum+offset, color='black',
+                          linewidth=1.4, linestyle='--', alpha=0.95,
+                          zorder=10, label='Selected sum + continuum')
 
         lines = axes.get_lines()
         self.colors = []
@@ -3970,6 +4584,8 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
     def SetFitParams(self):
 
         self.base = float(self.le_base.text())
+        self.base_slope = float(self.le_blin.text())
+        self.base_quadratic = float(self.le_bquad.text())
 
 
         self.stepfitparams[0] = float(self.le_sa1.text())
@@ -3987,7 +4603,9 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
 
 
         self.anlz.set_init_fit_params(self.i_spec-1, self.base, self.stepfitparams,
-                                       self.gauss_fp_a, self.gauss_fp_m, self.gauss_fp_s)
+                                       self.gauss_fp_a, self.gauss_fp_m, self.gauss_fp_s,
+                                       self.base_slope, self.base_quadratic,
+                                       self.continuum_combo.currentIndex())
 
 
 
@@ -3996,6 +4614,11 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
 
         fp = self.anlz.xfitpars[self.i_spec-1]
         self.le_base.setText('{0:.2f}'.format(fp.base))
+        self.le_blin.setText('{0:.6f}'.format(fp.base_slope))
+        self.le_bquad.setText('{0:.6f}'.format(fp.base_quadratic))
+        self.continuum_combo.blockSignals(True)
+        self.continuum_combo.setCurrentIndex(getattr(fp, 'continuum_order', 0))
+        self.continuum_combo.blockSignals(False)
 
         self.le_sa1.setText('{0:.2f}'.format(fp.stepfitparams[0]))
         self.le_sp1.setText('{0:.2f}'.format(fp.stepfitparams[1]))
@@ -4010,6 +4633,83 @@ class PageXrayPeakFitting(QtWidgets.QWidget):
             self.le_sigma[i].setText('{0:.2f}'.format(fp.gauss_fp_s[i]))
 
 
+
+
+
+#----------------------------------------------------------------------
+class PeakFitAssignmentDialog(QtWidgets.QDialog):
+
+    def __init__(self, parent, i_peak):
+        QtWidgets.QDialog.__init__(self, parent)
+
+        self.parent = parent
+        self.i_peak = i_peak
+        self.setWindowTitle('Peak Assignment')
+        self.resize(420, 260)
+
+        fp = parent.anlz.xfitpars[parent.i_spec-1]
+        if not hasattr(fp, 'gauss_names'):
+            fp.gauss_names = ['']*12
+
+        amp = fp.gauss_fp_a[i_peak]
+        center = fp.gauss_fp_m[i_peak]
+        sigma = fp.gauss_fp_s[i_peak]
+        fwhm = 2.354820045*sigma
+        area = amp*sigma*np.sqrt(2*np.pi)
+
+        vbox = QtWidgets.QVBoxLayout()
+        form = QtWidgets.QFormLayout()
+
+        self.le_name = QtWidgets.QLineEdit(self)
+        self.le_name.setText(fp.gauss_names[i_peak].strip())
+        form.addRow('Peak name', self.le_name)
+
+        self.assignment_combo = QtWidgets.QComboBox(self)
+        self.assignment_combo.addItem('')
+        peak_names = []
+        peak_engs = []
+        try:
+            peak_names = list(parent.window().page5.peak_names)
+            peak_engs = list(parent.window().page5.peak_engs)
+        except Exception:
+            peak_names = list(parent.peak_names)
+            peak_engs = list(parent.peak_engs)
+        for name, energy in zip(peak_names, peak_engs):
+            self.assignment_combo.addItem('{0} ({1:.2f} eV)'.format(name, energy), name)
+        self.assignment_combo.currentIndexChanged[int].connect(self.OnAssignmentChanged)
+        form.addRow('Assign from Peak ID', self.assignment_combo)
+
+        form.addRow('Center', QtWidgets.QLabel('{0:.4f} eV'.format(center)))
+        form.addRow('Height', QtWidgets.QLabel('{0:.5g} OD'.format(amp)))
+        form.addRow('Sigma', QtWidgets.QLabel('{0:.4f} eV'.format(sigma)))
+        form.addRow('FWHM', QtWidgets.QLabel('{0:.4f} eV'.format(fwhm)))
+        form.addRow('Area', QtWidgets.QLabel('{0:.5g} OD*eV'.format(area)))
+
+        vbox.addLayout(form)
+
+        note = QtWidgets.QLabel('Use the main Fit Parameters table to fine tune numeric peak values.')
+        note.setWordWrap(True)
+        vbox.addWidget(note)
+
+        buttons = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        vbox.addWidget(buttons)
+        self.setLayout(vbox)
+
+
+#----------------------------------------------------------------------
+    def OnAssignmentChanged(self, index):
+        if index <= 0:
+            return
+        name = self.assignment_combo.itemData(index)
+        if name:
+            self.le_name.setText(str(name))
+
+
+#----------------------------------------------------------------------
+    def PeakName(self):
+        return str(self.le_name.text()).strip()
 
 
 
@@ -5154,23 +5854,23 @@ class PageSpectral(QtWidgets.QWidget):
     def OnTSpecFromFile(self, event):
 
 
-        #try:
-        if True:
-            wildcard = "ASCII files (*.csv *.txt *.xas);;CSV files (*.csv);;TXT files (*.txt);;XAS files (*.xas)"
-            directory = self.com.path
-            filepath, _filter = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', directory, wildcard)
+        wildcard = "ASCII files (*.csv *.txt *.xas);;CSV files (*.csv);;TXT files (*.txt);;XAS files (*.xas)"
+        directory = self.com.path
+        filepath, _filter = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose Spectrum file', directory, wildcard)
 
-            filepath = str(filepath)
-            if filepath == '':
-                return
+        filepath = str(filepath)
+        if filepath == '':
+            return
 
-            self.filename =  os.path.basename(str(filepath))
-            directory =  os.path.dirname(str(filepath))
-            self.com.path = directory
+        self.filename =  os.path.basename(str(filepath))
+        directory =  os.path.dirname(str(filepath))
+        self.com.path = directory
 
-
-            QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
+        QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
+        try:
             self.anlz.read_target_spectrum(filename=filepath)
+            if not getattr(self.anlz, 'n_target_to_add', 0):
+                raise ValueError('No valid spectra found in the selected file.')
             self.com.spec_anl_calculated = 1
 
             self.i_tspec = self.anlz.n_target_spectra
@@ -5183,12 +5883,15 @@ class PageSpectral(QtWidgets.QWidget):
             self.loadTSpectrum()
             self.loadTargetMap()
             self.ShowSpectraList()
-
+        except Exception as error:
+            details = str(error) or error.__class__.__name__
+            QtWidgets.QMessageBox.warning(
+                self,
+                'Error',
+                'Spectra not loaded.\n\nFile:\n{0}\n\nReason:\n{1}'.format(filepath, details)
+            )
+        finally:
             QtWidgets.QApplication.restoreOverrideCursor()
-
-        #except:
-        #    QtWidgets.QApplication.restoreOverrideCursor()
-        #    QtWidgets.QMessageBox.warning(self, 'Error', 'Spectra not loaded.')
 
 
         self.window().refresh_widgets()
@@ -5604,7 +6307,11 @@ class PageSpectral(QtWidgets.QWidget):
         if state:
             self.showraw = True
         else:
-            self.showraw = False
+            if self.com.pca_calculated == 1 and hasattr(self.anlz, 'target_pcafit_maps'):
+                self.showraw = False
+            else:
+                self.showraw = True
+                self.rb_raw.setChecked(True)
 
         if self.com.spec_anl_calculated == 1:
             self.loadTSpectrum()
@@ -5741,7 +6448,9 @@ class PageSpectral(QtWidgets.QWidget):
 #----------------------------------------------------------------------
     def loadTargetMap(self):
 
-        if self.showraw == True:
+        if self.showraw == True or self.com.pca_calculated == 0 or not hasattr(self.anlz, 'target_pcafit_maps'):
+            self.showraw = True
+            self.rb_raw.setChecked(True)
             tsmapimage = self.anlz.target_svd_maps[:,:,self.i_tspec-1]
         else:
             tsmapimage = self.anlz.target_pcafit_maps[:,:,self.i_tspec-1]
@@ -5811,7 +6520,7 @@ class PageSpectral(QtWidgets.QWidget):
 
             line3 = axes.plot(self.stk.ev,diff, color='grey', label = 'Abs(Raw-Fit)')
         else:
-            QtWidgets.QMessageBox.warning(self, 'Error', 'No PCA conducted. Calculate PCA!')
+            self.textctrl_sp2.setText('SVD map: PCA fit not calculated')
 
         fontP = matplotlib.font_manager.FontProperties()
         fontP.set_size('small')
@@ -5833,6 +6542,8 @@ class PageSpectral(QtWidgets.QWidget):
             self.textctrl_sp2.setText('RMS Error: '+ str('{0:7.5f}').format(self.anlz.target_rms[self.i_tspec-1]))
 
             self.ShowFitWeights()
+        else:
+            self.tc_spfitlist.clear()
 
 
 
@@ -19359,9 +20070,18 @@ class MainFrame(QtWidgets.QMainWindow):
         if filepath is None:
             return False
         filepath = str(filepath)
-        if plugin is None: # auto-assign appropriate plugin
-            plugin = file_plugins.identify(filepath)
-        FileStruct = file_plugins.GetFileStructure(filepath, plugin=plugin)
+        try:
+            if plugin is None: # auto-assign appropriate plugin
+                plugin = file_plugins.identify(filepath)
+            FileStruct = file_plugins.GetFileStructure(filepath, plugin=plugin)
+        except Exception as error:
+            details = str(error) or error.__class__.__name__
+            QtWidgets.QMessageBox.warning(
+                self,
+                'Error',
+                'Image stack not loaded.\n\nFile:\n{0}\n\nReason:\n{1}'.format(filepath, details)
+            )
+            return False
         FileInternalSelection = [(0,0)]
         if FileStruct is not None:
             dlg = File_GUI.DataChoiceDialog(filepath=filepath, filestruct=FileStruct, plugin=plugin)
@@ -19376,33 +20096,33 @@ class MainFrame(QtWidgets.QMainWindow):
             return False
 
         QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(Qt.WaitCursor))
-
-        if self.common.stack_loaded == 1:
-            self.new_stack_refresh()
-            self.stk.new_data()
-            self.anlz.delete_data()
-        try:    #if checkboxes exist, return checked/unchecked
-            JSONconvert = dlg.jsoncheck.isChecked()
-        except UnboundLocalError: #if checkboxes missing, i.e. for prenormalized data, *.ncb, etc.
-            print("DataChoiceDialog skipped")
-            JSONconvert = None
-        file_plugins.load(filepath, stack_object=self.stk, plugin=plugin, selection=FileInternalSelection,json=JSONconvert)
-        directory = os.path.dirname(str(filepath))
-        self.page1.filename = os.path.basename(str(filepath))
+        try:
+            if self.common.stack_loaded == 1:
+                self.new_stack_refresh()
+                self.stk.new_data()
+                self.anlz.delete_data()
+            try:    #if checkboxes exist, return checked/unchecked
+                JSONconvert = dlg.jsoncheck.isChecked()
+            except (UnboundLocalError, AttributeError): #if checkboxes missing, i.e. for prenormalized data, *.ncb, etc.
+                print("DataChoiceDialog skipped")
+                JSONconvert = None
+            file_plugins.load(filepath, stack_object=self.stk, plugin=plugin, selection=FileInternalSelection,json=JSONconvert)
+            directory = os.path.dirname(str(filepath))
+            self.page1.filename = os.path.basename(str(filepath))
 
 
         #Update widgets
-        x=self.stk.n_cols
-        y=self.stk.n_rows
-        self.page1.imgrgb = np.zeros(x*y*3,dtype = "uint8")
-        self.page1.maxval = np.amax(self.stk.absdata)
+            x=self.stk.n_cols
+            y=self.stk.n_rows
+            self.page1.imgrgb = np.zeros(x*y*3,dtype = "uint8")
+            self.page1.maxval = np.amax(self.stk.absdata)
 
 
-        self.ix = int(x/2)
-        self.iy = int(y/2)
+            self.ix = int(x/2)
+            self.iy = int(y/2)
 
-        self.page1.ix = self.ix
-        self.page1.iy = self.iy
+            self.page1.ix = self.ix
+            self.page1.iy = self.iy
 
         #self.iev = 0
         #self.page0.slider_eng.setRange(0,self.stk.n_ev-1)
@@ -19415,34 +20135,49 @@ class MainFrame(QtWidgets.QMainWindow):
         #if showmaptab:
         #    self.page9.Clear()
         #    self.page9.slider_eng.setRange(0,self.stk.n_ev-1)
-        self.stk.setScale()
-        self.common.stack_loaded = 1
-        self.common.path = directory
+            self.stk.setScale()
+            self.common.stack_loaded = 1
+            self.common.path = directory
 
-        if self.stk.data_struct.spectromicroscopy.normalization.white_spectrum is not None:
-            self.common.i0_loaded = 1
-            self.stk.calculate_optical_density()
-            self.stk.fill_h5_struct_normalization()
+            if self.stk.data_struct.spectromicroscopy.normalization.white_spectrum is not None:
+                self.common.i0_loaded = 1
+                self.stk.calculate_optical_density()
+                self.stk.fill_h5_struct_normalization()
 
         #self.page0.Clear()
-        self.page0.absimgfig.loadNewImage()
-        self.page0.ShowInfo(self.page1.filename, directory)
+            self.page0.absimgfig.loadNewImage()
+            self.page0.ShowInfo(self.page1.filename, directory)
         #self.page1.ResetDisplaySettings()
-        self.page1.absimgfig.loadNewImageWithROI()
-        self.page1.button_multicrop.setText('Crop stack 3D...')
+            self.page1.absimgfig.loadNewImageWithROI()
+            self.page1.button_multicrop.setText('Crop stack 3D...')
         #print(x,y), (self.ix,self.iy), self.stk.absdata.shape
-        self.page1.specfig.ClearandReload()
+            self.page1.specfig.ClearandReload()
         #self.page1.textctrl.setText(self.page1.filename)
 
-        self.page5.updatewidgets()
-
-        QtWidgets.QApplication.restoreOverrideCursor()
+            self.page5.updatewidgets()
 
         #if showmaptab:
         #    self.page9.Clear()
         #    self.page9.loadData()
-        self.refresh_widgets()
-        return True
+            self.refresh_widgets()
+            return True
+        except Exception as error:
+            self.common.stack_loaded = 0
+            self.common.i0_loaded = 0
+            try:
+                self.new_stack_refresh()
+            except Exception:
+                pass
+            self.refresh_widgets()
+            details = str(error) or error.__class__.__name__
+            QtWidgets.QMessageBox.warning(
+                self,
+                'Error',
+                'Image stack not loaded.\n\nFile:\n{0}\n\nReason:\n{1}'.format(filepath, details)
+            )
+            return False
+        finally:
+            QtWidgets.QApplication.restoreOverrideCursor()
 
     def LoadStack(self):
         """

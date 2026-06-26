@@ -24,6 +24,7 @@ import numpy as np
 import scipy.interpolate
 import scipy.spatial
 import scipy.ndimage
+import scipy.special
 from scipy.cluster.vq import  kmeans2, whiten
 import scipy.signal
 from .file_plugins import file_stk
@@ -63,7 +64,7 @@ def stepfunc(p, x):
     
     c = 1.665
     
-    y = H*(0.5+0.5*erf((x-P)/(G/c)))
+    y = H*(0.5+0.5*scipy.special.erf((x-P)/(G/c)))
 
     return y
 
@@ -78,37 +79,45 @@ def gaussian(p, x):
     
     return y
 
-def model(p, nsteps, npeaks, x):
+def continuum_model(coeffs, order, x, origin):
     
-    offset = p[0]
+    dx = x-origin
+    y = np.ones((x.size))*coeffs[0]
+    if order >= 1:
+        y = y + coeffs[1]*dx
+    if order >= 2:
+        y = y + coeffs[2]*dx*dx
+    return y
+
+def model(p, nsteps, npeaks, x, continuum_order=0, continuum_origin=0.0):
     
-    pg = nsteps*3+1
+    ncont = continuum_order+1
     
-    istepfitparams = p[1:pg]
+    pg = ncont+nsteps*3
     
-    y = np.zeros((x.size))
+    y = continuum_model(p[:ncont], continuum_order, x, continuum_origin)
        
     if nsteps > 0:
-        for i in range(x.size):
-            y[i] = stepfunc(istepfitparams, x[i])
+        for istep in range(nsteps):
+            istepfitparams = p[ncont+istep*3:ncont+istep*3+3]
+            for i in range(x.size):
+                y[i] = y[i] + stepfunc(istepfitparams, x[i])
 
     for i in range(npeaks):
         pp = [p[pg+i*3],p[pg+1+i*3],p[pg+2+i*3]]
         y = y + gaussian(pp,x)
         
-    y = y+offset
-    
     return y 
 
 
-def model_error(p, nsteps, npeaks, x, y):
+def model_error(p, nsteps, npeaks, x, y, continuum_order=0, continuum_origin=0.0):
 
 #    err = np.zeros(x.size)
 #     for i in range(x.size):
 #         err[i] = (y[i]-model(p, x[i]))
 #     return err
 
-    err = y-model(p, nsteps, npeaks, x)
+    err = y-model(p, nsteps, npeaks, x, continuum_order, continuum_origin)
     
     return err
 
@@ -118,10 +127,15 @@ class Cfitparams:
     def __init__(self):
        
         self.base = 0.0
+        self.base_slope = 0.0
+        self.base_quadratic = 0.0
+        self.continuum_order = 0
+        self.continuum_origin = 0.0
         self.stepfitparams = np.zeros((8))
         self.gauss_fp_a = np.zeros((12))
         self.gauss_fp_m = np.zeros((12))
         self.gauss_fp_s = np.zeros((12))
+        self.gauss_names = ['']*12
         
         
 
@@ -1389,23 +1403,37 @@ class analyze:
 # ----------------------------------------------------------------------
     def load_filter_remap_spectra(self, filename):
         spectrum_common_names = [' ']
-        fitspectra = 0
+        fitted_spectra = []
+        fitted_names = []
         fn = os.path.basename(str(filename))
         _, extension = os.path.splitext(fn)
         if extension in ['.csv', '.txt', '.xas']:
-            spectrum_evdata, spectrum_data, spectrum_common_names = file_stk.read_ascii(self, filename)
+            loaded = file_stk.read_ascii(self, filename)
+            if loaded is None:
+                return [], np.empty((0, self.stack.n_ev))
+            spectrum_evdata, spectrum_data, spectrum_common_names = loaded
+        else:
+            return [], np.empty((0, self.stack.n_ev))
+
+        spectrum_data = np.atleast_2d(spectrum_data)
+        basename = os.path.splitext(os.path.basename(str(filename)))[0]
         for i, spec in enumerate(spectrum_data):
-            if not np.any(spec):  # exclude spectra with only zeros
-                spectrum_common_names.pop(i)
+            if (not np.any(np.isfinite(spec))) or (not np.any(spec)):  # exclude spectra with only zeros
                 continue
             fitspectrum = self.remap_spectrum(spectrum_evdata, spec)
+            fitted_spectra.append(fitspectrum[0])
 
-            try:
-                fitspectra = np.vstack((fitspectra, fitspectrum))
-            except ValueError:
-                fitspectra = fitspectrum
+            if i < len(spectrum_common_names) and spectrum_common_names[i].strip() != '':
+                fitted_names.append(spectrum_common_names[i].strip())
+            elif len(spectrum_data) == 1:
+                fitted_names.append(basename)
+            else:
+                fitted_names.append('%s_%d' % (basename, i+1))
 
-        return spectrum_common_names, fitspectra
+        if len(fitted_spectra) == 0:
+            return [], np.empty((0, self.stack.n_ev))
+        fitspectra = np.asarray(fitted_spectra)
+        return fitted_names, fitspectra
 
 # ----------------------------------------------------------------------
     def remap_spectrum(self, spec_ev, spec):
@@ -1511,16 +1539,21 @@ class analyze:
             
         fp.base = np.mean(self.xrayfitspectra[index][0:5])
         
-        self.set_init_fit_params(index, fp.base, fp.stepfitparams, fp.gauss_fp_a, fp.gauss_fp_m, fp.gauss_fp_s)
+        self.set_init_fit_params(index, fp.base, fp.stepfitparams, fp.gauss_fp_a, fp.gauss_fp_m, fp.gauss_fp_s,
+                                 fp.base_slope, fp.base_quadratic, fp.continuum_order)
         
         return fp.base, fp.stepfitparams, fp.gauss_fp_a, fp.gauss_fp_m, fp.gauss_fp_s
 
 
 #-----------------------------------------------------------------------   
-    def set_init_fit_params(self, index, base, stepfitparams, peak_a, peak_m, peak_s):
+    def set_init_fit_params(self, index, base, stepfitparams, peak_a, peak_m, peak_s,
+                            base_slope=0.0, base_quadratic=0.0, continuum_order=0):
         
         
         self.xfitpars[index].base = base
+        self.xfitpars[index].base_slope = base_slope
+        self.xfitpars[index].base_quadratic = base_quadratic
+        self.xfitpars[index].continuum_order = continuum_order
         
         
         self.xfitpars[index].stepfitparams = stepfitparams
@@ -1535,11 +1568,26 @@ class analyze:
         return
 
 #-----------------------------------------------------------------------   
-    def fit_spectrum(self, i_spec, nsteps, npeaks):
+    def fit_spectrum(self, i_spec, nsteps, npeaks, fit_range=None, continuum_order=None,
+                     peak_sigma_bounds=(0.05, None), step_width_bounds=(0.05, None)):
         
         
         xfit_spectrum = self.xrayfitspectra[i_spec]
+        fit_ev = np.array(self.stack.ev).astype(np.float64)
+        fit_y = np.array(xfit_spectrum).astype(np.float64)
+        if fit_range is not None:
+            emin, emax = fit_range
+            mask = (fit_ev >= emin) & (fit_ev <= emax)
+            if np.count_nonzero(mask) >= max(3, nsteps*3+npeaks*3+1):
+                fit_ev = fit_ev[mask]
+                fit_y = fit_y[mask]
         fp = self.xfitpars[i_spec]
+        if continuum_order is None:
+            continuum_order = getattr(fp, 'continuum_order', 0)
+        continuum_order = int(max(0, min(2, continuum_order)))
+        continuum_origin = float(np.mean(fit_ev))
+        fp.continuum_order = continuum_order
+        fp.continuum_origin = continuum_origin
         
         
         p = []
@@ -1547,6 +1595,10 @@ class analyze:
         self.npeaks = npeaks
         
         p.append(fp.base)
+        if continuum_order >= 1:
+            p.append(fp.base_slope)
+        if continuum_order >= 2:
+            p.append(fp.base_quadratic)
         
         for i in range(nsteps*3):
             p.append(fp.stepfitparams[i])
@@ -1559,16 +1611,29 @@ class analyze:
         
         #p2, success = optimize.leastsq(model_error, p[:], args=(nsteps, npeaks, np.array(self.stack.ev).astype(np.float64), np.array(xfit_spectrum).astype(np.float64)))
         
+        emin = float(np.amin(fit_ev))
+        emax = float(np.amax(fit_ev))
+        peak_sigma_min, peak_sigma_max = peak_sigma_bounds
+        step_width_min, step_width_max = step_width_bounds
+
         bounds=[]
-        #base can be a negative number
+        #continuum coefficients can be negative
         bounds.append((fp.base-1.5,fp.base+1.5))
-        for i in range(1,len(p)):
-            bmin = 0
-            bmax = None
-            bounds.append((bmin,bmax))
+        if continuum_order >= 1:
+            bounds.append((None, None))
+        if continuum_order >= 2:
+            bounds.append((None, None))
+        for i in range(nsteps):
+            bounds.append((emin, emax))
+            bounds.append((0, None))
+            bounds.append((step_width_min, step_width_max))
+        for i in range(npeaks):
+            bounds.append((0, None))
+            bounds.append((emin, emax))
+            bounds.append((peak_sigma_min, peak_sigma_max))
           
                     
-        p2, success = leastsqbound(model_error, p[:], bounds, args=(nsteps, npeaks, np.array(self.stack.ev).astype(np.float64), np.array(xfit_spectrum).astype(np.float64)))
+        p2, success = leastsqbound(model_error, p[:], bounds, args=(nsteps, npeaks, fit_ev, fit_y, continuum_order, continuum_origin))
        
         fp.stepfitparams = np.zeros((8))
         fp.gauss_fp_a = np.zeros((12))
@@ -1576,37 +1641,179 @@ class analyze:
         fp.gauss_fp_s = np.zeros((12)) 
         
         fp.base = p2[0]
-        fp.stepfitparams[0:nsteps*3] = p2[1:nsteps*3+1]
+        fp.base_slope = p2[1] if continuum_order >= 1 else 0.0
+        fp.base_quadratic = p2[2] if continuum_order >= 2 else 0.0
+        ncont = continuum_order+1
+        fp.stepfitparams[0:nsteps*3] = p2[ncont:ncont+nsteps*3]
         for i in range(npeaks):           
-            fp.gauss_fp_a[i] = p2[nsteps*3+1+i*3]
-            fp.gauss_fp_m[i] = p2[nsteps*3+2+i*3]
-            fp.gauss_fp_s[i] = p2[nsteps*3+3+i*3]
+            fp.gauss_fp_a[i] = p2[ncont+nsteps*3+i*3]
+            fp.gauss_fp_m[i] = p2[ncont+nsteps*3+1+i*3]
+            fp.gauss_fp_s[i] = p2[ncont+nsteps*3+2+i*3]
         
         
-        y = model(p2, nsteps, npeaks, self.stack.ev)
+        y = model(p2, nsteps, npeaks, self.stack.ev, continuum_order, continuum_origin)
         
         separate_y = []
         
-        #Add base
-        y1 = np.ones((self.stack.ev.size))*fp.base
+        #Add continuum
+        y1 = continuum_model(p2[:ncont], continuum_order, self.stack.ev, continuum_origin)
         separate_y.append(y1)
         
         #Add step
         for i in range(nsteps):
             y1 = np.zeros((self.stack.ev.size))
-            istepfitparams = p2[3*i+1:3*i+4]
+            istepfitparams = p2[ncont+3*i:ncont+3*i+3]
             for i in range(self.stack.ev.size):
                 y1[i] = stepfunc(istepfitparams, self.stack.ev[i])
             separate_y.append(y1)
             
         #Add peaks
-        pg = nsteps*3+1
+        pg = ncont+nsteps*3
         for i in range(npeaks):
             pp = [p2[pg+i*3],p2[pg+1+i*3],p2[pg+2+i*3]]
             y1 = gaussian(pp,self.stack.ev)
             separate_y.append(y1)
            
         return y, separate_y
+
+
+#-----------------------------------------------------------------------
+    def auto_fit_spectrum(self, i_spec, emin=None, emax=None, max_steps=1,
+                          max_peaks=6, min_prominence=0.03, min_sigma=0.15,
+                          max_sigma=1.5, continuum_order=0, smooth_points=5):
+        ev = np.array(self.stack.ev).astype(np.float64)
+        spectrum = np.array(self.xrayfitspectra[i_spec]).astype(np.float64)
+
+        if emin is None:
+            emin = float(ev[0])
+        if emax is None:
+            emax = float(ev[-1])
+        if emin > emax:
+            emin, emax = emax, emin
+
+        mask = (ev >= emin) & (ev <= emax)
+        if np.count_nonzero(mask) < 5:
+            mask = np.ones(ev.shape, dtype=bool)
+            emin = float(ev[0])
+            emax = float(ev[-1])
+
+        ev_fit = ev[mask]
+        y_fit = spectrum[mask]
+        continuum_order = int(max(0, min(2, continuum_order)))
+        continuum_origin = float(np.mean(ev_fit))
+        y_span = float(np.amax(y_fit) - np.amin(y_fit))
+        if y_span <= 0:
+            y_span = 1.0
+
+        smooth = y_fit.copy()
+        if smooth_points > 2 and smooth.size >= smooth_points:
+            if smooth_points % 2 == 0:
+                smooth_points += 1
+            if smooth_points >= smooth.size:
+                smooth_points = smooth.size - 1
+                if smooth_points % 2 == 0:
+                    smooth_points -= 1
+            if smooth_points >= 3:
+                smooth = scipy.signal.savgol_filter(smooth, smooth_points, 2)
+
+        nedge = max(1, int(0.1*smooth.size))
+        if continuum_order > 0 and ev_fit.size > continuum_order+1:
+            c = np.polyfit(ev_fit-continuum_origin, smooth, continuum_order)
+            c = c[::-1]
+        else:
+            c = np.array([float(np.median(smooth[:nedge]))])
+        base = float(c[0])
+        base_slope = float(c[1]) if continuum_order >= 1 and len(c) > 1 else 0.0
+        base_quadratic = float(c[2]) if continuum_order >= 2 and len(c) > 2 else 0.0
+        post_edge = float(np.median(smooth[-nedge:]))
+        continuum_guess = continuum_model([base, base_slope, base_quadratic], continuum_order, ev_fit, continuum_origin)
+        step_height = max(0.0, post_edge - float(continuum_guess[-1]))
+
+        derivative = np.gradient(smooth, ev_fit)
+        edge_order = np.argsort(derivative)[::-1]
+        step_positions = []
+        for idx in edge_order:
+            pos = float(ev_fit[idx])
+            if all(abs(pos - prev) > max_sigma for prev in step_positions):
+                step_positions.append(pos)
+            if len(step_positions) >= max_steps:
+                break
+        if not step_positions:
+            step_positions = [float(ev_fit[np.argmax(derivative)])]
+
+        residual = smooth - continuum_guess
+
+        prominence = max(float(min_prominence), 0.01*y_span)
+        distance = 1
+        if ev_fit.size > 1:
+            step = float(np.median(np.diff(ev_fit)))
+            if step > 0:
+                distance = max(1, int(min_sigma/step))
+        peaks, props = scipy.signal.find_peaks(residual, prominence=prominence, distance=distance)
+        if peaks.size == 0:
+            peaks = np.array([int(np.argmax(residual))])
+            props = {'prominences': np.array([max(prominence, float(np.amax(residual)))])}
+        order = np.argsort(props.get('prominences', np.ones(peaks.size)))[::-1]
+        peaks = peaks[order]
+
+        best = None
+        max_steps = int(max(0, min(2, max_steps)))
+        max_peaks = int(max(0, min(12, max_peaks)))
+        candidate_peak_count = min(max_peaks, peaks.size)
+
+        for nsteps in range(max_steps+1):
+            for npeaks in range(candidate_peak_count+1):
+                fp = self.xfitpars[i_spec]
+                fp.base = base
+                fp.base_slope = base_slope
+                fp.base_quadratic = base_quadratic
+                fp.continuum_order = continuum_order
+                fp.continuum_origin = continuum_origin
+                fp.stepfitparams = np.zeros((8))
+                for i in range(nsteps):
+                    fp.stepfitparams[i*3] = step_positions[min(i, len(step_positions)-1)]
+                    fp.stepfitparams[i*3+1] = step_height/max(1, nsteps)
+                    fp.stepfitparams[i*3+2] = max_sigma
+                fp.gauss_fp_a = np.zeros((12))
+                fp.gauss_fp_m = np.zeros((12))
+                fp.gauss_fp_s = np.zeros((12))
+                for i in range(npeaks):
+                    idx = peaks[i]
+                    fp.gauss_fp_a[i] = max(0.0, float(residual[idx]))
+                    fp.gauss_fp_m[i] = float(ev_fit[idx])
+                    fp.gauss_fp_s[i] = min(max_sigma, max(min_sigma, 0.35))
+                try:
+                    y, separate_y = self.fit_spectrum(
+                        i_spec, nsteps, npeaks, fit_range=(emin, emax),
+                        continuum_order=continuum_order,
+                        peak_sigma_bounds=(min_sigma, max_sigma),
+                        step_width_bounds=(min_sigma, max_sigma*4.0))
+                except Exception:
+                    continue
+
+                fit_resid = spectrum[mask] - y[mask]
+                sse = float(np.sum(fit_resid**2))
+                n = max(1, int(np.count_nonzero(mask)))
+                k = 1 + nsteps*3 + npeaks*3
+                bic = n*np.log(max(sse/n, 1e-30)) + k*np.log(n)
+                if best is None or bic < best[0]:
+                    best = (bic, sse, nsteps, npeaks, y.copy(), separate_y,
+                            copy.deepcopy(self.xfitpars[i_spec]))
+
+        if best is None:
+            return self.fit_spectrum(i_spec, max_steps, candidate_peak_count,
+                                     fit_range=(emin, emax),
+                                     continuum_order=continuum_order,
+                                     peak_sigma_bounds=(min_sigma, max_sigma),
+                                     step_width_bounds=(min_sigma, max_sigma*4.0)) + (max_steps, candidate_peak_count)
+
+        _, _, nsteps, npeaks, y, separate_y, fitparams = best
+        self.xfitpars[i_spec] = fitparams
+        y, separate_y = self.fit_spectrum(i_spec, nsteps, npeaks, fit_range=(emin, emax),
+                                          continuum_order=continuum_order,
+                                          peak_sigma_bounds=(min_sigma, max_sigma),
+                                          step_width_bounds=(min_sigma, max_sigma*4.0))
+        return y, separate_y, nsteps, npeaks
 
 
 #-----------------------------------------------------------------------   

@@ -106,11 +106,13 @@ def read_ascii(self, filename):
     allowedchars = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-', '.']
     with open(str(filename), 'r') as f:
         for line in f:
+            if line.strip() == '':
+                continue
             if line.startswith('*'):
                 if 'Common name' in line:
                     spectrum_common_names = [line.split(':')[-1].strip()]
             elif line[0] not in allowedchars:
-                names = line.split(',')
+                names = [name.strip() for name in line.split(',')]
                 if names[0] == "photon energy":
                     names = names[1:]
                     #print(names)
@@ -128,10 +130,15 @@ def read_ascii(self, filename):
         spectrum_data = np.flip(spectrum_data,1)
 
     if spectrum_common_names[0] == ' ':
-        spectrum_common_names = [os.path.splitext(os.path.basename(str(filename)))[0]]
+        if len(names) == spectrum_data.shape[0]:
+            spectrum_common_names = names
+        else:
+            spectrum_common_names = [os.path.splitext(os.path.basename(str(filename)))[0]]
     elif spectrum_common_names[0] == 'ROI spectrum' and len(names) > 1:
         spectrum_common_names = names
         #print(spectrum_common_name)
+    elif len(spectrum_common_names) == 1 and len(names) == spectrum_data.shape[0] and spectrum_data.shape[0] > 1:
+        spectrum_common_names = names
 
     return spectrum_evdata, spectrum_data, spectrum_common_names
 
