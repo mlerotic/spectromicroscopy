@@ -882,12 +882,17 @@ def write_results_h5(filename, data_struct, anlz):
     # Read basic definitions
     ds = f['implements']
     implements = ds[...]
+    # h5py returns string datasets as bytes on Python 3; decode before concatenating
+    if isinstance(implements, np.ndarray):
+        implements = implements.item()
+    if isinstance(implements, bytes):
+        implements = implements.decode('utf-8')
 
     if 'Mantis' in f:
         mantisGrp = f['Mantis']
     else:
-        del f['implements']
         implements = implements+':Mantis'
+        del f['implements']
         ds = f.create_dataset('implements', data = implements)
         mantisGrp = f.create_group('Mantis')
 
@@ -1756,12 +1761,17 @@ class h5:
         # Read basic definitions
         ds = f['implements']
         implements = ds[...]
+        # h5py returns string datasets as bytes on Python 3; decode before concatenating
+        if isinstance(implements, np.ndarray):
+            implements = implements.item()
+        if isinstance(implements, bytes):
+            implements = implements.decode('utf-8')
 
         if 'Mantis' in f:
             mantisGrp = f['Mantis']
         else:
-            del f['implements']
             implements = implements+':Mantis'
+            del f['implements']
             ds = f.create_dataset('implements', data = implements)
             mantisGrp = f.create_group('Mantis')
 
